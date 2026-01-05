@@ -1,30 +1,24 @@
-// ==========================================
-// 📌 API: /api/v1/users
-// ==========================================
-
 import { NextRequest, NextResponse } from 'next/server';
-import { userService } from '@/services';
+import { userService } from '@/services/user.service';
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
+export async function POST(req: NextRequest) {
+  const body = await req.json();
 
-    if (!body.lineId || !body.name) {
-      return NextResponse.json({ error: 'lineId and name are required' }, { status: 400 });
-    }
-
-    const user = await userService.upsertUser({
-      lineId: body.lineId,
-      name: body.name,
-      pictureUrl: body.pictureUrl,
-      studentId: body.studentId,
-      faculty: body.faculty,
-      phone: body.phone,
-      email: body.email,
-    });
-
-    return NextResponse.json({ success: true, user });
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to create/update user' }, { status: 500 });
+  if (!body.lineId || !body.firstName || !body.lastName) {
+    return NextResponse.json(
+      { error: 'lineId, firstName, lastName required' },
+      { status: 400 }
+    );
   }
+
+  const user = await userService.upsertLineStudent({
+    lineId: body.lineId,
+    firstName: body.firstName,
+    lastName: body.lastName,
+    email: body.email,
+    phone: body.phone,
+    studentCode: body.studentCode,
+  });
+
+  return NextResponse.json({ success: true, user });
 }

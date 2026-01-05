@@ -26,10 +26,13 @@ ENV NODE_ENV production
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy ไฟล์ที่จำเป็น
+# Copy ไฟล์ที่จำเป็นสำหรับ Next.js
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# ✅✅ เพิ่มบรรทัดนี้: Copy โฟลเดอร์ Prisma มาด้วย (สำคัญมาก!)
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
 USER nextjs
 

@@ -12,7 +12,7 @@ services:
       - "3000:3000"
     environment:
       # ต่อ DB ผ่านชื่อ service "db"
-      - DATABASE_URL=mysql://user:password@db:3306/wellness_db
+      - DATABASE_URL=mysql://root:rootpassword@db:3306/wellness_db
     depends_on:
       - db
 

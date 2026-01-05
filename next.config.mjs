@@ -9,7 +9,11 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'profile.line-scdn.net',
+        hostname: 'profile.line-scdn.net', // ของเดิม (สำหรับ LINE Profile)
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com', // ✅ เพิ่มอันนี้เข้าไป (สำหรับรูป Login)
       },
     ],
   },

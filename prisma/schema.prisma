@@ -1,6 +1,6 @@
-// ==========================================
-// 📌 Prisma Schema - NU Wellness Booking System
-// ==========================================
+// schema.prisma
+// ✅ Generated from WellnessCenter_DB.sql
+// Version: 3.0 - Matches actual database structure
 
 generator client {
   provider = "prisma-client-js"
@@ -11,190 +11,483 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ==========================================
-// 👤 User Model (LINE Users)
-// ==========================================
-model User {
-  id         String   @id @default(cuid())
-  lineId     String   @unique @map("line_id")
-  name       String
-  pictureUrl String?  @map("picture_url")
-  studentId  String?  @map("student_id")
-  faculty    String?
-  phone      String?
-  email      String?
-  isActive   Boolean  @default(true) @map("is_active")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+// ============================================
+// 🔐 AUTHENTICATION
+// ============================================
+
+model Account {
+  account_id            Int         @id @default(autoincrement())
+  account_username      String      @unique @db.VarChar(50)
+  account_password      String      @db.VarChar(255)
+  account_role          AccountRole
+  account_line_id       String?     @unique @db.VarChar(100)
+  account_created_at    DateTime    @default(now())
+  account_last_login_at DateTime?
 
   // Relations
-  bookings Booking[]
+  student                Student?
+  consultant             Consultant?
+  feedbackCommentReplies FeedbackComment[]     @relation("FeedbackCommentRepliedBy")
+  notifications          Notification[]
+  bookingCancellations   BookingCancellation[]
 
-  @@map("users")
+  @@map("account")
 }
 
-// ==========================================
-// 👨‍⚕️ Consultant Model
-// ==========================================
+enum AccountRole {
+  STUDENT
+  CONSULTANT
+  HEAD_CONSULTANT
+}
+
+// ============================================
+// 👨‍🎓 STUDENT
+// ============================================
+
+model Student {
+  student_id        Int     @id @default(autoincrement())
+  account_id        Int     @unique
+  student_status_id Int
+  student_code      String? @unique @db.VarChar(20)
+
+  // Relations
+  account   Account        @relation(fields: [account_id], references: [account_id])
+  status    StudentStatus  @relation(fields: [student_status_id], references: [student_status_id])
+  profile   StudentProfile?
+  academic  StudentAcademic?
+  addresses StudentAddress[]
+  bookings  Booking[]
+  feedbacks Feedback[]
+
+  @@map("student")
+}
+
+model StudentStatus {
+  student_status_id     Int     @id @default(autoincrement())
+  student_status_code   String  @unique @db.VarChar(20)
+  student_status_detail String? @db.Text
+
+  students Student[]
+
+  @@map("student_status")
+}
+
+model StudentProfile {
+  student_id           Int            @id
+  student_prefix       String?        @db.VarChar(10)
+  student_first_name   String         @db.VarChar(100)
+  student_last_name    String         @db.VarChar(100)
+  student_nickname     String?        @db.VarChar(20)
+  student_gender       StudentGender?
+  student_birthday     DateTime?      @db.Date
+  student_nationality  String?        @db.VarChar(50)
+  student_religion     String?        @db.VarChar(50)
+  student_blood_group  String?        @db.VarChar(10)
+  student_phone_number String?        @db.VarChar(20)
+  student_email        String?        @db.VarChar(100)
+
+  student Student @relation(fields: [student_id], references: [student_id])
+
+  @@map("student_profile")
+}
+
+enum StudentGender {
+  MALE
+  FEMALE
+  LGBTQ_PLUS
+  PREFER_NOT_TO_SAY
+}
+
+model StudentAddress {
+  student_address_id           Int                @id @default(autoincrement())
+  student_id                   Int
+  province_id                  Int
+  student_address_type         StudentAddressType
+  student_address_detail       String?            @db.VarChar(200)
+  student_address_sub_district String?            @db.VarChar(100)
+  student_address_district     String?            @db.VarChar(100)
+  student_address_postal_code  String             @db.VarChar(10)
+
+  student  Student  @relation(fields: [student_id], references: [student_id])
+  province Province @relation(fields: [province_id], references: [province_id])
+
+  @@unique([student_id, student_address_type], map: "student_address_index_0")
+  @@map("student_address")
+}
+
+enum StudentAddressType {
+  PERMANENT
+  CURRENT
+  DORMITORY
+}
+
+model Province {
+  province_id      Int     @id @default(autoincrement())
+  province_code    String  @unique @db.VarChar(10)
+  province_name_th String  @db.VarChar(100)
+  province_name_en String? @db.VarChar(100)
+
+  studentAddresses StudentAddress[]
+
+  @@map("province")
+}
+
+model StudentAcademic {
+  student_id                  Int     @id
+  faculty_id                  Int
+  department_id               Int
+  advisor_id                  Int?
+  student_program             String? @db.VarChar(50)
+  student_degree              String? @db.VarChar(50)
+  student_degree_name         String? @db.VarChar(100)
+  student_admit_academic_year Int?
+
+  student    Student    @relation(fields: [student_id], references: [student_id])
+  faculty    Faculty    @relation(fields: [faculty_id], references: [faculty_id])
+  department Department @relation(fields: [department_id], references: [department_id])
+  advisor    Advisor?   @relation(fields: [advisor_id], references: [advisor_id])
+
+  @@map("student_academic")
+}
+
+// ============================================
+// 🏫 FACULTY & DEPARTMENT
+// ============================================
+
+model Faculty {
+  faculty_id      Int     @id @default(autoincrement())
+  faculty_code    String  @unique @db.VarChar(10)
+  faculty_name_th String  @db.VarChar(100)
+  faculty_name_en String? @db.VarChar(100)
+
+  departments      Department[]
+  advisors         Advisor[]
+  studentAcademics StudentAcademic[]
+
+  @@map("faculty")
+}
+
+model Department {
+  department_id      Int     @id @default(autoincrement())
+  faculty_id         Int
+  department_code    String  @unique @db.VarChar(10)
+  department_name_th String  @db.VarChar(100)
+  department_name_en String? @db.VarChar(100)
+
+  faculty          Faculty           @relation(fields: [faculty_id], references: [faculty_id])
+  advisors         Advisor[]
+  studentAcademics StudentAcademic[]
+
+  @@map("department")
+}
+
+model Advisor {
+  advisor_id              Int     @id @default(autoincrement())
+  faculty_id              Int
+  department_id           Int
+  advisor_academic_rank   String? @db.VarChar(50)
+  advisor_prefix          String? @db.VarChar(50)
+  advisor_first_name      String  @db.VarChar(100)
+  advisor_last_name       String  @db.VarChar(100)
+  advisor_email           String? @db.VarChar(100)
+  advisor_phone_number    String? @db.VarChar(50)
+  advisor_office_location String? @db.VarChar(100)
+
+  faculty          Faculty           @relation(fields: [faculty_id], references: [faculty_id])
+  department       Department        @relation(fields: [department_id], references: [department_id])
+  studentAcademics StudentAcademic[]
+
+  @@map("advisor")
+}
+
+// ============================================
+// 👨‍⚕️ CONSULTANT
+// ============================================
+
 model Consultant {
-  id        String   @id @default(cuid())
-  name      String
-  email     String?  @unique
-  phone     String?
-  avatar    String?
-  specialty String?
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  consultant_id         Int      @id @default(autoincrement())
+  account_id            Int      @unique
+  organization_id       Int
+  consultant_created_at DateTime @default(now())
 
-  // Relations
-  bookings Booking[]
-  admin    Admin?
+  account         Account                    @relation(fields: [account_id], references: [account_id])
+  organization    Organization               @relation(fields: [organization_id], references: [organization_id])
+  profile         ConsultantProfile?
+  languages       ConsultantLanguage[]
+  specializations ConsultantSpecialization[]
+  bookings        Booking[]
+  feedbacks       Feedback[]
 
-  @@map("consultants")
+  assignmentsMade     BookingAssignment[] @relation("AssignedBy")
+  assignmentsReceived BookingAssignment[] @relation("AssignedTo")
+
+  @@map("consultant")
 }
 
-// ==========================================
-// 🔐 Admin Model
-// ==========================================
-model Admin {
-  id           String   @id @default(cuid())
-  username     String   @unique
-  passwordHash String   @map("password_hash")
-  name         String
-  role         String   @default("consultant") // 'admin' | 'consultant'
-  isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+model ConsultantProfile {
+  consultant_id           Int     @id
+  consultant_prefix       String? @db.VarChar(50)
+  consultant_first_name   String  @db.VarChar(100)
+  consultant_last_name    String  @db.VarChar(100)
+  consultant_nickname     String? @db.VarChar(50)
+  consultant_gender       String? @db.VarChar(20)
+  consultant_nationality  String? @db.VarChar(50)
+  consultant_phone_number String? @db.VarChar(20)
+  consultant_email        String? @db.VarChar(100)
 
-  // Relations
-  consultantId String?     @unique @map("consultant_id")
-  consultant   Consultant? @relation(fields: [consultantId], references: [id])
+  consultant Consultant @relation(fields: [consultant_id], references: [consultant_id])
 
-  @@map("admins")
+  @@map("consultant_profile")
 }
 
-// ==========================================
-// 📅 Booking Model
-// ==========================================
-model Booking {
-  id                 String    @id @default(cuid())
-  lineUserId         String?
-  userName           String?
-  date               DateTime  @db.Date
-  startTime          String    @map("start_time") // "08:00"
-  endTime            String    @map("end_time") // "09:00"
-  status             String    @default("CONFIRMED") // CONFIRMED | ASSIGNED | COMPLETED | CANCELLED
-  problemType        String?   @map("problem_type")
-  problemDescription String?   @db.Text @map("problem_description")
-  consultantNote     String?   @db.Text @map("consultant_note")
-  cancelReason       String?   @map("cancel_reason")
-  completedAt        DateTime? @map("completed_at")
-  createdAt          DateTime  @default(now()) @map("created_at")
-  updatedAt          DateTime  @updatedAt @map("updated_at")
+model ConsultantLanguage {
+  consultant_language_id            Int     @id @default(autoincrement())
+  consultant_id                     Int
+  consultant_language_code          String  @db.VarChar(10)
+  consultant_language_fluency_level String? @db.VarChar(20)
 
-  // Relations
-  userId       String      @map("user_id")
-  user         User        @relation(fields: [userId], references: [id])
-  consultantId String?     @map("consultant_id")
-  consultant   Consultant? @relation(fields: [consultantId], references: [id])
+  consultant Consultant @relation(fields: [consultant_id], references: [consultant_id])
 
-  @@index([date])
-  @@index([status])
-  @@index([userId])
-  @@map("bookings")
+  @@unique([consultant_id, consultant_language_code], map: "consultant_language_index_1")
+  @@map("consultant_language")
 }
 
-// ==========================================
-// ⏰ Working Hours Model (Default Schedule)
-// ==========================================
-model WorkingHours {
-  id           String   @id @default(cuid())
-  dayOfWeek    Int      @map("day_of_week") // 0 = Sunday, 1 = Monday, ...
-  openTime     String   @map("open_time") // "08:00"
-  closeTime    String   @map("close_time") // "20:00"
-  slotDuration Int      @default(60) @map("slot_duration") // minutes
-  maxBookings  Int      @default(1) @map("max_bookings")
-  isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+model ConsultantSpecialization {
+  consultant_specialization_id    Int    @id @default(autoincrement())
+  consultant_id                   Int
+  consultant_specialization_topic String @db.VarChar(100)
 
-  @@unique([dayOfWeek])
-  @@map("working_hours")
+  consultant Consultant @relation(fields: [consultant_id], references: [consultant_id])
+
+  @@unique([consultant_id, consultant_specialization_topic], map: "consultant_specialization_index_2")
+  @@map("consultant_specialization")
 }
 
-// ==========================================
-// 📆 Day Override Model (Special Days)
-// ==========================================
-model DayOverride {
-  id          String   @id @default(cuid())
-  date        DateTime @unique @db.Date
-  isClosed    Boolean  @default(false) @map("is_closed")
-  openTime    String?  @map("open_time")
-  closeTime   String?  @map("close_time")
-  maxBookings Int?     @map("max_bookings")
-  reason      String?
-  createdBy   String?  @map("created_by")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+model Organization {
+  organization_id   Int     @id @default(autoincrement())
+  organization_name String  @unique @db.VarChar(100)
+  organization_type String? @db.VarChar(50)
 
-  @@index([date])
-  @@map("day_overrides")
+  consultants Consultant[]
+
+  @@map("organization")
 }
 
-// ==========================================
-// ⚙️ Slot Override Model (Custom Time Slots)
-// ==========================================
-model SlotOverride {
-  id          String   @id @default(cuid())
-  date        DateTime @db.Date
-  startTime   String   @map("start_time")
-  endTime     String   @map("end_time")
-  isAvailable Boolean  @default(true) @map("is_available")
-  maxBookings Int?     @map("max_bookings")
-  reason      String?
-  createdBy   String?  @map("created_by")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+// ============================================
+// 📅 TIME SLOT & BOOKING
+// ============================================
 
-  @@unique([date, startTime, endTime])
-  @@index([date])
-  @@map("slot_overrides")
-}
-
-// ==========================================
-// 📝 Notification Log Model
-// ==========================================
-model NotificationLog {
-  id        String   @id @default(cuid())
-  type      String   // LINE_MESSAGE | EMAIL
-  recipient String
-  content   String   @db.Text
-  status    String   @default("PENDING") // PENDING | SENT | FAILED
-  sentAt    DateTime? @map("sent_at")
-  error     String?
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@index([type, status])
-  @@map("notification_logs")
-}
-
-// ==========================================
-// 🕒 Time Slot Model (เพิ่มส่วนนี้เข้าไป)
-// ==========================================
 model TimeSlot {
-  id           String   @id @default(cuid())
-  date         DateTime @db.Date
-  startTime    String   @map("start_time") // "08:00"
-  endTime      String   @map("end_time")   // "09:00"
-  maxBookings  Int      @default(1) @map("max_bookings")
-  bookedCount  Int      @default(0) @map("booked_count")
-  isAvailable  Boolean  @default(true) @map("is_available")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  time_slot_id             Int            @id @default(autoincrement())
+  time_slot_start_datetime DateTime
+  time_slot_end_datetime   DateTime
+  time_slot_max_capacity   Int            @default(1)
+  time_slot_status         TimeSlotStatus @default(AVAILABLE)
 
-  // ป้องกันการสร้างเวลาซ้ำในวันเดียวกัน
-  @@unique([date, startTime, endTime])
-  @@index([date])
-  @@map("time_slots")
+  bookingSlots BookingSlot[]
+
+  @@index([time_slot_start_datetime, time_slot_end_datetime], map: "time_slot_index_3")
+  @@map("time_slot")
+}
+
+enum TimeSlotStatus {
+  AVAILABLE
+  BOOKED
+  LOCKED
+  CANCELLED
+}
+
+model Booking {
+  booking_id          Int           @id @default(autoincrement())
+  student_id          Int
+  consultant_id       Int?
+  problem_category_id Int
+  booking_detail_text String?       @db.Text
+  booking_status      BookingStatus @default(PENDING_ASSIGNMENT)
+  booking_created_at  DateTime      @default(now())
+  booking_updated_at  DateTime      @default(now()) @updatedAt
+
+  student         Student         @relation(fields: [student_id], references: [student_id])
+  consultant      Consultant?     @relation(fields: [consultant_id], references: [consultant_id])
+  problemCategory ProblemCategory @relation(fields: [problem_category_id], references: [problem_category_id])
+
+  bookingSlots  BookingSlot[]
+  assignments   BookingAssignment[]
+  outcome       BookingOutcome?
+  cancellation  BookingCancellation?
+  feedback      Feedback?
+  notifications Notification[]
+
+  @@index([booking_status], map: "booking_index_4")
+  @@index([student_id], map: "booking_index_5")
+  @@index([consultant_id], map: "booking_index_6")
+  @@map("booking")
+}
+
+enum BookingStatus {
+  PENDING_ASSIGNMENT
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model ProblemCategory {
+  problem_category_id          Int     @id @default(autoincrement())
+  problem_category_code        String  @unique @db.VarChar(20)
+  problem_category_name_th     String  @db.VarChar(100)
+  problem_category_name_en     String? @db.VarChar(100)
+  problem_category_description String? @db.Text
+
+  bookings Booking[]
+
+  @@map("problem_category")
+}
+
+model BookingSlot {
+  booking_id   Int
+  time_slot_id Int
+
+  booking  Booking  @relation(fields: [booking_id], references: [booking_id])
+  timeSlot TimeSlot @relation(fields: [time_slot_id], references: [time_slot_id])
+
+  @@id([booking_id, time_slot_id])
+  @@map("booking_slot")
+}
+
+model BookingAssignment {
+  booking_assignment_id             Int      @id @default(autoincrement())
+  booking_id                        Int
+  booking_assignment_assigned_by_id Int
+  booking_assignment_assigned_to_id Int
+  booking_assignment_note           String?  @db.Text
+  booking_assignment_assigned_at    DateTime @default(now())
+
+  booking    Booking    @relation(fields: [booking_id], references: [booking_id])
+  assignedBy Consultant @relation("AssignedBy", fields: [booking_assignment_assigned_by_id], references: [consultant_id])
+  assignedTo Consultant @relation("AssignedTo", fields: [booking_assignment_assigned_to_id], references: [consultant_id])
+
+  @@index([booking_id], map: "booking_assignment_index_7")
+  @@map("booking_assignment")
+}
+
+model BookingOutcome {
+  booking_id                     Int      @id
+  booking_outcome_consultant_note String   @db.Text
+  booking_outcome_next_step      String?  @db.Text
+  booking_outcome_risk_level     Int?
+  booking_outcome_recorded_at    DateTime @default(now())
+
+  booking Booking @relation(fields: [booking_id], references: [booking_id])
+
+  @@map("booking_outcome")
+}
+
+model BookingCancellation {
+  booking_id                       Int      @id
+  booking_cancellation_cancelled_by_id Int
+  booking_cancellation_reason      String   @db.Text
+  booking_cancellation_cancelled_at DateTime @default(now())
+
+  booking     Booking @relation(fields: [booking_id], references: [booking_id])
+  cancelledBy Account @relation(fields: [booking_cancellation_cancelled_by_id], references: [account_id])
+
+  @@map("booking_cancellation")
+}
+
+// ============================================
+// 📝 FEEDBACK
+// ============================================
+
+model Feedback {
+  feedback_id           Int      @id @default(autoincrement())
+  booking_id            Int      @unique
+  student_id            Int
+  consultant_id         Int
+  feedback_is_anonymous Boolean  @default(true)
+  feedback_created_at   DateTime @default(now())
+
+  booking    Booking    @relation(fields: [booking_id], references: [booking_id])
+  student    Student    @relation(fields: [student_id], references: [student_id])
+  consultant Consultant @relation(fields: [consultant_id], references: [consultant_id])
+
+  ratings FeedbackRating[]
+  comment FeedbackComment?
+
+  @@map("feedback")
+}
+
+model EvaluationCriterion {
+  evaluation_criterion_id            Int     @id @default(autoincrement())
+  evaluation_criterion_topic_th      String  @db.VarChar(100)
+  evaluation_criterion_topic_en      String? @db.VarChar(100)
+  evaluation_criterion_weight        Decimal @default(1) @db.Decimal(3, 2)
+  evaluation_criterion_display_order Int     @default(0)
+
+  ratings FeedbackRating[]
+
+  @@map("evaluation_criterion")
+}
+
+model FeedbackRating {
+  feedback_rating_id      Int @id @default(autoincrement())
+  feedback_id             Int
+  evaluation_criterion_id Int
+  feedback_rating_score   Int
+
+  feedback  Feedback            @relation(fields: [feedback_id], references: [feedback_id])
+  criterion EvaluationCriterion @relation(fields: [evaluation_criterion_id], references: [evaluation_criterion_id])
+
+  @@unique([feedback_id, evaluation_criterion_id], map: "feedback_rating_index_8")
+  @@map("feedback_rating")
+}
+
+model FeedbackComment {
+  feedback_id                    Int       @id
+  feedback_comment_text          String?   @db.Text
+  feedback_comment_admin_reply   String?   @db.Text
+  feedback_comment_replied_by_id Int?
+  feedback_comment_replied_at    DateTime?
+
+  feedback  Feedback @relation(fields: [feedback_id], references: [feedback_id])
+  repliedBy Account? @relation("FeedbackCommentRepliedBy", fields: [feedback_comment_replied_by_id], references: [account_id])
+
+  @@map("feedback_comment")
+}
+
+// ============================================
+// 🔔 NOTIFICATION
+// ============================================
+
+model NotificationTemplate {
+  notification_template_id     Int     @id @default(autoincrement())
+  notification_template_code   String  @unique @db.VarChar(50)
+  notification_template_title  String? @db.VarChar(200)
+  notification_template_body   String? @db.Text
+  notification_template_format String  @default("TEXT") @db.VarChar(20)
+
+  notifications Notification[]
+
+  @@map("notification_template")
+}
+
+model Notification {
+  notification_id            Int       @id @default(autoincrement())
+  account_id                 Int
+  notification_template_id   Int
+  booking_id                 Int?
+  notification_channel       String    @default("LINE") @db.VarChar(20)
+  notification_data          Json?
+  notification_status        String    @default("PENDING") @db.VarChar(20)
+  notification_sent_at       DateTime?
+  notification_error_message String?   @db.Text
+  notification_created_at    DateTime  @default(now())
+
+  account  Account              @relation(fields: [account_id], references: [account_id])
+  template NotificationTemplate @relation(fields: [notification_template_id], references: [notification_template_id])
+  booking  Booking?             @relation(fields: [booking_id], references: [booking_id])
+
+  @@index([account_id], map: "notification_index_9")
+  @@index([notification_status], map: "notification_index_10")
+  @@map("notification")
 }
