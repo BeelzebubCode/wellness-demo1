@@ -13,19 +13,18 @@ interface Liff {
   closeWindow: () => void;
 }
 
-declare global {
-  interface Window {
-    liff?: Liff;
-  }
+function getLiff(): Liff | undefined {
+  if (typeof window === 'undefined') return undefined;
+  return (window as any).liff as Liff | undefined;
 }
 
 export const liffHelper = {
   async init(liffId: string): Promise<boolean> {
     if (typeof window === 'undefined') return false;
-    
+
     try {
       // Load LIFF SDK if not already loaded
-      if (!window.liff) {
+      if (!getLiff()) {
         await new Promise<void>((resolve, reject) => {
           const script = document.createElement('script');
           script.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js';
@@ -35,7 +34,10 @@ export const liffHelper = {
         });
       }
 
-      await window.liff!.init({ liffId });
+      const liff = getLiff();
+      if (!liff) throw new Error('LIFF SDK not available after loading script');
+
+      await liff.init({ liffId });
       return true;
     } catch (error) {
       console.error('LIFF init error:', error);
@@ -44,32 +46,33 @@ export const liffHelper = {
   },
 
   isLoggedIn(): boolean {
-    return window.liff?.isLoggedIn() ?? false;
+    return getLiff()?.isLoggedIn() ?? false;
   },
 
   isInClient(): boolean {
-    return window.liff?.isInClient() ?? false;
+    return getLiff()?.isInClient() ?? false;
   },
 
   login(redirectUri?: string): void {
-    window.liff?.login({ redirectUri });
+    getLiff()?.login({ redirectUri });
   },
 
   logout(): void {
-    window.liff?.logout();
+    getLiff()?.logout();
   },
 
   async getProfile(): Promise<LiffProfile | null> {
     try {
-      if (!window.liff?.isLoggedIn()) return null;
-      return await window.liff.getProfile();
+      const liff = getLiff();
+      if (!liff?.isLoggedIn()) return null;
+      return await liff.getProfile();
     } catch {
       return null;
     }
   },
 
   closeWindow(): void {
-    window.liff?.closeWindow();
+    getLiff()?.closeWindow();
   },
 };
 

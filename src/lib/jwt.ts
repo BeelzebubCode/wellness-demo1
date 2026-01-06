@@ -1,7 +1,6 @@
 // src/lib/jwt.ts
-
 import { SignJWT, jwtVerify } from 'jose';
-import { NextRequest } from 'next/server';
+import type { NextRequest } from 'next/server';
 import bcrypt from 'bcryptjs';
 
 const JWT_SECRET = new TextEncoder().encode(
@@ -15,6 +14,9 @@ export interface JWTPayload {
   consultantId?: number;
 }
 
+// =======================
+// JWT
+// =======================
 export async function generateToken(payload: JWTPayload): Promise<string> {
   return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: 'HS256' })
@@ -23,31 +25,93 @@ export async function generateToken(payload: JWTPayload): Promise<string> {
     .sign(JWT_SECRET);
 }
 
+function isValidPayload(p: any): p is JWTPayload {
+  return (
+    p &&
+    typeof p.accountId === 'number' &&
+    typeof p.username === 'string' &&
+    typeof p.role === 'string'
+  );
+}
+
 export async function verifyToken(token: string): Promise<JWTPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload as unknown as JWTPayload;
+    const clean = token.trim();
+    if (!clean) return null;
+
+    const { payload } = await jwtVerify(clean, JWT_SECRET);
+
+    // jose payload เป็น object กว้าง ๆ เลย validate เบื้องต้นกันพัง
+    const p = payload as any;
+    if (!isValidPayload(p)) return null;
+
+    // consultantId อาจมาเป็น number หรือ string ได้ (กันเคสแปลก ๆ)
+    const rawConsultantId = (payload as any)?.consultantId;
+
+    let consultantId: number | undefined = undefined;
+
+    if (typeof rawConsultantId === 'number') {
+      consultantId = rawConsultantId;
+    } else if (typeof rawConsultantId === 'string') {
+      const s = rawConsultantId.trim();
+      if (s !== '') {
+        const n = Number(s);
+        consultantId = Number.isFinite(n) ? n : undefined;
+      }
+    }
+
+    // แล้วค่อย return
+    return {
+      accountId: (payload as any).accountId,
+      username: (payload as any).username,
+      role: (payload as any).role,
+      consultantId,
+    };
+
   } catch {
     return null;
   }
 }
 
+/**
+ * Extract token from:
+ * 1) Authorization: Bearer <token>
+ * 2) Cookie: admin_token / access_token / token
+ * 3) Query: ?token=<token> (เผื่อ debug หรือ integration)
+ */
 export function extractToken(request: NextRequest): string | null {
-  // Try Authorization header first
-  const authHeader = request.headers.get('authorization');
-  if (authHeader?.startsWith('Bearer ')) {
-    return authHeader.slice(7);
+  const auth =
+    request.headers.get('authorization') ||
+    request.headers.get('Authorization') ||
+    '';
+
+  if (auth.startsWith('Bearer ')) {
+    const token = auth.slice(7).trim();
+    if (token) return token;
   }
 
-  // Try cookie
-  const cookieToken = request.cookies.get('admin_token')?.value;
-  if (cookieToken) {
-    return cookieToken;
+  const cookieToken =
+    request.cookies.get('admin_token')?.value ||
+    request.cookies.get('access_token')?.value ||
+    request.cookies.get('token')?.value;
+
+  if (cookieToken) return cookieToken;
+
+  // เผื่อเคสส่งมาใน query
+  try {
+    const url = new URL(request.url);
+    const q = url.searchParams.get('token');
+    if (q) return q.trim();
+  } catch {
+    // ignore
   }
 
   return null;
 }
 
+// =======================
+// Password (bcrypt)
+// =======================
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);
 }

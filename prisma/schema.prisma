@@ -1,7 +1,3 @@
-// schema.prisma
-// ✅ Generated from WellnessCenter_DB.sql
-// Version: 3.0 - Matches actual database structure
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,63 +7,45 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ============================================
-// 🔐 AUTHENTICATION
-// ============================================
-
 model Account {
-  account_id            Int         @id @default(autoincrement())
-  account_username      String      @unique @db.VarChar(50)
-  account_password      String      @db.VarChar(255)
-  account_role          AccountRole
-  account_line_id       String?     @unique @db.VarChar(100)
-  account_created_at    DateTime    @default(now())
-  account_last_login_at DateTime?
-
-  // Relations
-  student                Student?
+  account_id             Int                   @id @default(autoincrement())
+  account_username       String                @unique @db.VarChar(50)
+  account_password       String                @db.VarChar(255)
+  account_role           AccountRole
+  account_line_id        String?               @unique @db.VarChar(100)
+  account_created_at     DateTime              @default(now())
+  account_last_login_at  DateTime?
+  bookingCancellations   BookingCancellation[]
   consultant             Consultant?
   feedbackCommentReplies FeedbackComment[]     @relation("FeedbackCommentRepliedBy")
   notifications          Notification[]
-  bookingCancellations   BookingCancellation[]
+  student                Student?
 
   @@map("account")
 }
 
-enum AccountRole {
-  STUDENT
-  CONSULTANT
-  HEAD_CONSULTANT
-}
-
-// ============================================
-// 👨‍🎓 STUDENT
-// ============================================
-
 model Student {
-  student_id        Int     @id @default(autoincrement())
-  account_id        Int     @unique
+  student_id        Int              @id @default(autoincrement())
+  account_id        Int              @unique
   student_status_id Int
-  student_code      String? @unique @db.VarChar(20)
+  student_code      String?          @unique @db.VarChar(20)
+  bookings          Booking[]
+  feedbacks         Feedback[]
+  account           Account          @relation(fields: [account_id], references: [account_id])
+  status            StudentStatus    @relation(fields: [student_status_id], references: [student_status_id])
+  academic          StudentAcademic?
+  addresses         StudentAddress[]
+  profile           StudentProfile?
 
-  // Relations
-  account   Account        @relation(fields: [account_id], references: [account_id])
-  status    StudentStatus  @relation(fields: [student_status_id], references: [student_status_id])
-  profile   StudentProfile?
-  academic  StudentAcademic?
-  addresses StudentAddress[]
-  bookings  Booking[]
-  feedbacks Feedback[]
-
+  @@index([student_status_id], map: "student_student_status_id_fkey")
   @@map("student")
 }
 
 model StudentStatus {
-  student_status_id     Int     @id @default(autoincrement())
-  student_status_code   String  @unique @db.VarChar(20)
-  student_status_detail String? @db.Text
-
-  students Student[]
+  student_status_id     Int       @id @default(autoincrement())
+  student_status_code   String    @unique @db.VarChar(20)
+  student_status_detail String?   @db.Text
+  students              Student[]
 
   @@map("student_status")
 }
@@ -85,17 +63,9 @@ model StudentProfile {
   student_blood_group  String?        @db.VarChar(10)
   student_phone_number String?        @db.VarChar(20)
   student_email        String?        @db.VarChar(100)
-
-  student Student @relation(fields: [student_id], references: [student_id])
+  student              Student        @relation(fields: [student_id], references: [student_id])
 
   @@map("student_profile")
-}
-
-enum StudentGender {
-  MALE
-  FEMALE
-  LGBTQ_PLUS
-  PREFER_NOT_TO_SAY
 }
 
 model StudentAddress {
@@ -107,175 +77,153 @@ model StudentAddress {
   student_address_sub_district String?            @db.VarChar(100)
   student_address_district     String?            @db.VarChar(100)
   student_address_postal_code  String             @db.VarChar(10)
-
-  student  Student  @relation(fields: [student_id], references: [student_id])
-  province Province @relation(fields: [province_id], references: [province_id])
+  province                     Province           @relation(fields: [province_id], references: [province_id])
+  student                      Student            @relation(fields: [student_id], references: [student_id])
 
   @@unique([student_id, student_address_type], map: "student_address_index_0")
+  @@index([province_id], map: "student_address_province_id_fkey")
   @@map("student_address")
 }
 
-enum StudentAddressType {
-  PERMANENT
-  CURRENT
-  DORMITORY
-}
-
 model Province {
-  province_id      Int     @id @default(autoincrement())
-  province_code    String  @unique @db.VarChar(10)
-  province_name_th String  @db.VarChar(100)
-  province_name_en String? @db.VarChar(100)
-
+  province_id      Int              @id @default(autoincrement())
+  province_code    String           @unique @db.VarChar(10)
+  province_name_th String           @db.VarChar(100)
+  province_name_en String?          @db.VarChar(100)
   studentAddresses StudentAddress[]
 
   @@map("province")
 }
 
 model StudentAcademic {
-  student_id                  Int     @id
+  student_id                  Int        @id
   faculty_id                  Int
   department_id               Int
   advisor_id                  Int?
-  student_program             String? @db.VarChar(50)
-  student_degree              String? @db.VarChar(50)
-  student_degree_name         String? @db.VarChar(100)
+  student_program             String?    @db.VarChar(50)
+  student_degree              String?    @db.VarChar(50)
+  student_degree_name         String?    @db.VarChar(100)
   student_admit_academic_year Int?
+  advisor                     Advisor?   @relation(fields: [advisor_id], references: [advisor_id])
+  department                  Department @relation(fields: [department_id], references: [department_id])
+  faculty                     Faculty    @relation(fields: [faculty_id], references: [faculty_id])
+  student                     Student    @relation(fields: [student_id], references: [student_id])
 
-  student    Student    @relation(fields: [student_id], references: [student_id])
-  faculty    Faculty    @relation(fields: [faculty_id], references: [faculty_id])
-  department Department @relation(fields: [department_id], references: [department_id])
-  advisor    Advisor?   @relation(fields: [advisor_id], references: [advisor_id])
-
+  @@index([advisor_id], map: "student_academic_advisor_id_fkey")
+  @@index([department_id], map: "student_academic_department_id_fkey")
+  @@index([faculty_id], map: "student_academic_faculty_id_fkey")
   @@map("student_academic")
 }
 
-// ============================================
-// 🏫 FACULTY & DEPARTMENT
-// ============================================
-
 model Faculty {
-  faculty_id      Int     @id @default(autoincrement())
-  faculty_code    String  @unique @db.VarChar(10)
-  faculty_name_th String  @db.VarChar(100)
-  faculty_name_en String? @db.VarChar(100)
-
-  departments      Department[]
+  faculty_id       Int               @id @default(autoincrement())
+  faculty_code     String            @unique @db.VarChar(10)
+  faculty_name_th  String            @db.VarChar(100)
+  faculty_name_en  String?           @db.VarChar(100)
   advisors         Advisor[]
+  departments      Department[]
   studentAcademics StudentAcademic[]
 
   @@map("faculty")
 }
 
 model Department {
-  department_id      Int     @id @default(autoincrement())
+  department_id      Int               @id @default(autoincrement())
   faculty_id         Int
-  department_code    String  @unique @db.VarChar(10)
-  department_name_th String  @db.VarChar(100)
-  department_name_en String? @db.VarChar(100)
+  department_code    String            @unique @db.VarChar(10)
+  department_name_th String            @db.VarChar(100)
+  department_name_en String?           @db.VarChar(100)
+  advisors           Advisor[]
+  faculty            Faculty           @relation(fields: [faculty_id], references: [faculty_id])
+  studentAcademics   StudentAcademic[]
 
-  faculty          Faculty           @relation(fields: [faculty_id], references: [faculty_id])
-  advisors         Advisor[]
-  studentAcademics StudentAcademic[]
-
+  @@index([faculty_id], map: "department_faculty_id_fkey")
   @@map("department")
 }
 
 model Advisor {
-  advisor_id              Int     @id @default(autoincrement())
+  advisor_id              Int               @id @default(autoincrement())
   faculty_id              Int
   department_id           Int
-  advisor_academic_rank   String? @db.VarChar(50)
-  advisor_prefix          String? @db.VarChar(50)
-  advisor_first_name      String  @db.VarChar(100)
-  advisor_last_name       String  @db.VarChar(100)
-  advisor_email           String? @db.VarChar(100)
-  advisor_phone_number    String? @db.VarChar(50)
-  advisor_office_location String? @db.VarChar(100)
+  advisor_academic_rank   String?           @db.VarChar(50)
+  advisor_prefix          String?           @db.VarChar(50)
+  advisor_first_name      String            @db.VarChar(100)
+  advisor_last_name       String            @db.VarChar(100)
+  advisor_email           String?           @db.VarChar(100)
+  advisor_phone_number    String?           @db.VarChar(50)
+  advisor_office_location String?           @db.VarChar(100)
+  department              Department        @relation(fields: [department_id], references: [department_id])
+  faculty                 Faculty           @relation(fields: [faculty_id], references: [faculty_id])
+  studentAcademics        StudentAcademic[]
 
-  faculty          Faculty           @relation(fields: [faculty_id], references: [faculty_id])
-  department       Department        @relation(fields: [department_id], references: [department_id])
-  studentAcademics StudentAcademic[]
-
+  @@index([department_id], map: "advisor_department_id_fkey")
+  @@index([faculty_id], map: "advisor_faculty_id_fkey")
   @@map("advisor")
 }
 
-// ============================================
-// 👨‍⚕️ CONSULTANT
-// ============================================
-
 model Consultant {
-  consultant_id         Int      @id @default(autoincrement())
-  account_id            Int      @unique
+  consultant_id         Int                        @id @default(autoincrement())
+  account_id            Int                        @unique
   organization_id       Int
-  consultant_created_at DateTime @default(now())
+  consultant_created_at DateTime                   @default(now())
+  bookings              Booking[]
+  assignmentsMade       BookingAssignment[]        @relation("AssignedBy")
+  assignmentsReceived   BookingAssignment[]        @relation("AssignedTo")
+  account               Account                    @relation(fields: [account_id], references: [account_id])
+  organization          Organization               @relation(fields: [organization_id], references: [organization_id])
+  languages             ConsultantLanguage[]
+  profile               ConsultantProfile?
+  specializations       ConsultantSpecialization[]
+  feedbacks             Feedback[]
 
-  account         Account                    @relation(fields: [account_id], references: [account_id])
-  organization    Organization               @relation(fields: [organization_id], references: [organization_id])
-  profile         ConsultantProfile?
-  languages       ConsultantLanguage[]
-  specializations ConsultantSpecialization[]
-  bookings        Booking[]
-  feedbacks       Feedback[]
-
-  assignmentsMade     BookingAssignment[] @relation("AssignedBy")
-  assignmentsReceived BookingAssignment[] @relation("AssignedTo")
-
+  @@index([organization_id], map: "consultant_organization_id_fkey")
   @@map("consultant")
 }
 
 model ConsultantProfile {
-  consultant_id           Int     @id
-  consultant_prefix       String? @db.VarChar(50)
-  consultant_first_name   String  @db.VarChar(100)
-  consultant_last_name    String  @db.VarChar(100)
-  consultant_nickname     String? @db.VarChar(50)
-  consultant_gender       String? @db.VarChar(20)
-  consultant_nationality  String? @db.VarChar(50)
-  consultant_phone_number String? @db.VarChar(20)
-  consultant_email        String? @db.VarChar(100)
-
-  consultant Consultant @relation(fields: [consultant_id], references: [consultant_id])
+  consultant_id           Int        @id
+  consultant_prefix       String?    @db.VarChar(50)
+  consultant_first_name   String     @db.VarChar(100)
+  consultant_last_name    String     @db.VarChar(100)
+  consultant_nickname     String?    @db.VarChar(50)
+  consultant_gender       String?    @db.VarChar(20)
+  consultant_nationality  String?    @db.VarChar(50)
+  consultant_phone_number String?    @db.VarChar(20)
+  consultant_email        String?    @db.VarChar(100)
+  consultant              Consultant @relation(fields: [consultant_id], references: [consultant_id])
 
   @@map("consultant_profile")
 }
 
 model ConsultantLanguage {
-  consultant_language_id            Int     @id @default(autoincrement())
+  consultant_language_id            Int        @id @default(autoincrement())
   consultant_id                     Int
-  consultant_language_code          String  @db.VarChar(10)
-  consultant_language_fluency_level String? @db.VarChar(20)
-
-  consultant Consultant @relation(fields: [consultant_id], references: [consultant_id])
+  consultant_language_code          String     @db.VarChar(10)
+  consultant_language_fluency_level String?    @db.VarChar(20)
+  consultant                        Consultant @relation(fields: [consultant_id], references: [consultant_id])
 
   @@unique([consultant_id, consultant_language_code], map: "consultant_language_index_1")
   @@map("consultant_language")
 }
 
 model ConsultantSpecialization {
-  consultant_specialization_id    Int    @id @default(autoincrement())
+  consultant_specialization_id    Int        @id @default(autoincrement())
   consultant_id                   Int
-  consultant_specialization_topic String @db.VarChar(100)
-
-  consultant Consultant @relation(fields: [consultant_id], references: [consultant_id])
+  consultant_specialization_topic String     @db.VarChar(100)
+  consultant                      Consultant @relation(fields: [consultant_id], references: [consultant_id])
 
   @@unique([consultant_id, consultant_specialization_topic], map: "consultant_specialization_index_2")
   @@map("consultant_specialization")
 }
 
 model Organization {
-  organization_id   Int     @id @default(autoincrement())
-  organization_name String  @unique @db.VarChar(100)
-  organization_type String? @db.VarChar(50)
-
-  consultants Consultant[]
+  organization_id   Int          @id @default(autoincrement())
+  organization_name String       @unique @db.VarChar(100)
+  organization_type String?      @db.VarChar(50)
+  consultants       Consultant[]
 
   @@map("organization")
 }
-
-// ============================================
-// 📅 TIME SLOT & BOOKING
-// ============================================
 
 model TimeSlot {
   time_slot_id             Int            @id @default(autoincrement())
@@ -283,63 +231,45 @@ model TimeSlot {
   time_slot_end_datetime   DateTime
   time_slot_max_capacity   Int            @default(1)
   time_slot_status         TimeSlotStatus @default(AVAILABLE)
-
-  bookingSlots BookingSlot[]
+  bookingSlots             BookingSlot[]
 
   @@index([time_slot_start_datetime, time_slot_end_datetime], map: "time_slot_index_3")
   @@map("time_slot")
 }
 
-enum TimeSlotStatus {
-  AVAILABLE
-  BOOKED
-  LOCKED
-  CANCELLED
-}
-
 model Booking {
-  booking_id          Int           @id @default(autoincrement())
+  booking_id          Int                  @id @default(autoincrement())
   student_id          Int
   consultant_id       Int?
   problem_category_id Int
-  booking_detail_text String?       @db.Text
-  booking_status      BookingStatus @default(PENDING_ASSIGNMENT)
-  booking_created_at  DateTime      @default(now())
-  booking_updated_at  DateTime      @default(now()) @updatedAt
-
-  student         Student         @relation(fields: [student_id], references: [student_id])
-  consultant      Consultant?     @relation(fields: [consultant_id], references: [consultant_id])
-  problemCategory ProblemCategory @relation(fields: [problem_category_id], references: [problem_category_id])
-
-  bookingSlots  BookingSlot[]
-  assignments   BookingAssignment[]
-  outcome       BookingOutcome?
-  cancellation  BookingCancellation?
-  feedback      Feedback?
-  notifications Notification[]
+  booking_detail_text String?              @db.Text
+  booking_status      BookingStatus        @default(PENDING_ASSIGNMENT)
+  booking_created_at  DateTime             @default(now())
+  booking_updated_at  DateTime             @default(now()) @updatedAt
+  consultant          Consultant?          @relation(fields: [consultant_id], references: [consultant_id])
+  problemCategory     ProblemCategory      @relation(fields: [problem_category_id], references: [problem_category_id])
+  student             Student              @relation(fields: [student_id], references: [student_id])
+  assignments         BookingAssignment[]
+  cancellation        BookingCancellation?
+  outcome             BookingOutcome?
+  bookingSlots        BookingSlot[]
+  feedback            Feedback?
+  notifications       Notification[]
 
   @@index([booking_status], map: "booking_index_4")
   @@index([student_id], map: "booking_index_5")
   @@index([consultant_id], map: "booking_index_6")
+  @@index([problem_category_id], map: "booking_problem_category_id_fkey")
   @@map("booking")
 }
 
-enum BookingStatus {
-  PENDING_ASSIGNMENT
-  ASSIGNED
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-}
-
 model ProblemCategory {
-  problem_category_id          Int     @id @default(autoincrement())
-  problem_category_code        String  @unique @db.VarChar(20)
-  problem_category_name_th     String  @db.VarChar(100)
-  problem_category_name_en     String? @db.VarChar(100)
-  problem_category_description String? @db.Text
-
-  bookings Booking[]
+  problem_category_id          Int       @id @default(autoincrement())
+  problem_category_code        String    @unique @db.VarChar(20)
+  problem_category_name_th     String    @db.VarChar(100)
+  problem_category_name_en     String?   @db.VarChar(100)
+  problem_category_description String?   @db.Text
+  bookings                     Booking[]
 
   @@map("problem_category")
 }
@@ -347,98 +277,93 @@ model ProblemCategory {
 model BookingSlot {
   booking_id   Int
   time_slot_id Int
-
-  booking  Booking  @relation(fields: [booking_id], references: [booking_id])
-  timeSlot TimeSlot @relation(fields: [time_slot_id], references: [time_slot_id])
+  booking      Booking  @relation(fields: [booking_id], references: [booking_id])
+  timeSlot     TimeSlot @relation(fields: [time_slot_id], references: [time_slot_id])
 
   @@id([booking_id, time_slot_id])
+  @@index([time_slot_id], map: "booking_slot_time_slot_id_fkey")
   @@map("booking_slot")
 }
 
 model BookingAssignment {
-  booking_assignment_id             Int      @id @default(autoincrement())
+  booking_assignment_id             Int        @id @default(autoincrement())
   booking_id                        Int
   booking_assignment_assigned_by_id Int
   booking_assignment_assigned_to_id Int
-  booking_assignment_note           String?  @db.Text
-  booking_assignment_assigned_at    DateTime @default(now())
-
-  booking    Booking    @relation(fields: [booking_id], references: [booking_id])
-  assignedBy Consultant @relation("AssignedBy", fields: [booking_assignment_assigned_by_id], references: [consultant_id])
-  assignedTo Consultant @relation("AssignedTo", fields: [booking_assignment_assigned_to_id], references: [consultant_id])
+  booking_assignment_note           String?    @db.Text
+  booking_assignment_assigned_at    DateTime   @default(now())
+  assignedBy                        Consultant @relation("AssignedBy", fields: [booking_assignment_assigned_by_id], references: [consultant_id])
+  assignedTo                        Consultant @relation("AssignedTo", fields: [booking_assignment_assigned_to_id], references: [consultant_id])
+  booking                           Booking    @relation(fields: [booking_id], references: [booking_id])
 
   @@index([booking_id], map: "booking_assignment_index_7")
+  @@index([booking_assignment_assigned_by_id], map: "booking_assignment_booking_assignment_assigned_by_id_fkey")
+  @@index([booking_assignment_assigned_to_id], map: "booking_assignment_booking_assignment_assigned_to_id_fkey")
   @@map("booking_assignment")
 }
 
 model BookingOutcome {
-  booking_id                     Int      @id
+  booking_id                      Int      @id
   booking_outcome_consultant_note String   @db.Text
-  booking_outcome_next_step      String?  @db.Text
-  booking_outcome_risk_level     Int?
-  booking_outcome_recorded_at    DateTime @default(now())
-
-  booking Booking @relation(fields: [booking_id], references: [booking_id])
+  booking_outcome_next_step       String?  @db.Text
+  booking_outcome_risk_level      Int?
+  booking_outcome_recorded_at     DateTime @default(now())
+  booking                         Booking  @relation(fields: [booking_id], references: [booking_id])
 
   @@map("booking_outcome")
 }
 
 model BookingCancellation {
-  booking_id                       Int      @id
+  booking_id                           Int      @id
   booking_cancellation_cancelled_by_id Int
-  booking_cancellation_reason      String   @db.Text
-  booking_cancellation_cancelled_at DateTime @default(now())
+  booking_cancellation_reason          String   @db.Text
+  booking_cancellation_cancelled_at    DateTime @default(now())
+  cancelledBy                          Account  @relation(fields: [booking_cancellation_cancelled_by_id], references: [account_id])
+  booking                              Booking  @relation(fields: [booking_id], references: [booking_id])
 
-  booking     Booking @relation(fields: [booking_id], references: [booking_id])
-  cancelledBy Account @relation(fields: [booking_cancellation_cancelled_by_id], references: [account_id])
-
+  @@index([booking_cancellation_cancelled_by_id], map: "booking_cancellation_booking_cancellation_cancelled_by_id_fkey")
   @@map("booking_cancellation")
 }
 
-// ============================================
-// 📝 FEEDBACK
-// ============================================
-
 model Feedback {
-  feedback_id           Int      @id @default(autoincrement())
-  booking_id            Int      @unique
+  feedback_id           Int              @id @default(autoincrement())
+  booking_id            Int              @unique
   student_id            Int
   consultant_id         Int
-  feedback_is_anonymous Boolean  @default(true)
-  feedback_created_at   DateTime @default(now())
+  feedback_is_anonymous Boolean          @default(true)
+  feedback_created_at   DateTime         @default(now())
+  booking               Booking          @relation(fields: [booking_id], references: [booking_id])
+  consultant            Consultant       @relation(fields: [consultant_id], references: [consultant_id])
+  student               Student          @relation(fields: [student_id], references: [student_id])
+  comment               FeedbackComment?
+  ratings               FeedbackRating[]
 
-  booking    Booking    @relation(fields: [booking_id], references: [booking_id])
-  student    Student    @relation(fields: [student_id], references: [student_id])
-  consultant Consultant @relation(fields: [consultant_id], references: [consultant_id])
-
-  ratings FeedbackRating[]
-  comment FeedbackComment?
-
+  @@index([consultant_id], map: "feedback_consultant_id_fkey")
+  @@index([student_id], map: "feedback_student_id_fkey")
   @@map("feedback")
 }
 
 model EvaluationCriterion {
-  evaluation_criterion_id            Int     @id @default(autoincrement())
-  evaluation_criterion_topic_th      String  @db.VarChar(100)
-  evaluation_criterion_topic_en      String? @db.VarChar(100)
-  evaluation_criterion_weight        Decimal @default(1) @db.Decimal(3, 2)
-  evaluation_criterion_display_order Int     @default(0)
-
-  ratings FeedbackRating[]
+  evaluation_criterion_id            Int              @id @default(autoincrement())
+  evaluation_criterion_topic_th      String           @db.VarChar(100)
+  evaluation_criterion_topic_en      String?          @db.VarChar(100)
+  evaluation_criterion_weight        Decimal          @default(1.00) @db.Decimal(3, 2)
+  evaluation_criterion_display_order Int              @default(0)
+  ratings                            FeedbackRating[]
 
   @@map("evaluation_criterion")
 }
 
 model FeedbackRating {
-  feedback_rating_id      Int @id @default(autoincrement())
+  feedback_rating_id      Int                 @id @default(autoincrement())
   feedback_id             Int
   evaluation_criterion_id Int
   feedback_rating_score   Int
-
-  feedback  Feedback            @relation(fields: [feedback_id], references: [feedback_id])
-  criterion EvaluationCriterion @relation(fields: [evaluation_criterion_id], references: [evaluation_criterion_id])
+  criterion               EvaluationCriterion @relation(fields: [evaluation_criterion_id], references: [evaluation_criterion_id])
+  feedback                Feedback            @relation(fields: [feedback_id], references: [feedback_id])
 
   @@unique([feedback_id, evaluation_criterion_id], map: "feedback_rating_index_8")
+  @@index([evaluation_criterion_id], map: "feedback_rating_evaluation_criterion_id_fkey")
   @@map("feedback_rating")
 }
 
@@ -448,46 +373,76 @@ model FeedbackComment {
   feedback_comment_admin_reply   String?   @db.Text
   feedback_comment_replied_by_id Int?
   feedback_comment_replied_at    DateTime?
+  repliedBy                      Account?  @relation("FeedbackCommentRepliedBy", fields: [feedback_comment_replied_by_id], references: [account_id])
+  feedback                       Feedback  @relation(fields: [feedback_id], references: [feedback_id])
 
-  feedback  Feedback @relation(fields: [feedback_id], references: [feedback_id])
-  repliedBy Account? @relation("FeedbackCommentRepliedBy", fields: [feedback_comment_replied_by_id], references: [account_id])
-
+  @@index([feedback_comment_replied_by_id], map: "feedback_comment_feedback_comment_replied_by_id_fkey")
   @@map("feedback_comment")
 }
 
-// ============================================
-// 🔔 NOTIFICATION
-// ============================================
-
 model NotificationTemplate {
-  notification_template_id     Int     @id @default(autoincrement())
-  notification_template_code   String  @unique @db.VarChar(50)
-  notification_template_title  String? @db.VarChar(200)
-  notification_template_body   String? @db.Text
-  notification_template_format String  @default("TEXT") @db.VarChar(20)
-
-  notifications Notification[]
+  notification_template_id     Int            @id @default(autoincrement())
+  notification_template_code   String         @unique @db.VarChar(50)
+  notification_template_title  String?        @db.VarChar(200)
+  notification_template_body   String?        @db.Text
+  notification_template_format String         @default("TEXT") @db.VarChar(20)
+  notifications                Notification[]
 
   @@map("notification_template")
 }
 
 model Notification {
-  notification_id            Int       @id @default(autoincrement())
+  notification_id            Int                  @id @default(autoincrement())
   account_id                 Int
   notification_template_id   Int
   booking_id                 Int?
-  notification_channel       String    @default("LINE") @db.VarChar(20)
+  notification_channel       String               @default("LINE") @db.VarChar(20)
   notification_data          Json?
-  notification_status        String    @default("PENDING") @db.VarChar(20)
+  notification_status        String               @default("PENDING") @db.VarChar(20)
   notification_sent_at       DateTime?
-  notification_error_message String?   @db.Text
-  notification_created_at    DateTime  @default(now())
-
-  account  Account              @relation(fields: [account_id], references: [account_id])
-  template NotificationTemplate @relation(fields: [notification_template_id], references: [notification_template_id])
-  booking  Booking?             @relation(fields: [booking_id], references: [booking_id])
+  notification_error_message String?              @db.Text
+  notification_created_at    DateTime             @default(now())
+  account                    Account              @relation(fields: [account_id], references: [account_id])
+  booking                    Booking?             @relation(fields: [booking_id], references: [booking_id])
+  template                   NotificationTemplate @relation(fields: [notification_template_id], references: [notification_template_id])
 
   @@index([account_id], map: "notification_index_9")
   @@index([notification_status], map: "notification_index_10")
+  @@index([booking_id], map: "notification_booking_id_fkey")
+  @@index([notification_template_id], map: "notification_notification_template_id_fkey")
   @@map("notification")
+}
+
+enum AccountRole {
+  STUDENT
+  CONSULTANT
+  HEAD_CONSULTANT
+}
+
+enum StudentGender {
+  MALE
+  FEMALE
+  LGBTQ_PLUS
+  PREFER_NOT_TO_SAY
+}
+
+enum StudentAddressType {
+  PERMANENT
+  CURRENT
+  DORMITORY
+}
+
+enum TimeSlotStatus {
+  AVAILABLE
+  BOOKED
+  LOCKED
+  CANCELLED
+}
+
+enum BookingStatus {
+  PENDING_ASSIGNMENT
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
 }
