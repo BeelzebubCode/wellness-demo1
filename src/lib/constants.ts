@@ -5,6 +5,7 @@
 /* ======================================================
    Booking Status
 ====================================================== */
+
 export const BOOKING_STATUS = {
   PENDING_ASSIGNMENT: {
     key: 'PENDING_ASSIGNMENT',
@@ -110,28 +111,34 @@ export const API_ROUTES = {
    Navigation
 ====================================================== */
 
+export type PublicNavItem = {
+  href: string;
+  label: string;
+  icon?: string; // ✅ ใช้ emoji แบบง่ายสุดก่อน (กัน TS error)
+};
+
 /* ----- Public ----- */
-export const PUBLIC_NAV = [
-  { href: '/booking', label: 'จองคิว' },
-  { href: '/booking/my-appointments', label: 'ตารางนัดของฉัน' },
-] as const;
+export const PUBLIC_NAV: readonly PublicNavItem[] = [
+  { href: "/booking", label: "จองคิว", icon: "📅" },
+  { href: "/booking/my-appointments", label: "ตารางนัดของฉัน", icon: "🗓️" },
+];
 
 /* ----- Admin (NO Dashboard / NO Stats) ----- */
 export const ADMIN_NAV = [
   {
-    href: '/admin/data-center',
-    label: 'ศูนย์ข้อมูล',
+    href: "/admin/data-center",
+    label: "ศูนย์ข้อมูล",
   },
   {
-    href: '/admin/bookings',
-    label: 'รายการจอง',
+    href: "/admin/bookings",
+    label: "รายการจอง",
   },
   {
-    href: '/admin/schedule',
-    label: 'จัดการตาราง',
+    href: "/admin/schedule",
+    label: "จัดการตาราง",
   },
   {
-    href: '/admin/my-jobs',
-    label: 'งานของฉัน',
+    href: "/admin/my-jobs",
+    label: "งานของฉัน",
   },
 ] as const;
