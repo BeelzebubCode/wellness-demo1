@@ -1,17 +1,37 @@
 // ==========================================
-// 📌 Booking Component: BookingForm
+// 📌 Booking Component: BookingForm (Uses nameTh from API)
 // ==========================================
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui';
-import { PROBLEM_TYPES } from '@/lib/constants';
-import { AlertTriangle, Brain, Heart, Home, MoonStar, SmilePlus, Users, BriefcaseBusiness, BookOpen, CigaretteOff, Sparkles } from 'lucide-react';
+import {
+  AlertTriangle,
+  Brain,
+  Heart,
+  Home,
+  MoonStar,
+  SmilePlus,
+  Users,
+  BriefcaseBusiness,
+  BookOpen,
+  CigaretteOff,
+  Sparkles,
+} from 'lucide-react';
+
+type ProblemCategory = {
+  id: number;
+  code: string;
+  nameTh: string;
+  nameEn?: string | null;
+  description?: string | null;
+};
 
 export interface BookingFormData {
-  problemType: string;
+  // ✅ ส่ง id ตรง DB
+  problemCategoryId: number;
   problemTypeOther?: string;
   problemDescription: string;
 }
@@ -22,22 +42,56 @@ export interface BookingFormProps {
   error?: string | null;
 }
 
-export function BookingForm({
-  onSubmit,
-  isLoading = false,
-  error,
-}: BookingFormProps) {
+export function BookingForm({ onSubmit, isLoading = false, error }: BookingFormProps) {
   const [formData, setFormData] = useState<BookingFormData>({
-    problemType: '',
+    problemCategoryId: 0,
     problemTypeOther: '',
     problemDescription: '',
   });
 
   const [localError, setLocalError] = useState<string | null>(null);
 
-  // map id ของ PROBLEM_TYPES -> icon จาก lucide-react
-  const problemTypeIcons: Record<string, JSX.Element> = {
-    // ต้อง match id ใน PROBLEM_TYPES
+  // ---- Load categories from API (nameTh) ----
+  const [categories, setCategories] = useState<ProblemCategory[]>([]);
+  const [isCatLoading, setIsCatLoading] = useState(true);
+  const [catError, setCatError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      try {
+        setIsCatLoading(true);
+        setCatError(null);
+
+        const res = await fetch('/api/v1/problem-categories', { cache: 'no-store' });
+        const data = await res.json();
+
+        if (!res.ok || !data?.success) {
+          throw new Error(data?.error || 'Failed to load problem categories');
+        }
+
+        if (!mounted) return;
+
+        const list: ProblemCategory[] = Array.isArray(data.categories) ? data.categories : [];
+        setCategories(list);
+      } catch (e: any) {
+        if (!mounted) return;
+        setCatError(e?.message || 'Failed to load problem categories');
+        setCategories([]);
+      } finally {
+        if (!mounted) return;
+        setIsCatLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // ---- Icon mapping by DB code ----
+  const iconByCode: Record<string, JSX.Element> = {
     stress: <Brain className="h-5 w-5 text-primary-500" />,
     depression: <MoonStar className="h-5 w-5 text-indigo-500" />,
     relationship: <Heart className="h-5 w-5 text-rose-500" />,
@@ -51,26 +105,30 @@ export function BookingForm({
     other: <Home className="h-5 w-5 text-gray-500" />,
   };
 
+  const selectedCategory = useMemo(
+    () => categories.find((c) => c.id === formData.problemCategoryId) || null,
+    [categories, formData.problemCategoryId]
+  );
+
+  const isOtherSelected = selectedCategory?.code === 'other';
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // validation ง่าย ๆ
-    if (!formData.problemType) {
+    if (!formData.problemCategoryId || formData.problemCategoryId <= 0) {
       setLocalError('กรุณาเลือกประเภทปัญหาที่ต้องการปรึกษา');
       return;
     }
 
-    if (
-      formData.problemType === 'other' &&
-      !formData.problemTypeOther?.trim()
-    ) {
+    if (isOtherSelected && !formData.problemTypeOther?.trim()) {
       setLocalError('กรุณาระบุประเภทปัญหาที่ต้องการปรึกษา');
       return;
     }
 
     setLocalError(null);
+
     onSubmit({
-      ...formData,
+      problemCategoryId: formData.problemCategoryId,
       problemTypeOther: formData.problemTypeOther?.trim(),
       problemDescription: formData.problemDescription.trim(),
     });
@@ -78,53 +136,66 @@ export function BookingForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Problem Type Selection */}
+      {/* Problem Category Selection */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-3">
-          ประเภทปัญหาที่ต้องการปรึกษา{' '}
-          <span className="text-red-500">*</span>
+          ประเภทปัญหาที่ต้องการปรึกษา <span className="text-red-500">*</span>
         </label>
 
-        <div className="grid grid-cols-2 gap-2">
-          {PROBLEM_TYPES.map((problem) => {
-            const isSelected = formData.problemType === problem.id;
-            const icon =
-              problemTypeIcons[problem.id] ??
-              problemTypeIcons.other ??
-              null;
+        {isCatLoading ? (
+          <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-500">
+            กำลังโหลดประเภทปัญหา...
+          </div>
+        ) : catError ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-3">
+            <p className="flex items-start gap-2 text-xs text-red-700">
+              <AlertTriangle className="mt-0.5 h-4 w-4" />
+              <span>{catError}</span>
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            {categories.map((c) => {
+              const isSelected = formData.problemCategoryId === c.id;
+              const icon = iconByCode[c.code] ?? iconByCode.other;
 
-            return (
-              <button
-                key={problem.id}
-                type="button"
-                onClick={() =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    problemType: problem.id,
-                  }))
-                }
-                className={cn(
-                  'flex items-center gap-2 rounded-xl border-2 p-3 text-left text-sm transition-all',
-                  'bg-white',
-                  isSelected
-                    ? 'border-primary-500 bg-primary-50 text-primary-800 shadow-sm'
-                    : 'border-gray-200 text-gray-700 hover:border-primary-200 hover:bg-primary-50/40',
-                )}
-              >
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50">
-                  {icon}
-                </div>
-                <span className="font-medium leading-snug">
-                  {problem.label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      problemCategoryId: c.id,
+                      // ถ้าเปลี่ยนหมวดแล้วไม่ใช่ other -> ล้างข้อความอื่นๆ
+                      problemTypeOther: c.code === 'other' ? prev.problemTypeOther : '',
+                    }))
+                  }
+                  className={cn(
+                    'flex items-center gap-2 rounded-xl border-2 p-3 text-left text-sm transition-all',
+                    'bg-white',
+                    isSelected
+                      ? 'border-primary-500 bg-primary-50 text-primary-800 shadow-sm'
+                      : 'border-gray-200 text-gray-700 hover:border-primary-200 hover:bg-primary-50/40'
+                  )}
+                >
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50">
+                    {icon}
+                  </div>
+
+                  {/* ✅ สำคัญ: แสดงชื่อไทยจาก DB */}
+                  <span className="font-medium leading-snug">
+                    {c.nameTh}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Other Problem Type Input */}
-      {formData.problemType === 'other' && (
+      {isOtherSelected && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             กรุณาระบุประเภทปัญหา
@@ -166,7 +237,7 @@ export function BookingForm({
         </p>
       </div>
 
-      {/* Error Message (local validation + backend error) */}
+      {/* Error Message */}
       {(localError || error) && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-3">
           <p className="flex items-start gap-2 text-xs text-red-700">
