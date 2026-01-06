@@ -150,41 +150,63 @@ export async function GET(request: NextRequest) {
 // POST /api/v1/bookings
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const {
-      lineUserId,
-      studentCode,
-      timeSlotId,
-      problemCategoryId,
-      problemCategoryCode,
-      detailText,
-    } = body;
+    const body = await request.json().catch(() => null);
 
-    // Validate required fields
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ error: 'Body ไม่ถูกต้อง (ต้องเป็น JSON)' }, { status: 400 });
+    }
+
+    const lineUserId = (body as any).lineUserId?.toString()?.trim() || null;
+    const studentCode = (body as any).studentCode?.toString()?.trim() || null;
+
+    // coerce IDs (รับทั้ง number และ string)
+    const timeSlotIdRaw = (body as any).timeSlotId;
+    const problemCategoryIdRaw = (body as any).problemCategoryId;
+
+    const timeSlotId =
+      timeSlotIdRaw === undefined || timeSlotIdRaw === null || timeSlotIdRaw === ''
+        ? null
+        : Number(timeSlotIdRaw);
+
+    const problemCategoryId =
+      problemCategoryIdRaw === undefined || problemCategoryIdRaw === null || problemCategoryIdRaw === ''
+        ? null
+        : Number(problemCategoryIdRaw);
+
+    const problemCategoryCode = (body as any).problemCategoryCode?.toString()?.trim() || null;
+    const detailText = (body as any).detailText?.toString() || null;
+
+    // ✅ Validate required fields
     if (!lineUserId && !studentCode) {
       return NextResponse.json(
-        { error: 'ต้องระบุ lineUserId หรือ studentCode' },
+        { error: 'ต้องระบุ lineUserId หรือ studentCode', received: { lineUserId, studentCode } },
         { status: 400 }
       );
     }
 
-    if (!timeSlotId) {
-      return NextResponse.json(
-        { error: 'ต้องระบุ timeSlotId' },
-        { status: 400 }
-      );
+    if (timeSlotId === null) {
+      return NextResponse.json({ error: 'ต้องระบุ timeSlotId' }, { status: 400 });
+    }
+    if (Number.isNaN(timeSlotId) || timeSlotId <= 0) {
+      return NextResponse.json({ error: 'timeSlotId ต้องเป็นตัวเลขมากกว่า 0', received: timeSlotIdRaw }, { status: 400 });
     }
 
     if (!problemCategoryId && !problemCategoryCode) {
       return NextResponse.json(
-        { error: 'ต้องระบุประเภทปัญหา' },
+        { error: 'ต้องระบุประเภทปัญหา (problemCategoryId หรือ problemCategoryCode)' },
+        { status: 400 }
+      );
+    }
+    if (problemCategoryId !== null && (Number.isNaN(problemCategoryId) || problemCategoryId <= 0)) {
+      return NextResponse.json(
+        { error: 'problemCategoryId ต้องเป็นตัวเลขมากกว่า 0', received: problemCategoryIdRaw },
         { status: 400 }
       );
     }
 
-    // 1. หา Student จาก LINE ID หรือ Student Code
-    let student;
-    
+    // 1) หา Student จาก LINE ID หรือ Student Code
+    let student: any;
+
     if (lineUserId) {
       const account = await prisma.account.findUnique({
         where: { account_line_id: lineUserId },
@@ -198,76 +220,51 @@ export async function POST(request: NextRequest) {
     }
 
     if (!student) {
-      return NextResponse.json(
-        { error: 'ไม่พบข้อมูลนิสิต' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'ไม่พบข้อมูลนิสิต' }, { status: 404 });
     }
 
-    // 2. หา Problem Category
-    let problemCategory;
-    if (problemCategoryId) {
-      problemCategory = await prisma.problemCategory.findUnique({
-        where: { problem_category_id: problemCategoryId },
-      });
-    } else if (problemCategoryCode) {
-      problemCategory = await prisma.problemCategory.findUnique({
-        where: { problem_category_code: problemCategoryCode },
-      });
-    }
+    // 2) หา Problem Category
+    const problemCategory = problemCategoryId
+      ? await prisma.problemCategory.findUnique({
+          where: { problem_category_id: problemCategoryId },
+        })
+      : await prisma.problemCategory.findUnique({
+          where: { problem_category_code: problemCategoryCode! },
+        });
 
     if (!problemCategory) {
-      return NextResponse.json(
-        { error: 'ไม่พบประเภทปัญหาที่ระบุ' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'ไม่พบประเภทปัญหาที่ระบุ' }, { status: 404 });
     }
 
-    // 3. ตรวจสอบ Time Slot
+    // 3) ตรวจสอบ Time Slot
     const timeSlot = await prisma.timeSlot.findUnique({
       where: { time_slot_id: timeSlotId },
       include: {
-        bookingSlots: {
-          include: {
-            booking: true,
-          },
-        },
+        bookingSlots: { include: { booking: true } },
       },
     });
 
     if (!timeSlot) {
-      return NextResponse.json(
-        { error: 'ไม่พบช่วงเวลาที่ระบุ' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'ไม่พบช่วงเวลาที่ระบุ' }, { status: 404 });
     }
 
     if (timeSlot.time_slot_status !== 'AVAILABLE') {
-      return NextResponse.json(
-        { error: 'ช่วงเวลานี้ไม่ว่าง' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'ช่วงเวลานี้ไม่ว่าง' }, { status: 400 });
     }
 
-    // ตรวจสอบจำนวน booking ที่มีอยู่
     const activeBookings = timeSlot.bookingSlots.filter(
       (bs) => bs.booking.booking_status !== 'CANCELLED'
     );
 
     if (activeBookings.length >= timeSlot.time_slot_max_capacity) {
-      return NextResponse.json(
-        { error: 'ช่วงเวลานี้เต็มแล้ว' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'ช่วงเวลานี้เต็มแล้ว' }, { status: 400 });
     }
 
-    // 4. ตรวจสอบว่านิสิตมี booking ที่ active อยู่หรือไม่
+    // 4) ตรวจสอบว่านิสิตมี booking ที่ active อยู่หรือไม่
     const existingBooking = await prisma.booking.findFirst({
       where: {
         student_id: student.student_id,
-        booking_status: {
-          in: ['PENDING_ASSIGNMENT', 'ASSIGNED', 'IN_PROGRESS'],
-        },
+        booking_status: { in: ['PENDING_ASSIGNMENT', 'ASSIGNED', 'IN_PROGRESS'] },
       },
     });
 
@@ -278,9 +275,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. สร้าง Booking และ BookingSlot พร้อมกัน
+    // 5) สร้าง Booking + BookingSlot (transaction)
     const booking = await prisma.$transaction(async (tx) => {
-      // สร้าง Booking
       const newBooking = await tx.booking.create({
         data: {
           student_id: student.student_id,
@@ -290,15 +286,10 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // สร้าง BookingSlot
       await tx.bookingSlot.create({
-        data: {
-          booking_id: newBooking.booking_id,
-          time_slot_id: timeSlotId,
-        },
+        data: { booking_id: newBooking.booking_id, time_slot_id: timeSlotId },
       });
 
-      // อัพเดท TimeSlot status ถ้าเต็ม
       const updatedBookingCount = activeBookings.length + 1;
       if (updatedBookingCount >= timeSlot.time_slot_max_capacity) {
         await tx.timeSlot.update({
@@ -320,9 +311,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error creating booking:', error);
-    return NextResponse.json(
-      { error: 'Failed to create booking' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to create booking' }, { status: 500 });
   }
 }
