@@ -10,8 +10,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const pathname = usePathname();
 
-  // ✅ สำคัญ: หน้า login ห้ามโดน guard ไม่งั้นวน
-  const isLoginPage = pathname === '/admin/login';
+  // ✅ หน้า login กลาง (/login) ห้ามโดน guard
+  const isLoginPage = pathname === '/login';
   if (isLoginPage) return <>{children}</>;
 
   const { user, isLoading, isAuthenticated } = useAdminAuth();
@@ -21,10 +21,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      const safeNext = pathname && pathname !== '/admin/login' ? pathname : '/admin';
-      router.replace(`/admin/login?next=${encodeURIComponent(safeNext)}`);
+      const safeNext =
+        pathname && pathname !== '/login'
+          ? pathname
+          : '/admin/data-center';
+
+      router.replace(`/login?next=${encodeURIComponent(safeNext)}`);
     }
-  }, [isLoading, isAuthenticated, router, pathname]);
+  }, [isLoading, isAuthenticated, pathname, router]);
 
   if (isLoading || !isAuthenticated) {
     return (
@@ -40,7 +44,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         isOpen={isMobileMenuOpen}
         isCollapsed={isSidebarCollapsed}
         onCloseMobile={() => setIsMobileMenuOpen(false)}
-        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        onToggleCollapse={() =>
+          setIsSidebarCollapsed(!isSidebarCollapsed)
+        }
       />
 
       <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
@@ -51,7 +57,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         />
 
         <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
-          <div className="max-w-7xl mx-auto animate-fade-in">{children}</div>
+          <div className="max-w-7xl mx-auto animate-fade-in">
+            {children}
+          </div>
         </main>
       </div>
     </div>

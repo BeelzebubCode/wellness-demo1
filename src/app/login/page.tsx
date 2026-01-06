@@ -29,26 +29,36 @@ export default function LoginPage() {
 
     try {
       const res = await fetch('/api/v1/auth/login', {
-        method: 'POST', 
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: formData.username,
-          password: formData.password,
-        }),
-        credentials: 'include', 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+        credentials: 'include',
       });
 
       const data = await res.json();
 
       if (res.ok && data.success) {
-        // login สำเร็จ → ไปหน้า admin
-        window.location.href = '/admin';
-      } else {
-        setError(data.error || 'เข้าสู่ระบบไม่สำเร็จ');
-        setLoading(false);
+        const role = data.account.role;
+
+        switch (role) {
+          case 'HEAD_CONSULTANT':
+          case 'ADMIN':
+            router.replace('/admin/data-center');
+            return;
+          case 'CONSULTANT':
+            router.replace('/consultant/my-jobs');
+            return;
+          case 'STUDENT':
+            router.replace('/booking');
+            return;
+          default:
+            router.replace('/');
+            return;
+        }
       }
+
+      setError(data.error || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+      setLoading(false);
 
     } catch (err) {
       console.error(err);

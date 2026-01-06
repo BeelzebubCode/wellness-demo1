@@ -1,5 +1,4 @@
 // src/app/api/v1/auth/verify/route.ts
-// ✅ Robust Verify: Reads token from Authorization / Cookie / Query
 
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
@@ -12,7 +11,7 @@ function extractTokenFromRequest(req: NextRequest): string | null {
     if (token) return token;
   }
 
-  // 2) Cookie (รองรับหลายชื่อ เผื่อโปรเจกต์เก่า/ใหม่)
+  // 2) Cookie
   const cookieToken =
     req.cookies.get('admin_token')?.value ||
     req.cookies.get('token')?.value ||
@@ -20,36 +19,42 @@ function extractTokenFromRequest(req: NextRequest): string | null {
 
   if (cookieToken) return cookieToken;
 
-  // 3) Query ?token=...
-  const url = new URL(req.url);
-  const q = url.searchParams.get('token');
+  // 3) Query ?token=
+  const q = new URL(req.url).searchParams.get('token');
   if (q) return q;
 
   return null;
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    const token = extractTokenFromRequest(request);
+    const token = extractTokenFromRequest(req);
 
     if (!token) {
       return NextResponse.json(
-        { valid: false, error: 'No token' },
-        { status: 401 }
+        { valid: false, error: 'NO_TOKEN' },
+        { status: 401, headers: { 'Cache-Control': 'no-store' } }
       );
     }
 
     const payload = await verifyToken(token);
 
-    // ถ้า verifyToken คืน null/undefined ให้ถือว่า token ใช้ไม่ได้
     if (!payload) {
       return NextResponse.json(
-        { valid: false, error: 'Invalid token' },
-        { status: 401 }
+        { valid: false, error: 'INVALID_TOKEN' },
+        { status: 401, headers: { 'Cache-Control': 'no-store' } }
       );
     }
 
-    return NextResponse.json({
+    // 🔒 กัน role ที่ไม่ควรเข้า admin
+    if (!['ADMIN', 'HEAD_CONSULTANT'].includes(payload.role)) {
+      return NextResponse.json(
+        { valid: false, error: 'FORBIDDEN' },
+        { status: 403, headers: { 'Cache-Control': 'no-store' } }
+      );
+    }
+
+    const res = NextResponse.json({
       valid: true,
       account: {
         id: payload.accountId,
@@ -58,11 +63,14 @@ export async function GET(request: NextRequest) {
         consultantId: payload.consultantId ?? null,
       },
     });
-  } catch (err) {
-    // ถ้า verifyToken throw ก็ถือว่า invalid เหมือนกัน (ไม่ใช่ 500)
+
+    res.headers.set('Cache-Control', 'no-store');
+
+    return res;
+  } catch {
     return NextResponse.json(
-      { valid: false, error: 'Invalid token' },
-      { status: 401 }
+      { valid: false, error: 'INVALID_TOKEN' },
+      { status: 401, headers: { 'Cache-Control': 'no-store' } }
     );
   }
 }

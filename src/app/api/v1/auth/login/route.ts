@@ -42,13 +42,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (account.account_role === 'STUDENT') {
-      return NextResponse.json(
-        { success: false, error: 'ไม่มีสิทธิ์เข้าถึงระบบ Admin' },
-        { status: 403 }
-      );
-    }
-
     const ok = await verifyPassword(password, account.account_password);
     if (!ok) {
       return NextResponse.json(
@@ -57,7 +50,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // update last login (ไม่ให้พังถ้าอัปเดตไม่ได้)
+    // update last login (ไม่ critical)
     prisma.account
       .update({
         where: { account_id: account.account_id },
@@ -65,18 +58,19 @@ export async function POST(request: NextRequest) {
       })
       .catch(() => {});
 
-    const consultantId = account.consultant?.consultant_id ?? undefined;
+    const consultantId = account.consultant?.consultant_id ?? null;
 
     const token = await generateToken({
       accountId: account.account_id,
       username: account.account_username,
       role: account.account_role,
-      consultantId: consultantId || undefined,
+      consultantId: consultantId ?? undefined,
     });
 
     let displayName = account.account_username;
     if (account.consultant?.profile) {
-      const { consultant_first_name, consultant_last_name } = account.consultant.profile;
+      const { consultant_first_name, consultant_last_name } =
+        account.consultant.profile;
       displayName = `${consultant_first_name} ${consultant_last_name}`;
     }
 
@@ -88,15 +82,15 @@ export async function POST(request: NextRequest) {
         username: account.account_username,
         name: displayName,
         role: account.account_role,
-        consultantId: consultantId ?? null,
+        consultantId,
       },
     };
 
     const res = NextResponse.json(responseData);
 
-    // ✅ ตั้ง httpOnly cookie
+    // ✅ ใช้ cookie เดียว ทุก role
     res.cookies.set({
-      name: 'admin_token',
+      name: 'admin_token', // ชื่อจะเปลี่ยนเป็น auth_token ก็ได้
       value: token,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -115,7 +109,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// (ไม่จำเป็น แต่กัน 405 ถ้ามีคนยิง GET มา)
 export async function GET() {
   return NextResponse.json(
     { success: false, error: 'Method Not Allowed' },
