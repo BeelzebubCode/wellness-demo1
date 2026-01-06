@@ -17,7 +17,7 @@ export function AdminHeader({ adminName, adminRole, onMenuClick }: AdminHeaderPr
   const handleLogout = () => {
     if(!confirm('ต้องการออกจากระบบ?')) return;
     localStorage.clear();
-    router.push('/admin/login');
+    router.push('/login');
   };
 
   return (

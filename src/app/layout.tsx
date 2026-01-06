@@ -2,16 +2,9 @@
 // 📌 Root Layout
 // ==========================================
 
-import type { Metadata } from 'next';
-import './globals.css';
 
-export const metadata: Metadata = {
-  title: {
-    default: 'NU Wellness Center',
-    template: '%s | NU Wellness Center',
-  },
-  description: 'ระบบจองคิวให้คำปรึกษาสุขภาพจิต มหาวิทยาลัยนเรศวร',
-};
+import { AuthProvider } from '@/contexts/AuthContext';
+import './globals.css';
 
 export default function RootLayout({
   children,
@@ -20,7 +13,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="th">
-      <body className="antialiased">{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

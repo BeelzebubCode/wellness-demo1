@@ -9,7 +9,7 @@ type LoginResponse = {
     id: number;
     username: string;
     name: string;
-    role: string;
+    role: 'ADMIN' | 'HEAD_CONSULTANT' | 'CONSULTANT' | 'STUDENT';
     consultantId?: number | null;
   };
   error?: string;
@@ -88,9 +88,9 @@ export async function POST(request: NextRequest) {
 
     const res = NextResponse.json(responseData);
 
-    // ✅ ใช้ cookie เดียว ทุก role
+    // ✅ cookie เดียว ใช้ทุก role
     res.cookies.set({
-      name: 'admin_token', // ชื่อจะเปลี่ยนเป็น auth_token ก็ได้
+      name: 'auth_token',
       value: token,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
