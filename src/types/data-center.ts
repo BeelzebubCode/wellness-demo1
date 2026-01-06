@@ -8,11 +8,38 @@ export type BookingStatus =
   | 'CONFIRMED';
 
 export interface DataCenterFilter {
+  // ===== Global =====
   search?: string;
-  status?: 'ALL' | BookingStatus;
+
+  // ===== Student =====
+  facultyId?: number;
+  departmentId?: number;
+  year?: number;
+  degree?: string;
+  studentCode?: string;
+  bookingCountMin?: number;
+  noShowCountMin?: number;
+  isRepeatTopic?: boolean;
+
+  // ===== Consultant =====
+  consultantName?: string;
+  specialization?: string;
+  organizationId?: number;
+  activeQueueMin?: number;
+  workloadMin?: number;
+  avgDurationMin?: number;
+  ratingMin?: number;
+
+  // ===== Problem =====
+  problemCategoryId?: number;
+
+  // ===== Booking =====
+  status?: BookingStatus | 'ALL';
   startDate?: string;
   endDate?: string;
+  timeRange?: 'MORNING' | 'AFTERNOON' | 'EVENING';
 }
+
 
 /**
  * ✅ Shape สำหรับ ConsultationTable
