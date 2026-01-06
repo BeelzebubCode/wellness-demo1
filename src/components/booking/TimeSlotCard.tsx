@@ -5,7 +5,7 @@
 'use client';
 
 import { cn } from '@/lib/cn';
-import type { TimeSlot } from '@/types';
+import type { TimeSlot } from '@/features/booking/types';
 
 export interface TimeSlotCardProps {
   slot: TimeSlot;

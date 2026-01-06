@@ -18,7 +18,7 @@ import {
 import { Button, Card, LoadingSpinner } from '@/components/ui';
 import { addDays, toISODateString } from '@/lib/date';
 import { PROBLEM_TYPES } from '@/lib/constants';
-import type { TimeSlot } from '@/types';
+import type { TimeSlot } from '@/features/booking/types';
 import type { BookingFormData } from '@/components/booking/BookingForm';
 import Link from "next/link";
 
@@ -121,12 +121,9 @@ export default function BookingPage() {
 
       await createBooking({
         lineUserId: profile.userId,
-        userName: profile.displayName,
-        date: toISODateString(selectedDate),
-        startTime: selectedSlot.startTime,
-        endTime: selectedSlot.endTime,
-        problemType: problemLabel,
-        problemDescription: formData.problemDescription,
+        timeSlotId: selectedSlot.id,              // ✅ ตัวที่ backend ต้องการ
+        problemCategoryId: formData.problemCategoryId,
+        detailText: formData.problemDescription,
       });
 
       setIsConfirmModalOpen(false);

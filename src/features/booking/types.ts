@@ -10,12 +10,23 @@ export type BookingStatus =
 export interface TimeSlot {
   id: number;
   date: string;
+
   startTime: string;
   endTime: string;
-  status: 'AVAILABLE' | 'BOOKED' | 'LOCKED' | 'CANCELLED';
+  startDateTime: string;
+  endDateTime: string;
+
   maxCapacity: number;
-  currentBookings: number;
+  bookedCount: number;
+  availableCount: number;
+
+  status: 'AVAILABLE' | 'BOOKED' | 'LOCKED' | 'CANCELLED';
+
+  // 🔑 UI + API ใช้จริง
+  isAvailable: boolean;
+  isClosed: boolean;
 }
+
 
 export interface Booking {
   id: number;
@@ -65,9 +76,9 @@ export interface BookingDetail extends Booking {
 export interface CreateBookingDTO {
   lineUserId?: string;
   studentCode?: string;
-  problemCategoryId: number;
+  timeSlotId: number;      
+  problemCategoryId?: number;
   detailText?: string;
-  timeSlotId: number;
 }
 
 export interface ProblemCategory {

@@ -14,6 +14,41 @@ function addMinutes(date: Date, minutes: number): Date {
   return new Date(date.getTime() + minutes * 60000);
 }
 
+async function generateDefaultSlots(date: string) {
+  const dayOfWeek = new Date(date).getDay();
+  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+  const openTime = '08:00';
+  const closeTime = isWeekend ? '16:00' : '20:00';
+  const slotDuration = 60;
+
+  const slots: { start: Date; end: Date }[] = [];
+
+  let currentTime = createDateTime(date, openTime);
+  const endTime = createDateTime(date, closeTime);
+
+  while (currentTime < endTime) {
+    const slotEnd = addMinutes(currentTime, slotDuration);
+    if (slotEnd <= endTime) {
+      slots.push({ start: new Date(currentTime), end: slotEnd });
+    }
+    currentTime = slotEnd;
+  }
+
+  if (slots.length === 0) return;
+
+  await prisma.timeSlot.createMany({
+    data: slots.map((s) => ({
+      time_slot_start_datetime: s.start,
+      time_slot_end_datetime: s.end,
+      time_slot_max_capacity: 1,
+      time_slot_status: 'AVAILABLE',
+    })),
+    skipDuplicates: true,
+  });
+}
+
+
 // GET /api/v1/time-slots?date=YYYY-MM-DD
 export async function GET(req: NextRequest) {
   try {
@@ -45,7 +80,7 @@ export async function GET(req: NextRequest) {
       whereClause.time_slot_status = 'AVAILABLE';
     }
 
-    const timeSlots = await prisma.timeSlot.findMany({
+    let timeSlots = await prisma.timeSlot.findMany({
       where: whereClause,
       include: {
         bookingSlots: {
@@ -62,14 +97,48 @@ export async function GET(req: NextRequest) {
       orderBy: { time_slot_start_datetime: 'asc' },
     });
 
+    // ✅ หัวใจของระบบ: auto-generate ครั้งแรก
+    if (timeSlots.length === 0) {
+      await generateDefaultSlots(dateStr);
+
+      // query ใหม่หลังจากสร้าง default
+      timeSlots = await prisma.timeSlot.findMany({
+        where: whereClause,
+        include: {
+          bookingSlots: {
+            include: {
+              booking: {
+                select: {
+                  booking_id: true,
+                  booking_status: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: { time_slot_start_datetime: 'asc' },
+      });
+    }
+
     // Format response
     const formattedSlots = timeSlots.map((slot) => {
-      // นับ booking ที่ active
       const activeBookings = slot.bookingSlots.filter(
         (bs) => bs.booking.booking_status !== 'CANCELLED'
       ).length;
 
-      const availableCount = Math.max(0, slot.time_slot_max_capacity - activeBookings);
+      const availableCount = Math.max(
+        0,
+        slot.time_slot_max_capacity - activeBookings
+      );
+
+      const isClosed =
+        slot.time_slot_status === 'LOCKED' ||
+        slot.time_slot_status === 'CANCELLED';
+
+      const isAvailable =
+        slot.time_slot_status === 'AVAILABLE' &&
+        availableCount > 0 &&
+        !isClosed;
 
       return {
         id: slot.time_slot_id,
@@ -82,9 +151,14 @@ export async function GET(req: NextRequest) {
         bookedCount: activeBookings,
         availableCount,
         status: slot.time_slot_status,
-        isAvailable: slot.time_slot_status === 'AVAILABLE' && availableCount > 0,
+
+        // ✅ สำคัญ: UI ใช้
+        isAvailable,
+        isClosed,
       };
     });
+
+
 
     return NextResponse.json({
       success: true,
@@ -116,9 +190,16 @@ export async function POST(req: NextRequest) {
 
     // ถ้าต้องการสร้าง slots อัตโนมัติ
     if (generateDefault) {
-      const { openTime = '09:00', closeTime = '16:00', slotDuration = 60 } = body;
+  // 0 = อาทิตย์, 6 = เสาร์
+      const dayOfWeek = new Date(date).getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+      const openTime = '08:00';
+      const closeTime = isWeekend ? '16:00' : '20:00';
+      const slotDuration = 60; // นาที
 
       const generatedSlots: { start: Date; end: Date }[] = [];
+
       let currentTime = createDateTime(date, openTime);
       const endTime = createDateTime(date, closeTime);
 

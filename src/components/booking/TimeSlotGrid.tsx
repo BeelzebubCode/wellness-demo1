@@ -8,7 +8,7 @@ import type { ReactNode } from 'react';
 import { formatThaiDate } from '@/lib/date';
 import { TimeSlotCard } from './TimeSlotCard';
 import { LoadingSpinner } from '@/components/ui';
-import type { TimeSlot } from '@/types';
+import type { TimeSlot } from '@/features/booking/types';
 import {
   Sunrise,
   Sun,

@@ -1,12 +1,9 @@
-// ==========================================
-// 📌 Hook: useTimeSlots
-// ==========================================
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { toISODateString } from '@/lib/date';
-import type { TimeSlot } from '@/types';
+import type { TimeSlot } from '../types';
+import { getTimeSlots } from '../api';
 
 interface UseTimeSlotsReturn {
   slots: TimeSlot[];
@@ -26,16 +23,10 @@ export function useTimeSlots(selectedDate: Date): UseTimeSlotsReturn {
 
     try {
       const dateStr = toISODateString(selectedDate);
-      const response = await fetch(`/api/v1/slots?date=${dateStr}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch time slots');
-      }
-
-      const data = await response.json();
-      setSlots(data.slots || []);
+      const slots = await getTimeSlots(dateStr);
+      setSlots(slots);
     } catch (err) {
-      console.error('Error fetching time slots:', err);
+      console.error(err);
       setError('ไม่สามารถโหลดข้อมูลช่วงเวลาได้');
       setSlots([]);
     } finally {

@@ -7,7 +7,7 @@
 import { Modal } from '@/components/ui';
 import { BookingForm, type BookingFormData } from './BookingForm';
 import { formatThaiDate } from '@/lib/date';
-import type { TimeSlot } from '@/types';
+import type { TimeSlot } from '@/features/booking/types';
 import { CalendarClock, Clock3, Lock } from 'lucide-react';
 
 export interface BookingConfirmModalProps {
