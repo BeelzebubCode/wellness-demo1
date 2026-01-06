@@ -5,7 +5,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import type { CreateBookingDTO, Booking } from '@/types';
+import type { CreateBookingDTO, Booking } from '@/features/booking/types';
 
 interface UseBookingReturn {
   createBooking: (data: CreateBookingDTO) => Promise<Booking>;

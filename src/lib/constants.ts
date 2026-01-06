@@ -1,23 +1,23 @@
 // ==========================================
-// 📌 App Constants
+// 📌 App Constants (Clean Version)
 // ==========================================
 
-// ----- Booking Status Config -----
+/* ======================================================
+   Booking Status
+====================================================== */
 export const BOOKING_STATUS = {
-  CONFIRMED: {
-    key: 'CONFIRMED',
+  PENDING_ASSIGNMENT: {
+    key: 'PENDING_ASSIGNMENT',
     label: 'รอมอบหมาย',
     icon: '⏳',
-    color: 'blue',
-    bgColor: 'bg-blue-50',
-    textColor: 'text-blue-700',
-    borderColor: 'border-blue-200',
+    bgColor: 'bg-amber-50',
+    textColor: 'text-amber-700',
+    borderColor: 'border-amber-200',
   },
   ASSIGNED: {
     key: 'ASSIGNED',
     label: 'กำลังดำเนินการ',
     icon: '👨‍⚕️',
-    color: 'purple',
     bgColor: 'bg-purple-50',
     textColor: 'text-purple-700',
     borderColor: 'border-purple-200',
@@ -26,38 +26,23 @@ export const BOOKING_STATUS = {
     key: 'COMPLETED',
     label: 'เสร็จสิ้น',
     icon: '✅',
-    color: 'green',
-    bgColor: 'bg-green-50',
-    textColor: 'text-green-700',
-    borderColor: 'border-green-200',
+    bgColor: 'bg-emerald-50',
+    textColor: 'text-emerald-700',
+    borderColor: 'border-emerald-200',
   },
   CANCELLED: {
     key: 'CANCELLED',
     label: 'ยกเลิก',
     icon: '❌',
-    color: 'gray',
     bgColor: 'bg-gray-50',
-    textColor: 'text-gray-500',
+    textColor: 'text-gray-600',
     borderColor: 'border-gray-200',
   },
 } as const;
 
-// ----- Problem Types -----
-export const PROBLEM_TYPES = [
-  { id: 'stress', label: 'ความเครียด/วิตกกังวล', icon: '😰' },
-  { id: 'depression', label: 'ภาวะซึมเศร้า', icon: '😢' },
-  { id: 'relationship', label: 'ปัญหาความสัมพันธ์', icon: '💔' },
-  { id: 'academic', label: 'ปัญหาการเรียน', icon: '📚' },
-  { id: 'career', label: 'ปัญหาอาชีพ/การทำงาน', icon: '💼' },
-  { id: 'family', label: 'ปัญหาครอบครัว', icon: '👨‍👩‍👧‍👦' },
-  { id: 'self-esteem', label: 'ปัญหาความมั่นใจในตัวเอง', icon: '🪞' },
-  { id: 'sleep', label: 'ปัญหาการนอนหลับ', icon: '😴' },
-  { id: 'addiction', label: 'ปัญหาการเสพติด', icon: '🚭' },
-  { id: 'grief', label: 'การสูญเสีย/ความเศร้าโศก', icon: '🕊️' },
-  { id: 'other', label: 'อื่นๆ', icon: '💭' },
-] as const;
-
-// ----- Days of Week -----
+/* ======================================================
+   Days of Week
+====================================================== */
 export const DAYS_OF_WEEK = [
   { id: 0, name: 'อาทิตย์', short: 'อา', en: 'Sunday' },
   { id: 1, name: 'จันทร์', short: 'จ', en: 'Monday' },
@@ -68,26 +53,32 @@ export const DAYS_OF_WEEK = [
   { id: 6, name: 'เสาร์', short: 'ส', en: 'Saturday' },
 ] as const;
 
-// ----- Default Working Hours -----
+/* ======================================================
+   Default Working Hours
+====================================================== */
 export const DEFAULT_WORKING_HOURS = {
   weekday: { openTime: '08:00', closeTime: '20:00' },
   weekend: { openTime: '08:00', closeTime: '16:00' },
   slotDuration: 60, // minutes
-  maxBookings: 1,
+  maxBookingsPerSlot: 1,
 } as const;
 
-// ----- App Settings -----
+/* ======================================================
+   App Config
+====================================================== */
 export const APP_CONFIG = {
   name: 'NU Wellness Center',
   shortName: 'NUW',
   description: 'ระบบจองคิวให้คำปรึกษาสุขภาพจิต',
-  maxAdvanceBookingDays: 60, // 2 months
+  maxAdvanceBookingDays: 60,
   maxActiveBookingsPerUser: 1,
   lineChannelId: process.env.NEXT_PUBLIC_LINE_CHANNEL_ID || '',
   liffId: process.env.NEXT_PUBLIC_LIFF_ID || '',
 } as const;
 
-// ----- API Routes -----
+/* ======================================================
+   API Routes
+====================================================== */
 export const API_ROUTES = {
   auth: {
     login: '/api/v1/auth/login',
@@ -115,17 +106,32 @@ export const API_ROUTES = {
   },
 } as const;
 
-// ----- Navigation -----
+/* ======================================================
+   Navigation
+====================================================== */
+
+/* ----- Public ----- */
 export const PUBLIC_NAV = [
-  { href: '/booking', label: 'จองคิว', icon: '📅' },
-  { href: '/booking/my-appointments', label: 'ตารางนัดของฉัน', icon: '📋' },
+  { href: '/booking', label: 'จองคิว' },
+  { href: '/booking/my-appointments', label: 'ตารางนัดของฉัน' },
 ] as const;
 
+/* ----- Admin (NO Dashboard / NO Stats) ----- */
 export const ADMIN_NAV = [
-  { href: '/admin', label: 'แดชบอร์ด', icon: '🏠' },
-  { href: '/admin/bookings', label: 'รายการจอง', icon: '📅' },
-  { href: '/admin/schedule', label: 'จัดการตาราง', icon: '⏰' },
-  // { href: '/admin/consultants', label: 'ผู้ให้คำปรึกษา', icon: '👨‍⚕️' },
-  { href: '/admin/stats', label: 'สถิติ', icon: '📊' },
-  { href: '/admin/my-jobs', label: 'งานของฉัน', icon: '👨‍⚕️' },
+  {
+    href: '/admin/data-center',
+    label: 'ศูนย์ข้อมูล',
+  },
+  {
+    href: '/admin/bookings',
+    label: 'รายการจอง',
+  },
+  {
+    href: '/admin/schedule',
+    label: 'จัดการตาราง',
+  },
+  {
+    href: '/admin/my-jobs',
+    label: 'งานของฉัน',
+  },
 ] as const;

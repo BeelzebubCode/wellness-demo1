@@ -7,26 +7,12 @@ export type BookingStatus =
   | 'COMPLETED' 
   | 'CANCELLED';
 
-export interface TimeSlot {
-  id: number;
-  date: string;
-
+export interface TimeSlot { 
+  timeSlotId: number;     
   startTime: string;
   endTime: string;
-  startDateTime: string;
-  endDateTime: string;
-
-  maxCapacity: number;
-  bookedCount: number;
-  availableCount: number;
-
-  status: 'AVAILABLE' | 'BOOKED' | 'LOCKED' | 'CANCELLED';
-
-  // 🔑 UI + API ใช้จริง
   isAvailable: boolean;
-  isClosed: boolean;
 }
-
 
 export interface Booking {
   id: number;

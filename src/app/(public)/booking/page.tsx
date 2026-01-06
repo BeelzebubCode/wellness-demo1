@@ -17,7 +17,6 @@ import {
 } from '@/components/booking';
 import { Button, Card, LoadingSpinner } from '@/components/ui';
 import { addDays, toISODateString } from '@/lib/date';
-import { PROBLEM_TYPES } from '@/lib/constants';
 import type { TimeSlot } from '@/features/booking/types';
 import type { BookingFormData } from '@/components/booking/BookingForm';
 import Link from "next/link";
@@ -113,18 +112,14 @@ export default function BookingPage() {
     if (!selectedSlot || !profile?.userId) return;
 
     try {
-      const problemLabel =
-        formData.problemType === 'other'
-          ? formData.problemTypeOther
-          : PROBLEM_TYPES.find((p) => p.id === formData.problemType)?.label ||
-          formData.problemType;
 
       await createBooking({
         lineUserId: profile.userId,
-        timeSlotId: selectedSlot.id,              // ✅ ตัวที่ backend ต้องการ
+        timeSlotId: selectedSlot.timeSlotId, 
         problemCategoryId: formData.problemCategoryId,
         detailText: formData.problemDescription,
       });
+
 
       setIsConfirmModalOpen(false);
       setSelectedSlot(null);
