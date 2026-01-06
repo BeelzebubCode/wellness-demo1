@@ -1,4 +1,3 @@
-import 'server-only';
 import prisma from '@/lib/prisma';
 import type { AccountRole } from '@prisma/client';
 

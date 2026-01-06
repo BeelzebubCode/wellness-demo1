@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { headers } from 'next/headers';
+import prisma from '@/lib/prisma';
 
-// จำลองการเช็ค Consultant ID (ในระบบจริงคุณจะดึงจาก Token)
-// const CURRENT_CONSULTANT_ID = 1; 
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
-    const bookingId = parseInt(params.id);
+    const { id } = await params;
+    const bookingId = parseInt(id);
     const body = await request.json();
     const { note, nextStep, riskLevel } = body;
 

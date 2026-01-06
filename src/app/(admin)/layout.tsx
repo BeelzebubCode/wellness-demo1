@@ -1,41 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { AdminHeader, AdminSidebar } from '@/components/layout';
 import { LoadingSpinner } from '@/components/ui';
+import useAdminAuth from '@/features/auth/hooks/useAdminAuth';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
-  const [isLoading, setIsLoading] = useState(true);
-  const [adminInfo, setAdminInfo] = useState<{ name: string; role: string } | null>(null);
-  
-  // State for Layout
+  const { user, isLoading, isAuthenticated } = useAdminAuth();
+
+  // Layout states
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-
-  useEffect(() => {
-    if (pathname === '/admin/login') {
-      setIsLoading(false);
-      return;
-    }
-
-    // Check Auth
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-      router.replace('/admin/login');
-      return;
-    }
-
-    setAdminInfo({
-      name: localStorage.getItem('adminName') || 'Admin',
-      role: localStorage.getItem('adminRole') || 'admin'
-    });
-    setIsLoading(false);
-  }, [pathname, router]);
-
-  if (pathname === '/admin/login') return <>{children}</>;
 
   if (isLoading) {
     return (
@@ -45,9 +22,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
+  if (!isAuthenticated) {
+    // useAdminAuth จะ redirect เอง แต่ fallback ให้ empty
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex font-sans">
-      {/* Sidebar */}
       <AdminSidebar 
         isOpen={isMobileMenuOpen}
         isCollapsed={isSidebarCollapsed}
@@ -55,11 +36,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
       />
 
-      {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
         <AdminHeader 
-          adminName={adminInfo?.name} 
-          adminRole={adminInfo?.role} 
+          adminName={user?.name || 'Admin'}
+          adminRole={user?.role || 'admin'}
           onMenuClick={() => setIsMobileMenuOpen(true)}
         />
         
