@@ -4,6 +4,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Menu, LogOut, User, Bell } from 'lucide-react'; // 👈 ใช้ไอคอนจาก Lucide
+import { logout } from '@/features/auth/logout';
 
 export interface AdminHeaderProps {
   adminName?: string;
@@ -14,10 +15,11 @@ export interface AdminHeaderProps {
 export function AdminHeader({ adminName, adminRole, onMenuClick }: AdminHeaderProps) {
   const router = useRouter();
 
-  const handleLogout = () => {
-    if(!confirm('ต้องการออกจากระบบ?')) return;
-    localStorage.clear();
-    router.push('/login');
+  const handleLogout = async () => {
+  if (!confirm('ต้องการออกจากระบบ?')) return;
+
+    await logout();
+    router.replace('/login');
   };
 
   return (
