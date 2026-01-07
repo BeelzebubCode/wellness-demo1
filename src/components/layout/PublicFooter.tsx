@@ -35,10 +35,10 @@ export function PublicFooter() {
           <div className="flex-1 text-center md:text-right space-y-2">
             <p className="font-semibold text-sm text-white/95">ติดต่อเรา</p>
             <p className="flex items-center justify-center md:justify-end gap-2 text-white/80 text-sm">
-              <MapPin size={16} /> มหาวิทยาลัยนเรศวร
+              <MapPin size={16} /> ศูนย์สุขภาวะนิสิต มหาวิทยาลัยนเรศวร
             </p>
             <p className="flex items-center justify-center md:justify-end gap-2 text-white/80 text-sm">
-              <Phone size={16} /> 055-xxx-xxx
+              <Phone size={16} /> 055-961-273
             </p>
             <p className="flex items-center justify-center md:justify-end gap-2 text-white/80 text-sm">
               <Mail size={16} /> support@wellness.nu.ac.th
