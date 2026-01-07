@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getAccountFromRequest } from '@/lib/jwt';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -293,8 +294,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({ success: true, status: 'COMPLETED' });
       }
-
-      // ยกเลิกการจอง
+      
       case 'cancel': {
         if (!cancelReason) {
           return NextResponse.json(
@@ -303,37 +303,47 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
           );
         }
 
-        if (!accountId) {
+        // ✅ ดึง account จาก JWT (cookie / header)
+        const account = await getAccountFromRequest(req);
+        if (!account) {
           return NextResponse.json(
-            { error: 'กรุณาระบุผู้ยกเลิก' },
-            { status: 400 }
+            { error: 'Unauthorized' },
+            { status: 401 }
+          );
+        }
+
+        // (optional แต่แนะนำ) ให้เฉพาะ STUDENT ยกเลิกเองได้
+        if (account.role !== 'STUDENT') {
+          return NextResponse.json(
+            { error: 'Permission denied' },
+            { status: 403 }
           );
         }
 
         await prisma.$transaction(async (tx) => {
-          // อัพเดท booking
+          // 1) update booking
           await tx.booking.update({
             where: { booking_id: bookingId },
             data: { booking_status: 'CANCELLED' },
           });
 
-          // สร้าง cancellation record
+          // 2) insert cancellation record
           await tx.bookingCancellation.create({
             data: {
               booking_id: bookingId,
-              booking_cancellation_cancelled_by_id: accountId,
+              booking_cancellation_cancelled_by_id: account.accountId,
               booking_cancellation_reason: cancelReason,
             },
           });
 
-          // คืน time slot status
-          const bookingSlots = await tx.bookingSlot.findMany({
+          // 3) คืน time slot
+          const slots = await tx.bookingSlot.findMany({
             where: { booking_id: bookingId },
           });
 
-          for (const slot of bookingSlots) {
+          for (const s of slots) {
             await tx.timeSlot.update({
-              where: { time_slot_id: slot.time_slot_id },
+              where: { time_slot_id: s.time_slot_id },
               data: { time_slot_status: 'AVAILABLE' },
             });
           }

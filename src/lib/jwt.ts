@@ -122,3 +122,16 @@ export async function verifyPassword(
 ): Promise<boolean> {
   return bcrypt.compare(password, hashedPassword);
 }
+
+
+// =======================
+// Helper for API Route
+// =======================
+export async function getAccountFromRequest(
+  request: NextRequest
+): Promise<JWTPayload | null> {
+  const token = extractToken(request);
+  if (!token) return null;
+
+  return await verifyToken(token);
+}
