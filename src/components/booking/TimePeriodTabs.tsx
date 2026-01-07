@@ -11,53 +11,84 @@ interface Props {
   onChange: (value: TimePeriod) => void;
 }
 
+const TABS: Array<{
+  key: TimePeriod;
+  label: string;
+  Icon: React.ElementType;
+}> = [
+  { key: 'morning', label: 'ช่วงเช้า', Icon: Sunrise },
+  { key: 'afternoon', label: 'ช่วงบ่าย', Icon: Sun },
+  { key: 'evening', label: 'ช่วงเย็น', Icon: Moon },
+];
+
 export function TimePeriodTabs({ value, onChange }: Props) {
   return (
-    <div className="grid grid-cols-3 gap-2 mb-3">
-      {/* Morning */}
-      <Button
-        size="sm"
-        variant={value === 'morning' ? 'primary' : 'outline'}
-        onClick={() => onChange('morning')}
-        className={cn(
-          'h-11 w-full',
-          'flex items-center justify-center gap-2',
-          'leading-none'
-        )}
-      >
-        <Sunrise className="w-4 h-4" />
-        <span className="font-semibold">ช่วงเช้า</span>
-      </Button>
+    <>
+      {/* ================= MOBILE (Animated) ================= */}
+      <div className="mb-3 flex gap-2 md:hidden">
+        {TABS.map(({ key, label, Icon }) => {
+          const active = value === key;
 
-      {/* Afternoon */}
-      <Button
-        size="sm"
-        variant={value === 'afternoon' ? 'primary' : 'outline'}
-        onClick={() => onChange('afternoon')}
-        className={cn(
-          'h-11 w-full',
-          'flex items-center justify-center gap-2',
-          'leading-none'
-        )}
-      >
-        <Sun className="w-4 h-4" />
-        <span className="font-semibold">ช่วงบ่าย</span>
-      </Button>
+          return (
+            <Button
+              key={key}
+              size="sm"
+              variant={active ? 'primary' : 'outline'}
+              onClick={() => onChange(key)}
+              className={cn(
+                // ✅ base
+                'h-11 min-w-0 rounded-xl px-3',
+                'flex items-center justify-center gap-2',
+                'leading-none overflow-hidden',
+                // ✅ animation width (flex grow)
+                'transition-[flex] duration-300 ease-out',
+                active ? 'flex-[3]' : 'flex-1',
+                // ✅ ให้ปุ่มที่ไม่ active ดูเบากว่า (optional)
+                !active && 'opacity-90'
+              )}
+            >
+              <Icon className="w-4 h-4 shrink-0" />
 
-      {/* Evening */}
-      <Button
-        size="sm"
-        variant={value === 'evening' ? 'primary' : 'outline'}
-        onClick={() => onChange('evening')}
-        className={cn(
-          'h-11 w-full',
-          'flex items-center justify-center gap-2',
-          'leading-none'
-        )}
-      >
-        <Moon className="w-4 h-4" />
-        <span className="font-semibold">ช่วงเย็น</span>
-      </Button>
-    </div>
+              {/* ✅ label จะโชว์/หายแบบนุ่ม ๆ */}
+              <span
+                className={cn(
+                  'whitespace-nowrap font-semibold',
+                  'transition-all duration-200 ease-out',
+                  active
+                    ? 'opacity-100 translate-x-0 max-w-[120px]'
+                    : 'opacity-0 -translate-x-1 max-w-0'
+                )}
+              >
+                {label}
+              </span>
+            </Button>
+          );
+        })}
+      </div>
+
+      {/* ================= DESKTOP (Normal) ================= */}
+      <div className="hidden md:grid grid-cols-3 gap-2 mb-3">
+        {TABS.map(({ key, label, Icon }) => {
+          const active = value === key;
+
+          return (
+            <Button
+              key={key}
+              size="sm"
+              variant={active ? 'primary' : 'outline'}
+              onClick={() => onChange(key)}
+              className={cn(
+                'h-11 w-full rounded-xl',
+                'flex items-center justify-center gap-2',
+                'leading-none'
+              )}
+            >
+              <Icon className="w-4 h-4" />
+              <span className="font-semibold">{label}</span>
+            </Button>
+          );
+        })}
+      </div>
+    </>
   );
 }

@@ -114,9 +114,14 @@ export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProp
               <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm">
                 <User className="w-4 h-4 text-primary-600" />
               </div>
-              <div className="flex flex-col leading-tight">
-                <span className="text-[11px] text-white/70 tracking-wide">NU Wellness</span>
-                <span className="text-sm font-semibold text-white">{APP_CONFIG.name}</span>
+              <div className="flex flex-col leading-tight min-w-0">
+                <span className="text-[11px] text-white/70 tracking-wide">
+                  NU Wellness
+                </span>
+
+                <span className="text-sm font-bold text-white truncate">
+                  {isLoggedIn ? displayName : APP_CONFIG.name}
+                </span>
               </div>
             </Link>
 

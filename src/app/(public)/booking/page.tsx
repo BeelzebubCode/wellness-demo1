@@ -180,22 +180,7 @@ export default function BookingPage() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <main className="flex-1 mx-auto w-full max-w-5xl px-4 pt-4 pb-24 space-y-4">
-
-        {/* Greeting */}
-        <Card className="rounded-2xl bg-white shadow-sm">
-          <div className="flex items-center gap-3">
-            <UserRound className="w-5 h-5 text-primary-500" />
-            <div>
-              <p className="text-sm font-semibold text-gray-800">
-                สวัสดี, {profile.displayName}
-              </p>
-              <p className="text-xs text-gray-500">
-                เลือกวันและช่วงเวลาที่ต้องการจอง
-              </p>
-            </div>
-          </div>
-        </Card>
-
+        
         {/* Rules */}
         <Card className="rounded-2xl bg-primary-50 border border-primary-100">
           <div className="flex gap-3">
