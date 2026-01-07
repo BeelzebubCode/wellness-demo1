@@ -2,11 +2,11 @@
 // 📌 Booking Component: BookingForm (Uses nameTh from API)
 // ==========================================
 
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { cn } from '@/lib/cn';
-import { Button } from '@/components/ui';
+import { useEffect, useMemo, useState } from "react";
+import { cn } from "@/lib/cn";
+import { Button } from "@/components/ui";
 import {
   AlertTriangle,
   Brain,
@@ -19,7 +19,11 @@ import {
   BookOpen,
   CigaretteOff,
   Sparkles,
-} from 'lucide-react';
+} from "lucide-react";
+import {
+  PROBLEM_CATEGORY_CONFIG,
+  ProblemCategoryCode,
+} from "@/lib/problem-category.config";
 
 type ProblemCategory = {
   id: number;
@@ -42,11 +46,15 @@ export interface BookingFormProps {
   error?: string | null;
 }
 
-export function BookingForm({ onSubmit, isLoading = false, error }: BookingFormProps) {
+export function BookingForm({
+  onSubmit,
+  isLoading = false,
+  error,
+}: BookingFormProps) {
   const [formData, setFormData] = useState<BookingFormData>({
     problemCategoryId: 0,
-    problemTypeOther: '',
-    problemDescription: '',
+    problemTypeOther: "",
+    problemDescription: "",
   });
 
   const [localError, setLocalError] = useState<string | null>(null);
@@ -64,20 +72,24 @@ export function BookingForm({ onSubmit, isLoading = false, error }: BookingFormP
         setIsCatLoading(true);
         setCatError(null);
 
-        const res = await fetch('/api/v1/problem-categories', { cache: 'no-store' });
+        const res = await fetch("/api/v1/problem-categories", {
+          cache: "no-store",
+        });
         const data = await res.json();
 
         if (!res.ok || !data?.success) {
-          throw new Error(data?.error || 'Failed to load problem categories');
+          throw new Error(data?.error || "Failed to load problem categories");
         }
 
         if (!mounted) return;
 
-        const list: ProblemCategory[] = Array.isArray(data.categories) ? data.categories : [];
+        const list: ProblemCategory[] = Array.isArray(data.categories)
+          ? data.categories
+          : [];
         setCategories(list);
       } catch (e: any) {
         if (!mounted) return;
-        setCatError(e?.message || 'Failed to load problem categories');
+        setCatError(e?.message || "Failed to load problem categories");
         setCategories([]);
       } finally {
         if (!mounted) return;
@@ -90,38 +102,23 @@ export function BookingForm({ onSubmit, isLoading = false, error }: BookingFormP
     };
   }, []);
 
-  // ---- Icon mapping by DB code ----
-  const iconByCode: Record<string, JSX.Element> = {
-    stress: <Brain className="h-5 w-5 text-primary-500" />,
-    depression: <MoonStar className="h-5 w-5 text-indigo-500" />,
-    relationship: <Heart className="h-5 w-5 text-rose-500" />,
-    study: <BookOpen className="h-5 w-5 text-emerald-500" />,
-    work: <BriefcaseBusiness className="h-5 w-5 text-amber-600" />,
-    family: <Users className="h-5 w-5 text-orange-500" />,
-    self: <SmilePlus className="h-5 w-5 text-sky-500" />,
-    sleep: <MoonStar className="h-5 w-5 text-purple-500" />,
-    addiction: <CigaretteOff className="h-5 w-5 text-red-500" />,
-    grief: <Sparkles className="h-5 w-5 text-slate-500" />,
-    other: <Home className="h-5 w-5 text-gray-500" />,
-  };
-
   const selectedCategory = useMemo(
     () => categories.find((c) => c.id === formData.problemCategoryId) || null,
     [categories, formData.problemCategoryId]
   );
 
-  const isOtherSelected = selectedCategory?.code === 'other';
+  const isOtherSelected = selectedCategory?.code?.toUpperCase() === "OTHER";
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!formData.problemCategoryId || formData.problemCategoryId <= 0) {
-      setLocalError('กรุณาเลือกประเภทปัญหาที่ต้องการปรึกษา');
+      setLocalError("กรุณาเลือกประเภทปัญหาที่ต้องการปรึกษา");
       return;
     }
 
     if (isOtherSelected && !formData.problemTypeOther?.trim()) {
-      setLocalError('กรุณาระบุประเภทปัญหาที่ต้องการปรึกษา');
+      setLocalError("กรุณาระบุประเภทปัญหาที่ต้องการปรึกษา");
       return;
     }
 
@@ -157,7 +154,12 @@ export function BookingForm({ onSubmit, isLoading = false, error }: BookingFormP
           <div className="grid grid-cols-2 gap-2">
             {categories.map((c) => {
               const isSelected = formData.problemCategoryId === c.id;
-              const icon = iconByCode[c.code] ?? iconByCode.other;
+
+              const code = c.code as ProblemCategoryCode;
+              const config =
+                PROBLEM_CATEGORY_CONFIG[code] ?? PROBLEM_CATEGORY_CONFIG.OTHER;
+
+              const Icon = config.icon;
 
               return (
                 <button
@@ -167,26 +169,22 @@ export function BookingForm({ onSubmit, isLoading = false, error }: BookingFormP
                     setFormData((prev) => ({
                       ...prev,
                       problemCategoryId: c.id,
-                      // ถ้าเปลี่ยนหมวดแล้วไม่ใช่ other -> ล้างข้อความอื่นๆ
-                      problemTypeOther: c.code === 'other' ? prev.problemTypeOther : '',
+                      problemTypeOther:
+                        code === "OTHER" ? prev.problemTypeOther : "",
                     }))
                   }
                   className={cn(
-                    'flex items-center gap-2 rounded-xl border-2 p-3 text-left text-sm transition-all',
-                    'bg-white',
+                    "flex items-center gap-2 rounded-xl border-2 p-3 text-left text-sm transition-all",
                     isSelected
-                      ? 'border-primary-500 bg-primary-50 text-primary-800 shadow-sm'
-                      : 'border-gray-200 text-gray-700 hover:border-primary-200 hover:bg-primary-50/40'
+                      ? "border-primary-500 bg-primary-50 text-primary-800 shadow-sm"
+                      : "border-gray-200 text-gray-700 hover:border-primary-200 hover:bg-primary-50/40"
                   )}
                 >
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50">
-                    {icon}
+                    <Icon className={cn("h-5 w-5", config.color)} />
                   </div>
 
-                  {/* ✅ สำคัญ: แสดงชื่อไทยจาก DB */}
-                  <span className="font-medium leading-snug">
-                    {c.nameTh}
-                  </span>
+                  <span className="font-medium leading-snug">{c.nameTh}</span>
                 </button>
               );
             })}
@@ -233,7 +231,8 @@ export function BookingForm({ onSubmit, isLoading = false, error }: BookingFormP
           className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
         />
         <p className="mt-1 text-xs text-gray-400">
-          ข้อมูลนี้จะถูกเก็บรักษาเป็นความลับ และใช้เพื่อการเตรียมตัวของผู้ให้คำปรึกษาเท่านั้น
+          ข้อมูลนี้จะถูกเก็บรักษาเป็นความลับ
+          และใช้เพื่อการเตรียมตัวของผู้ให้คำปรึกษาเท่านั้น
         </p>
       </div>
 
