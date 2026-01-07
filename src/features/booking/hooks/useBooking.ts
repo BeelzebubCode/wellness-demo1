@@ -36,25 +36,52 @@ export function useBooking(): UseBookingReturn {
       setError(null);
 
       try {
+        // ✅ Guard ก่อนยิง API
+        if (!data.studentCode) {
+          throw new Error('ไม่พบ studentCode (account_username)');
+        }
+
+        if (!data.timeSlotId || data.timeSlotId <= 0) {
+          throw new Error('timeSlotId ไม่ถูกต้อง');
+        }
+
+        if (!data.problemCategoryId || data.problemCategoryId <= 0) {
+          throw new Error('problemCategoryId ไม่ถูกต้อง');
+        }
+
         const response = await fetch('/api/v1/bookings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
         });
 
-        const result = await safeJson<{ booking: Booking; error?: string }>(
-          response,
-        );
+        const result = await safeJson<any>(response);
 
         if (!response.ok) {
           throw new Error(result?.error || 'Failed to create booking');
         }
 
-        if (!result?.booking) {
+        // 🔧 รองรับ response จริงจาก API
+        // { success: true, bookingId }
+        if (!result?.booking && !result?.bookingId) {
           throw new Error('Invalid response from server');
         }
 
-        return result.booking;
+        // ถ้า API ส่งแค่ bookingId กลับมา
+        if (result.bookingId && !result.booking) {
+          return {
+            id: result.bookingId,
+            studentId: 0,
+            studentName: '',
+            problemType: '',
+            problemCategoryId: data.problemCategoryId,
+            status: 'PENDING_ASSIGNMENT',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+        }
+
+        return result.booking as Booking;
       } catch (err: any) {
         const errorMessage = err?.message || 'เกิดข้อผิดพลาดในการจอง';
         setError(errorMessage);

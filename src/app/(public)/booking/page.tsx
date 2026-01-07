@@ -32,10 +32,9 @@ import { useState, useMemo, useEffect } from 'react';
    🔐 MOCK LOGIN (DEV MODE)
    ================================================== */
 const MOCK_USER = {
-  userId: 'U_MOCK_100000001', // ✅ ให้ตรง DB
+  username: 'student1',   
   displayName: 'Student 1',
 };
-
 
 export default function BookingPage() {
   /* ---------------- AUTH ---------------- */
@@ -75,7 +74,7 @@ export default function BookingPage() {
   const {
     hasActiveBooking,
     refetch: refetchAppointments,
-  } = useMyAppointments(profile.userId);
+  } = useMyAppointments(profile.username); // ✅ ใช้ username
 
   const {
     createBooking,
@@ -132,15 +131,16 @@ export default function BookingPage() {
 
     // 🔴 ใส่ log ตรงนี้
     console.log('📦 BOOKING PAYLOAD', {
-      lineUserId: profile.userId,
+      studentCode: profile.username,
       timeSlotId: selectedSlot.id,
       problemCategoryId: formData.problemCategoryId,
       detailText: formData.problemDescription,
     });
 
+
     try {
       await createBooking({
-        lineUserId: profile.userId,
+        studentCode: profile.username,          // ✅ account_username
         timeSlotId: selectedSlot.id,
         problemCategoryId: formData.problemCategoryId,
         detailText: formData.problemDescription,

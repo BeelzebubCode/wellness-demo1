@@ -70,10 +70,9 @@ export interface BookingDetail extends Booking {
 }
 
 export interface CreateBookingDTO {
-  lineUserId?: string;
-  studentCode?: string;
-  timeSlotId: number;      
-  problemCategoryId?: number;
+  studentCode: string;          // ✅ บังคับ
+  timeSlotId: number;
+  problemCategoryId: number;    // ✅ API ต้องใช้
   detailText?: string;
 }
 
