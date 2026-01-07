@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/cn';
 import type { TimeSlot } from '@/features/booking/types';
+import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 
 export interface TimeSlotCardProps {
   slot: TimeSlot;
@@ -71,18 +72,27 @@ export function TimeSlotCard({
       {/* Status Badge */}
       <div
         className={cn(
-          'inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium',
+          'inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium',
           isAvailable && 'bg-green-100 text-green-700',
           isFull && 'bg-red-100 text-red-700',
           disabled && !isFull && 'bg-amber-100 text-amber-700',
         )}
       >
         {isFull ? (
-          <>❌ เต็ม</>
+          <>
+            <XCircle className="w-3.5 h-3.5" />
+            เต็ม
+          </>
         ) : disabled ? (
-          <>⚠️ มีคิวค้าง</>
+          <>
+            <AlertTriangle className="w-3.5 h-3.5" />
+            มีคิวค้าง
+          </>
         ) : (
-          <>✓ ว่าง</>
+          <>
+            <CheckCircle className="w-3.5 h-3.5" />
+            ว่าง
+          </>
         )}
       </div>
 

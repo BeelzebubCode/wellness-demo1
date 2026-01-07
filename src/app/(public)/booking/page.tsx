@@ -4,7 +4,6 @@
 
 'use client';
 
-import { useState } from 'react';
 import {
   BookingCalendar,
   TimeSlotGrid,
@@ -26,6 +25,8 @@ import {
   UserRound,
 } from 'lucide-react';
 import { ImageCard } from '@/components/ui/ImageCard';
+import { TimePeriodTabs, TimePeriod } from '@/components/booking/TimePeriodTabs';
+import { useState, useMemo, useEffect } from 'react';
 
 /* ==================================================
    🔐 MOCK LOGIN (DEV MODE)
@@ -46,6 +47,22 @@ export default function BookingPage() {
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('morning');
+
+  const filterSlotsByPeriod = (
+    slots: TimeSlot[],
+    period: TimePeriod,
+  ) => {
+    return slots.filter((slot) => {
+      const hour = Number(slot.startTime.split(':')[0]);
+
+      if (period === 'morning') return hour >= 8 && hour < 12;
+      if (period === 'afternoon') return hour >= 12 && hour < 17;
+      if (period === 'evening') return hour >= 17 && hour < 20;
+
+      return true;
+    });
+  };
 
   /* ---------------- DATA ---------------- */
   const {
@@ -53,7 +70,7 @@ export default function BookingPage() {
     isLoading: isSlotsLoading,
     refetch: refetchSlots,
   } = useTimeSlots(selectedDate);
-
+  
   const {
     hasActiveBooking,
     refetch: refetchAppointments,
@@ -66,6 +83,15 @@ export default function BookingPage() {
     clearError,
   } = useBooking();
 
+  
+  // filter slots by selectedPeriod
+  const filteredSlots = useMemo(() => {
+    return filterSlotsByPeriod(
+      slots ?? [],
+      selectedPeriod,
+    );
+  }, [slots, selectedPeriod]);
+  
   /* ---------------- HANDLERS ---------------- */
   const handlePreviousMonth = () => {
     setCurrentMonth(
@@ -123,6 +149,10 @@ export default function BookingPage() {
     nd.setHours(0, 0, 0, 0);
     return nd;
   };
+
+  useEffect(() => {
+    setSelectedSlot(null);
+  }, [selectedDate, selectedPeriod]);
 
   /* ==================================================
      📱 UI
@@ -204,9 +234,17 @@ export default function BookingPage() {
 
           <div className="md:col-span-3 space-y-4">
             <Card className="rounded-2xl bg-white shadow-sm">
+
+               {/* 🔹 เมนูเลือกช่วงเวลา */}
+              <TimePeriodTabs
+                value={selectedPeriod}
+                onChange={setSelectedPeriod}
+              />
+              
+              {/* 🔹 TimeSlot */}
               <TimeSlotGrid
                 selectedDate={selectedDate}
-                slots={slots}
+                slots={filteredSlots}
                 onSelectSlot={handleSelectSlot}
                 isLoading={isSlotsLoading}
                 hasActiveBooking={hasActiveBooking}
