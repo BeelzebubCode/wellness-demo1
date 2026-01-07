@@ -2,12 +2,12 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  User, 
-  Lock, 
-  Loader2, 
-  Heart, 
-  ArrowRight, 
+import {
+  User,
+  Lock,
+  Loader2,
+  Heart,
+  ArrowRight,
   AlertCircle,
   Eye,
   EyeOff,
@@ -38,24 +38,55 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
+        
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('auth_user', JSON.stringify({ name: data.account?.username || formData.username }));
+        window.dispatchEvent(new Event('auth-changed'));
+
+        // ✅ 1) เก็บ token (สำคัญ: ให้ Header รู้ว่าล็อกอินแล้ว)
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+        }
+
+        // ✅ 2) เก็บ user ไว้โชว์ชื่อบน PublicHeader (optional แต่แนะนำ)
+        localStorage.setItem(
+          'auth_user',
+          JSON.stringify({
+            name: data.account?.name || data.account?.username || formData.username,
+            avatar: data.account?.avatar || null,
+            role: data.account?.role || null,
+          })
+        );
+
+        // ✅ 3) ยิง event บอกทุก component (เช่น PublicHeader) ว่า auth เปลี่ยนแล้ว
+        window.dispatchEvent(new Event('auth-changed'));
+
         const role = data.account.role;
 
         switch (role) {
           case 'HEAD_CONSULTANT':
           case 'ADMIN':
             router.replace('/admin/data-center');
+            router.refresh();
             return;
+
           case 'CONSULTANT':
             router.replace('/consultant/my-jobs');
+            router.refresh();
             return;
+
           case 'STUDENT':
             router.replace('/booking');
+            router.refresh();
             return;
+
           default:
             router.replace('/');
+            router.refresh();
             return;
         }
       }
+
 
       setError(data.error || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
       setLoading(false);
@@ -81,10 +112,10 @@ export default function LoginPage() {
           <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
             <defs>
               <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-                <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" strokeWidth="0.5"/>
+                <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" strokeWidth="0.5" />
               </pattern>
             </defs>
-            <rect width="100" height="100" fill="url(#grid)"/>
+            <rect width="100" height="100" fill="url(#grid)" />
           </svg>
         </div>
 
@@ -92,7 +123,7 @@ export default function LoginPage() {
         <div className="absolute top-20 left-20 w-32 h-32 bg-white/10 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-40 right-20 w-48 h-48 bg-cyan-300/20 rounded-full blur-3xl animate-pulse" />
         <div className="absolute top-1/2 left-1/3 w-24 h-24 bg-emerald-300/20 rounded-full blur-2xl animate-pulse" />
-        
+
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20 text-white">
           {/* Logo */}
@@ -116,7 +147,7 @@ export default function LoginPage() {
               <span className="text-emerald-200">นิสิตทุกคน</span>
             </h2>
             <p className="text-lg text-emerald-100/90 leading-relaxed">
-              ระบบบริหารจัดการการนัดหมายให้คำปรึกษาด้านสุขภาพจิต 
+              ระบบบริหารจัดการการนัดหมายให้คำปรึกษาด้านสุขภาพจิต
               สำหรับเจ้าหน้าที่และผู้ให้คำปรึกษา
             </p>
           </div>
@@ -262,7 +293,7 @@ export default function LoginPage() {
 
             <div className="mt-6 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50 p-5">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                
+
                 {/* Left: Info */}
                 <div className="flex items-start gap-3">
                   <div className="p-2 bg-amber-100 rounded-xl">
@@ -307,7 +338,7 @@ export default function LoginPage() {
                               hover:bg-amber-100 hover:text-amber-800
                               transition"
                   >
-                      Student
+                    Student
                   </button>
                 </div>
               </div>
