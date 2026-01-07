@@ -43,3 +43,45 @@
     @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-6 lg:p-8;
   }
 }
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+    opacity: 0.6;
+  }
+  100% {
+    background-position: -200% 0;
+    opacity: 1;
+  }
+}
+
+.animate-pop-in {
+  animation: pop-in 0.55s ease-out both;
+}
+
+.animate-shimmer {
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+.bg-shimmer {
+  background: linear-gradient(
+    110deg,
+    rgba(13, 148, 136, 0.06),
+    rgba(255, 255, 255, 0.35),
+    rgba(16, 185, 129, 0.06)
+  );
+  background-size: 200% 100%;
+}

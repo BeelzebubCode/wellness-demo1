@@ -6,13 +6,13 @@ import {
   User,
   Lock,
   Loader2,
-  Heart,
   ArrowRight,
   AlertCircle,
   Eye,
   EyeOff,
   Sparkles,
-  Shield
+  HeartPulse,
+  Megaphone,
 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -38,17 +38,10 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('auth_user', JSON.stringify({ name: data.account?.username || formData.username }));
-        window.dispatchEvent(new Event('auth-changed'));
+        // ✅ 1) token
+        if (data.token) localStorage.setItem('token', data.token);
 
-        // ✅ 1) เก็บ token (สำคัญ: ให้ Header รู้ว่าล็อกอินแล้ว)
-        if (data.token) {
-          localStorage.setItem('token', data.token);
-        }
-
-        // ✅ 2) เก็บ user ไว้โชว์ชื่อบน PublicHeader (optional แต่แนะนำ)
+        // ✅ 2) user
         localStorage.setItem(
           'auth_user',
           JSON.stringify({
@@ -58,7 +51,7 @@ export default function LoginPage() {
           })
         );
 
-        // ✅ 3) ยิง event บอกทุก component (เช่น PublicHeader) ว่า auth เปลี่ยนแล้ว
+        // ✅ 3) event
         window.dispatchEvent(new Event('auth-changed'));
 
         const role = data.account.role;
@@ -87,10 +80,8 @@ export default function LoginPage() {
         }
       }
 
-
       setError(data.error || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
       setLoading(false);
-
     } catch (err) {
       console.error(err);
       setError('Connection Error');
@@ -98,257 +89,268 @@ export default function LoginPage() {
     }
   };
 
-
   const handleDemoFill = (username: string, password: string) => {
     setFormData({ username, password });
   };
 
   return (
-    <div className="min-h-screen w-full flex">
-      {/* ================= LEFT SIDE ================= */}
-      <div className="hidden lg:flex relative w-1/2 bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-            <defs>
-              <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-                <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" strokeWidth="0.5" />
-              </pattern>
-            </defs>
-            <rect width="100" height="100" fill="url(#grid)" />
-          </svg>
-        </div>
+    <div className="min-h-screen w-full bg-white relative overflow-hidden">
+      {/* background blobs (คล้ายรูปตัวอย่าง แต่โทนระบบ teal/mint) */}
+      <div className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-teal-100 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-28 -right-20 h-72 w-72 rounded-full bg-emerald-100 blur-3xl" />
+      <div className="pointer-events-none absolute top-10 right-10 h-28 w-28 rounded-full bg-teal-200/40" />
 
-        {/* Floating Elements */}
-        <div className="absolute top-20 left-20 w-32 h-32 bg-white/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-40 right-20 w-48 h-48 bg-cyan-300/20 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute top-1/2 left-1/3 w-24 h-24 bg-emerald-300/20 rounded-full blur-2xl animate-pulse" />
-
-        {/* Content */}
-        <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20 text-white">
-          {/* Logo */}
-          <div className="flex items-center gap-4 mb-8">
-            <div className="p-4 bg-white/20 backdrop-blur-xl rounded-2xl shadow-xl">
-              <Heart className="w-10 h-10 text-white" fill="currentColor" />
-            </div>
-            <div>
-              <h1 className="text-3xl xl:text-4xl font-bold tracking-tight">
-                NU Wellness
-              </h1>
-              <p className="text-emerald-100 text-sm">Center Management System</p>
-            </div>
-          </div>
-
-          {/* Main Message */}
-          <div className="space-y-6 max-w-lg">
-            <h2 className="text-4xl xl:text-5xl font-bold leading-tight">
-              ดูแลสุขภาพใจ
-              <br />
-              <span className="text-emerald-200">นิสิตทุกคน</span>
-            </h2>
-            <p className="text-lg text-emerald-100/90 leading-relaxed">
-              ระบบบริหารจัดการการนัดหมายให้คำปรึกษาด้านสุขภาพจิต
-              สำหรับเจ้าหน้าที่และผู้ให้คำปรึกษา
-            </p>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-6 mt-12 pt-8 border-t border-white/20">
-            <div>
-              <p className="text-3xl font-bold">500+</p>
-              <p className="text-emerald-200 text-sm">นิสิตที่ใช้บริการ</p>
-            </div>
-            <div>
-              <p className="text-3xl font-bold">15</p>
-              <p className="text-emerald-200 text-sm">ผู้เชี่ยวชาญ</p>
-            </div>
-            <div>
-              <p className="text-3xl font-bold">98%</p>
-              <p className="text-emerald-200 text-sm">ความพึงพอใจ</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ================= RIGHT SIDE: LOGIN FORM ================= */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-10 md:p-16 bg-slate-50">
-        <div className="w-full max-w-md">
-          {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center justify-center gap-3 mb-10">
-            <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg">
-              <Heart className="w-7 h-7 text-white" fill="currentColor" />
-            </div>
-            <span className="text-2xl font-bold text-slate-800">NU Wellness</span>
-          </div>
-
-          {/* Header */}
-          <div className="text-center lg:text-left mb-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium mb-4">
-              <Shield className="w-4 h-4" />
-              Admin Portal
-            </div>
-            <h3 className="text-3xl font-bold text-slate-900 tracking-tight">
-              ยินดีต้อนรับกลับ
-            </h3>
-            <p className="mt-2 text-slate-500">
-              เข้าสู่ระบบเพื่อจัดการการนัดหมาย
-            </p>
-          </div>
-
-          {/* Error Alert */}
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 animate-pulse">
-              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-              <p className="text-red-700 text-sm font-medium">{error}</p>
-            </div>
-          )}
-
-          {/* Form */}
-          <form onSubmit={handleLogin} className="space-y-5">
-            {/* Username */}
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700" htmlFor="username">
-                ชื่อผู้ใช้งาน
-              </label>
-              <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors">
-                  <User size={20} />
-                </div>
-                <input
-                  id="username"
-                  type="text"
-                  placeholder="ระบุชื่อบัญชีของคุณ"
-                  autoComplete="username"
-                  className="w-full pl-12 pr-4 py-3.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-900 placeholder:text-slate-400 shadow-sm"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  required
-                  disabled={loading}
-                />
-              </div>
-            </div>
-
-            {/* Password */}
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700" htmlFor="password">
-                รหัสผ่าน
-              </label>
-              <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors">
-                  <Lock size={20} />
-                </div>
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                  className="w-full pl-12 pr-12 py-3.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-900 placeholder:text-slate-400 shadow-sm"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-                  disabled={loading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-4 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/25 transition-all hover:shadow-emerald-500/40 active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <>
-                  <Loader2 size={22} className="animate-spin" />
-                  <span>กำลังเข้าสู่ระบบ...</span>
-                </>
-              ) : (
-                <>
-                  เข้าสู่ระบบ <ArrowRight size={20} />
-                </>
-              )}
-            </button>
-          </form>
-
-          {/* Demo Account Section */}
-          <div className="mt-8">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200"></div>
-              </div>
-              <div className="relative flex justify-center">
-                <span className="px-4 bg-slate-50 text-xs text-slate-400 uppercase tracking-wider">
-                  ทดสอบระบบ
+      <div className="relative z-10 min-h-screen flex items-center justify-center px-4 py-10">
+        {/* Main Card */}
+        <div className="w-full max-w-5xl rounded-[26px] bg-white shadow-[0_22px_60px_rgba(2,6,23,0.12)] border border-slate-200 overflow-hidden">
+          <div className="grid lg:grid-cols-2">
+            {/* ================= LEFT: form ================= */}
+            <div className="p-8 sm:p-10 lg:p-12">
+              {/* Logo/Brand (สไตล์ HermesPay แต่เป็น NU Wellness) */}
+              <div className="flex items-center gap-2 mb-10">
+                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-teal-600 to-emerald-600 shadow-sm">
+                  <HeartPulse className="w-4 h-4 text-white" />
+                </span>
+                <span className="text-lg font-semibold text-slate-900">
+                  NU Wellness
                 </span>
               </div>
-            </div>
 
-            <div className="mt-6 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50 p-5">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              {/* Error */}
+              {error && (
+                <div className="mb-5 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-500 mt-0.5" />
+                  <p className="text-sm text-red-700 font-semibold">{error}</p>
+                </div>
+              )}
 
-                {/* Left: Info */}
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-amber-100 rounded-xl">
-                    <Sparkles className="w-4 h-4 text-amber-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-amber-900">
-                      Demo Account
-                    </p>
-                  </div>
+              <form onSubmit={handleLogin} className="space-y-4 max-w-sm">
+                {/* Username */}
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                    <User size={18} />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Name"
+                    autoComplete="username"
+                    className="w-full h-11 pl-10 pr-3 rounded-md border border-slate-200 bg-white
+                               text-slate-900 placeholder:text-slate-400
+                               focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500
+                               transition"
+                    value={formData.username}
+                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    required
+                    disabled={loading}
+                  />
                 </div>
 
-                {/* Right: Buttons */}
-                <div className="flex gap-2">
+                {/* Password */}
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                    <Lock size={18} />
+                  </span>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Password"
+                    autoComplete="current-password"
+                    className="w-full h-11 pl-10 pr-10 rounded-md border border-slate-200 bg-white
+                               text-slate-900 placeholder:text-slate-400
+                               focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500
+                               transition"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    required
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((s) => !s)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
+                    tabIndex={-1}
+                    aria-label="toggle password"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+
+                {/* Row: forgot + login button (เหมือนรูป) */}
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    type="button"
+                    className="text-sm text-slate-500 hover:text-slate-700 transition"
+                    disabled={loading}
+                  >
+                    Forgot Password?
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="h-10 px-6 rounded-md font-semibold text-white
+                               bg-teal-600 hover:bg-teal-700
+                               shadow-sm shadow-teal-500/20
+                               transition disabled:opacity-70 disabled:cursor-not-allowed
+                               inline-flex items-center gap-2"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Loading
+                      </>
+                    ) : (
+                      <>
+                        Login <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+
+              {/* Demo buttons (ยังอยู่เหมือนเดิม แต่จัดให้กลืนกับ UI) */}
+              <div className="mt-10 max-w-sm">
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  <span className="font-semibold">Demo</span>
+                  <span className="text-slate-400">— กดเพื่อกรอกอัตโนมัติ</span>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={() => handleDemoFill('admin', 'admin123')}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-lg
-                              bg-white text-amber-700 border border-amber-300
-                              hover:bg-amber-100 hover:text-amber-800
-                              transition"
+                    className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white
+                               hover:bg-slate-50 transition"
                   >
                     Admin
                   </button>
-
                   <button
                     type="button"
                     onClick={() => handleDemoFill('consultant1', '123456')}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-lg
-                              bg-white text-amber-700 border border-amber-300
-                              hover:bg-amber-100 hover:text-amber-800
-                              transition"
+                    className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white
+                               hover:bg-slate-50 transition"
                   >
                     Consultant
                   </button>
-
                   <button
                     type="button"
                     onClick={() => handleDemoFill('student1', '123456')}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-lg
-                              bg-white text-amber-700 border border-amber-300
-                              hover:bg-amber-100 hover:text-amber-800
-                              transition"
+                    className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white
+                               hover:bg-slate-50 transition"
                   >
                     Student
                   </button>
                 </div>
+
+                <p className="mt-8 text-xs text-slate-400">
+                  © 2024 NU Wellness Center. All rights reserved.
+                </p>
               </div>
             </div>
-          </div>
 
-          {/* Footer */}
-          <p className="mt-8 text-center text-xs text-slate-400">
-            © 2024 NU Wellness Center. All rights reserved.
-          </p>
+            {/* ================= RIGHT: illustration area ================= */}
+            <div className="relative hidden lg:flex items-center justify-center bg-teal-50">
+              {/* วงกลม/ลวดลายแบบในรูป */}
+              <div className="pointer-events-none absolute -top-14 -right-14 w-48 h-48 rounded-full bg-emerald-200/45" />
+              <div className="pointer-events-none absolute top-24 right-10 w-24 h-24 rounded-full bg-teal-200/55" />
+              <div className="pointer-events-none absolute bottom-10 left-10 w-28 h-28 rounded-full bg-emerald-200/35" />
+              <div className="pointer-events-none absolute bottom-20 right-8 w-36 h-36 rounded-full bg-teal-200/25" />
+
+              {/* เส้นคลื่นๆ */}
+              <div className="pointer-events-none absolute top-8 left-10 text-teal-400/60 select-none">
+                <svg width="70" height="30" viewBox="0 0 70 30" fill="none">
+                  <path
+                    d="M2 15c8-10 16 10 24 0s16-10 24 0 16 10 18 0"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
+
+              {/* TODO: ใส่รูปทีหลัง */}
+              <div className="relative w-[78%] max-w-md mx-auto">
+                <div
+                  className="
+                    relative
+                    w-full
+                    aspect-[4/3]
+                    bg-white
+                    rounded-[24px]
+                    border border-teal-100
+                    shadow-[0_16px_40px_rgba(2,6,23,0.12)]
+                    overflow-hidden
+                  "
+                >
+                  {/* shimmer background */}
+                  <div className="absolute inset-0 animate-shimmer bg-shimmer" />
+
+                  {/* image */}
+                  <div className="relative z-10 flex h-full w-full items-center justify-center">
+                    <img
+                      src="/images/login-illustration.png"
+                      alt="login illustration"
+                      className="
+                        w-[86%]
+                        max-h-[86%]
+                        object-contain
+                        rounded-[15px]
+                        drop-shadow-[0_14px_28px_rgba(2,6,23,0.12)]
+                        animate-pop-in
+                      "
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* จุดกลมๆ */}
+              <div className="pointer-events-none absolute top-1/2 right-14 w-2 h-2 rounded-full bg-teal-500/60" />
+              <div className="pointer-events-none absolute top-[58%] right-20 w-1.5 h-1.5 rounded-full bg-emerald-500/55" />
+
+              {/* วงแหวนขวา */}
+              <div className="pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 opacity-40">
+                <svg width="90" height="90" viewBox="0 0 90 90" fill="none">
+                  <circle cx="45" cy="45" r="22" stroke="#0EA5A4" strokeWidth="2" opacity="0.35" />
+                  <circle cx="45" cy="45" r="32" stroke="#0EA5A4" strokeWidth="2" opacity="0.22" />
+                  <circle cx="45" cy="45" r="42" stroke="#0EA5A4" strokeWidth="2" opacity="0.14" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Mobile illustration */}
+            <div className="lg:hidden bg-teal-50 border-t border-slate-200 p-4">
+              <div
+                className="
+                  relative
+                  w-full
+                  aspect-[16/9]
+                  bg-white
+                  rounded-[20px]
+                  border border-teal-100
+                  shadow-[0_14px_32px_rgba(2,6,23,0.12)]
+                  overflow-hidden
+                "
+              >
+                {/* shimmer background */}
+                <div className="absolute inset-0 animate-shimmer bg-shimmer" />
+
+                {/* image */}
+                <div className="relative z-10 flex h-full w-full items-center justify-center">
+                  <img
+                    src="/images/login-illustration.png"
+                    alt="login illustration"
+                    className="
+                      w-full
+                      h-full
+                      object-cover
+                      animate-pop-in
+                    "
+                  />
+                </div>
+              </div>
+            </div>
+            {/* /mobile */}
+          </div>
         </div>
       </div>
     </div>
