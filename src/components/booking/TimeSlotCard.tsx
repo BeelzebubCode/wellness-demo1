@@ -20,6 +20,11 @@ export function TimeSlotCard({
   const isAvailable = slot.isAvailable && !disabled;
   const isFull = !slot.isAvailable;
 
+  // ✅ FIXED QUOTA: 1 คิวต่อช่วงเวลา
+  const TOTAL = 1;
+
+  const queueText = isAvailable ? `0/${TOTAL}` : `1/${TOTAL}`;
+
   return (
     <button
       onClick={onSelect}
@@ -81,17 +86,17 @@ export function TimeSlotCard({
         {isFull ? (
           <>
             <XCircle className="w-3.5 h-3.5" />
-            เต็ม
+            <span>เต็ม {queueText}</span>
           </>
         ) : disabled ? (
           <>
             <AlertTriangle className="w-3.5 h-3.5" />
-            มีคิวค้าง
+            <span>มีคิวค้าง</span>
           </>
         ) : (
           <>
             <CheckCircle className="w-3.5 h-3.5" />
-            ว่าง
+            <span>ว่าง {queueText}</span>
           </>
         )}
       </div>

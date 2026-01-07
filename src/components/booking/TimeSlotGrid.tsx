@@ -166,12 +166,6 @@ function TimeSlotSection({
             <p className="text-[11px] md:text-xs text-gray-400">{subtitle}</p>
           </div>
         </div>
-
-        {/* Right: available count badge */}
-        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 px-3 py-1 text-[11px] md:text-xs font-medium self-start md:self-auto">
-          <CheckCircle2 className="w-3 h-3" />
-          {availableCount} ว่าง
-        </span>
       </div>
 
       {/* ตารางช่วงเวลา */}

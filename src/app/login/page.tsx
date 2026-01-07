@@ -112,7 +112,7 @@ export default function LoginPage() {
                   <HeartPulse className="w-4 h-4 text-white" />
                 </span>
                 <span className="text-lg font-semibold text-slate-900">
-                  NU Wellness
+                  NU Wellness Center
                 </span>
               </div>
 
