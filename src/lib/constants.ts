@@ -2,6 +2,13 @@
 // 📌 App Constants (Clean Version)
 // ==========================================
 
+import {
+  Clock,
+  UserCheck,
+  CheckCircle,
+  XCircle,
+} from 'lucide-react';
+
 /* ======================================================
    Booking Status
 ====================================================== */
@@ -10,7 +17,7 @@ export const BOOKING_STATUS = {
   PENDING_ASSIGNMENT: {
     key: 'PENDING_ASSIGNMENT',
     label: 'รอมอบหมาย',
-    icon: '⏳',
+    icon: Clock,
     bgColor: 'bg-amber-50',
     textColor: 'text-amber-700',
     borderColor: 'border-amber-200',
@@ -18,7 +25,7 @@ export const BOOKING_STATUS = {
   ASSIGNED: {
     key: 'ASSIGNED',
     label: 'กำลังดำเนินการ',
-    icon: '👨‍⚕️',
+    icon: UserCheck,
     bgColor: 'bg-purple-50',
     textColor: 'text-purple-700',
     borderColor: 'border-purple-200',
@@ -26,7 +33,7 @@ export const BOOKING_STATUS = {
   COMPLETED: {
     key: 'COMPLETED',
     label: 'เสร็จสิ้น',
-    icon: '✅',
+    icon: CheckCircle,
     bgColor: 'bg-emerald-50',
     textColor: 'text-emerald-700',
     borderColor: 'border-emerald-200',
@@ -34,7 +41,7 @@ export const BOOKING_STATUS = {
   CANCELLED: {
     key: 'CANCELLED',
     label: 'ยกเลิก',
-    icon: '❌',
+    icon: XCircle,
     bgColor: 'bg-gray-50',
     textColor: 'text-gray-600',
     borderColor: 'border-gray-200',

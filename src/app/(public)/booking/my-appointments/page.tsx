@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useMyAppointments } from '@/features/booking/hooks/useMyAppointments';
 import { useBooking } from '@/features/booking/hooks/useBooking';
 import { MyAppointmentCard } from '@/components/booking';
+import { MyBookingHistory } from '@/components/booking/MyBookingHistory';
 import {
   Card,
   Button,
@@ -26,7 +27,7 @@ import {
    🔐 DEV LOGIN (NO LINE)
    ================================================== */
 const MOCK_USER = {
-  username: 'student1', // account_username
+  username: 'student1',
   displayName: 'Student 1',
 };
 
@@ -65,7 +66,7 @@ export default function MyAppointmentsPage() {
       setBookingToCancel(null);
       refetch();
     } catch {
-      // error handled in hook
+      // handled in hook
     }
   };
 
@@ -82,9 +83,9 @@ export default function MyAppointmentsPage() {
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
-        <Card className="max-w-md w-full text-center py-10 shadow-md rounded-2xl">
+        <Card className="max-w-md w-full text-center py-10 rounded-2xl">
           <ClipboardList className="w-12 h-12 mx-auto mb-4 text-primary-500" />
-          <h2 className="text-xl font-bold text-gray-800 mb-2">
+          <h2 className="text-xl font-bold text-gray-800">
             กรุณาเข้าสู่ระบบ
           </h2>
         </Card>
@@ -103,9 +104,10 @@ export default function MyAppointmentsPage() {
         </h1>
       </div>
 
+      {/* ACTIVE + SUMMARY */}
       <div className="max-w-5xl mx-auto px-4 space-y-8">
-        {/* ACTIVE BOOKING */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* ACTIVE BOOKING */}
           <div className="lg:col-span-2">
             <Card className="rounded-2xl p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
@@ -162,30 +164,11 @@ export default function MyAppointmentsPage() {
             </Card>
           </div>
         </div>
+      </div>
 
-        {/* HISTORY */}
-        <Card className="rounded-2xl p-6 shadow-sm">
-          <h2 className="text-sm font-semibold text-gray-800 flex items-center gap-2 mb-4">
-            <ClipboardList className="w-4 h-4 text-primary-500" />
-            ประวัติการจอง ({pastBookings.length})
-          </h2>
-
-          {pastBookings.length > 0 ? (
-            <div className="space-y-3">
-              {pastBookings.map((booking) => (
-                <MyAppointmentCard
-                  key={booking.id}
-                  booking={booking}
-                  isCompact
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center text-gray-500 text-sm py-6 bg-gray-50 border border-dashed rounded-xl">
-              ยังไม่มีประวัติการจอง
-            </div>
-          )}
-        </Card>
+      {/* HISTORY (แก้ layout ตรงนี้) */}
+      <div className="max-w-5xl mx-auto px-4 mt-10">
+        <MyBookingHistory bookings={pastBookings} />
       </div>
 
       {/* CANCEL MODAL */}

@@ -20,33 +20,71 @@ export function MyAppointmentCard({
 }: MyAppointmentCardProps) {
   const statusConfig =
     BOOKING_STATUS[booking.status as keyof typeof BOOKING_STATUS];
-
-  // ✅ ตรง backend
-  const canCancel = ['PENDING_ASSIGNMENT', 'ASSIGNED'].includes(
-    booking.status
-  );
+  const StatusIcon = statusConfig.icon;
 
   const hasDate =
-    Boolean(booking.date) &&
-    Boolean(booking.startTime) &&
-    Boolean(booking.endTime);
+    !!booking.date && !!booking.startTime && !!booking.endTime;
 
+  /* ======================================================
+     ✅ COMPACT MODE (History)
+  ====================================================== */
+  if (isCompact) {
+    return (
+      <div className="border rounded-xl bg-white px-4 py-3 hover:bg-gray-50 transition">
+        <div className="flex items-start justify-between gap-4">
+          {/* LEFT */}
+          <div className="flex items-start gap-3">
+            {/* Date */}
+            {booking.date && (
+              <div className="text-center w-10 flex-shrink-0">
+                <div className="text-xs text-gray-500">
+                  {new Date(booking.date).toLocaleDateString('th-TH', {
+                    weekday: 'short',
+                  })}
+                </div>
+                <div className="text-lg font-semibold text-gray-800">
+                  {new Date(booking.date).getDate()}
+                </div>
+              </div>
+            )}
+
+            {/* Info */}
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-1.5 text-sm text-gray-700">
+                <StatusIcon className="w-4 h-4 text-gray-500" />
+                <span>{statusConfig.label}</span>
+              </div>
+
+              {hasDate && (
+                <div className="text-xs text-gray-500 flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {booking.startTime} – {booking.endTime} น.
+                </div>
+              )}
+
+              {booking.problemType && (
+                <div className="text-xs text-gray-600">
+                  {booking.problemType}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT */}
+          <div className="text-xs text-gray-400">
+            #{String(booking.id).padStart(6, '0')}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ======================================================
+     NORMAL MODE (Active booking)
+  ====================================================== */
   return (
-    <Card
-      className={cn(
-        'overflow-hidden transition-all duration-200 hover:shadow-md',
-        isCompact && 'p-4'
-      )}
-      padding={isCompact ? 'none' : 'md'}
-    >
-      {/* ================= STATUS BAR ================= */}
-      <div
-        className={cn(
-          'px-4 py-2',
-          statusConfig.bgColor,
-          !isCompact && '-mx-6 -mt-6 mb-4'
-        )}
-      >
+    <Card className="overflow-hidden" padding="md">
+      <div className={cn('px-4 py-2', statusConfig.bgColor)}>
         <div className="flex items-center justify-between">
           <span
             className={cn(
@@ -54,69 +92,47 @@ export function MyAppointmentCard({
               statusConfig.textColor
             )}
           >
-            {statusConfig.icon}
+            <StatusIcon className="w-4 h-4" />
             {statusConfig.label}
           </span>
-
           <span className="text-xs text-gray-500">
             #{String(booking.id).padStart(6, '0')}
           </span>
         </div>
       </div>
 
-      {/* ================= CONTENT ================= */}
-      <div className={cn('space-y-4', isCompact && 'mt-3')}>
-        {/* ---- Date & Time ---- */}
+      <div className="p-4 space-y-4">
         {hasDate && (
-          <div className="flex items-start gap-4">
-            <div className="w-14 h-14 bg-primary-50 rounded-xl flex flex-col items-center justify-center text-primary-600 flex-shrink-0">
-              <span className="text-xs font-bold uppercase">
-                {new Date(booking.date!).toLocaleDateString('th-TH', {
-                  weekday: 'short',
-                })}
-              </span>
-              <span className="text-xl font-bold leading-none">
-                {new Date(booking.date!).getDate()}
-              </span>
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-gray-800">
-                {formatThaiDate(new Date(booking.date!))}
-              </p>
-              <p className="text-sm text-gray-500 flex items-center gap-1">
-                <Clock className="w-4 h-4" />
-                {booking.startTime} - {booking.endTime} น.
-              </p>
-            </div>
+          <div>
+            <p className="font-semibold text-gray-800">
+              {formatThaiDate(new Date(booking.date!))}
+            </p>
+            <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+              <Clock className="w-4 h-4" />
+              {booking.startTime} – {booking.endTime} น.
+            </p>
           </div>
         )}
 
-        {/* ---- Problem Type ---- */}
         {booking.problemType && (
           <div className="bg-gray-50 rounded-lg p-3">
-            <p className="text-xs text-gray-400 mb-1">
-              ประเภทปัญหา
-            </p>
+            <p className="text-xs text-gray-400 mb-1">ประเภทปัญหา</p>
             <p className="text-sm text-gray-700">
               {booking.problemType}
             </p>
           </div>
         )}
 
-        {/* ---- Actions ---- */}
-        {canCancel && onCancel && (
-          <div className="pt-2 border-t border-gray-100">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onCancel}
-              className="text-red-600 border-red-200 hover:bg-red-50 flex items-center gap-1"
-            >
-              <XCircle className="w-4 h-4" />
-              ยกเลิกการจอง
-            </Button>
-          </div>
+        {onCancel && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onCancel}
+            className="text-red-600 border-red-200 hover:bg-red-50 flex items-center gap-1"
+          >
+            <XCircle className="w-4 h-4" />
+            ยกเลิกการจอง
+          </Button>
         )}
       </div>
     </Card>
