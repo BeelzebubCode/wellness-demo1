@@ -24,6 +24,7 @@ import {
   PROBLEM_CATEGORY_CONFIG,
   ProblemCategoryCode,
 } from "@/lib/problem-category.config";
+import { AlertBox } from "../notification/AlertBox";
 
 type ProblemCategory = {
   id: number;
@@ -58,6 +59,8 @@ export function BookingForm({
   });
 
   const [localError, setLocalError] = useState<string | null>(null);
+
+  const [descError, setDescError] = useState<string | null>(null);
 
   // ---- Load categories from API (nameTh) ----
   const [categories, setCategories] = useState<ProblemCategory[]>([]);
@@ -122,6 +125,12 @@ export function BookingForm({
       return;
     }
 
+    if (!formData.problemDescription?.trim()) {
+      setLocalError("กรุณากรอกรายละเอียดเพิ่มเติม");
+      return;
+    }
+
+    setDescError(null);
     setLocalError(null);
 
     onSubmit({
@@ -216,20 +225,36 @@ export function BookingForm({
       {/* Problem Description */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          รายละเอียดเพิ่มเติม (ถ้ามี)
+          รายละเอียดเพิ่มเติม <span className="text-red-500">*</span>
         </label>
+
         <textarea
           value={formData.problemDescription}
-          onChange={(e) =>
+          onChange={(e) => {
             setFormData((prev) => ({
               ...prev,
               problemDescription: e.target.value,
-            }))
-          }
+            }));
+            if (descError) setDescError(null); // พอพิมพ์แล้วล้าง error
+          }}
           rows={4}
           placeholder="อธิบายปัญหาหรือสิ่งที่ต้องการปรึกษาเพิ่มเติม..."
-          className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+          className={cn(
+            "w-full resize-none rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2",
+            descError
+              ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
+              : "border-gray-200 focus:border-primary-500 focus:ring-primary-500/20"
+          )}
         />
+
+        {/* ✅ error สีแดงใต้ช่อง */}
+        {descError && (
+          <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+            <AlertTriangle className="w-3.5 h-3.5" />
+            {descError}
+          </p>
+        )}
+
         <p className="mt-1 text-xs text-gray-400">
           ข้อมูลนี้จะถูกเก็บรักษาเป็นความลับ
           และใช้เพื่อการเตรียมตัวของผู้ให้คำปรึกษาเท่านั้น
@@ -237,14 +262,8 @@ export function BookingForm({
       </div>
 
       {/* Error Message */}
-      {(localError || error) && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-3">
-          <p className="flex items-start gap-2 text-xs text-red-700">
-            <AlertTriangle className="mt-0.5 h-4 w-4" />
-            <span>{localError || error}</span>
-          </p>
-        </div>
-      )}
+      <AlertBox message={localError || error} />
+
 
       {/* Submit Button */}
       <Button

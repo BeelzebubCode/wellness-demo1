@@ -85,8 +85,8 @@ export default function HomePage() {
               },
               {
                 icon: <Users className="w-7 h-7 text-primary-500" />,
-                title: 'ผู้เชี่ยวชาญ',
-                desc: 'ดูแลโดยนักจิตวิทยาที่มีประสบการณ์',
+                title: 'เจ้าหน้าที่',
+                desc: 'บริการฟรีสำหรับนิสิต',
               },
               {
                 icon: <Smartphone className="w-7 h-7 text-primary-500" />,

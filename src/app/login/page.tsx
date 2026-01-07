@@ -243,7 +243,7 @@ export default function LoginPage() {
                 </div>
 
                 <p className="mt-8 text-xs text-slate-400">
-                  © 2024 NU Wellness Center. All rights reserved.
+                  © 2026 NU Wellness Center. All rights reserved.
                 </p>
               </div>
             </div>
