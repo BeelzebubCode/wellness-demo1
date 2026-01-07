@@ -1,8 +1,10 @@
-// ==========================================
-// 📌 Layout Components - Index
-// ==========================================
+// components/layout/index.ts
 
-export * from './PublicHeader';
-export * from './PublicFooter';
-export * from './AdminHeader';
-export * from './AdminSidebar';
+// Headers
+export * from './header';
+
+// Sidebars
+export * from './sidebar';
+
+// Footer
+export { PublicFooter } from './PublicFooter';

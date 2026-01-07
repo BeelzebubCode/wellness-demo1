@@ -1,8 +1,6 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-// ตรวจสอบ path นี้ให้ถูกต้องตามโปรเจคของคุณ
-import ConsultantHeader from '@/components/layout/ConsultantHeader'; 
 
 import {
   CalendarDays,
@@ -133,13 +131,6 @@ export default function ConsultantMyJobsPage() {
       {/* Decorative Globs (แบบเดิม) */}
       <div className="fixed top-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full bg-teal-100/30 blur-[100px] pointer-events-none z-0 mix-blend-multiply" />
       <div className="fixed bottom-[-10%] left-[-5%] w-[400px] h-[400px] rounded-full bg-blue-100/30 blur-[80px] pointer-events-none z-0 mix-blend-multiply" />
-
-      <div className="relative z-10">
-        <ConsultantHeader
-          consultantName="ผู้ให้คำปรึกษา"
-          roleText="Consultant"
-          onMenuClick={() => console.log('Menu Clicked')}
-        />
 
         <main className="max-w-[1280px] mx-auto px-4 md:px-6 py-8 space-y-6">
 
@@ -328,7 +319,6 @@ export default function ConsultantMyJobsPage() {
 
         </main>
       </div>
-    </div>
   );
 }
 

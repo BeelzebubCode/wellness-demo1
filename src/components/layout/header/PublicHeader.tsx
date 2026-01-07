@@ -2,15 +2,16 @@
 // 📌 Layout Component: PublicHeader (Hydration-safe + Auth Reactive) — Premium Mobile UI
 // ==========================================
 
-'use client';
+// components/layout/header/PublicHeader.tsx
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { cn } from '@/lib/cn';
-import { APP_CONFIG, PUBLIC_NAV } from '@/lib/constants';
-import { logout as doLogout } from '@/features/auth/logout';
-import { LogOut, Menu, X, LogIn, User } from 'lucide-react';
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { cn } from "@/lib/cn";
+import { APP_CONFIG, PUBLIC_NAV } from "@/lib/constants";
+import { logout } from "@/features/auth/logout";
+import { LogOut, Menu, X, LogIn, User } from "lucide-react";
 
 type PublicUser = {
   name?: string | null;
@@ -18,11 +19,11 @@ type PublicUser = {
   role?: string | null;
 };
 
-const TOKEN_KEY = 'token';
-const USER_KEY = 'auth_user';
+const TOKEN_KEY = "token";
+const USER_KEY = "auth_user";
 
 function readUserFromStorage(): { isLoggedIn: boolean; user: PublicUser } {
-  if (typeof window === 'undefined') return { isLoggedIn: false, user: {} };
+  if (typeof window === "undefined") return { isLoggedIn: false, user: {} };
 
   const token = localStorage.getItem(TOKEN_KEY);
   const rawUser = localStorage.getItem(USER_KEY);
@@ -45,15 +46,21 @@ export interface PublicHeaderProps {
   onLogin?: () => void;
 }
 
-export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProps) {
+export function PublicHeader({
+  userName,
+  userAvatar,
+  onLogin,
+}: PublicHeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const [auth, setAuth] = useState<{ isLoggedIn: boolean; user: PublicUser }>(() => ({
-    isLoggedIn: false,
-    user: {},
-  }));
+  const [auth, setAuth] = useState<{ isLoggedIn: boolean; user: PublicUser }>(
+    () => ({
+      isLoggedIn: false,
+      user: {},
+    })
+  );
   const [hydrated, setHydrated] = useState(false);
 
   const toggleMobile = () => setMobileOpen((v) => !v);
@@ -61,15 +68,15 @@ export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProp
   useEffect(() => {
     const sync = () => setAuth(readUserFromStorage());
 
-    window.addEventListener('storage', sync);
-    window.addEventListener('auth-changed', sync as EventListener);
+    window.addEventListener("storage", sync);
+    window.addEventListener("auth-changed", sync as EventListener);
 
     sync();
     setHydrated(true);
 
     return () => {
-      window.removeEventListener('storage', sync);
-      window.removeEventListener('auth-changed', sync as EventListener);
+      window.removeEventListener("storage", sync);
+      window.removeEventListener("auth-changed", sync as EventListener);
     };
   }, []);
 
@@ -79,19 +86,21 @@ export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProp
     return auth.isLoggedIn;
   }, [userName, hydrated, auth.isLoggedIn]);
 
-  const displayName = useMemo(() => userName ?? auth.user.name ?? 'ผู้ใช้', [userName, auth.user.name]);
-  const displayAvatar = useMemo(() => userAvatar ?? auth.user.avatar ?? null, [userAvatar, auth.user.avatar]);
+  const displayName = useMemo(
+    () => userName ?? auth.user.name ?? "ผู้ใช้",
+    [userName, auth.user.name]
+  );
+  const displayAvatar = useMemo(
+    () => userAvatar ?? auth.user.avatar ?? null,
+    [userAvatar, auth.user.avatar]
+  );
 
+  // ✅ แก้ไขแล้ว - ใช้ logout() อย่างเดียว
   const handleLogout = async () => {
-    if (!confirm('ต้องการออกจากระบบ?')) return;
+    if (!confirm("ต้องการออกจากระบบ?")) return;
 
-    await doLogout();
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-    window.dispatchEvent(new Event('auth-changed'));
-
-    router.replace('/');
-    router.refresh();
+    await logout();
+    window.location.href = "/";
   };
 
   return (
@@ -128,7 +137,13 @@ export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProp
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-2">
               {PUBLIC_NAV.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const isActive = item.exact
+                  ? pathname === item.href
+                  : pathname === item.href ||
+                    pathname.startsWith(`${item.href}/`);
+
+                const Icon = item.icon;
+
                 return (
                   <Link
                     key={item.href}
@@ -140,7 +155,14 @@ export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProp
                         : "text-white/85 hover:bg-white/10"
                     )}
                   >
-                    {item.icon && <span className="w-4 h-4 flex items-center justify-center">{item.icon}</span>}
+                    {Icon && (
+                      <Icon
+                        className={cn(
+                          "w-4 h-4",
+                          isActive ? "text-slate-900" : "text-white/85"
+                        )}
+                      />
+                    )}
                     {item.label}
                   </Link>
                 );
@@ -164,7 +186,9 @@ export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProp
                         <User className="w-4 h-4 text-white" />
                       </div>
                     )}
-                    <span className="text-sm font-semibold text-white max-w-[140px] truncate">{displayName}</span>
+                    <span className="text-sm font-semibold text-white max-w-[140px] truncate">
+                      {displayName}
+                    </span>
                   </div>
 
                   <button
@@ -209,7 +233,11 @@ export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProp
                 )}
                 aria-label="Toggle menu"
               >
-                {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                {mobileOpen ? (
+                  <X className="w-5 h-5" />
+                ) : (
+                  <Menu className="w-5 h-5" />
+                )}
               </button>
             </div>
           </div>
@@ -231,11 +259,16 @@ export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProp
                 "p-4 space-y-4"
               )}
             >
-
               {/* nav pills */}
               <nav className="grid grid-cols-2 gap-2">
                 {PUBLIC_NAV.map((item) => {
-                  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  const isActive = item.exact
+                    ? pathname === item.href
+                    : pathname === item.href ||
+                      pathname.startsWith(`${item.href}/`);
+
+                  const Icon = item.icon;
+
                   return (
                     <Link
                       key={item.href}
@@ -257,8 +290,16 @@ export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProp
                           className="absolute -inset-0.5 rounded-full bg-white/30 blur-md opacity-60"
                         />
                       )}
+
                       <span className="relative flex items-center justify-center gap-2">
-                        {item.icon ? <span className="w-4 h-4">{item.icon}</span> : null}
+                        {Icon && (
+                          <Icon
+                            className={cn(
+                              "w-4 h-4",
+                              isActive ? "text-slate-900" : "text-white"
+                            )}
+                          />
+                        )}
                         <span className="truncate">{item.label}</span>
                       </span>
                     </Link>

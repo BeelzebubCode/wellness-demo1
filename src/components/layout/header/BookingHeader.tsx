@@ -1,29 +1,31 @@
-// src/components/layout/AdminHeader.tsx
-
+// components/layout/header/BookingHeader.tsx
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Menu, LogOut, User, Bell } from 'lucide-react'; // 👈 ใช้ไอคอนจาก Lucide
+import { Menu, LogOut, User } from 'lucide-react';
 import { logout } from '@/features/auth/logout';
 
-export interface AdminHeaderProps {
-  adminName?: string;
-  adminRole?: string;
+export interface BookingHeaderProps {
+  userName?: string;
+  userRole?: string;
   onMenuClick: () => void;
 }
 
-export function AdminHeader({ adminName, adminRole, onMenuClick }: AdminHeaderProps) {
+export function BookingHeader({ 
+  userName, 
+  userRole, 
+  onMenuClick 
+}: BookingHeaderProps) {
   const router = useRouter();
 
   const handleLogout = async () => {
-  if (!confirm('ต้องการออกจากระบบ?')) return;
+    if (!confirm('ต้องการออกจากระบบ?')) return;
 
     await logout();
     router.replace('/login');
   };
 
   return (
-    // 📏 ปรับความสูงเป็น h-20 (80px) เพื่อความโอ่อ่า อ่านง่าย
     <header className="bg-white sticky top-0 z-30 border-b border-gray-200 shadow-sm px-6 h-20 flex items-center justify-between">
       
       {/* Left: Menu & Title */}
@@ -33,10 +35,9 @@ export function AdminHeader({ adminName, adminRole, onMenuClick }: AdminHeaderPr
           className="p-3 -ml-3 text-gray-600 hover:bg-gray-100 rounded-xl md:hidden active:scale-95 transition-all"
           aria-label="เมนูหลัก"
         >
-          <Menu className="w-8 h-8" /> {/* ไอคอนเมนูใหญ่ขึ้น */}
+          <Menu className="w-8 h-8" />
         </button>
 
-        {/* 📏 Title ใหญ่สำหรับ Mobile */}
         <h1 className="text-xl font-bold text-primary-700 md:hidden">NU Wellness</h1>
       </div>
 
@@ -45,9 +46,11 @@ export function AdminHeader({ adminName, adminRole, onMenuClick }: AdminHeaderPr
         
         {/* User Info (Desktop) */}
         <div className="hidden sm:flex flex-col items-end mr-2">
-          <p className="text-lg font-bold text-gray-800 leading-none mb-1">{adminName || 'ผู้ดูแลระบบ'}</p>
+          <p className="text-lg font-bold text-gray-800 leading-none mb-1">
+            {userName || 'นักศึกษา'}
+          </p>
           <p className="text-sm text-gray-500 font-medium">
-            {adminRole === 'admin' ? 'ผู้ดูแลระบบสูงสุด' : 'ผู้ให้คำปรึกษา'}
+            {userRole || 'Student'}
           </p>
         </div>
         
@@ -71,3 +74,5 @@ export function AdminHeader({ adminName, adminRole, onMenuClick }: AdminHeaderPr
     </header>
   );
 }
+
+export default BookingHeader;
