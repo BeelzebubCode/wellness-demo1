@@ -118,8 +118,25 @@ export function LineProvider({ children, liffId }: LineProviderProps) {
 
 export function useLine(): LineContextValue {
   const context = useContext(LineContext);
+
+  // ✅ ปิด LINE ชั่วคราว: ถ้าไม่ได้ครอบ Provider ก็ไม่ต้องพัง ให้คืนค่า default ไปเลย
   if (context === undefined) {
-    throw new Error('useLine must be used within a LineProvider');
+    return {
+      profile: null,
+      isLoggedIn: false,
+      isLoading: false,
+      error: null,
+      login: () => {
+        // noop (ปิด LINE ไว้ก่อน)
+        console.warn('[Line] LINE is disabled (no provider).');
+      },
+      logout: () => {
+        // noop (ปิด LINE ไว้ก่อน)
+        console.warn('[Line] LINE is disabled (no provider).');
+      },
+    };
   }
+
   return context;
 }
+
