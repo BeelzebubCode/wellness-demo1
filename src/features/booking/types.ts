@@ -25,22 +25,19 @@ export interface TimeSlot {
 
 
 export interface Booking {
-  id: number;
+  id: number;     
   studentId: number;
   studentName: string;
-  studentCode?: string;
-  consultantId?: number;
-  consultantName?: string;
   problemType: string;
   problemCategoryId: number;
-  detailText?: string;
   status: BookingStatus;
+  createdAt: string;
+  updatedAt: string;
   date?: string;
   startTime?: string;
   endTime?: string;
-  createdAt: string;
-  updatedAt: string;
 }
+
 
 export interface BookingDetail extends Booking {
   student: {

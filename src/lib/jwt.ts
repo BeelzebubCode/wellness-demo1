@@ -73,12 +73,6 @@ export async function verifyToken(token: string): Promise<JWTPayload | null> {
   }
 }
 
-/**
- * Extract token from:
- * 1) Authorization: Bearer <token>
- * 2) Cookie: admin_token / access_token / token
- * 3) Query: ?token=<token> (เผื่อ debug หรือ integration)
- */
 export function extractToken(request: NextRequest): string | null {
   const auth =
     request.headers.get('authorization') ||
@@ -90,14 +84,15 @@ export function extractToken(request: NextRequest): string | null {
     if (token) return token;
   }
 
+  // ✅ FIX: เพิ่ม auth_token (สำคัญมาก)
   const cookieToken =
+    request.cookies.get('auth_token')?.value ||   // 👈 เพิ่มบรรทัดนี้
     request.cookies.get('admin_token')?.value ||
     request.cookies.get('access_token')?.value ||
     request.cookies.get('token')?.value;
 
   if (cookieToken) return cookieToken;
 
-  // เผื่อเคสส่งมาใน query
   try {
     const url = new URL(request.url);
     const q = url.searchParams.get('token');
@@ -108,6 +103,7 @@ export function extractToken(request: NextRequest): string | null {
 
   return null;
 }
+
 
 // =======================
 // Password (bcrypt)

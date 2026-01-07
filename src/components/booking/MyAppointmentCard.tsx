@@ -4,11 +4,8 @@ import { cn } from '@/lib/cn';
 import { formatThaiDate } from '@/lib/date';
 import { BOOKING_STATUS } from '@/lib/constants';
 import { Card, Button } from '@/components/ui';
-import type { Booking } from '@/types';
-import {
-  Clock,
-  XCircle,
-} from 'lucide-react';
+import type { Booking } from '@/features/booking/types';
+import { Clock, XCircle } from 'lucide-react';
 
 export interface MyAppointmentCardProps {
   booking: Booking;
@@ -28,6 +25,11 @@ export function MyAppointmentCard({
   const canCancel = ['PENDING_ASSIGNMENT', 'ASSIGNED'].includes(
     booking.status
   );
+
+  const hasDate =
+    Boolean(booking.date) &&
+    Boolean(booking.startTime) &&
+    Boolean(booking.endTime);
 
   return (
     <Card
@@ -56,7 +58,6 @@ export function MyAppointmentCard({
             {statusConfig.label}
           </span>
 
-          {/* ✅ booking.id เป็น number */}
           <span className="text-xs text-gray-500">
             #{String(booking.id).padStart(6, '0')}
           </span>
@@ -66,53 +67,40 @@ export function MyAppointmentCard({
       {/* ================= CONTENT ================= */}
       <div className={cn('space-y-4', isCompact && 'mt-3')}>
         {/* ---- Date & Time ---- */}
-        <div className="flex items-start gap-4">
-          <div className="w-14 h-14 bg-primary-50 rounded-xl flex flex-col items-center justify-center text-primary-600 flex-shrink-0">
-            <span className="text-xs font-bold uppercase">
-              {new Date(booking.date).toLocaleDateString('th-TH', {
-                weekday: 'short',
-              })}
-            </span>
-            <span className="text-xl font-bold leading-none">
-              {new Date(booking.date).getDate()}
-            </span>
-          </div>
+        {hasDate && (
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 bg-primary-50 rounded-xl flex flex-col items-center justify-center text-primary-600 flex-shrink-0">
+              <span className="text-xs font-bold uppercase">
+                {new Date(booking.date!).toLocaleDateString('th-TH', {
+                  weekday: 'short',
+                })}
+              </span>
+              <span className="text-xl font-bold leading-none">
+                {new Date(booking.date!).getDate()}
+              </span>
+            </div>
 
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-gray-800">
-              {formatThaiDate(new Date(booking.date))}
-            </p>
-            <p className="text-sm text-gray-500 flex items-center gap-1">
-              <Clock className="w-4 h-4" />
-              {booking.startTime} - {booking.endTime} น.
-            </p>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-gray-800">
+                {formatThaiDate(new Date(booking.date!))}
+              </p>
+              <p className="text-sm text-gray-500 flex items-center gap-1">
+                <Clock className="w-4 h-4" />
+                {booking.startTime} - {booking.endTime} น.
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ---- Problem Type ---- */}
         {booking.problemType && (
           <div className="bg-gray-50 rounded-lg p-3">
-            <p className="text-xs text-gray-400 mb-1">ประเภทปัญหา</p>
+            <p className="text-xs text-gray-400 mb-1">
+              ประเภทปัญหา
+            </p>
             <p className="text-sm text-gray-700">
               {booking.problemType}
             </p>
-          </div>
-        )}
-
-        {/* ---- Consultant ---- */}
-        {booking.consultant && (
-          <div className="flex items-center gap-3 bg-purple-50 rounded-lg p-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold">
-              {booking.consultant.name.charAt(0)}
-            </div>
-            <div>
-              <p className="text-xs text-purple-600">
-                ผู้ให้คำปรึกษา
-              </p>
-              <p className="font-semibold text-purple-800">
-                {booking.consultant.name}
-              </p>
-            </div>
           </div>
         )}
 

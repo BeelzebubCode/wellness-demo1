@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { Booking } from '@/types';
+import type { Booking } from '@/features/booking/types';
 
 interface UseMyAppointmentsReturn {
   bookings: Booking[];
