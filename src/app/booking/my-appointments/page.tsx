@@ -7,6 +7,7 @@ import { useMyAppointments } from '@/features/booking/hooks/useMyAppointments';
 import { useBooking } from '@/features/booking/hooks/useBooking';
 import { useStudentAuth } from '@/features/auth/hooks/useStudentAuth';
 import { MyAppointmentCard } from '@/components/booking';
+import { AlertBox } from '@/components/notification/AlertBox';
 import {
   Card,
   Button,
@@ -14,7 +15,6 @@ import {
   Modal,
   ModalFooter,
 } from '@/components/ui';
-
 import {
   ClipboardList,
   Clock3,
@@ -30,11 +30,13 @@ export default function MyAppointmentsPage() {
   /* ---------------- STATE (CANCEL) ---------------- */
   const [bookingToCancel, setBookingToCancel] = useState<number | null>(null);
   const [cancelReason, setCancelReason] = useState('');
+  const [cancelError, setCancelError] = useState<string | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
 
   const handleCancelClick = (bookingId: number) => {
     setBookingToCancel(bookingId);
     setCancelReason('');
+    setCancelError(null);
     setShowCancelModal(true);
   };
 
@@ -48,16 +50,24 @@ export default function MyAppointmentsPage() {
 
   const { cancelBooking, isLoading: isCancelling } = useBooking();
 
+  /* ---------------- ACTION ---------------- */
   const handleConfirmCancel = async () => {
     if (!bookingToCancel) return;
 
+    if (!cancelReason.trim()) {
+      setCancelError('กรุณากรอกเหตุผลในการยกเลิก');
+      return;
+    }
+
     try {
-      await cancelBooking(String(bookingToCancel), cancelReason || undefined);
+      await cancelBooking(String(bookingToCancel), cancelReason);
       setShowCancelModal(false);
       setBookingToCancel(null);
+      setCancelReason('');
+      setCancelError(null);
       refetch();
     } catch {
-      // handled in hook
+      setCancelError('ไม่สามารถยกเลิกการจองได้ กรุณาลองใหม่');
     }
   };
 
@@ -151,7 +161,6 @@ export default function MyAppointmentsPage() {
             </div>
           </Card>
 
-          {/* Quick Link to History */}
           <Link href="/booking/history">
             <Card className="rounded-2xl p-4 shadow-sm hover:bg-gray-50 transition cursor-pointer">
               <div className="flex items-center justify-between">
@@ -181,14 +190,25 @@ export default function MyAppointmentsPage() {
           <p className="text-sm text-gray-600">
             คุณแน่ใจหรือไม่ที่จะยกเลิกการจองนี้?
           </p>
+
           <textarea
             value={cancelReason}
-            onChange={(e) => setCancelReason(e.target.value)}
-            placeholder="เหตุผล (ไม่บังคับ)"
-            className="w-full p-3 border rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            onChange={(e) => {
+              setCancelReason(e.target.value);
+              setCancelError(null);
+            }}
+            placeholder="เหตุผล (จำเป็น)"
+            className={`w-full p-3 border rounded-xl text-sm focus:ring-2
+              ${
+                cancelError
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'focus:ring-primary-500 focus:border-primary-500'
+              }`}
             rows={3}
           />
+          <AlertBox message={cancelError} />
         </div>
+
         <ModalFooter>
           <Button variant="ghost" onClick={() => setShowCancelModal(false)}>
             ยกเลิก
