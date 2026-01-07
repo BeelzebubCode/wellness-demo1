@@ -8,11 +8,21 @@ export type BookingStatus =
   | 'CANCELLED';
 
 export interface TimeSlot { 
-  timeSlotId: number;     
+  id: number;                 // ✅ ให้ตรงกับ API
   startTime: string;
   endTime: string;
   isAvailable: boolean;
+  // (optional) ถ้า UI ใช้
+  date?: string;
+  startDateTime?: string;
+  endDateTime?: string;
+  maxCapacity?: number;
+  bookedCount?: number;
+  availableCount?: number;
+  status?: string;
+  isClosed?: boolean;
 }
+
 
 export interface Booking {
   id: number;

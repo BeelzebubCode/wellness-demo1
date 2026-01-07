@@ -32,9 +32,10 @@ import { useState, useMemo, useEffect } from 'react';
    🔐 MOCK LOGIN (DEV MODE)
    ================================================== */
 const MOCK_USER = {
-  userId: 'test_student_001',
-  displayName: 'Test Student',
+  userId: 'U_MOCK_100000001', // ✅ ให้ตรง DB
+  displayName: 'Student 1',
 };
+
 
 export default function BookingPage() {
   /* ---------------- AUTH ---------------- */
@@ -70,7 +71,7 @@ export default function BookingPage() {
     isLoading: isSlotsLoading,
     refetch: refetchSlots,
   } = useTimeSlots(selectedDate);
-  
+
   const {
     hasActiveBooking,
     refetch: refetchAppointments,
@@ -83,7 +84,7 @@ export default function BookingPage() {
     clearError,
   } = useBooking();
 
-  
+
   // filter slots by selectedPeriod
   const filteredSlots = useMemo(() => {
     return filterSlotsByPeriod(
@@ -91,7 +92,7 @@ export default function BookingPage() {
       selectedPeriod,
     );
   }, [slots, selectedPeriod]);
-  
+
   /* ---------------- HANDLERS ---------------- */
   const handlePreviousMonth = () => {
     setCurrentMonth(
@@ -124,12 +125,23 @@ export default function BookingPage() {
   };
 
   const handleConfirmBooking = async (formData: BookingFormData) => {
-    if (!selectedSlot) return;
+    if (!selectedSlot?.id) {
+      alert('กรุณาเลือกช่วงเวลาที่ต้องการจอง');
+      return;
+    }
+
+    // 🔴 ใส่ log ตรงนี้
+    console.log('📦 BOOKING PAYLOAD', {
+      lineUserId: profile.userId,
+      timeSlotId: selectedSlot.id,
+      problemCategoryId: formData.problemCategoryId,
+      detailText: formData.problemDescription,
+    });
 
     try {
       await createBooking({
-        lineUserId: profile.userId, // ใช้เป็น userId ชั่วคราว
-        timeSlotId: selectedSlot.timeSlotId,
+        lineUserId: profile.userId,
+        timeSlotId: selectedSlot.id,
         problemCategoryId: formData.problemCategoryId,
         detailText: formData.problemDescription,
       });
@@ -235,12 +247,12 @@ export default function BookingPage() {
           <div className="md:col-span-3 space-y-4">
             <Card className="rounded-2xl bg-white shadow-sm">
 
-               {/* 🔹 เมนูเลือกช่วงเวลา */}
+              {/* 🔹 เมนูเลือกช่วงเวลา */}
               <TimePeriodTabs
                 value={selectedPeriod}
                 onChange={setSelectedPeriod}
               />
-              
+
               {/* 🔹 TimeSlot */}
               <TimeSlotGrid
                 selectedDate={selectedDate}
