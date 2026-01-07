@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import type { BookingStatus } from '@prisma/client';
+import { getAccountFromRequest } from '@/lib/jwt';
 
 /* =========================
    GET /api/v1/bookings
@@ -121,32 +122,27 @@ export async function GET(request: NextRequest) {
    ========================= */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json().catch(() => null);
+    const account = await getAccountFromRequest(request);
 
-    if (!body) {
+    if (!account || account.role !== 'STUDENT') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!account.studentId) {
       return NextResponse.json(
-        { error: 'Body ต้องเป็น JSON' },
+        { error: 'Student profile not found' },
         { status: 400 }
       );
     }
 
-    const studentUsername = body.studentCode?.toString().trim(); // account_username
+    const body = await request.json();
+
     const timeSlotId = Number(body.timeSlotId);
     const problemCategoryId = Number(body.problemCategoryId);
     const detailText = body.detailText?.toString() || null;
 
-    if (!studentUsername) {
-      return NextResponse.json(
-        { error: 'ต้องระบุ studentCode (account_username)' },
-        { status: 400 }
-      );
-    }
-
     if (!timeSlotId || Number.isNaN(timeSlotId)) {
-      return NextResponse.json(
-        { error: 'timeSlotId ไม่ถูกต้อง' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'timeSlotId ไม่ถูกต้อง' }, { status: 400 });
     }
 
     if (!problemCategoryId || Number.isNaN(problemCategoryId)) {
@@ -156,48 +152,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    /* หา student จาก account_username */
-    const student = await prisma.student.findFirst({
-      where: {
-        account: {
-          account_username: studentUsername,
-        },
-      },
-    });
+    const studentId = account.studentId;
 
-    if (!student) {
-      return NextResponse.json(
-        { error: 'ไม่พบข้อมูลนิสิต' },
-        { status: 404 }
-      );
-    }
-
-    const timeSlot = await prisma.timeSlot.findUnique({
-      where: { time_slot_id: timeSlotId },
-      include: {
-        bookingSlots: {
-          include: { booking: true },
-        },
-      },
-    });
-
-    if (!timeSlot || timeSlot.time_slot_status !== 'AVAILABLE') {
-      return NextResponse.json(
-        { error: 'ช่วงเวลานี้ไม่ว่าง' },
-        { status: 400 }
-      );
-    }
-
-    if (timeSlot.bookingSlots.length >= timeSlot.time_slot_max_capacity) {
-      return NextResponse.json(
-        { error: 'ช่วงเวลานี้เต็มแล้ว' },
-        { status: 400 }
-      );
-    }
-
+    // 🔍 เช็กว่ามี booking ค้างอยู่ไหม
     const existing = await prisma.booking.findFirst({
       where: {
-        student_id: student.student_id,
+        student_id: studentId,
         booking_status: {
           in: ['PENDING_ASSIGNMENT', 'ASSIGNED', 'IN_PROGRESS'],
         },
@@ -214,7 +174,7 @@ export async function POST(request: NextRequest) {
     const booking = await prisma.$transaction(async (tx) => {
       const b = await tx.booking.create({
         data: {
-          student_id: student.student_id,
+          student_id: studentId,
           problem_category_id: problemCategoryId,
           booking_detail_text: detailText,
           booking_status: 'PENDING_ASSIGNMENT',
@@ -228,16 +188,6 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      if (
-        timeSlot.bookingSlots.length + 1 >=
-        timeSlot.time_slot_max_capacity
-      ) {
-        await tx.timeSlot.update({
-          where: { time_slot_id: timeSlotId },
-          data: { time_slot_status: 'BOOKED' },
-        });
-      }
-
       return b;
     });
 
@@ -245,6 +195,7 @@ export async function POST(request: NextRequest) {
       success: true,
       bookingId: booking.booking_id,
     });
+
   } catch (err) {
     console.error(err);
     return NextResponse.json(
@@ -253,3 +204,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

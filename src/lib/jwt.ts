@@ -2,6 +2,7 @@
 import { SignJWT, jwtVerify } from 'jose';
 import type { NextRequest } from 'next/server';
 import bcrypt from 'bcryptjs';
+import prisma from '@/lib/prisma';
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'your-super-secret-key-change-in-production'
@@ -12,6 +13,10 @@ export interface JWTPayload {
   username: string;
   role: string;
   consultantId?: number;
+}
+
+export interface AccountContext extends JWTPayload {
+  studentId?: number;
 }
 
 // =======================
@@ -125,9 +130,26 @@ export async function verifyPassword(
 // =======================
 export async function getAccountFromRequest(
   request: NextRequest
-): Promise<JWTPayload | null> {
+): Promise<AccountContext | null> {
   const token = extractToken(request);
   if (!token) return null;
 
-  return await verifyToken(token);
+  const payload = await verifyToken(token);
+  if (!payload) return null;
+
+  let studentId: number | undefined = undefined;
+
+  if (payload.role === 'STUDENT') {
+    const student = await prisma.student.findFirst({
+      where: { account_id: payload.accountId },
+      select: { student_id: true },
+    });
+
+    studentId = student?.student_id;
+  }
+
+  return {
+    ...payload,
+    studentId,
+  };
 }
