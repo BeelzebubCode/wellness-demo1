@@ -3,7 +3,7 @@ import { CalendarDays, Clock, Database, BookCheck } from 'lucide-react';
 import type { NavItem } from '@/components/layout/sidebar/types';
 
 export const ADMIN_NAV: NavItem[] = [
-    {
+{
     href: '/admin/data-center',
     label: 'ศูนย์ข้อมูล',
     icon: Database,

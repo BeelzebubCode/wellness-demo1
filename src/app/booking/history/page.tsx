@@ -1,13 +1,15 @@
 // app/booking/history/page.tsx
-'use client';
+"use client";
 
-import { useMyAppointments } from '@/features/booking/hooks/useMyAppointments';
-import { MyAppointmentCard } from '@/components/booking';
-import { Card, LoadingSpinner } from '@/components/ui';
-import { History, Inbox } from 'lucide-react';
+import { useMyAppointments } from "@/features/booking/hooks/useMyAppointments";
+import { MyAppointmentCard } from "@/components/booking";
+import { Card, LoadingSpinner } from "@/components/ui";
+import { History, Inbox } from "lucide-react";
+import { useState } from "react";
 
 export default function BookingHistoryPage() {
   const { pastBookings, isLoading } = useMyAppointments();
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   if (isLoading) {
     return (
@@ -39,12 +41,12 @@ export default function BookingHistoryPage() {
         />
         <StatCard
           label="เสร็จสิ้น"
-          value={pastBookings.filter((b) => b.status === 'COMPLETED').length}
+          value={pastBookings.filter((b) => b.status === "COMPLETED").length}
           color="text-emerald-600"
         />
         <StatCard
           label="ยกเลิก"
-          value={pastBookings.filter((b) => b.status === 'CANCELLED').length}
+          value={pastBookings.filter((b) => b.status === "CANCELLED").length}
           color="text-red-600"
         />
       </div>
@@ -58,13 +60,19 @@ export default function BookingHistoryPage() {
 
         {pastBookings.length > 0 ? (
           <div className="space-y-3">
-            {pastBookings.map((booking) => (
-              <MyAppointmentCard
-                key={booking.id}
-                booking={booking}
-                isCompact
-              />
-            ))}
+            {pastBookings.map((booking) => {
+              const isExpanded = expandedId === booking.id;
+
+              return (
+                <MyAppointmentCard
+                  key={booking.id}
+                  booking={booking}
+                  isCompact
+                  isExpanded={isExpanded}
+                  onToggle={() => setExpandedId(isExpanded ? null : booking.id)}
+                />
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-12 border border-dashed rounded-xl bg-gray-50">
