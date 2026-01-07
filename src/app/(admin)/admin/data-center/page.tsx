@@ -8,10 +8,12 @@ import StatusBadge from "@/components/shared/StatusBadge";
 import Avatar from "@/components/shared/Avatar";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
+import DataCenterDetailModal from "@/components/admin/data-center/DataCenterDetailModal";
 
 const PAGE_SIZE = 20;
 
 export default function DataCenterPage() {
+  const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
   const [data, setData] = useState<DataCenterResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [currentFilters, setCurrentFilters] = useState<DataCenterFilter>({});
@@ -207,7 +209,10 @@ export default function DataCenterPage() {
 
                         {/* Action */}
                         <td className="px-6 py-4 text-right">
-                          <button className="text-indigo-600 hover:text-indigo-800 font-medium text-xs">
+                          <button
+                            onClick={() => setSelectedBookingId(item.id)}
+                            className="text-indigo-600 hover:text-indigo-800 font-medium text-xs"
+                          >
                             ดูรายละเอียด
                           </button>
                         </td>
@@ -247,6 +252,11 @@ export default function DataCenterPage() {
           </>
         )}
       </div>
+
+      <DataCenterDetailModal
+        bookingId={selectedBookingId}
+        onClose={() => setSelectedBookingId(null)}
+      />
     </div>
   );
 }
