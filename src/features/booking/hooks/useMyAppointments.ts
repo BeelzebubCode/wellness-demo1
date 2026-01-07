@@ -13,26 +13,18 @@ interface UseMyAppointmentsReturn {
   hasActiveBooking: boolean;
 }
 
-export function useMyAppointments(
-  studentCode: string | null
-): UseMyAppointmentsReturn {
+export function useMyAppointments(): UseMyAppointmentsReturn {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchBookings = useCallback(async () => {
-    if (!studentCode) {
-      setBookings([]);
-      return;
-    }
-
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(
-        `/api/v1/bookings?student=${encodeURIComponent(studentCode)}`
-      );
+      // ✅ API สำหรับ "ของฉัน" เท่านั้น
+      const response = await fetch('/api/v1/bookings/my');
 
       if (!response.ok) {
         throw new Error('Failed to fetch bookings');
@@ -47,7 +39,7 @@ export function useMyAppointments(
     } finally {
       setIsLoading(false);
     }
-  }, [studentCode]);
+  }, []);
 
   useEffect(() => {
     fetchBookings();

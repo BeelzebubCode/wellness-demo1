@@ -5,6 +5,7 @@
 import {
   Clock,
   UserCheck,
+  Loader2,
   CheckCircle,
   XCircle,
 } from 'lucide-react';
@@ -29,6 +30,14 @@ export const BOOKING_STATUS = {
     bgColor: 'bg-purple-50',
     textColor: 'text-purple-700',
     borderColor: 'border-purple-200',
+  },
+  IN_PROGRESS: {
+    key: 'IN_PROGRESS',
+    label: 'กำลังให้คำปรึกษา',
+    icon: Loader2,
+    bgColor: 'bg-blue-50',
+    textColor: 'text-blue-700',
+    borderColor: 'border-blue-200',
   },
   COMPLETED: {
     key: 'COMPLETED',

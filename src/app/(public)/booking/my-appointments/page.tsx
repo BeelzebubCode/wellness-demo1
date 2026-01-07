@@ -53,7 +53,7 @@ export default function MyAppointmentsPage() {
     pastBookings,
     isLoading,
     refetch,
-  } = useMyAppointments(profile.username);
+  } = useMyAppointments();
 
   const { cancelBooking, isLoading: isCancelling } = useBooking();
 

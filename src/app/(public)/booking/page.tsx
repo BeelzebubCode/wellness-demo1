@@ -74,7 +74,7 @@ export default function BookingPage() {
   const {
     hasActiveBooking,
     refetch: refetchAppointments,
-  } = useMyAppointments(profile.username); // ✅ ใช้ username
+  } = useMyAppointments();
 
   const {
     createBooking,
