@@ -120,6 +120,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    const now = new Date();
     // Format response
     const formattedSlots = timeSlots.map((slot) => {
       const activeBookings = slot.bookingSlots.filter(
@@ -135,26 +136,37 @@ export async function GET(req: NextRequest) {
         slot.time_slot_status === 'LOCKED' ||
         slot.time_slot_status === 'CANCELLED';
 
+      const slotStart = slot.time_slot_start_datetime;
+
+      // ❗ ถ้าเป็นวันเดียวกับวันนี้ และเวลาผ่านไปแล้ว → ห้ามจอง
+      const isPastTime =
+        slotStart.toDateString() === now.toDateString() &&
+        slotStart <= now;
+
       const isAvailable =
         slot.time_slot_status === 'AVAILABLE' &&
         availableCount > 0 &&
-        !isClosed;
+        !isClosed &&
+        !isPastTime;
+
 
       return {
         id: slot.time_slot_id,
-        date: slot.time_slot_start_datetime.toISOString().split('T')[0],
-        startTime: slot.time_slot_start_datetime.toTimeString().slice(0, 5),
+        date: slotStart.toISOString().split('T')[0],
+        startTime: slotStart.toTimeString().slice(0, 5),
         endTime: slot.time_slot_end_datetime.toTimeString().slice(0, 5),
-        startDateTime: slot.time_slot_start_datetime.toISOString(),
+
+        startDateTime: slotStart.toISOString(),
         endDateTime: slot.time_slot_end_datetime.toISOString(),
+
         maxCapacity: slot.time_slot_max_capacity,
         bookedCount: activeBookings,
         availableCount,
         status: slot.time_slot_status,
 
-        // ✅ สำคัญ: UI ใช้
         isAvailable,
         isClosed,
+        isPastTime, // (optional)
       };
     });
 
