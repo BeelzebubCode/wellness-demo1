@@ -68,8 +68,8 @@ export default function LoginPage() {
   };
 
 
-  const handleDemoLogin = () => {
-    setFormData({ username: 'admin', password: 'admin123' });
+  const handleDemoFill = (username: string, password: string) => {
+    setFormData({ username, password });
   };
 
   return (
@@ -259,28 +259,57 @@ export default function LoginPage() {
                 </span>
               </div>
             </div>
-            
-            <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-amber-100 rounded-lg flex-shrink-0">
-                  <Sparkles className="w-4 h-4 text-amber-600" />
+
+            <div className="mt-6 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50 p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                
+                {/* Left: Info */}
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-amber-100 rounded-xl">
+                    <Sparkles className="w-4 h-4 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-amber-900">
+                      Demo Account
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-amber-800">Demo Account</p>
-                  <p className="text-xs text-amber-700 mt-1">
-                    Username: <code className="px-1.5 py-0.5 bg-amber-100 rounded font-mono">admin</code>
-                    {' • '}
-                    Password: <code className="px-1.5 py-0.5 bg-amber-100 rounded font-mono">admin123</code>
-                  </p>
+
+                {/* Right: Buttons */}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleDemoFill('admin', 'admin123')}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg
+                              bg-white text-amber-700 border border-amber-300
+                              hover:bg-amber-100 hover:text-amber-800
+                              transition"
+                  >
+                    Admin
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDemoFill('consultant1', '123456')}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg
+                              bg-white text-amber-700 border border-amber-300
+                              hover:bg-amber-100 hover:text-amber-800
+                              transition"
+                  >
+                    Consultant
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDemoFill('student1', '123456')}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg
+                              bg-white text-amber-700 border border-amber-300
+                              hover:bg-amber-100 hover:text-amber-800
+                              transition"
+                  >
+                      Student
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleDemoLogin}
-                  disabled={loading}
-                  className="px-3 py-1.5 text-xs font-semibold text-amber-700 hover:text-amber-800 bg-amber-100 hover:bg-amber-200 rounded-lg transition-colors flex-shrink-0 disabled:opacity-50"
-                >
-                  ใช้งาน
-                </button>
               </div>
             </div>
           </div>
