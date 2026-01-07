@@ -2,8 +2,6 @@
 // 📌 Root Layout
 // ==========================================
 
-
-import { AuthProvider } from '@/contexts/AuthContext';
 import './globals.css';
 
 export default function RootLayout({
@@ -14,7 +12,7 @@ export default function RootLayout({
   return (
     <html lang="th">
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        {children}
       </body>
     </html>
   );

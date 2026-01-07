@@ -2,21 +2,26 @@
 
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { useStudentAuth } from '@/features/auth/hooks/useStudentAuth';
 
-export default function BookingLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+export default function BookingLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const { user, isLoading } = useStudentAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (isLoading) return;
+
+    if (!user) {
       router.replace(`/login?next=${encodeURIComponent(pathname)}`);
     }
-  }, [loading, user, pathname, router]);
+  }, [isLoading, user, pathname, router]);
 
-  if (loading || !user) return null;
+  if (isLoading || !user) return null;
 
   return <>{children}</>;
 }
-
