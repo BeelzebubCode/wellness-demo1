@@ -53,8 +53,8 @@ export function BookingCalendar({
           </svg>
         </button>
         
-        <h3 className="font-semibold text-gray-800">
-          {formatMonthYear(currentMonth)}
+        <h3 className="text-xl font-semibold text-gray-800">
+        {formatMonthYear(currentMonth)}
         </h3>
         
         <button
@@ -74,7 +74,7 @@ export function BookingCalendar({
           {THAI_DAYS_SHORT.map((day) => (
             <div
               key={day}
-              className="text-center text-xs font-medium text-gray-400 py-2"
+              className="text-center text-sm font-medium text-gray-400 py-2"
             >
               {day}
             </div>
