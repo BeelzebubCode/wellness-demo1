@@ -1,20 +1,20 @@
 // app/booking/my-appointments/page.tsx
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { useMyAppointments } from '@/features/booking/hooks/useMyAppointments';
-import { useBooking } from '@/features/booking/hooks/useBooking';
-import { useStudentAuth } from '@/features/auth/hooks/useStudentAuth';
-import { MyAppointmentCard } from '@/components/booking';
-import { AlertBox } from '@/components/notification/AlertBox';
+import { useState } from "react";
+import Link from "next/link";
+import { useMyAppointments } from "@/features/booking/hooks/useMyAppointments";
+import { useBooking } from "@/features/booking/hooks/useBooking";
+import { useStudentAuth } from "@/features/auth/hooks/useStudentAuth";
+import { MyAppointmentCard } from "@/components/booking";
+import { AlertBox } from "@/components/notification/AlertBox";
 import {
   Card,
   Button,
   LoadingSpinner,
   Modal,
   ModalFooter,
-} from '@/components/ui';
+} from "@/components/ui";
 import {
   ClipboardList,
   Clock3,
@@ -22,40 +22,40 @@ import {
   Inbox,
   CalendarPlus,
   History,
-} from 'lucide-react';
+} from "lucide-react";
 
 export default function MyAppointmentsPage() {
-  const { user } = useStudentAuth();
+  const {
+    user,
+    isLoading: authLoading,
+    isAuthenticated,
+  } = useStudentAuth("/login");
 
   /* ---------------- STATE (CANCEL) ---------------- */
   const [bookingToCancel, setBookingToCancel] = useState<number | null>(null);
-  const [cancelReason, setCancelReason] = useState('');
+  const [cancelReason, setCancelReason] = useState("");
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
   const handleCancelClick = (bookingId: number) => {
     setBookingToCancel(bookingId);
-    setCancelReason('');
+    setCancelReason("");
     setCancelError(null);
     setShowCancelModal(true);
   };
 
   /* ---------------- DATA ---------------- */
-  const {
-    activeBooking,
-    pastBookings,
-    isLoading,
-    refetch,
-  } = useMyAppointments();
-
+  const { activeBooking, pastBookings, isLoading, refetch } =
+    useMyAppointments();
   const { cancelBooking, isLoading: isCancelling } = useBooking();
 
   /* ---------------- ACTION ---------------- */
   const handleConfirmCancel = async () => {
-    if (!bookingToCancel) return;
+    setHasSubmitted(true);
 
     if (!cancelReason.trim()) {
-      setCancelError('กรุณากรอกเหตุผลในการยกเลิก');
+      setCancelError("กรุณากรอกเหตุผลในการยกเลิก");
       return;
     }
 
@@ -63,15 +63,28 @@ export default function MyAppointmentsPage() {
       await cancelBooking(String(bookingToCancel), cancelReason);
       setShowCancelModal(false);
       setBookingToCancel(null);
-      setCancelReason('');
+      setCancelReason("");
       setCancelError(null);
+      setHasSubmitted(false);
       refetch();
     } catch {
-      setCancelError('ไม่สามารถยกเลิกการจองได้ กรุณาลองใหม่');
+      setCancelError("ไม่สามารถยกเลิกการจองได้ กรุณาลองใหม่");
     }
   };
 
-  /* ---------------- LOADING ---------------- */
+  /* ---------------- AUTH LOADING (สำคัญ: มาก่อน data) ---------------- */
+  if (authLoading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <LoadingSpinner size="xl" label="กำลังตรวจสอบสิทธิ์..." />
+      </div>
+    );
+  }
+
+  // hook จะ redirect เอง ถ้าไม่ผ่าน → render null กัน UI กระพริบ
+  if (!isAuthenticated || !user) return null;
+
+  /* ---------------- DATA LOADING ---------------- */
   if (isLoading || isCancelling) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
@@ -89,9 +102,7 @@ export default function MyAppointmentsPage() {
           <ClipboardList className="w-6 h-6 text-primary-600" />
           ตารางนัดของฉัน
         </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          ดูการจองที่กำลังดำเนินการ
-        </p>
+        <p className="text-sm text-gray-500 mt-1">ดูการจองที่กำลังดำเนินการ</p>
       </div>
 
       {/* ACTIVE + SUMMARY */}
@@ -157,7 +168,7 @@ export default function MyAppointmentsPage() {
 
             <div className="mt-4 flex items-center gap-2 pt-3 border-t text-xs text-gray-500">
               <UserRound className="w-4 h-4" />
-              {user?.displayName || user?.username}
+              {(user as any).displayName ?? user.username}
             </div>
           </Card>
 
@@ -196,17 +207,24 @@ export default function MyAppointmentsPage() {
             onChange={(e) => {
               setCancelReason(e.target.value);
               setCancelError(null);
+              setHasSubmitted(false); // ✅ พอเริ่มพิมพ์ ล้าง error look
             }}
             placeholder="เหตุผล (จำเป็น)"
-            className={`w-full p-3 border rounded-xl text-sm focus:ring-2
-              ${
-                cancelError
-                  ? 'border-red-500 focus:ring-red-500'
-                  : 'focus:ring-primary-500 focus:border-primary-500'
-              }`}
             rows={3}
+            className={`
+              w-full p-3 rounded-xl text-sm transition
+              border
+              ${
+                cancelError && hasSubmitted
+                  ? "border-red-400 bg-red-50 focus:ring-red-300"
+                  : "border-gray-300 focus:border-primary-500 focus:ring-primary-300"
+              }
+              focus:outline-none focus:ring-2
+            `}
           />
-          <AlertBox message={cancelError} />
+
+          {/* ✅ แก้ตรงนี้: AlertBox signature แบบใหม่ + render เฉพาะตอนมี error */}
+          {cancelError && <AlertBox type="error" message={cancelError} />}
         </div>
 
         <ModalFooter>

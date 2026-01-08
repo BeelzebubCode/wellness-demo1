@@ -58,9 +58,14 @@ export function BookingForm({
     problemDescription: "",
   });
 
-  const [localError, setLocalError] = useState<string | null>(null);
+  type FormErrors = {
+    problemCategoryId?: string;
+    problemTypeOther?: string;
+    problemDescription?: string;
+  };
 
-  const [descError, setDescError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
   // ---- Load categories from API (nameTh) ----
   const [categories, setCategories] = useState<ProblemCategory[]>([]);
@@ -114,24 +119,25 @@ export function BookingForm({
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setHasSubmitted(true);
+
+    const nextErrors: FormErrors = {};
 
     if (!formData.problemCategoryId || formData.problemCategoryId <= 0) {
-      setLocalError("กรุณาเลือกประเภทปัญหาที่ต้องการปรึกษา");
-      return;
+      nextErrors.problemCategoryId = "กรุณาเลือกประเภทปัญหาที่ต้องการปรึกษา";
     }
 
     if (isOtherSelected && !formData.problemTypeOther?.trim()) {
-      setLocalError("กรุณาระบุประเภทปัญหาที่ต้องการปรึกษา");
-      return;
+      nextErrors.problemTypeOther = "กรุณาระบุประเภทปัญหาที่ต้องการปรึกษา";
     }
 
     if (!formData.problemDescription?.trim()) {
-      setLocalError("กรุณากรอกรายละเอียดเพิ่มเติม");
-      return;
+      nextErrors.problemDescription = "กรุณากรอกรายละเอียดเพิ่มเติม";
     }
 
-    setDescError(null);
-    setLocalError(null);
+    setErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) return;
 
     onSubmit({
       problemCategoryId: formData.problemCategoryId,
@@ -160,44 +166,61 @@ export function BookingForm({
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-2">
-            {categories.map((c) => {
-              const isSelected = formData.problemCategoryId === c.id;
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              {categories.map((c) => {
+                const isSelected = formData.problemCategoryId === c.id;
 
-              const code = c.code as ProblemCategoryCode;
-              const config =
-                PROBLEM_CATEGORY_CONFIG[code] ?? PROBLEM_CATEGORY_CONFIG.OTHER;
+                const code = c.code as ProblemCategoryCode;
+                const config =
+                  PROBLEM_CATEGORY_CONFIG[code] ??
+                  PROBLEM_CATEGORY_CONFIG.OTHER;
 
-              const Icon = config.icon;
+                const Icon = config.icon;
 
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      problemCategoryId: c.id,
-                      problemTypeOther:
-                        code === "OTHER" ? prev.problemTypeOther : "",
-                    }))
-                  }
-                  className={cn(
-                    "flex items-center gap-2 rounded-xl border-2 p-3 text-left text-sm transition-all",
-                    isSelected
-                      ? "border-primary-500 bg-primary-50 text-primary-800 shadow-sm"
-                      : "border-gray-200 text-gray-700 hover:border-primary-200 hover:bg-primary-50/40"
-                  )}
-                >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50">
-                    <Icon className={cn("h-5 w-5", config.color)} />
-                  </div>
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        problemCategoryId: c.id,
+                        problemTypeOther:
+                          code === "OTHER" ? prev.problemTypeOther : "",
+                      }));
 
-                  <span className="font-medium leading-snug">{c.nameTh}</span>
-                </button>
-              );
-            })}
-          </div>
+                      // ✅ ล้าง error ของ category + กันแดงค้าง
+                      setErrors((prev) => ({
+                        ...prev,
+                        problemCategoryId: undefined,
+                      }));
+                      setHasSubmitted(false);
+                    }}
+                    className={cn(
+                      "flex items-center gap-2 rounded-xl border-2 p-3 text-left text-sm transition-all",
+                      isSelected
+                        ? "border-primary-500 bg-primary-50 text-primary-800 shadow-sm"
+                        : "border-gray-200 text-gray-700 hover:border-primary-200 hover:bg-primary-50/40"
+                    )}
+                  >
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50">
+                      <Icon className={cn("h-5 w-5", config.color)} />
+                    </div>
+
+                    <span className="font-medium leading-snug">{c.nameTh}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* ✅ แจ้งเตือนแบบ box เมื่อไม่เลือกประเภท */}
+            {hasSubmitted && errors.problemCategoryId && (
+              <div className="mt-3">
+                <AlertBox type="error" message={errors.problemCategoryId} />
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -207,18 +230,31 @@ export function BookingForm({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             กรุณาระบุประเภทปัญหา
           </label>
+
           <input
             type="text"
             value={formData.problemTypeOther}
-            onChange={(e) =>
+            onChange={(e) => {
               setFormData((prev) => ({
                 ...prev,
                 problemTypeOther: e.target.value,
-              }))
-            }
+              }));
+
+              // ✅ พิมพ์แล้วล้าง error
+              if (hasSubmitted) {
+                setErrors((prev) => ({ ...prev, problemTypeOther: undefined }));
+              }
+            }}
             placeholder="เช่น ปัญหาการปรับตัว ปัญหาสุขภาพ ฯลฯ"
             className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
           />
+
+          {/* ✅ แจ้งเตือนแบบ box เมื่อเลือก OTHER แต่ไม่กรอก */}
+          {hasSubmitted && errors.problemTypeOther && (
+            <div className="mt-2">
+              <AlertBox type="error" message={errors.problemTypeOther} />
+            </div>
+          )}
         </div>
       )}
 
@@ -235,24 +271,25 @@ export function BookingForm({
               ...prev,
               problemDescription: e.target.value,
             }));
-            if (descError) setDescError(null); // พอพิมพ์แล้วล้าง error
+            if (hasSubmitted) {
+              setErrors((prev) => ({ ...prev, problemDescription: undefined }));
+            }
           }}
           rows={4}
           placeholder="อธิบายปัญหาหรือสิ่งที่ต้องการปรึกษาเพิ่มเติม..."
           className={cn(
-            "w-full resize-none rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2",
-            descError
-              ? "border-red-300 focus:border-red-500 focus:ring-red-500/20"
+            "w-full resize-none rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 transition",
+            hasSubmitted && errors.problemDescription
+              ? "border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/20"
               : "border-gray-200 focus:border-primary-500 focus:ring-primary-500/20"
           )}
         />
 
-        {/* ✅ error สีแดงใต้ช่อง */}
-        {descError && (
-          <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
-            <AlertTriangle className="w-3.5 h-3.5" />
-            {descError}
-          </p>
+        {/* อันนี้เป็น inline ก็โอเค (ถ้านายอยากให้เป็น box บอกพี่ เดี๋ยวปรับ) */}
+        {hasSubmitted && errors.problemDescription && (
+          <div className="mt-3">
+            <AlertBox type="error" message={errors.problemDescription} />
+          </div>
         )}
 
         <p className="mt-1 text-xs text-gray-400">
@@ -261,9 +298,8 @@ export function BookingForm({
         </p>
       </div>
 
-      {/* Error Message */}
-      <AlertBox message={localError || error} />
-
+      {/* Error Message (server error เท่านั้น) */}
+      {error && <AlertBox type="error" message={error} />}
 
       {/* Submit Button */}
       <Button
