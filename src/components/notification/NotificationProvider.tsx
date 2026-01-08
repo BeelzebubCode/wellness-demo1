@@ -1,11 +1,11 @@
 // src/components/notification/NotificationProvider.tsx
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState } from 'react';
-import type { Notification } from './types';
-import { ToastHost } from './Toast';
+import React, { createContext, useContext, useState } from "react";
+import type { Notification } from "./types";
+import { ToastHost } from "./Toast";
 
-type PushPayload = Omit<Notification, 'id'> & {
+type PushPayload = Omit<Notification, "id"> & {
   title?: string;
   duration?: number;
 };
@@ -19,15 +19,30 @@ interface NotificationContextValue {
 
 const NotificationContext = createContext<NotificationContextValue | null>(null);
 
+// ✅ สร้าง id แบบรองรับทุกที่ (crypto.randomUUID มี/ไม่มี ก็ไม่พัง)
+function makeId() {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+  } catch {
+    // ignore
+  }
+  // fallback: เพียงพอสำหรับ id ของ toast
+  return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  const push: NotificationContextValue['push'] = (n) => {
-    setNotifications((prev) => [
-      // ใส่หน้า list ให้ toast ใหม่อยู่บนสุด
-      { ...n, id: crypto.randomUUID() } as Notification,
-      ...prev,
-    ].slice(0, 3)); // max 3
+  const push: NotificationContextValue["push"] = (n) => {
+    setNotifications((prev) =>
+      [
+        // ใส่หน้า list ให้ toast ใหม่อยู่บนสุด
+        { ...n, id: makeId() } as Notification,
+        ...prev,
+      ].slice(0, 3)
+    ); // max 3
   };
 
   const clear = (id: string) => {
@@ -46,6 +61,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
 export function useNotificationContext() {
   const ctx = useContext(NotificationContext);
-  if (!ctx) throw new Error('useNotificationContext must be used within NotificationProvider');
+  if (!ctx) throw new Error("useNotificationContext must be used within NotificationProvider");
   return ctx;
 }

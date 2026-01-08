@@ -1,26 +1,32 @@
 // components/layout/sidebar/types.ts
-export type SidebarTheme = "light" | "primary" | "dark";
+import type { LucideIcon } from "lucide-react";
 
-export type SidebarLogoConfig = {
-  title: string;
-  subtitle?: string;
-  href?: string; // default "/"
-  variant?: "default" | "white"; // ส่งให้ BrandLogo
-};
-
-export interface SidebarItem {
+export interface NavItem {
   href: string;
   label: string;
-  icon: any; // (ของเดิมใช้ LucideIcon) ถ้าไฟล์เดิมมี LucideIcon อยู่ก็ใช้เหมือนเดิมได้
-  exact?: boolean;
-  badge?: number;
+  icon: LucideIcon;
+  exact?: boolean; // true = exact match, false = startsWith
+  badge?: number;  // optional notification badge
+}
+
+export type SidebarTheme = "light" | "primary" | "dark";
+
+export interface SidebarLogoConfig {
+  icon?: LucideIcon;                 // (optional) เดิมใช้ icon
+  title: string;
+  subtitle?: string;
+  href?: string;                     // default "/"
+  variant?: "default" | "white";     // สำหรับพื้นหลังเข้ม/อ่อน
 }
 
 export interface SidebarConfig {
   logo: SidebarLogoConfig;
-  items: SidebarItem[];
+  items: NavItem[];
   theme?: SidebarTheme;
-  backLink?: { href: string; label: string };
+  backLink?: {
+    href: string;
+    label: string;
+  };
 }
 
 export interface BaseSidebarProps {
