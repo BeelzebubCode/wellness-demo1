@@ -1,19 +1,19 @@
 // components/layout/sidebar/AdminSidebar.tsx
-'use client';
+"use client";
 
-import { ShieldPlus } from 'lucide-react';
-import { ADMIN_NAV } from '@/lib/constants/admin-nav';
-import { BaseSidebar } from './BaseSidebar';
-import type { SidebarConfig } from './types';
+import { ADMIN_NAV } from "@/lib/constants/admin-nav";
+import { BaseSidebar } from "./BaseSidebar";
+import type { SidebarConfig } from "./types";
 
 const ADMIN_CONFIG: SidebarConfig = {
   logo: {
-    icon: ShieldPlus,
-    title: 'NU Wellness',
-    subtitle: 'Admin Panel',
+    title: "NU Wellness",
+    subtitle: "Admin Panel",
+    href: "/admin",
+    // variant ไม่ใส่ก็ได้ เดี๋ยว BaseSidebar auto ให้ตามธีม
   },
   items: ADMIN_NAV,
-  theme: 'light',
+  theme: "light",
 };
 
 interface AdminSidebarProps {

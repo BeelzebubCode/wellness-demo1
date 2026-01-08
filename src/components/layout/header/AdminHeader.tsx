@@ -3,7 +3,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Menu, LogOut, User, Bell } from "lucide-react"; // 👈 ใช้ไอคอนจาก Lucide
+import { Menu, User } from "lucide-react"; // 👈 ใช้ไอคอนจาก Lucide
 import LogoutButton from "@/components/auth/LogoutButton";
 
 export interface AdminHeaderProps {

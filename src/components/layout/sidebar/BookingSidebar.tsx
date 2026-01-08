@@ -1,22 +1,23 @@
 // components/layout/sidebar/BookingSidebar.tsx
-'use client';
+"use client";
 
-import { Heart } from 'lucide-react';
-import { BOOKING_NAV } from '@/lib/constants/booking-nav';
-import { BaseSidebar } from './BaseSidebar';
-import type { SidebarConfig } from './types';
+import { BOOKING_NAV } from "@/lib/constants/booking-nav";
+import { BaseSidebar } from "./BaseSidebar";
+import type { SidebarConfig } from "./types";
 
 const BOOKING_CONFIG: SidebarConfig = {
   logo: {
-    icon: Heart,
-    title: 'NU Wellness',
-    subtitle: 'Student Portal',
+    title: "NU Wellness",
+    subtitle: "Student Portal",
+    href: "/",
+    // theme = primary → BaseSidebar จะ auto ใช้ variant="white" ให้อยู่แล้ว
+    // ถ้าอยากบังคับก็ใส่: variant: "white",
   },
   items: BOOKING_NAV,
-  theme: 'primary',
+  theme: "primary",
   backLink: {
-    href: '/',
-    label: 'กลับหน้าหลัก',
+    href: "/",
+    label: "กลับหน้าหลัก",
   },
 };
 

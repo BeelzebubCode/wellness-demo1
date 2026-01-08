@@ -1,22 +1,22 @@
 // components/layout/sidebar/ConsultantSidebar.tsx
-'use client';
+"use client";
 
-import { Stethoscope } from 'lucide-react';
-import { CONSULTANT_NAV } from '@/lib/constants/consultant-nav';
-import { BaseSidebar } from './BaseSidebar';
-import type { SidebarConfig } from './types';
+import { CONSULTANT_NAV } from "@/lib/constants/consultant-nav";
+import { BaseSidebar } from "./BaseSidebar";
+import type { SidebarConfig } from "./types";
 
 const CONSULTANT_CONFIG: SidebarConfig = {
   logo: {
-    icon: Stethoscope,
-    title: 'NU Wellness',
-    subtitle: 'Consultant Portal',
+    title: "NU Wellness",
+    subtitle: "Consultant Portal",
+    href: "/consultant",
+    // theme = dark → BaseSidebar auto ใช้ variant="white"
   },
   items: CONSULTANT_NAV,
-  theme: 'dark',  // ใช้ theme dark ให้ต่างจาก Admin/Booking
+  theme: "dark",
   backLink: {
-    href: '/',
-    label: 'กลับหน้าหลัก',
+    href: "/",
+    label: "กลับหน้าหลัก",
   },
 };
 

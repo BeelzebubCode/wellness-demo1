@@ -1,12 +1,13 @@
 // components/layout/sidebar/BaseSidebar.tsx
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Home } from 'lucide-react';
-import { cn } from '@/lib/cn';
-import type { BaseSidebarProps } from './types';
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { ChevronLeft, ChevronRight, Home } from "lucide-react";
+import { cn } from "@/lib/cn";
+import type { BaseSidebarProps } from "./types";
+import { BrandLogo } from "@/components/shared";
 
 export function BaseSidebar({
   config,
@@ -16,7 +17,7 @@ export function BaseSidebar({
   onToggleCollapse,
 }: BaseSidebarProps) {
   const pathname = usePathname();
-  const { logo, items, theme = 'light', backLink } = config;
+  const { logo, items, theme = "light", backLink } = config;
 
   useEffect(() => {
     onCloseMobile();
@@ -26,75 +27,73 @@ export function BaseSidebar({
   // Theme variants
   const themes = {
     light: {
-      wrapper: 'bg-white text-gray-600',
-      border: 'border-gray-200',
-      logoBg: 'bg-primary-500 text-white',
-      logoText: 'text-gray-800',
-      logoSubtext: 'text-gray-500',
-      navActive: 'bg-primary-50 text-primary-700',
-      navInactive: 'text-gray-500 hover:bg-gray-50 hover:text-gray-900',
-      divider: 'border-gray-100',
-      backLink: 'text-gray-400 hover:bg-gray-50 hover:text-gray-600',
-      collapseBtn: 'text-gray-400 hover:text-gray-600 hover:bg-gray-50',
+      wrapper: "bg-white text-gray-600",
+      border: "border-gray-200",
+      // ⬇️ ไม่ต้องใช้ logoBg แล้ว เพราะ BrandLogo เป็นรูป
+      navActive: "bg-primary-50 text-primary-700",
+      navInactive: "text-gray-500 hover:bg-gray-50 hover:text-gray-900",
+      divider: "border-gray-100",
+      backLink: "text-gray-400 hover:bg-gray-50 hover:text-gray-600",
+      collapseBtn: "text-gray-400 hover:text-gray-600 hover:bg-gray-50",
+      logoText: "text-gray-800",
+      logoSubtext: "text-gray-500",
     },
     primary: {
-      wrapper: 'bg-gradient-to-b from-primary-600 to-teal-600 text-white',
-      border: 'border-white/10',
-      logoBg: 'bg-white text-primary-600',
-      logoText: 'text-white',
-      logoSubtext: 'text-white/70',
-      navActive: 'bg-white text-primary-700',
-      navInactive: 'text-white/80 hover:bg-white/10 hover:text-white',
-      divider: 'border-white/10',
-      backLink: 'text-white/60 hover:bg-white/10 hover:text-white',
-      collapseBtn: 'text-white/50 hover:text-white hover:bg-white/10',
+      wrapper: "bg-gradient-to-b from-primary-600 to-teal-600 text-white",
+      border: "border-white/10",
+      navActive: "bg-white text-primary-700",
+      navInactive: "text-white/80 hover:bg-white/10 hover:text-white",
+      divider: "border-white/10",
+      backLink: "text-white/60 hover:bg-white/10 hover:text-white",
+      collapseBtn: "text-white/50 hover:text-white hover:bg-white/10",
+      logoText: "text-white",
+      logoSubtext: "text-white/70",
     },
     dark: {
-      wrapper: 'bg-gray-900 text-gray-300',
-      border: 'border-gray-800',
-      logoBg: 'bg-primary-500 text-white',
-      logoText: 'text-white',
-      logoSubtext: 'text-gray-500',
-      navActive: 'bg-gray-800 text-white',
-      navInactive: 'text-gray-400 hover:bg-gray-800 hover:text-white',
-      divider: 'border-gray-800',
-      backLink: 'text-gray-500 hover:bg-gray-800 hover:text-gray-300',
-      collapseBtn: 'text-gray-500 hover:text-gray-300 hover:bg-gray-800',
+      wrapper: "bg-gray-900 text-gray-300",
+      border: "border-gray-800",
+      navActive: "bg-gray-800 text-white",
+      navInactive: "text-gray-400 hover:bg-gray-800 hover:text-white",
+      divider: "border-gray-800",
+      backLink: "text-gray-500 hover:bg-gray-800 hover:text-gray-300",
+      collapseBtn: "text-gray-500 hover:text-gray-300 hover:bg-gray-800",
+      logoText: "text-white",
+      logoSubtext: "text-gray-500",
     },
   };
 
   const t = themes[theme];
-  const LogoIcon = logo.icon;
+
+  // ✅ ให้ BrandLogo ใช้ variant ตามธีมอัตโนมัติ ถ้า config ไม่ได้กำหนด
+  const logoVariant =
+    logo.variant ?? (theme === "primary" || theme === "dark" ? "white" : "default");
 
   const sidebarContent = (
-    <div className={cn('flex flex-col h-full overflow-hidden', t.wrapper)}>
+    <div className={cn("flex flex-col h-full overflow-hidden", t.wrapper)}>
       {/* Logo */}
       <div
         className={cn(
-          'h-20 flex items-center px-6 border-b overflow-hidden flex-shrink-0',
+          "h-20 flex items-center px-6 border-b overflow-hidden flex-shrink-0",
           t.border,
-          isCollapsed && 'justify-center px-2'
+          isCollapsed && "justify-center px-2"
         )}
       >
-        <div
+        {/* ✅ collapsed = แสดงแค่รูป, expanded = แสดงรูป+ข้อความ */}
+        <BrandLogo
+          href={logo.href ?? "/"}
+          size={40}
+          showText={!isCollapsed}
+          subtitle={!isCollapsed ? logo.subtitle : undefined}
+          variant={logoVariant}
           className={cn(
-            'w-10 h-10 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0',
-            t.logoBg
+            "min-w-0",
+            isCollapsed ? "justify-center" : "justify-start"
           )}
-        >
-          <LogoIcon className="w-6 h-6" />
-        </div>
-
-        {!isCollapsed && (
-          <div className="ml-3 min-w-0 overflow-hidden">
-            <span className={cn('font-bold text-xl tracking-tight whitespace-nowrap block', t.logoText)}>
-              {logo.title}
-            </span>
-            {logo.subtitle && (
-              <span className={cn('text-xs whitespace-nowrap', t.logoSubtext)}>{logo.subtitle}</span>
-            )}
-          </div>
-        )}
+          textClassName={cn(
+            // ให้สีข้อความเข้ากับธีมของ sidebar
+            t.logoText
+          )}
+        />
       </div>
 
       {/* Navigation */}
@@ -102,7 +101,7 @@ export function BaseSidebar({
         {items.map((item) => {
           const isActive = item.exact
             ? pathname === item.href
-            : pathname === item.href || pathname.startsWith(item.href + '/');
+            : pathname === item.href || pathname.startsWith(item.href + "/");
 
           const Icon = item.icon;
 
@@ -111,17 +110,17 @@ export function BaseSidebar({
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-200 group relative overflow-hidden',
-                isCollapsed && 'justify-center px-2',
+                "flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-200 group relative overflow-hidden",
+                isCollapsed && "justify-center px-2",
                 isActive
-                  ? cn(t.navActive, 'font-semibold shadow-sm')
-                  : cn(t.navInactive, 'font-medium')
+                  ? cn(t.navActive, "font-semibold shadow-sm")
+                  : cn(t.navInactive, "font-medium")
               )}
             >
               <span
                 className={cn(
-                  'transition-transform duration-200 flex-shrink-0',
-                  isActive ? 'scale-110' : 'group-hover:scale-110'
+                  "transition-transform duration-200 flex-shrink-0",
+                  isActive ? "scale-110" : "group-hover:scale-110"
                 )}
               >
                 <Icon className="w-6 h-6" />
@@ -129,17 +128,19 @@ export function BaseSidebar({
 
               {!isCollapsed && (
                 <>
-                  <span className="text-base flex-1 whitespace-nowrap overflow-hidden">{item.label}</span>
+                  <span className="text-base flex-1 whitespace-nowrap overflow-hidden">
+                    {item.label}
+                  </span>
 
                   {item.badge !== undefined && item.badge > 0 && (
                     <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full flex-shrink-0">
-                      {item.badge > 99 ? '99+' : item.badge}
+                      {item.badge > 99 ? "99+" : item.badge}
                     </span>
                   )}
                 </>
               )}
 
-              {isActive && !isCollapsed && theme === 'light' && (
+              {isActive && !isCollapsed && theme === "light" && (
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary-500 rounded-r-full" />
               )}
 
@@ -154,28 +155,30 @@ export function BaseSidebar({
 
         {backLink && (
           <>
-            <div className={cn('my-4 border-t', t.divider)} />
+            <div className={cn("my-4 border-t", t.divider)} />
             <Link
               href={backLink.href}
               className={cn(
-                'flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 font-medium overflow-hidden',
+                "flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 font-medium overflow-hidden",
                 t.backLink,
-                isCollapsed && 'justify-center px-2'
+                isCollapsed && "justify-center px-2"
               )}
             >
               <Home className="w-5 h-5 flex-shrink-0" />
-              {!isCollapsed && <span className="text-sm whitespace-nowrap">{backLink.label}</span>}
+              {!isCollapsed && (
+                <span className="text-sm whitespace-nowrap">{backLink.label}</span>
+              )}
             </Link>
           </>
         )}
       </nav>
 
       {/* Collapse Toggle (desktop only) */}
-      <div className={cn('p-4 border-t hidden md:block overflow-hidden flex-shrink-0', t.border)}>
+      <div className={cn("p-4 border-t hidden md:block overflow-hidden flex-shrink-0", t.border)}>
         <button
           onClick={onToggleCollapse}
           className={cn(
-            'w-full flex items-center justify-center p-3 rounded-xl transition-colors overflow-hidden',
+            "w-full flex items-center justify-center p-3 rounded-xl transition-colors overflow-hidden",
             t.collapseBtn
           )}
         >
@@ -197,8 +200,8 @@ export function BaseSidebar({
       {/* Mobile overlay */}
       <div
         className={cn(
-          'fixed inset-0 z-40 bg-black/30 backdrop-blur-sm transition-opacity duration-300 md:hidden',
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          "fixed inset-0 z-40 bg-black/30 backdrop-blur-sm transition-opacity duration-300 md:hidden",
+          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         onClick={onCloseMobile}
       />
@@ -206,8 +209,8 @@ export function BaseSidebar({
       {/* Mobile drawer */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-72 transition-transform duration-300 md:hidden shadow-2xl overflow-hidden',
-          isOpen ? 'translate-x-0' : '-translate-x-full'
+          "fixed inset-y-0 left-0 z-50 w-72 transition-transform duration-300 md:hidden shadow-2xl overflow-hidden",
+          isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {sidebarContent}
@@ -216,8 +219,8 @@ export function BaseSidebar({
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          'hidden md:block h-screen sticky top-0 transition-all duration-300 z-20 overflow-hidden',
-          isCollapsed ? 'w-20' : 'w-72'
+          "hidden md:block h-screen sticky top-0 transition-all duration-300 z-20 overflow-hidden",
+          isCollapsed ? "w-20" : "w-72"
         )}
       >
         {sidebarContent}
