@@ -26,13 +26,13 @@ import {
 } from 'lucide-react';
 import { ImageCard } from '@/components/ui/ImageCard';
 import { TimePeriodTabs, TimePeriod } from '@/components/booking/TimePeriodTabs';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react'; // ✅ เพิ่ม useRef
 
 /* ==================================================
    🔐 MOCK LOGIN (DEV MODE)
    ================================================== */
 const MOCK_USER = {
-  username: 'student1',   
+  username: 'student1',    
   displayName: 'Student 1',
 };
 
@@ -48,6 +48,11 @@ export default function BookingPage() {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('morning');
+
+  // ✅ 1. สร้าง Ref เพื่ออ้างอิงตำแหน่ง Card เวลา
+  const slotsSectionRef = useRef<HTMLDivElement>(null);
+  // ✅ 2. ตัวเช็คเพื่อไม่ให้ scroll ตอนโหลดหน้าครั้งแรก
+  const isFirstRun = useRef(true);
 
   const filterSlotsByPeriod = (
     slots: TimeSlot[],
@@ -166,6 +171,26 @@ export default function BookingPage() {
     setSelectedSlot(null);
   }, [selectedDate, selectedPeriod]);
 
+  // ✅ 3. Effect สำหรับสั่ง Scroll เมื่อเปลี่ยนวัน
+  useEffect(() => {
+    // ข้ามการทำงานครั้งแรก (ตอนเข้าเว็บมา)
+    if (isFirstRun.current) {
+      isFirstRun.current = false;
+      return;
+    }
+
+    // ถ้ามีการเลือกวันใหม่ ให้เลื่อนลงมา
+    if (slotsSectionRef.current) {
+      // setTimeout เล็กน้อยเพื่อให้ DOM render เสร็จก่อนค่อยเลื่อน (เผื่อไว้)
+      setTimeout(() => {
+        slotsSectionRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }, 100);
+    }
+  }, [selectedDate]);
+
   /* ==================================================
      📱 UI
      ================================================== */
@@ -230,7 +255,11 @@ export default function BookingPage() {
           </div>
 
           <div className="md:col-span-3 space-y-4">
-            <Card className="rounded-2xl bg-white shadow-sm">
+            {/* ✅ 4. ติด Ref ตรงนี้ + เพิ่ม scroll-mt-20 เว้นระยะหัว */}
+            <Card 
+              ref={slotsSectionRef}
+              className="rounded-2xl bg-white shadow-sm scroll-mt-20 transition-all"
+            >
 
               {/* 🔹 เมนูเลือกช่วงเวลา */}
               <TimePeriodTabs
