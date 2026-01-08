@@ -64,11 +64,11 @@ export default function ConsultantLayout({
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         <ConsultantHeader
-          user={{
-            username: user.username,
-            displayName: user.displayName,
-            avatar: user.avatar,
-          }}
+          // user={{
+          //   username: user.username,
+          //   displayName: user.displayName,
+          //   avatar: user.avatar,
+          // }}
           onMenuClick={handleOpenMobile}
         />
 
