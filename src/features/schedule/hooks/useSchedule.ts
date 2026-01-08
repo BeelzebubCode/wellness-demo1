@@ -1,51 +1,43 @@
 // src/features/schedule/hooks/useSchedule.ts
-'use client';
+"use client";
 
-import { useState, useCallback } from 'react';
-import { scheduleApi } from '../api';
-import type { TimeSlot, DaySchedule } from '../types';
+import { useCallback, useState } from "react";
+import { scheduleApi } from "../api";
+import type { DayStatus, TimeSlot } from "../types";
 
 export function useSchedule() {
   const [slots, setSlots] = useState<TimeSlot[]>([]);
+  const [dayStatus, setDayStatus] = useState<DayStatus | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchSlots = useCallback(async (date: string) => {
     setIsLoading(true);
     setError(null);
-    
     try {
-      const response = await scheduleApi.getSlots(date, true);
-      if (response.success) {
-        setSlots(response.slots);
-      } else {
-        setError('ไม่สามารถโหลดข้อมูลได้');
+      const res = await scheduleApi.getSlots(date, true);
+      if (!res.success) {
+        setError(res.error ?? "ไม่สามารถโหลดข้อมูลได้");
+        setSlots([]);
+        setDayStatus(null);
+        return;
       }
-    } catch (err) {
-      console.error('Error fetching slots:', err);
-      setError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+      setSlots(res.slots);
+      setDayStatus(res.dayStatus ?? null);
+    } catch (e) {
+      console.error(e);
+      setError("เกิดข้อผิดพลาดในการเชื่อมต่อ");
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const getDaySchedule = useCallback((date: string): DaySchedule => {
-    const daySlots = slots.filter((s) => s.date === date);
-    return {
-      date,
-      slots: daySlots,
-      totalSlots: daySlots.length,
-      availableSlots: daySlots.filter((s) => s.status === 'AVAILABLE').length,
-      bookedSlots: daySlots.filter((s) => s.status === 'BOOKED').length,
-    };
-  }, [slots]);
-
   return {
     slots,
+    dayStatus,
     isLoading,
     error,
     fetchSlots,
-    getDaySchedule,
     clearError: () => setError(null),
   };
 }

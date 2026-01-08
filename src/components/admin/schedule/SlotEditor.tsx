@@ -1,3 +1,5 @@
+// src/components/admin/schedule/SlotEditor.tsx
+
 'use client';
 
 import { Card, Button, LoadingSpinner } from '@/components/ui';

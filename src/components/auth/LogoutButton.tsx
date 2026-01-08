@@ -73,15 +73,18 @@ export default function LogoutButton({
         description={confirmDescription}
         size="sm"
       >
-        <ModalFooter className="mt-2">
+        <ModalFooter className="mt-2 grid grid-cols-2 gap-3">
           <Button
+            className="w-full"
             variant="ghost"
             onClick={() => setIsOpen(false)}
             disabled={loading}
           >
             ยกเลิก
           </Button>
+
           <Button
+            className="w-full"
             variant={buttonVariant}
             onClick={onConfirm}
             disabled={loading}

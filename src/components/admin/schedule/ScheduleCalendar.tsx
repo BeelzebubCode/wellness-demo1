@@ -1,3 +1,5 @@
+// src/components/admin/schedule/ScheduleCalendar.tsx
+
 'use client';
 
 import { useMemo } from 'react';

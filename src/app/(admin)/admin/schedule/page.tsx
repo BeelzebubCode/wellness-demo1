@@ -1,94 +1,89 @@
+// src/app/(admin)/admin/schedule/page.tsx
+
 "use client";
 
-import { useState, useEffect } from "react";
-import { toISODateString } from "@/lib/date";
+import { useEffect, useMemo, useState } from "react";
 import { CalendarDays } from "lucide-react";
-import type { TimeSlot, Booking } from "@/types";
+import { toISODateString } from "@/lib/date";
 
-// Components
 import { ScheduleCalendar, SlotEditor } from "@/components/admin/schedule";
-import { AssignBookingModal, RescheduleBookingModal } from '@/components/admin/bookings'; 
+import ScheduleAssignModal from "@/components/admin/schedule/ScheduleAssignModal";
+import ScheduleRescheduleModal from "@/components/admin/schedule/ScheduleRescheduleModal";
+
+import type { Booking } from "@/types"; // bookings ยังใช้ของเดิมได้
+import type { TimeSlot } from "@/features/schedule/types";
+
+import { scheduleApi } from "@/features/schedule/api";
+import { useSlotEditor } from "@/features/schedule/hooks/useSlotEditor";
 
 type DayStatus = "OPEN" | "CLOSED";
 
-interface SlotCreatePayload {
-  startTime: string;
-  endTime: string;
-  capacity?: number;
-}
-
-interface SlotUpdatePayload {
-  startTime?: string;
-  endTime?: string;
-  capacity?: number;
-  isAvailable?: boolean; // ใช้สำหรับเปิด/ปิดเฉพาะช่วงเวลา
-}
-
 export default function AdminSchedulePage() {
-  // State หลัก
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  // Data State
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [dayStatus, setDayStatus] = useState<DayStatus | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [isToggling, setIsToggling] = useState(false); // toggle ทั้งวัน
-  const [isDeleting, setIsDeleting] = useState(false); // ลบทั้งวัน
-  const [isMutatingSlot, setIsMutatingSlot] = useState(false); // add/edit/delete รายช่วง
+  const [isToggling, setIsToggling] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const { isSubmitting, updateSlot, deleteSlot, deleteSlots, createSlot } =
+    useSlotEditor();
 
   // Modal Control
   const [assignModalOpen, setAssignModalOpen] = useState(false);
-  const [assignBookingId, setAssignBookingId] = useState<string | null>(null);
+  const [assignBooking, setAssignBooking] = useState<Booking | null>(null);
 
   const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
   const [rescheduleBooking, setRescheduleBooking] = useState<Booking | null>(
     null
   );
 
-  // Fetch Data เมื่อเปลี่ยนวัน
-  useEffect(() => {
-    fetchDailyData(selectedDate);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate]);
+  const dateStr = useMemo(() => toISODateString(selectedDate), [selectedDate]);
 
-  const fetchDailyData = async (date: Date) => {
+  const fetchDailyData = async (dateISO: string) => {
     setIsLoading(true);
     try {
-      const dateStr = toISODateString(date);
+      // ✅ slots จาก feature api
+      const slotsRes = await scheduleApi.getSlots(dateISO, true);
+      if (slotsRes.success) {
+        setSlots(slotsRes.slots ?? []);
+        setDayStatus(slotsRes.dayStatus ?? null);
+      } else {
+        setSlots([]);
+        setDayStatus(null);
+        console.error("getSlots error:", slotsRes.error);
+      }
 
-      // ดึงทั้ง Slots + สถานะวัน + Bookings พร้อมกัน
-      const [slotsRes, bookingsRes] = await Promise.all([
-        fetch(`/api/v1/slots?date=${dateStr}`),
-        fetch(`/api/v1/bookings?date=${dateStr}`),
-      ]);
+      // ✅ bookings ยังยิง endpoint เดิมของคุณ (ถ้า route นี้มีจริง)
+      const bookingsRes = await fetch(`/api/v1/bookings?date=${dateISO}`, {
+        cache: "no-store",
+      });
+      const bookingsJson = await bookingsRes.json();
 
-      const slotsData = await slotsRes.json();
-      setSlots(slotsData.slots || []);
-      // ให้ backend ส่ง dayStatus มาด้วย เช่น 'OPEN' | 'CLOSED'
-      setDayStatus(slotsData.dayStatus ?? null);
-
-      const bookingsData = await bookingsRes.json();
-      const activeBookings = (bookingsData.bookings || []).filter(
+      const activeBookings = (bookingsJson.bookings || []).filter(
         (b: Booking) => b.status !== "CANCELLED"
       );
       setBookings(activeBookings);
-    } catch (error) {
-      console.error("Error fetching data:", error);
+    } catch (err) {
+      console.error("fetchDailyData error:", err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // =========================
-  // Handlers สำหรับปุ่มกด
-  // =========================
+  useEffect(() => {
+    void fetchDailyData(dateStr);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateStr]);
 
   // แจกงานให้ผู้ให้คำปรึกษา
   const handleAssignClick = (bookingId: string) => {
-    setAssignBookingId(bookingId);
+    const b = bookings.find((x) => String(x.id) === String(bookingId)) ?? null;
+    setAssignBooking(b);
     setAssignModalOpen(true);
   };
 
@@ -98,17 +93,14 @@ export default function AdminSchedulePage() {
     setRescheduleModalOpen(true);
   };
 
-  // reload หลังจาก action สำเร็จ (จาก modal อื่น)
   const handleSuccess = () => {
-    fetchDailyData(selectedDate);
+    void fetchDailyData(dateStr);
   };
 
   // Toggle เปิด/ปิด "ทั้งวัน"
   const handleToggleDayStatus = async () => {
-    if (!selectedDate) return;
     setIsToggling(true);
     try {
-      const dateStr = toISODateString(selectedDate);
       const nextStatus: DayStatus = dayStatus === "CLOSED" ? "OPEN" : "CLOSED";
 
       const res = await fetch("/api/admin/day-status", {
@@ -127,107 +119,36 @@ export default function AdminSchedulePage() {
   };
 
   // =========================
-  // Helpers สำหรับจัดการ slot จริง ๆ (API)
+  // Slot handlers (ใช้ feature)
   // =========================
 
-  const createSlot = async (payload: SlotCreatePayload) => {
-    setIsMutatingSlot(true);
-    try {
-      const dateStr = toISODateString(selectedDate);
-      const res = await fetch("/api/v1/slots", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          date: dateStr,
-          ...payload,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to add slot");
-
-      await fetchDailyData(selectedDate);
-    } catch (error) {
-      console.error("Error adding slot:", error);
-    } finally {
-      setIsMutatingSlot(false);
-    }
-  };
-
-  const updateSlot = async (slotId: string, updates: SlotUpdatePayload) => {
-    setIsMutatingSlot(true);
-    try {
-      const res = await fetch(`/api/v1/slots/${slotId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updates),
-      });
-      if (!res.ok) throw new Error("Failed to update slot");
-
-      await fetchDailyData(selectedDate);
-    } catch (error) {
-      console.error("Error updating slot:", error);
-    } finally {
-      setIsMutatingSlot(false);
-    }
-  };
-
-  const deleteSlot = async (slotId: string) => {
-    setIsMutatingSlot(true);
-    try {
-      const res = await fetch(`/api/v1/slots/${slotId}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Failed to delete slot");
-
-      await fetchDailyData(selectedDate);
-    } catch (error) {
-      console.error("Error deleting slot:", error);
-    } finally {
-      setIsMutatingSlot(false);
-    }
-  };
-
-  // =========================
-  // Handlers ที่โยนให้ SlotEditor (ตาม props ของ SlotEditor)
-  // =========================
-
-  // ลบช่วงเวลาทั้งวัน
   const handleDeleteAllSlots = async () => {
-    if (!selectedDate) return;
     if (!confirm("ต้องการลบช่วงเวลาทั้งวันนี้ใช่หรือไม่?")) return;
-
     setIsDeleting(true);
     try {
-      const dateStr = toISODateString(selectedDate);
-      const res = await fetch(`/api/v1/slots?date=${dateStr}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Failed to delete all slots");
-
-      await fetchDailyData(selectedDate);
-    } catch (error) {
-      console.error("Error deleting all slots:", error);
+      await deleteSlots(dateStr);
+      await fetchDailyData(dateStr);
     } finally {
       setIsDeleting(false);
     }
   };
 
-  // 👉 อันนี้ต้องเป็น () => void ตามที่ SlotEditor ต้องการ
-  const handleAddSlot = () => {
-    // ตอนนี้ยังไม่มีฟอร์ม แถมค่า default ง่าย ๆ ให้ก่อน
-    const payload: SlotCreatePayload = {
+  const handleAddSlot = async () => {
+    // TODO: ตอนหลังเปลี่ยนเป็นเปิด SlotFormModal
+    await createSlot({
+      date: dateStr,
       startTime: "09:00",
       endTime: "10:00",
-      capacity: 5,
-    };
-    void createSlot(payload);
+      maxCapacity: 1,
+    });
+    await fetchDailyData(dateStr);
   };
 
-  // แก้ไขช่วงเวลา: ตอนนี้ทำแบบง่าย ๆ ให้แก้แค่ capacity ผ่าน prompt
-  const handleEditSlot = (index: number) => {
+  const handleEditSlot = async (index: number) => {
     const slot = slots[index];
     if (!slot) return;
 
-    const currentCap = (slot as any).capacity ?? 5;
+    const currentCap = slot.maxCapacity ?? 1;
     const input = window.prompt(
       "แก้ไขความจุ (จำนวนคนที่รับได้ในช่วงนี้):",
       String(currentCap)
@@ -240,28 +161,26 @@ export default function AdminSchedulePage() {
       return;
     }
 
-    void updateSlot(slot.id, { capacity: newCap });
+    await updateSlot(slot.id, { capacity: newCap });
+    await fetchDailyData(dateStr);
   };
 
-  // ลบช่วงเวลาเดียว (รับ index ตามที่ SlotEditor ส่งมา)
-  const handleDeleteSlot = (index: number) => {
+  const handleDeleteSlot = async (index: number) => {
     const slot = slots[index];
     if (!slot) return;
     if (!confirm("ต้องการลบช่วงเวลานี้ใช่หรือไม่?")) return;
 
-    void deleteSlot(slot.id);
+    await deleteSlot(slot.id);
+    await fetchDailyData(dateStr);
   };
 
-  // เปิด / ปิดเฉพาะช่วงเวลา (ใช้ index + next ที่ SlotEditor ส่งมา)
   const handleToggleSlotAvailability = async (index: number, next: boolean) => {
     const slot = slots[index];
     if (!slot) return;
 
-    try {
-      await updateSlot(slot.id, { isAvailable: next });
-    } catch (err) {
-      console.error("toggle slot failed", err);
-    }
+    // ✅ backend แปลง isAvailable -> status (AVAILABLE/LOCKED) ใน [id]/route.ts ของคุณ
+    await updateSlot(slot.id, { isAvailable: next });
+    await fetchDailyData(dateStr);
   };
 
   const uiDayStatus =
@@ -273,7 +192,6 @@ export default function AdminSchedulePage() {
 
   return (
     <div className="max-w-[1400px] mx-auto px-4 py-6 space-y-6">
-      {/* Page Header */}
       <div className="flex items-center gap-3 mb-2">
         <div className="p-2 bg-primary-100 rounded-lg text-primary-600">
           <CalendarDays className="w-6 h-6" />
@@ -288,9 +206,7 @@ export default function AdminSchedulePage() {
         </div>
       </div>
 
-      {/* Main Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left: Calendar (3 cols) */}
         <div className="lg:col-span-3 space-y-4">
           <ScheduleCalendar
             currentMonth={currentMonth}
@@ -300,14 +216,13 @@ export default function AdminSchedulePage() {
           />
         </div>
 
-        {/* Right: Booking List + Slot Editor (9 cols) */}
         <div className="lg:col-span-9">
           <SlotEditor
             selectedDate={selectedDate}
-            slots={slots}
+            slots={slots as any} // ถ้า components ยังอิง @/types เดิมอยู่ เดี๋ยวข้อ 2 แก้ให้เนียน
             bookings={bookings}
             dayStatus={uiDayStatus}
-            isLoading={isLoading || isMutatingSlot}
+            isLoading={isLoading || isSubmitting}
             isToggling={isToggling}
             isDeleting={isDeleting}
             onToggleDayStatus={handleToggleDayStatus}
@@ -322,18 +237,20 @@ export default function AdminSchedulePage() {
         </div>
       </div>
 
-      {/* Modals */}
-      <AssignBookingModal
+      <ScheduleAssignModal
         isOpen={assignModalOpen}
-        onClose={() => setAssignModalOpen(false)}
-        bookingId={assignBookingId}
+        booking={assignBooking}
+        onClose={() => {
+          setAssignModalOpen(false);
+          setAssignBooking(null);
+        }}
         onSuccess={handleSuccess}
       />
 
-      <RescheduleBookingModal
+      <ScheduleRescheduleModal
         isOpen={rescheduleModalOpen}
-        onClose={() => setRescheduleModalOpen(false)}
         booking={rescheduleBooking}
+        onClose={() => setRescheduleModalOpen(false)}
         onSuccess={handleSuccess}
       />
     </div>

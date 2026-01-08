@@ -1,3 +1,5 @@
+// src/components/admin/schedule/SlotFormModal.tsx
+
 'use client';
 
 import { Modal, ModalFooter, Button } from '@/components/ui';

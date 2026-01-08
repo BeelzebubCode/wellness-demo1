@@ -1,3 +1,5 @@
+// src/components/admin/schedule/SlotCard.tsx
+
 'use client';
 
 import { cn } from '@/lib/cn';
