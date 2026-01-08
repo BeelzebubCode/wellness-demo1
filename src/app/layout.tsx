@@ -3,20 +3,32 @@
 // ==========================================
 
 import './globals.css';
+import type { Metadata } from 'next';
 import { NotificationProvider } from '@/components/notification/NotificationProvider';
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export const metadata: Metadata = {
+  title: {
+    default: 'NU Wellness Center',
+    template: '%s | NU Wellness Center',
+  },
+  description: 'ระบบจองคิวให้คำปรึกษา NU Wellness',
+  icons: {
+    icon: '/icons/logo_wellness_center.ico', // ถ้ามี
+  },
+  openGraph: {
+    title: 'NU Wellness Center',
+    description: 'ระบบจองคิวให้คำปรึกษา NU Wellness Center',
+    images: ['/images/profiles.jpg'], // หรือรูป og ที่เตรียมไว้
+  },
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="th">
       <body>
-        <NotificationProvider>
-          {children}
-        </NotificationProvider>
+        <NotificationProvider>{children}</NotificationProvider>
       </body>
     </html>
   );
 }
+
