@@ -3,6 +3,7 @@
 // ==========================================
 
 import './globals.css';
+import { NotificationProvider } from '@/components/notification/NotificationProvider';
 
 export default function RootLayout({
   children,
@@ -12,7 +13,9 @@ export default function RootLayout({
   return (
     <html lang="th">
       <body>
-        {children}
+        <NotificationProvider>
+          {children}
+        </NotificationProvider>
       </body>
     </html>
   );

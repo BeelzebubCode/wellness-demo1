@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   User,
   Lock,
@@ -13,14 +13,16 @@ import {
   Sparkles,
   HeartPulse,
   Megaphone,
-} from 'lucide-react';
+} from "lucide-react";
+import { useNotificationContext } from "@/components/notification/NotificationProvider";
 
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({ username: '', password: '' });
+  const [formData, setFormData] = useState({ username: "", password: "" });
+  const { push } = useNotificationContext();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,63 +30,76 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const res = await fetch('/api/v1/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/v1/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
-        credentials: 'include',
+        credentials: "include",
       });
 
       const data = await res.json();
 
       if (res.ok && data.success) {
         // ✅ 1) token
-        if (data.token) localStorage.setItem('token', data.token);
+        if (data.token) localStorage.setItem("token", data.token);
 
         // ✅ 2) user
         localStorage.setItem(
-          'auth_user',
+          "auth_user",
           JSON.stringify({
-            name: data.account?.name || data.account?.username || formData.username,
+            name:
+              data.account?.name || data.account?.username || formData.username,
             avatar: data.account?.avatar || null,
             role: data.account?.role || null,
           })
         );
 
         // ✅ 3) event
-        window.dispatchEvent(new Event('auth-changed'));
+        window.dispatchEvent(new Event("auth-changed"));
 
         const role = data.account.role;
 
+        // login success
+        push({
+          type: "success",
+          title: "เข้าสู่ระบบสำเร็จ",
+          message: `ยินดีต้อนรับ ${data.account?.username}`,
+          duration: 1500,
+        });
+
+        // redirect ทันที
+        router.replace("/booking");
+        router.refresh();
+
         switch (role) {
-          case 'HEAD_CONSULTANT':
-          case 'ADMIN':
-            router.replace('/admin/data-center');
+          case "HEAD_CONSULTANT":
+          case "ADMIN":
+            router.replace("/admin/data-center");
             router.refresh();
             return;
 
-          case 'CONSULTANT':
-            router.replace('/consultant/my-jobs');
+          case "CONSULTANT":
+            router.replace("/consultant/my-jobs");
             router.refresh();
             return;
 
-          case 'STUDENT':
-            router.replace('/booking');
+          case "STUDENT":
+            router.replace("/booking");
             router.refresh();
             return;
 
           default:
-            router.replace('/');
+            router.replace("/");
             router.refresh();
             return;
         }
       }
 
-      setError(data.error || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+      setError(data.error || "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
       setLoading(false);
     } catch (err) {
       console.error(err);
-      setError('Connection Error');
+      setError("Connection Error");
       setLoading(false);
     }
   };
@@ -139,7 +154,9 @@ export default function LoginPage() {
                                focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500
                                transition"
                     value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, username: e.target.value })
+                    }
                     required
                     disabled={loading}
                   />
@@ -151,7 +168,7 @@ export default function LoginPage() {
                     <Lock size={18} />
                   </span>
                   <input
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     placeholder="Password"
                     autoComplete="current-password"
                     className="w-full h-11 pl-10 pr-10 rounded-md border border-slate-200 bg-white
@@ -159,7 +176,9 @@ export default function LoginPage() {
                                focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500
                                transition"
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
                     required
                     disabled={loading}
                   />
@@ -218,7 +237,7 @@ export default function LoginPage() {
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => handleDemoFill('admin', 'admin123')}
+                    onClick={() => handleDemoFill("admin", "admin123")}
                     className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white
                                hover:bg-slate-50 transition"
                   >
@@ -226,7 +245,7 @@ export default function LoginPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDemoFill('consultant1', '123456')}
+                    onClick={() => handleDemoFill("consultant1", "123456")}
                     className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white
                                hover:bg-slate-50 transition"
                   >
@@ -234,7 +253,7 @@ export default function LoginPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDemoFill('student1', '123456')}
+                    onClick={() => handleDemoFill("student1", "123456")}
                     className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white
                                hover:bg-slate-50 transition"
                   >
@@ -310,9 +329,30 @@ export default function LoginPage() {
               {/* วงแหวนขวา */}
               <div className="pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 opacity-40">
                 <svg width="90" height="90" viewBox="0 0 90 90" fill="none">
-                  <circle cx="45" cy="45" r="22" stroke="#0EA5A4" strokeWidth="2" opacity="0.35" />
-                  <circle cx="45" cy="45" r="32" stroke="#0EA5A4" strokeWidth="2" opacity="0.22" />
-                  <circle cx="45" cy="45" r="42" stroke="#0EA5A4" strokeWidth="2" opacity="0.14" />
+                  <circle
+                    cx="45"
+                    cy="45"
+                    r="22"
+                    stroke="#0EA5A4"
+                    strokeWidth="2"
+                    opacity="0.35"
+                  />
+                  <circle
+                    cx="45"
+                    cy="45"
+                    r="32"
+                    stroke="#0EA5A4"
+                    strokeWidth="2"
+                    opacity="0.22"
+                  />
+                  <circle
+                    cx="45"
+                    cy="45"
+                    r="42"
+                    stroke="#0EA5A4"
+                    strokeWidth="2"
+                    opacity="0.14"
+                  />
                 </svg>
               </div>
             </div>
