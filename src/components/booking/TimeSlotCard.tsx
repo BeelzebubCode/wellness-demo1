@@ -1,15 +1,19 @@
+// src/components/booking/TimeSlotCard.tsx
+
 'use client';
 
 import { cn } from '@/lib/cn';
 import type { TimeSlot } from '@/features/booking/types';
-import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Clock } from 'lucide-react';
 
 export interface TimeSlotCardProps {
   slot: TimeSlot;
   onSelect: () => void;
-  disabled?: boolean;
+  disabled?: boolean;     // ใช้กรณี "มีคิวค้าง" จากหน้า parent
   showEndTime?: boolean;
 }
+
+type BadgeVariant = 'available' | 'full' | 'blocked' | 'past' | 'closed' | 'unavailable';
 
 export function TimeSlotCard({
   slot,
@@ -17,14 +21,70 @@ export function TimeSlotCard({
   disabled = false,
   showEndTime = true,
 }: TimeSlotCardProps) {
-  const isAvailable = slot.isAvailable && !disabled;
-  const isFull = !slot.isAvailable;
-
-  const total = Number(slot.maxCapacity ?? 1);     // ✅ จาก DB
-  const booked = Number(slot.bookedCount ?? 0);    // ✅ จาก DB
-
-  // ✅ format ที่คุณอยากได้: ว่าง 0/2
+  const total = Number(slot.maxCapacity ?? 1);
+  const booked = Number(slot.bookedCount ?? 0);
   const queueText = `${booked}/${total}`;
+
+  // ✅ เลือกเหตุผลให้ชัดเจน
+  const isAvailable = slot.isAvailable && !disabled;
+
+  // ถ้า disabled=true (มีคิวค้าง) ให้ override เหนือทุกอย่าง
+  const reason = disabled
+    ? 'BLOCKED_ACTIVE_BOOKING'
+    : slot.unavailableReason ?? (slot.isPastTime ? 'PAST_TIME' : null);
+
+  const badge = (() => {
+    if (isAvailable) {
+      return {
+        variant: 'available' as BadgeVariant,
+        icon: <CheckCircle className="w-3.5 h-3.5" />,
+        text: `ว่าง ${queueText}`,
+      };
+    }
+
+    // ❗ ไม่ available แล้ว แยก reason
+    switch (reason) {
+      case 'PAST_TIME':
+        return {
+          variant: 'past' as BadgeVariant,
+          icon: <Clock className="w-3.5 h-3.5" />,
+          text: 'หมดเวลา',
+        };
+      case 'FULL':
+        return {
+          variant: 'full' as BadgeVariant,
+          icon: <XCircle className="w-3.5 h-3.5" />,
+          text: `เต็ม ${queueText}`,
+        };
+      case 'CLOSED':
+        return {
+          variant: 'closed' as BadgeVariant,
+          icon: <XCircle className="w-3.5 h-3.5" />,
+          text: 'ปิดรับจอง',
+        };
+      case 'BLOCKED_ACTIVE_BOOKING':
+        return {
+          variant: 'blocked' as BadgeVariant,
+          icon: <AlertTriangle className="w-3.5 h-3.5" />,
+          text: 'มีคิวค้าง',
+        };
+      default:
+        return {
+          variant: 'unavailable' as BadgeVariant,
+          icon: <XCircle className="w-3.5 h-3.5" />,
+          text: 'ไม่พร้อมใช้งาน',
+        };
+    }
+  })();
+
+  const badgeClass = {
+    available: 'bg-green-100 text-green-700',
+    full: 'bg-red-100 text-red-700',
+    past: 'bg-slate-200 text-slate-700',
+    closed: 'bg-slate-200 text-slate-700',
+    blocked: 'bg-amber-100 text-amber-700',
+    unavailable: 'bg-gray-200 text-gray-700',
+  }[badge.variant];
 
   return (
     <button
@@ -66,27 +126,11 @@ export function TimeSlotCard({
       <div
         className={cn(
           'inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium',
-          isAvailable && 'bg-green-100 text-green-700',
-          isFull && 'bg-red-100 text-red-700',
-          disabled && !isFull && 'bg-amber-100 text-amber-700',
+          badgeClass
         )}
       >
-        {isFull ? (
-          <>
-            <XCircle className="w-3.5 h-3.5" />
-            <span>เต็ม {queueText}</span>
-          </>
-        ) : disabled ? (
-          <>
-            <AlertTriangle className="w-3.5 h-3.5" />
-            <span>มีคิวค้าง</span>
-          </>
-        ) : (
-          <>
-            <CheckCircle className="w-3.5 h-3.5" />
-            <span>ว่าง {queueText}</span>
-          </>
-        )}
+        {badge.icon}
+        <span>{badge.text}</span>
       </div>
 
       {isAvailable && (

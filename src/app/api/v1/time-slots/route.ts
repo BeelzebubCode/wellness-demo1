@@ -1,8 +1,8 @@
 // src/app/api/v1/time-slots/route.ts
 // ✅ Fixed: Uses TimeSlot model from schema
 
-import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
 
 // Helper: สร้าง datetime จาก date + time
 function createDateTime(dateStr: string, timeStr: string): Date {
@@ -18,8 +18,8 @@ async function generateDefaultSlots(date: string) {
   const dayOfWeek = new Date(date).getDay();
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-  const openTime = '08:00';
-  const closeTime = isWeekend ? '16:00' : '20:00';
+  const openTime = "08:00";
+  const closeTime = isWeekend ? "16:00" : "20:00";
   const slotDuration = 60;
 
   const slots: { start: Date; end: Date }[] = [];
@@ -42,23 +42,22 @@ async function generateDefaultSlots(date: string) {
       time_slot_start_datetime: s.start,
       time_slot_end_datetime: s.end,
       time_slot_max_capacity: 1,
-      time_slot_status: 'AVAILABLE',
+      time_slot_status: "AVAILABLE",
     })),
     skipDuplicates: true,
   });
 }
 
-
 // GET /api/v1/time-slots?date=YYYY-MM-DD
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const dateStr = searchParams.get('date');
-    const showAll = searchParams.get('all') === 'true';
+    const dateStr = searchParams.get("date");
+    const showAll = searchParams.get("all") === "true";
 
     if (!dateStr) {
       return NextResponse.json(
-        { error: 'Date is required (YYYY-MM-DD)' },
+        { error: "Date is required (YYYY-MM-DD)" },
         { status: 400 }
       );
     }
@@ -89,7 +88,7 @@ export async function GET(req: NextRequest) {
           },
         },
       },
-      orderBy: { time_slot_start_datetime: 'asc' },
+      orderBy: { time_slot_start_datetime: "asc" },
     });
 
     // ✅ หัวใจของระบบ: auto-generate ครั้งแรก
@@ -111,16 +110,16 @@ export async function GET(req: NextRequest) {
             },
           },
         },
-        orderBy: { time_slot_start_datetime: 'asc' },
+        orderBy: { time_slot_start_datetime: "asc" },
       });
     }
 
     const now = new Date();
 
     const ACTIVE_STATUSES = [
-      'PENDING_ASSIGNMENT',
-      'ASSIGNED',
-      'IN_PROGRESS',
+      "PENDING_ASSIGNMENT",
+      "ASSIGNED",
+      "IN_PROGRESS",
     ] as const;
 
     // Format response
@@ -137,26 +136,40 @@ export async function GET(req: NextRequest) {
       );
 
       const isClosed =
-        slot.time_slot_status === 'LOCKED' ||
-        slot.time_slot_status === 'CANCELLED';
+        slot.time_slot_status === "LOCKED" ||
+        slot.time_slot_status === "CANCELLED";
 
+      const now = new Date();
       const slotStart = slot.time_slot_start_datetime;
 
-      // ❗ ถ้าเป็นวันเดียวกับวันนี้ และเวลาผ่านไปแล้ว → ห้ามจอง
+      // ✅ เวลาเลยแล้ว (วันนี้เท่านั้น)
       const isPastTime =
-        slotStart.toDateString() === now.toDateString() &&
-        slotStart <= now;
+        slotStart.toDateString() === now.toDateString() && slotStart <= now;
 
       const isAvailable =
-        slot.time_slot_status === 'AVAILABLE' &&
+        slot.time_slot_status === "AVAILABLE" &&
         availableCount > 0 &&
         !isClosed &&
         !isPastTime;
 
+      // ✅ เพิ่ม reason ให้ UI ตัดสินใจแสดงคำ
+      let unavailableReason:
+        | "PAST_TIME"
+        | "FULL"
+        | "CLOSED"
+        | "UNAVAILABLE"
+        | null = null;
+
+      if (!isAvailable) {
+        if (isPastTime) unavailableReason = "PAST_TIME";
+        else if (isClosed) unavailableReason = "CLOSED";
+        else if (availableCount <= 0) unavailableReason = "FULL";
+        else unavailableReason = "UNAVAILABLE";
+      }
 
       return {
         id: slot.time_slot_id,
-        date: slotStart.toISOString().split('T')[0],
+        date: slotStart.toISOString().split("T")[0],
         startTime: slotStart.toTimeString().slice(0, 5),
         endTime: slot.time_slot_end_datetime.toTimeString().slice(0, 5),
 
@@ -170,11 +183,12 @@ export async function GET(req: NextRequest) {
 
         isAvailable,
         isClosed,
-        isPastTime, // (optional)
+        isPastTime,
+
+        // ✅ ตัวใหม่
+        unavailableReason,
       };
     });
-
-
 
     return NextResponse.json({
       success: true,
@@ -182,9 +196,9 @@ export async function GET(req: NextRequest) {
       slots: formattedSlots,
     });
   } catch (error) {
-    console.error('Error fetching time slots:', error);
+    console.error("Error fetching time slots:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch time slots' },
+      { error: "Failed to fetch time slots" },
       { status: 500 }
     );
   }
@@ -198,10 +212,7 @@ export async function POST(req: NextRequest) {
     const { date, slots, generateDefault } = body;
 
     if (!date) {
-      return NextResponse.json(
-        { error: 'Date is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Date is required" }, { status: 400 });
     }
 
     // ถ้าต้องการสร้าง slots อัตโนมัติ
@@ -210,8 +221,8 @@ export async function POST(req: NextRequest) {
       const dayOfWeek = new Date(date).getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-      const openTime = '08:00';
-      const closeTime = isWeekend ? '16:00' : '20:00';
+      const openTime = "08:00";
+      const closeTime = isWeekend ? "16:00" : "20:00";
       const slotDuration = 60; // นาที
 
       const generatedSlots: { start: Date; end: Date }[] = [];
@@ -236,7 +247,7 @@ export async function POST(req: NextRequest) {
           time_slot_start_datetime: s.start,
           time_slot_end_datetime: s.end,
           time_slot_max_capacity: body.maxCapacity || 1,
-          time_slot_status: 'AVAILABLE',
+          time_slot_status: "AVAILABLE",
         })),
         skipDuplicates: true,
       });
@@ -251,18 +262,20 @@ export async function POST(req: NextRequest) {
     // ถ้าระบุ slots เอง
     if (!slots || !Array.isArray(slots) || slots.length === 0) {
       return NextResponse.json(
-        { error: 'Slots array is required' },
+        { error: "Slots array is required" },
         { status: 400 }
       );
     }
 
     const created = await prisma.timeSlot.createMany({
-      data: slots.map((s: { startTime: string; endTime: string; maxCapacity?: number }) => ({
-        time_slot_start_datetime: createDateTime(date, s.startTime),
-        time_slot_end_datetime: createDateTime(date, s.endTime),
-        time_slot_max_capacity: s.maxCapacity || 1,
-        time_slot_status: 'AVAILABLE',
-      })),
+      data: slots.map(
+        (s: { startTime: string; endTime: string; maxCapacity?: number }) => ({
+          time_slot_start_datetime: createDateTime(date, s.startTime),
+          time_slot_end_datetime: createDateTime(date, s.endTime),
+          time_slot_max_capacity: s.maxCapacity || 1,
+          time_slot_status: "AVAILABLE",
+        })
+      ),
       skipDuplicates: true,
     });
 
@@ -272,9 +285,9 @@ export async function POST(req: NextRequest) {
       date,
     });
   } catch (error) {
-    console.error('Error creating time slots:', error);
+    console.error("Error creating time slots:", error);
     return NextResponse.json(
-      { error: 'Failed to create time slots' },
+      { error: "Failed to create time slots" },
       { status: 500 }
     );
   }
@@ -285,13 +298,10 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const dateStr = searchParams.get('date');
+    const dateStr = searchParams.get("date");
 
     if (!dateStr) {
-      return NextResponse.json(
-        { error: 'Date is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Date is required" }, { status: 400 });
     }
 
     const startOfDay = new Date(`${dateStr}T00:00:00`);
@@ -316,9 +326,9 @@ export async function DELETE(req: NextRequest) {
       date: dateStr,
     });
   } catch (error) {
-    console.error('Error deleting time slots:', error);
+    console.error("Error deleting time slots:", error);
     return NextResponse.json(
-      { error: 'Failed to delete time slots' },
+      { error: "Failed to delete time slots" },
       { status: 500 }
     );
   }
