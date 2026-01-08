@@ -59,20 +59,31 @@ export default function BookingHistoryPage() {
         </h2>
 
         {pastBookings.length > 0 ? (
-          <div className="space-y-3">
-            {pastBookings.map((booking) => {
-              const isExpanded = expandedId === booking.id;
+          <div className="relative pl-6">
+            {/* timeline line */}
+            <div className="absolute left-2 top-1 bottom-1 w-px bg-gray-200" />
 
-              return (
-                <MyAppointmentCard
-                  key={booking.id}
-                  booking={booking}
-                  isCompact
-                  isExpanded={isExpanded}
-                  onToggle={() => setExpandedId(isExpanded ? null : booking.id)}
-                />
-              );
-            })}
+            <div className="space-y-4">
+              {pastBookings.map((booking) => {
+                const isExpanded = expandedId === booking.id;
+
+                return (
+                  <div key={booking.id} className="relative">
+                    {/* dot */}
+                    <div className="absolute -left-[2px] top-5 h-3 w-3 rounded-full bg-primary-500 ring-4 ring-white" />
+
+                    <MyAppointmentCard
+                      booking={booking}
+                      isCompact
+                      isExpanded={isExpanded}
+                      onToggle={() =>
+                        setExpandedId(isExpanded ? null : booking.id)
+                      }
+                    />
+                  </div>
+                );
+              })}
+            </div>
           </div>
         ) : (
           <div className="text-center py-12 border border-dashed rounded-xl bg-gray-50">
