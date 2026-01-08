@@ -20,7 +20,6 @@ export function AdminHeader({
   const router = useRouter();
 
   return (
-    // 📏 ปรับความสูงเป็น h-20 (80px) เพื่อความโอ่อ่า อ่านง่าย
     <header className="bg-white sticky top-0 z-30 border-b border-gray-200 shadow-sm px-6 h-20 flex items-center justify-between">
       {/* Left: Menu & Title */}
       <div className="flex items-center gap-4">
@@ -43,11 +42,9 @@ export function AdminHeader({
         {/* User Info (Desktop) */}
         <div className="hidden sm:flex flex-col items-end mr-2">
           <p className="text-lg font-bold text-gray-800 leading-none mb-1">
-            {adminName || "ผู้ดูแลระบบ"}
+            {adminName || "Head Consultant"}
           </p>
-          <p className="text-sm text-gray-500 font-medium">
-            {adminRole === "admin" ? "ผู้ดูแลระบบสูงสุด" : "ผู้ให้คำปรึกษา"}
-          </p>
+          <p className="text-sm text-gray-500 font-medium">หัวหน้าผู้ให้คำปรึกษา</p>
         </div>
 
         {/* Avatar Circle */}

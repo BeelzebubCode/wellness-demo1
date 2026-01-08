@@ -1,23 +1,19 @@
-// ==========================================
-// 📌 LIFF Entry Point
-// ==========================================
-
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { useLine } from '@/contexts/LineContext';
 import { LoadingSpinner } from '@/components/ui';
 
 export default function LiffPage() {
-  const router = useRouter();
   const { isLoading } = useLine();
 
   useEffect(() => {
     if (!isLoading) {
-      router.replace('/booking');
+      // ✅ บังคับเข้า 404
+      notFound();
     }
-  }, [isLoading, router]);
+  }, [isLoading]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-cyan-50">

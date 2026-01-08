@@ -57,9 +57,8 @@ export default function LoginPage() {
         // ✅ 3) event
         window.dispatchEvent(new Event("auth-changed"));
 
-        const role = data.account.role;
+        const role = data.account?.role;
 
-        // login success
         push({
           type: "success",
           title: "เข้าสู่ระบบสำเร็จ",
@@ -67,32 +66,20 @@ export default function LoginPage() {
           duration: 1500,
         });
 
-        // redirect ทันที
-        router.replace("/booking");
+        // เลือกปลายทางให้จบก่อน
+        const nextPath =
+          role === "HEAD_CONSULTANT" || role === "ADMIN"
+            ? "/admin/data-center"
+            : role === "CONSULTANT"
+            ? "/consultant/my-jobs"
+            : role === "STUDENT"
+            ? "/booking"
+            : "/";
+
+        // แล้วค่อย redirect ครั้งเดียว
+        router.replace(nextPath);
         router.refresh();
-
-        switch (role) {
-          case "HEAD_CONSULTANT":
-          case "ADMIN":
-            router.replace("/admin/data-center");
-            router.refresh();
-            return;
-
-          case "CONSULTANT":
-            router.replace("/consultant/my-jobs");
-            router.refresh();
-            return;
-
-          case "STUDENT":
-            router.replace("/booking");
-            router.refresh();
-            return;
-
-          default:
-            router.replace("/");
-            router.refresh();
-            return;
-        }
+        return;
       }
 
       setError(data.error || "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
@@ -237,15 +224,19 @@ export default function LoginPage() {
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => handleDemoFill("admin", "admin123")}
+                    onClick={() =>
+                      handleDemoFill("head", "wellness_center_123456!")
+                    }
                     className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white
                                hover:bg-slate-50 transition"
                   >
-                    Admin
+                    Head Consultant
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDemoFill("consultant1", "123456")}
+                    onClick={() =>
+                      handleDemoFill("consultant1", "wellness_center_123456!")
+                    }
                     className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white
                                hover:bg-slate-50 transition"
                   >
@@ -253,7 +244,9 @@ export default function LoginPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDemoFill("student1", "123456")}
+                    onClick={() =>
+                      handleDemoFill("student1", "wellness_center_123456!")
+                    }
                     className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white
                                hover:bg-slate-50 transition"
                   >

@@ -277,12 +277,11 @@ export function BookingForm({
           }}
           rows={4}
           placeholder="อธิบายปัญหาหรือสิ่งที่ต้องการปรึกษาเพิ่มเติม..."
-          className={cn(
-            "w-full resize-none rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 transition",
-            hasSubmitted && errors.problemDescription
-              ? "border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/20"
-              : "border-gray-200 focus:border-primary-500 focus:ring-primary-500/20"
-          )}
+          className="
+            w-full resize-none rounded-xl border border-gray-200
+            px-4 py-3 text-sm outline-none transition
+            focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20
+          "
         />
 
         {/* อันนี้เป็น inline ก็โอเค (ถ้านายอยากให้เป็น box บอกพี่ เดี๋ยวปรับ) */}

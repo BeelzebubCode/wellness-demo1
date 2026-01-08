@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { LogOut } from 'lucide-react';
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { LogOut } from "lucide-react";
 
-import { logout } from '@/features/auth/logout';
-import { Button, Modal, ModalFooter } from '@/components/ui';
+import { logout } from "@/features/auth/logout";
+import { Button, Modal, ModalFooter } from "@/components/ui";
 
 type Props = {
   redirectTo?: string;
@@ -18,19 +18,19 @@ type Props = {
   confirmDescription?: string;
 
   // button style
-  buttonVariant?: 'ghost' | 'primary' | 'danger';
+  buttonVariant?: "ghost" | "primary" | "danger";
 };
 
 export default function LogoutButton({
-  redirectTo = '/login',
-  label = 'ออก',
+  redirectTo = "/login",
+  label = "ออก",
   className,
   iconOnly = false,
 
-  confirmTitle = 'ยืนยันออกจากระบบ',
-  confirmDescription = 'ต้องการออกจากระบบใช่ไหม?',
+  confirmTitle = "ยืนยันออกจากระบบ",
+  confirmDescription = "ต้องการออกจากระบบใช่ไหม?",
 
-  buttonVariant = 'danger',
+  buttonVariant = "danger",
 }: Props) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -40,7 +40,10 @@ export default function LogoutButton({
     setLoading(true);
     try {
       await logout();
+      window.dispatchEvent(new Event("auth-changed"));
+
       router.replace(redirectTo);
+      router.refresh(); // ✅ ให้ layout/hook รีอ่านใหม่
     } finally {
       setLoading(false);
       setIsOpen(false);
@@ -56,7 +59,11 @@ export default function LogoutButton({
         title="ออกจากระบบ"
       >
         <LogOut className="w-6 h-6" />
-        {!iconOnly && <span className="hidden lg:inline text-base font-semibold">{label}</span>}
+        {!iconOnly && (
+          <span className="hidden lg:inline text-base font-semibold">
+            {label}
+          </span>
+        )}
       </button>
 
       <Modal
@@ -67,11 +74,19 @@ export default function LogoutButton({
         size="sm"
       >
         <ModalFooter className="mt-2">
-          <Button variant="ghost" onClick={() => setIsOpen(false)} disabled={loading}>
+          <Button
+            variant="ghost"
+            onClick={() => setIsOpen(false)}
+            disabled={loading}
+          >
             ยกเลิก
           </Button>
-          <Button variant={buttonVariant} onClick={onConfirm} disabled={loading}>
-            {loading ? 'กำลังออก...' : 'ออกจากระบบ'}
+          <Button
+            variant={buttonVariant}
+            onClick={onConfirm}
+            disabled={loading}
+          >
+            {loading ? "กำลังออก..." : "ออกจากระบบ"}
           </Button>
         </ModalFooter>
       </Modal>

@@ -81,15 +81,15 @@ export function PublicHeader({
   }, []);
 
   const isLoggedIn = useMemo(() => {
-    if (userName) return true;
     if (!hydrated) return false;
     return auth.isLoggedIn;
-  }, [userName, hydrated, auth.isLoggedIn]);
+  }, [hydrated, auth.isLoggedIn]);
 
   const displayName = useMemo(
-    () => userName ?? auth.user.name ?? "ผู้ใช้",
-    [userName, auth.user.name]
+    () => auth.user.name ?? "ผู้ใช้",
+    [auth.user.name]
   );
+
   const displayAvatar = useMemo(
     () => userAvatar ?? auth.user.avatar ?? null,
     [userAvatar, auth.user.avatar]

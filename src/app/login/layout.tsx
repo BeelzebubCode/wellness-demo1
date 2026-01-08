@@ -1,15 +1,10 @@
-// src/app/(public)/layout.tsx
+// src/app/(auth)/layout.tsx
 "use client";
 
 import { useRouter } from "next/navigation";
 import { PublicHeader, PublicFooter } from "@/components/layout";
-import { useStudentAuth } from "@/features/auth/hooks/useStudentAuth";
 
-export default function PublicLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   return (
