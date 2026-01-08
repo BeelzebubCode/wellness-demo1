@@ -184,13 +184,18 @@ export async function POST(request: NextRequest) {
 
     const studentId = account.studentId;
 
-    // 🔍 เช็กว่ามี booking ค้างอยู่ไหม
+    // ✅ สถานะที่ถือว่ายัง “นับคิว” อยู่ (ปรับได้ตามระบบคุณ)
+    const ACTIVE_STATUSES: BookingStatus[] = [
+      "PENDING_ASSIGNMENT",
+      "ASSIGNED",
+      "IN_PROGRESS",
+    ];
+
+    // 🔍 เช็กว่ามี booking ค้างอยู่ไหม (กัน 1 คนมีได้ 1 คิว active)
     const existing = await prisma.booking.findFirst({
       where: {
         student_id: studentId,
-        booking_status: {
-          in: ["PENDING_ASSIGNMENT", "ASSIGNED", "IN_PROGRESS"],
-        },
+        booking_status: { in: ACTIVE_STATUSES },
       },
     });
 
@@ -202,6 +207,52 @@ export async function POST(request: NextRequest) {
     }
 
     const booking = await prisma.$transaction(async (tx) => {
+      // ✅ 1) ดึง time slot จาก DB เพื่ออ่าน max_capacity + status
+      const timeSlot = await tx.timeSlot.findUnique({
+        where: { time_slot_id: timeSlotId },
+        select: {
+          time_slot_id: true,
+          time_slot_max_capacity: true,
+          time_slot_status: true,
+        },
+      });
+
+      if (!timeSlot) {
+        throw new Error("ไม่พบช่วงเวลานี้ในระบบ");
+      }
+
+      const maxCapacity = Number(timeSlot.time_slot_max_capacity ?? 0);
+      if (!maxCapacity || maxCapacity <= 0) {
+        throw new Error("ช่วงเวลานี้ไม่ได้เปิดรับจอง");
+      }
+
+      // ✅ ถ้า status เป็น BOOKED อยู่แล้ว ก็กันเลย (เผื่อมีคนอัปเดตไว้)
+      if (String(timeSlot.time_slot_status).toUpperCase() === "BOOKED") {
+        throw new Error("ช่วงเวลานี้เต็มแล้ว");
+      }
+
+      // ✅ 2) นับจำนวนคิวที่ถูกจองแล้ว “ของ slot นี้”
+      // นับเฉพาะ booking ที่ยัง active เพื่อให้ cancel/complete ไม่กินโควต้า
+      const bookedCount = await tx.bookingSlot.count({
+        where: {
+          time_slot_id: timeSlotId,
+          booking: {
+            booking_status: { in: ACTIVE_STATUSES },
+          },
+        },
+      });
+
+      if (bookedCount >= maxCapacity) {
+        // ✅ อัปเดต status เป็น BOOKED ไว้ด้วย (optional แต่ดี)
+        await tx.timeSlot.update({
+          where: { time_slot_id: timeSlotId },
+          data: { time_slot_status: "BOOKED" },
+        });
+
+        throw new Error("ช่วงเวลานี้เต็มแล้ว");
+      }
+
+      // ✅ 3) create booking + bookingSlot
       const b = await tx.booking.create({
         data: {
           student_id: studentId,
@@ -218,6 +269,21 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      // ✅ 4) ถ้าหลังจองแล้ว “เต็มพอดี” อัปเดต time_slot_status เป็น BOOKED
+      const newBookedCount = bookedCount + 1;
+      if (newBookedCount >= maxCapacity) {
+        await tx.timeSlot.update({
+          where: { time_slot_id: timeSlotId },
+          data: { time_slot_status: "BOOKED" },
+        });
+      } else {
+        // (optional) กันกรณี status เคยเป็น BOOKED แล้วถูกแก้จำนวน booking ลดลง
+        await tx.timeSlot.update({
+          where: { time_slot_id: timeSlotId },
+          data: { time_slot_status: "AVAILABLE" },
+        });
+      }
+
       return b;
     });
 
@@ -225,11 +291,15 @@ export async function POST(request: NextRequest) {
       success: true,
       bookingId: booking.booking_id,
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error(err);
-    return NextResponse.json(
-      { error: "Failed to create booking" },
-      { status: 500 }
-    );
+
+    // ✅ ส่งข้อความจาก throw Error(...) ออกไปให้ user เข้าใจ
+    const message =
+      err?.message && typeof err.message === "string"
+        ? err.message
+        : "Failed to create booking";
+
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

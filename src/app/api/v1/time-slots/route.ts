@@ -75,11 +75,6 @@ export async function GET(req: NextRequest) {
       },
     };
 
-    // ถ้าไม่ใช่ showAll ให้แสดงเฉพาะ AVAILABLE
-    if (!showAll) {
-      whereClause.time_slot_status = 'AVAILABLE';
-    }
-
     let timeSlots = await prisma.timeSlot.findMany({
       where: whereClause,
       include: {
@@ -121,10 +116,19 @@ export async function GET(req: NextRequest) {
     }
 
     const now = new Date();
+
+    const ACTIVE_STATUSES = [
+      'PENDING_ASSIGNMENT',
+      'ASSIGNED',
+      'IN_PROGRESS',
+    ] as const;
+
     // Format response
     const formattedSlots = timeSlots.map((slot) => {
-      const activeBookings = slot.bookingSlots.filter(
-        (bs) => bs.booking.booking_status !== 'CANCELLED'
+      const activeBookings = slot.bookingSlots.filter((bs) =>
+        ACTIVE_STATUSES.includes(
+          bs.booking.booking_status as (typeof ACTIVE_STATUSES)[number]
+        )
       ).length;
 
       const availableCount = Math.max(
@@ -202,7 +206,7 @@ export async function POST(req: NextRequest) {
 
     // ถ้าต้องการสร้าง slots อัตโนมัติ
     if (generateDefault) {
-  // 0 = อาทิตย์, 6 = เสาร์
+      // 0 = อาทิตย์, 6 = เสาร์
       const dayOfWeek = new Date(date).getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 

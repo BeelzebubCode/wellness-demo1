@@ -20,10 +20,11 @@ export function TimeSlotCard({
   const isAvailable = slot.isAvailable && !disabled;
   const isFull = !slot.isAvailable;
 
-  // ✅ FIXED QUOTA: 1 คิวต่อช่วงเวลา
-  const TOTAL = 1;
+  const total = Number(slot.maxCapacity ?? 1);     // ✅ จาก DB
+  const booked = Number(slot.bookedCount ?? 0);    // ✅ จาก DB
 
-  const queueText = isAvailable ? `0/${TOTAL}` : `1/${TOTAL}`;
+  // ✅ format ที่คุณอยากได้: ว่าง 0/2
+  const queueText = `${booked}/${total}`;
 
   return (
     <button
@@ -32,8 +33,6 @@ export function TimeSlotCard({
       className={cn(
         'relative p-4 rounded-xl border-2 text-left transition-all duration-200',
         'focus:outline-none focus:ring-2 focus:ring-offset-2',
-
-        // Available
         isAvailable && [
           'bg-gradient-to-br from-green-50 to-emerald-50',
           'border-green-200 hover:border-green-400',
@@ -41,40 +40,29 @@ export function TimeSlotCard({
           'focus:ring-green-500',
           'group',
         ],
-
-        // Full / Disabled
         !isAvailable && [
           'bg-gray-50 border-gray-200',
           'cursor-not-allowed opacity-60',
         ],
       )}
     >
-      {/* Time */}
       <div className="mb-2">
         <span
           className={cn(
             'text-lg font-bold',
-            isAvailable
-              ? 'text-green-700 group-hover:text-green-800'
-              : 'text-gray-400',
+            isAvailable ? 'text-green-700 group-hover:text-green-800' : 'text-gray-400',
           )}
         >
           {slot.startTime}
         </span>
 
         {showEndTime && (
-          <span
-            className={cn(
-              'text-sm ml-1',
-              isAvailable ? 'text-green-600' : 'text-gray-400',
-            )}
-          >
+          <span className={cn('text-sm ml-1', isAvailable ? 'text-green-600' : 'text-gray-400')}>
             - {slot.endTime}
           </span>
         )}
       </div>
 
-      {/* Status Badge */}
       <div
         className={cn(
           'inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium',
@@ -101,7 +89,6 @@ export function TimeSlotCard({
         )}
       </div>
 
-      {/* Hover ring */}
       {isAvailable && (
         <div className="absolute inset-0 rounded-xl border-2 border-green-400 opacity-0 group-hover:opacity-100 transition-opacity" />
       )}
