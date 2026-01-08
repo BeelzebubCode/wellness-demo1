@@ -1,16 +1,15 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { toISODateString } from '@/lib/date';
-import { CalendarDays } from 'lucide-react';
-import type { TimeSlot, Booking } from '@/types';
+import { useState, useEffect } from "react";
+import { toISODateString } from "@/lib/date";
+import { CalendarDays } from "lucide-react";
+import type { TimeSlot, Booking } from "@/types";
 
 // Components
-import { ScheduleCalendar, SlotEditor } from '@/components/admin/schedule';
-import { AssignConsultantModal } from '@/components/admin/bookings/AssignConsultantModal';
-import { RescheduleModal } from '@/components/admin/bookings/RescheduleModal';
+import { ScheduleCalendar, SlotEditor } from "@/components/admin/schedule";
+import { AssignBookingModal, RescheduleBookingModal } from '@/components/admin/bookings'; 
 
-type DayStatus = 'OPEN' | 'CLOSED';
+type DayStatus = "OPEN" | "CLOSED";
 
 interface SlotCreatePayload {
   startTime: string;
@@ -46,7 +45,7 @@ export default function AdminSchedulePage() {
 
   const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
   const [rescheduleBooking, setRescheduleBooking] = useState<Booking | null>(
-    null,
+    null
   );
 
   // Fetch Data เมื่อเปลี่ยนวัน
@@ -73,11 +72,11 @@ export default function AdminSchedulePage() {
 
       const bookingsData = await bookingsRes.json();
       const activeBookings = (bookingsData.bookings || []).filter(
-        (b: Booking) => b.status !== 'CANCELLED',
+        (b: Booking) => b.status !== "CANCELLED"
       );
       setBookings(activeBookings);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error("Error fetching data:", error);
     } finally {
       setIsLoading(false);
     }
@@ -110,19 +109,18 @@ export default function AdminSchedulePage() {
     setIsToggling(true);
     try {
       const dateStr = toISODateString(selectedDate);
-      const nextStatus: DayStatus =
-        dayStatus === 'CLOSED' ? 'OPEN' : 'CLOSED';
+      const nextStatus: DayStatus = dayStatus === "CLOSED" ? "OPEN" : "CLOSED";
 
-      const res = await fetch('/api/admin/day-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/admin/day-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ date: dateStr, status: nextStatus }),
       });
 
-      if (!res.ok) throw new Error('Failed to toggle day status');
+      if (!res.ok) throw new Error("Failed to toggle day status");
       setDayStatus(nextStatus);
     } catch (error) {
-      console.error('Error toggling day status:', error);
+      console.error("Error toggling day status:", error);
     } finally {
       setIsToggling(false);
     }
@@ -136,19 +134,19 @@ export default function AdminSchedulePage() {
     setIsMutatingSlot(true);
     try {
       const dateStr = toISODateString(selectedDate);
-      const res = await fetch('/api/v1/slots', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/v1/slots", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           date: dateStr,
           ...payload,
         }),
       });
-      if (!res.ok) throw new Error('Failed to add slot');
+      if (!res.ok) throw new Error("Failed to add slot");
 
       await fetchDailyData(selectedDate);
     } catch (error) {
-      console.error('Error adding slot:', error);
+      console.error("Error adding slot:", error);
     } finally {
       setIsMutatingSlot(false);
     }
@@ -158,15 +156,15 @@ export default function AdminSchedulePage() {
     setIsMutatingSlot(true);
     try {
       const res = await fetch(`/api/v1/slots/${slotId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updates),
       });
-      if (!res.ok) throw new Error('Failed to update slot');
+      if (!res.ok) throw new Error("Failed to update slot");
 
       await fetchDailyData(selectedDate);
     } catch (error) {
-      console.error('Error updating slot:', error);
+      console.error("Error updating slot:", error);
     } finally {
       setIsMutatingSlot(false);
     }
@@ -176,13 +174,13 @@ export default function AdminSchedulePage() {
     setIsMutatingSlot(true);
     try {
       const res = await fetch(`/api/v1/slots/${slotId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
-      if (!res.ok) throw new Error('Failed to delete slot');
+      if (!res.ok) throw new Error("Failed to delete slot");
 
       await fetchDailyData(selectedDate);
     } catch (error) {
-      console.error('Error deleting slot:', error);
+      console.error("Error deleting slot:", error);
     } finally {
       setIsMutatingSlot(false);
     }
@@ -195,19 +193,19 @@ export default function AdminSchedulePage() {
   // ลบช่วงเวลาทั้งวัน
   const handleDeleteAllSlots = async () => {
     if (!selectedDate) return;
-    if (!confirm('ต้องการลบช่วงเวลาทั้งวันนี้ใช่หรือไม่?')) return;
+    if (!confirm("ต้องการลบช่วงเวลาทั้งวันนี้ใช่หรือไม่?")) return;
 
     setIsDeleting(true);
     try {
       const dateStr = toISODateString(selectedDate);
       const res = await fetch(`/api/v1/slots?date=${dateStr}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
-      if (!res.ok) throw new Error('Failed to delete all slots');
+      if (!res.ok) throw new Error("Failed to delete all slots");
 
       await fetchDailyData(selectedDate);
     } catch (error) {
-      console.error('Error deleting all slots:', error);
+      console.error("Error deleting all slots:", error);
     } finally {
       setIsDeleting(false);
     }
@@ -217,8 +215,8 @@ export default function AdminSchedulePage() {
   const handleAddSlot = () => {
     // ตอนนี้ยังไม่มีฟอร์ม แถมค่า default ง่าย ๆ ให้ก่อน
     const payload: SlotCreatePayload = {
-      startTime: '09:00',
-      endTime: '10:00',
+      startTime: "09:00",
+      endTime: "10:00",
       capacity: 5,
     };
     void createSlot(payload);
@@ -231,14 +229,14 @@ export default function AdminSchedulePage() {
 
     const currentCap = (slot as any).capacity ?? 5;
     const input = window.prompt(
-      'แก้ไขความจุ (จำนวนคนที่รับได้ในช่วงนี้):',
-      String(currentCap),
+      "แก้ไขความจุ (จำนวนคนที่รับได้ในช่วงนี้):",
+      String(currentCap)
     );
     if (!input) return;
 
     const newCap = Number(input);
     if (Number.isNaN(newCap) || newCap <= 0) {
-      alert('กรุณากรอกตัวเลขมากกว่า 0');
+      alert("กรุณากรอกตัวเลขมากกว่า 0");
       return;
     }
 
@@ -249,7 +247,7 @@ export default function AdminSchedulePage() {
   const handleDeleteSlot = (index: number) => {
     const slot = slots[index];
     if (!slot) return;
-    if (!confirm('ต้องการลบช่วงเวลานี้ใช่หรือไม่?')) return;
+    if (!confirm("ต้องการลบช่วงเวลานี้ใช่หรือไม่?")) return;
 
     void deleteSlot(slot.id);
   };
@@ -262,7 +260,7 @@ export default function AdminSchedulePage() {
     try {
       await updateSlot(slot.id, { isAvailable: next });
     } catch (err) {
-      console.error('toggle slot failed', err);
+      console.error("toggle slot failed", err);
     }
   };
 
@@ -270,7 +268,7 @@ export default function AdminSchedulePage() {
     dayStatus == null
       ? null
       : {
-          isClosed: dayStatus === 'CLOSED',
+          isClosed: dayStatus === "CLOSED",
         };
 
   return (
@@ -325,14 +323,14 @@ export default function AdminSchedulePage() {
       </div>
 
       {/* Modals */}
-      <AssignConsultantModal
+      <AssignBookingModal
         isOpen={assignModalOpen}
         onClose={() => setAssignModalOpen(false)}
         bookingId={assignBookingId}
         onSuccess={handleSuccess}
       />
 
-      <RescheduleModal
+      <RescheduleBookingModal
         isOpen={rescheduleModalOpen}
         onClose={() => setRescheduleModalOpen(false)}
         booking={rescheduleBooking}
