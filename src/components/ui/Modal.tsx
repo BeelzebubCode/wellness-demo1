@@ -1,10 +1,11 @@
 // ==========================================
-// 📌 UI Component: Modal
+// 📌 UI Component: Modal (Fixed Full Screen)
 // ==========================================
 
 'use client';
 
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, type ReactNode, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
 
 export interface ModalProps {
@@ -28,7 +29,27 @@ export function Modal({
   showCloseButton = true,
   closeOnOverlayClick = true,
 }: ModalProps) {
-  if (!isOpen) return null;
+  // 1. ตรวจสอบว่า Component รันบน Client แล้วหรือยัง
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+
+    // ล็อคการ Scroll ของ Body เมื่อเปิด Modal
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    // คืนค่าเมื่อ Component ถูกทำลาย
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
+  // ถ้ายังไม่ Mount หรือไม่ได้เปิด Modal ให้ return null
+  if (!mounted || !isOpen) return null;
 
   const sizeStyles = {
     sm: 'max-w-sm',
@@ -44,13 +65,14 @@ export function Modal({
     }
   };
 
-  return (
+  // 2. ใช้ createPortal ย้าย Modal ไปที่ document.body
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
       onClick={handleOverlayClick}
     >
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" />
+      {/* Overlay สีดำ */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" />
 
       {/* Modal Content */}
       <div
@@ -87,7 +109,8 @@ export function Modal({
         {/* Body */}
         <div className="p-6">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body // 👈 จุดสำคัญ: สั่งให้ไปแปะที่ body โดยตรง
   );
 }
 
