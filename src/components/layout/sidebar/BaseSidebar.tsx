@@ -81,7 +81,7 @@ export function BaseSidebar({
         {/* ✅ collapsed = แสดงแค่รูป, expanded = แสดงรูป+ข้อความ */}
         <BrandLogo
           href={logo.href ?? "/"}
-          size={40}
+          size={isCollapsed ? 56 : 44} // ⬅️ ใหญ่ขึ้นชัดเจน
           showText={!isCollapsed}
           subtitle={!isCollapsed ? logo.subtitle : undefined}
           variant={logoVariant}
@@ -89,10 +89,7 @@ export function BaseSidebar({
             "min-w-0",
             isCollapsed ? "justify-center" : "justify-start"
           )}
-          textClassName={cn(
-            // ให้สีข้อความเข้ากับธีมของ sidebar
-            t.logoText
-          )}
+          textClassName={t.logoText}
         />
       </div>
 

@@ -1,4 +1,3 @@
-// src/components/shared/BrandLogo.tsx
 "use client";
 
 import Link from "next/link";
@@ -12,12 +11,12 @@ type BrandLogoProps = {
   variant?: "default" | "white";
   className?: string;
   textClassName?: string;
-  subtitle?: string; // optional: "Student Portal"
+  subtitle?: string;
 };
 
 export function BrandLogo({
   href = "/",
-  size = 36,
+  size = 48, //ขนาด BrandLogo
   showText = true,
   variant = "default",
   className,
@@ -26,13 +25,13 @@ export function BrandLogo({
 }: BrandLogoProps) {
   const src =
     variant === "white"
-      ? "/brand/nu-wellness-logo-white.png"
+      ? "/images/Brand_wellness_center1.png"
       : "/brand/nu-wellness-logo.png";
 
   return (
     <Link
       href={href}
-      className={cn("flex items-center gap-3 select-none", className)}
+      className={cn("flex items-center gap-4 select-none", className)}
       aria-label="NU Wellness"
     >
       <div
@@ -51,14 +50,25 @@ export function BrandLogo({
 
       {showText && (
         <div className="leading-tight">
-          <div className={cn("font-semibold text-[16px]", textClassName)}>
-            NU Wellness
+          <div
+            className={cn(
+              "font-semibold tracking-tight text-[22px]",
+              textClassName
+            )}
+          >
+            NU Wellness Center
           </div>
-          {subtitle ? (
-            <div className={cn("text-[12px] text-slate-500", textClassName)}>
+
+          {subtitle && (
+            <div
+              className={cn(
+                "text-[13px] text-slate-500",
+                textClassName
+              )}
+            >
               {subtitle}
             </div>
-          ) : null}
+          )}
         </div>
       )}
     </Link>
