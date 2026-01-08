@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   },
   description: 'ระบบจองคิวให้คำปรึกษา NU Wellness',
   icons: {
-    icon: '/icons/logo_wellness_center.ico', // ถ้ามี
+    icon: '/icons/wellness_icon.png', // ถ้ามี
   },
   openGraph: {
     title: 'NU Wellness Center',
