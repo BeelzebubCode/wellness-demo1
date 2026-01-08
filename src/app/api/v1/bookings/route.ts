@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import type { BookingStatus } from '@prisma/client';
-import { getAccountFromRequest } from '@/lib/jwt';
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+import type { BookingStatus } from "@prisma/client";
+import { getAccountFromRequest } from "@/lib/jwt";
 
 /* =========================
    GET /api/v1/bookings
@@ -10,9 +10,10 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
 
-    const status = searchParams.get('status') as BookingStatus | null;
-    const studentUsername = searchParams.get('student'); // account_username
-    const consultantId = searchParams.get('consultantId');
+    const status = searchParams.get("status") as BookingStatus | null;
+    const studentUsername = searchParams.get("student");
+    const consultantId = searchParams.get("consultantId");
+    const date = searchParams.get("date"); // ✅ เพิ่ม
 
     const where: any = {};
 
@@ -22,6 +23,20 @@ export async function GET(request: NextRequest) {
 
     if (consultantId) {
       where.consultant_id = Number(consultantId);
+    }
+
+    // ✅ filter ตามวันที่ (หน้า /admin/bookings ใช้)
+    if (date) {
+      where.bookingSlots = {
+        some: {
+          timeSlot: {
+            time_slot_start_datetime: {
+              gte: new Date(`${date}T00:00:00`),
+              lt: new Date(`${date}T23:59:59`),
+            },
+          },
+        },
+      };
     }
 
     if (studentUsername) {
@@ -65,7 +80,7 @@ export async function GET(request: NextRequest) {
         outcome: true,
         cancellation: true,
       },
-      orderBy: { booking_created_at: 'desc' },
+      orderBy: { booking_created_at: "desc" },
     });
 
     const formatted = bookings.map((b) => {
@@ -76,14 +91,26 @@ export async function GET(request: NextRequest) {
       return {
         id: b.booking_id,
         status: b.booking_status,
+
+        // ✅ alias สำหรับหน้า /admin/bookings
+        userName: studentProfile
+          ? `${studentProfile.student_first_name} ${studentProfile.student_last_name}`
+          : "ไม่ทราบชื่อ",
+        lineUserId: b.student.account.account_line_id ?? "-",
+        problemDescription: b.booking_detail_text ?? null,
+
+        // ของเดิม (คงไว้)
         problemType: b.problemCategory.problem_category_name_th,
         problemCategoryCode: b.problemCategory.problem_category_code,
         detailText: b.booking_detail_text,
         createdAt: b.booking_created_at.toISOString(),
 
-        date: slot?.time_slot_start_datetime.toISOString().split('T')[0] ?? null,
-        startTime: slot?.time_slot_start_datetime.toTimeString().slice(0, 5) ?? null,
-        endTime: slot?.time_slot_end_datetime.toTimeString().slice(0, 5) ?? null,
+        date:
+          slot?.time_slot_start_datetime.toISOString().split("T")[0] ?? null,
+        startTime:
+          slot?.time_slot_start_datetime.toTimeString().slice(0, 5) ?? null,
+        endTime:
+          slot?.time_slot_end_datetime.toTimeString().slice(0, 5) ?? null,
 
         student: {
           id: b.student.student_id,
@@ -111,7 +138,7 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     console.error(err);
     return NextResponse.json(
-      { error: 'Failed to fetch bookings' },
+      { error: "Failed to fetch bookings" },
       { status: 500 }
     );
   }
@@ -124,13 +151,13 @@ export async function POST(request: NextRequest) {
   try {
     const account = await getAccountFromRequest(request);
 
-    if (!account || account.role !== 'STUDENT') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!account || account.role !== "STUDENT") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     if (!account.studentId) {
       return NextResponse.json(
-        { error: 'Student profile not found' },
+        { error: "Student profile not found" },
         { status: 400 }
       );
     }
@@ -142,12 +169,15 @@ export async function POST(request: NextRequest) {
     const detailText = body.detailText?.toString() || null;
 
     if (!timeSlotId || Number.isNaN(timeSlotId)) {
-      return NextResponse.json({ error: 'timeSlotId ไม่ถูกต้อง' }, { status: 400 });
+      return NextResponse.json(
+        { error: "timeSlotId ไม่ถูกต้อง" },
+        { status: 400 }
+      );
     }
 
     if (!problemCategoryId || Number.isNaN(problemCategoryId)) {
       return NextResponse.json(
-        { error: 'problemCategoryId ไม่ถูกต้อง' },
+        { error: "problemCategoryId ไม่ถูกต้อง" },
         { status: 400 }
       );
     }
@@ -159,14 +189,14 @@ export async function POST(request: NextRequest) {
       where: {
         student_id: studentId,
         booking_status: {
-          in: ['PENDING_ASSIGNMENT', 'ASSIGNED', 'IN_PROGRESS'],
+          in: ["PENDING_ASSIGNMENT", "ASSIGNED", "IN_PROGRESS"],
         },
       },
     });
 
     if (existing) {
       return NextResponse.json(
-        { error: 'มีการจองที่ยังไม่เสร็จสิ้นอยู่แล้ว' },
+        { error: "มีการจองที่ยังไม่เสร็จสิ้นอยู่แล้ว" },
         { status: 400 }
       );
     }
@@ -177,7 +207,7 @@ export async function POST(request: NextRequest) {
           student_id: studentId,
           problem_category_id: problemCategoryId,
           booking_detail_text: detailText,
-          booking_status: 'PENDING_ASSIGNMENT',
+          booking_status: "PENDING_ASSIGNMENT",
         },
       });
 
@@ -195,13 +225,11 @@ export async function POST(request: NextRequest) {
       success: true,
       bookingId: booking.booking_id,
     });
-
   } catch (err) {
     console.error(err);
     return NextResponse.json(
-      { error: 'Failed to create booking' },
+      { error: "Failed to create booking" },
       { status: 500 }
     );
   }
 }
-

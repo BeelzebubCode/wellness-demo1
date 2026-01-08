@@ -1,7 +1,6 @@
 // src/components/admin/bookings/index.ts
 
-export { BookingCard } from './BookingCard';
-export { BookingDetailModal } from './BookingDetailModal';
-export { CompleteBookingModal } from './CompleteBookingModal';
-export { RescheduleModal } from './RescheduleModal';
-export { AssignConsultantModal } from './AssignConsultantModal';
+export * from './BookingsListCard';
+export * from './ProblemDetailsModal';
+export * from './RescheduleBookingModal';
+export * from './AssignBookingModal';
