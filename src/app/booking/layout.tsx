@@ -1,8 +1,7 @@
 // app/booking/layout.tsx
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useState, useCallback } from 'react';
 import { useStudentAuth } from '@/features/auth/hooks/useStudentAuth';
 import { BookingSidebar } from '@/components/layout/sidebar';
 import { BookingHeader } from '@/components/layout/header';
@@ -13,9 +12,8 @@ export default function BookingLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isLoading } = useStudentAuth();
-  const router = useRouter();
-  const pathname = usePathname();
+  // ✅ hook จะ redirect เองถ้าไม่ผ่าน
+  const { user, isLoading, isAuthenticated } = useStudentAuth('/login');
 
   // Sidebar state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -23,16 +21,11 @@ export default function BookingLayout({
 
   // Handlers
   const handleCloseMobile = useCallback(() => setIsSidebarOpen(false), []);
-  const handleToggleCollapse = useCallback(() => setIsSidebarCollapsed((prev) => !prev), []);
+  const handleToggleCollapse = useCallback(
+    () => setIsSidebarCollapsed((prev) => !prev),
+    []
+  );
   const handleOpenMobile = useCallback(() => setIsSidebarOpen(true), []);
-
-  // Auth guard
-  useEffect(() => {
-    if (isLoading) return;
-    if (!user) {
-      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
-    }
-  }, [isLoading, user, pathname, router]);
 
   // Loading
   if (isLoading) {
@@ -43,7 +36,8 @@ export default function BookingLayout({
     );
   }
 
-  if (!user) return null;
+  // ✅ ถ้าไม่ auth: hook จะพาไป /login แล้ว ดังนั้น render null ได้เลย
+  if (!isAuthenticated || !user) return null;
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -57,16 +51,14 @@ export default function BookingLayout({
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* ✅ แก้ตรงนี้ - ใช้ props แบบใหม่ */}
         <BookingHeader
-          userName={user.displayName || user.username}
+          // ✅ กัน field ไม่มี
+          userName={(user as any).displayName ?? user.username}
           userRole="นักศึกษา"
           onMenuClick={handleOpenMobile}
         />
 
-        <main className="flex-1 overflow-auto">
-          {children}
-        </main>
+        <main className="flex-1 overflow-auto">{children}</main>
       </div>
     </div>
   );

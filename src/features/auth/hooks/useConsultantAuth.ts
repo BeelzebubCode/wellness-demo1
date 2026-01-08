@@ -2,38 +2,69 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { authApi } from '../api';
+import type { AuthUser } from '../types';
 
-export type ConsultantUser = {
-  id: number;
-  username: string;
+type ConsultantUser = AuthUser & {
   role: 'CONSULTANT';
-  consultantId: number | null;
+  consultantId: number; // consultant ต้องมีจริง
 };
 
-export default function useConsultantAuth() {
+export default function useConsultantAuth(
+  redirectTo = '/login'
+) {
+  const router = useRouter();
+  const pathname = usePathname();
+
   const [user, setUser] = useState<ConsultantUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
+    const redirectLogin = () => {
+      if (pathname === '/login') return;
+      const next = pathname && pathname !== '/login' ? pathname : '/consultant/my-jobs';
+      router.replace(`${redirectTo}?next=${encodeURIComponent(next)}`);
+    };
+
     const verify = async () => {
       try {
-        const res = await fetch('/api/v1/auth/verify-consultant', {
-          credentials: 'include',
-        });
+        const data = await authApi.verifyConsultant();
 
-        if (!res.ok) throw new Error('unauthorized');
+        if (!isMounted) return;
 
-        const data = await res.json();
-        setUser(data.account);
+        // ต้อง valid + มี account
+        if (!data?.valid || !data?.account) {
+          setUser(null);
+          redirectLogin();
+          return;
+        }
+
+        // ต้องเป็น CONSULTANT และมี consultantId
+        const acc = data.account as AuthUser;
+        if (acc.role !== 'CONSULTANT' || !acc.consultantId) {
+          setUser(null);
+          router.replace('/'); // หรือ redirectLogin() ตาม flow ที่อยากได้
+          return;
+        }
+
+        setUser(acc as ConsultantUser);
       } catch {
+        if (!isMounted) return;
         setUser(null);
+        redirectLogin();
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     };
 
     verify();
-  }, []);
+    return () => {
+      isMounted = false;
+    };
+  }, [router, pathname, redirectTo]);
 
   return {
     user,
