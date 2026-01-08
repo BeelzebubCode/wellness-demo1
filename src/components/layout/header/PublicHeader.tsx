@@ -10,7 +10,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { APP_CONFIG, PUBLIC_NAV } from "@/lib/constants";
-import { logout } from "@/features/auth/logout";
+import LogoutButton from "@/components/auth/LogoutButton";
 import { LogOut, Menu, X, LogIn, User } from "lucide-react";
 
 type PublicUser = {
@@ -94,14 +94,6 @@ export function PublicHeader({
     () => userAvatar ?? auth.user.avatar ?? null,
     [userAvatar, auth.user.avatar]
   );
-
-  // ✅ แก้ไขแล้ว - ใช้ logout() อย่างเดียว
-  const handleLogout = async () => {
-    if (!confirm("ต้องการออกจากระบบ?")) return;
-
-    await logout();
-    window.location.href = "/";
-  };
 
   return (
     <header className="sticky top-0 z-40">
@@ -191,18 +183,16 @@ export function PublicHeader({
                     </span>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleLogout}
+                  <LogoutButton
+                    redirectTo="/"
+                    label="ออกจากระบบ"
+                    iconOnly={false}
                     className={cn(
                       "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full",
                       "border border-white/25 bg-white/10 text-xs font-semibold text-white",
                       "hover:bg-white hover:text-slate-900 transition shadow-sm"
                     )}
-                  >
-                    <LogOut className="w-4 h-4" />
-                    ออกจากระบบ
-                  </button>
+                  />
                 </div>
               )}
 
@@ -310,8 +300,10 @@ export function PublicHeader({
               {/* auth button (full width + premium) */}
               <div className="pt-1" suppressHydrationWarning>
                 {isLoggedIn ? (
-                  <button
-                    onClick={handleLogout}
+                  <LogoutButton
+                    redirectTo="/"
+                    label="ออกจากระบบ"
+                    iconOnly={false}
                     className={cn(
                       "w-full h-11 rounded-full",
                       "flex items-center justify-center gap-2",
@@ -319,10 +311,7 @@ export function PublicHeader({
                       "bg-white/10 text-white border border-white/20",
                       "hover:bg-white/15 active:scale-[0.98] transition"
                     )}
-                  >
-                    <LogOut className="w-4 h-4" />
-                    ออกจากระบบ
-                  </button>
+                  />
                 ) : (
                   onLogin && (
                     <button
