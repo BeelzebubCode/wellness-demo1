@@ -26,7 +26,7 @@ export function BrandLogo({
   const src =
     variant === "white"
       ? "/images/Brand_wellness_center1.png"
-      : "/brand/nu-wellness-logo.png";
+      : "/images/Brand_wellness_center1.png";
 
   return (
     <Link
