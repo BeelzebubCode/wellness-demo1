@@ -246,12 +246,6 @@ export default function BookingPage() {
                 maxDate={startOfDay(addDays(new Date(), 7))}
               />
             </Card>
-
-            <Card>
-              <Link href="https://www.facebook.com/Happyhome2563">
-                <ImageCard src="/images/profiles.jpg" height={180} />
-              </Link>
-            </Card>
           </div>
 
           <div className="md:col-span-3 space-y-4">

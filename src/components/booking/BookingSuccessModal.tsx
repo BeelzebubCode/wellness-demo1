@@ -74,7 +74,7 @@ export function BookingSuccessModal({
             size="md"
             className="w-full"
           >
-            จองคิวเพิ่ม (สำหรับคนอื่น)
+            กลับหน้าจองคิว
           </Button>
         </div>
       </div>

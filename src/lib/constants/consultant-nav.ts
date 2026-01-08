@@ -4,6 +4,11 @@ import type { NavItem } from '@/components/layout/sidebar/types';
 
 export const CONSULTANT_NAV: NavItem[] = [
   {
+    href: '/consultant/profile',
+    label: 'โปรไฟล์',
+    icon: UserCircle,
+  },
+  {
     href: '/consultant/my-jobs',
     label: 'งานของฉัน',
     icon: ClipboardList,
@@ -18,10 +23,5 @@ export const CONSULTANT_NAV: NavItem[] = [
     href: '/consultant/history',
     label: 'ประวัติการให้คำปรึกษา',
     icon: History,
-  },
-  {
-    href: '/consultant/profile',
-    label: 'โปรไฟล์',
-    icon: UserCircle,
   },
 ];
