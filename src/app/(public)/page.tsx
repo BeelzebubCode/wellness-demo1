@@ -3,216 +3,323 @@
 import Link from 'next/link';
 import {
   Heart,
-  Calendar,
+  CalendarDays,
   ClipboardList,
   Lock,
   Users,
   Smartphone,
   Clock,
-  CalendarDays,
   User,
 } from 'lucide-react';
+import AuthLikeBackground from '@/components/layout/background/AuthLikeBackground';
+
+const BRAND = {
+  teal: '#2FA4A9',
+  tealHover: '#278F93',
+  mintBg: '#F7FAF9',
+  mintSoft: '#E6F5F5',
+  border: '#D1EAEA',
+  deep: '#1F3D3D',
+};
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-cyan-50">
+    <div className="min-h-screen w-full bg-white relative overflow-hidden">
+      {/* ✅ background blobs (เหมือนหน้า login) */}
+      <AuthLikeBackground />
 
-      {/* ------------------------------------------------------- */}
-      {/* 🟩 Hero Section */}
-      {/* ------------------------------------------------------- */}
-      <section className="relative overflow-hidden">
-        {/* Floating Blobs */}
-        <div className="absolute inset-0">
-          <div className="absolute -top-32 -right-32 w-80 h-80 bg-primary-200/40 rounded-full blur-3xl" />
-          <div className="absolute top-48 -left-20 w-60 h-60 bg-cyan-200/40 rounded-full blur-3xl" />
-        </div>
+      {/* ✅ เนื้อหาทั้งหน้าให้ทับ background ได้ */}
+      <main className="relative z-10">
+        {/* ✅ กันชิด header: ปรับ pt ให้เข้ากับความสูง header ของคุณ */}
+        <div className="pt-24 md:pt-28" />
 
-        <div className="relative max-w-6xl mx-auto px-4 py-20 md:py-32 text-center">
-          {/* Logo Badge */}
-          <div className="w-24 h-24 bg-white/40 backdrop-blur-md rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-lg shadow-primary-500/20">
-            <Heart className="w-12 h-12 text-primary-600 drop-shadow-sm" />
-          </div>
-
-          <h1 className="text-4xl md:text-6xl font-extrabold text-gray-900 tracking-tight">
-            NU Wellness Center
-          </h1>
-
-          <p className="text-xl md:text-2xl text-gray-600 mt-4">
-            ระบบจองคิวให้คำปรึกษาสุขภาพจิต
-          </p>
-
-          <p className="text-gray-500 mt-3 max-w-xl mx-auto">
-            ดูแลสุขภาพจิตของคุณอย่างใกล้ชิด ด้วยทีมผู้เชี่ยวชาญที่พร้อมรับฟังเสมอ
-          </p>
-
-          {/* CTA Buttons */}
-          <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/booking"
-              className="inline-flex items-center gap-2 px-10 py-4 rounded-2xl bg-gradient-to-r from-primary-500 to-cyan-500 text-white font-semibold shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all"
+        {/* ------------------------------------------------------- */}
+        {/* 🟩 Hero */}
+        {/* ------------------------------------------------------- */}
+        <section className="bg-transparent">
+          <div className="max-w-7xl mx-auto px-6">
+            <div
+              className="
+                rounded-[32px]
+                border border-[rgba(209,234,234,0.9)]
+                bg-white/70 backdrop-blur
+                shadow-[0_18px_55px_rgba(2,6,23,0.08)]
+                overflow-hidden
+              "
             >
-              <Calendar className="w-5 h-5" />
-              จองคิวให้คำปรึกษา
-            </Link>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 p-8 md:p-12 items-center">
+                {/* Left */}
+                <div>
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/70 border border-[rgba(209,234,234,0.9)] text-[#1F3D3D] text-sm font-semibold shadow-sm">
+                    <span className="w-2 h-2 rounded-full" style={{ background: BRAND.teal }} />
+                    NU Wellness Center
+                  </div>
 
-            <Link
-              href="/booking/my-appointments"
-              className="inline-flex items-center gap-2 px-10 py-4 rounded-2xl bg-white text-gray-700 font-semibold border border-gray-200 shadow-md hover:bg-primary-50 transition-all"
-            >
-              <ClipboardList className="w-5 h-5" />
-              ตารางนัดของฉัน
-            </Link>
-          </div>
-        </div>
-      </section>
+                  <h1 className="text-4xl md:text-5xl font-semibold text-slate-900 leading-tight mt-5">
+                    ดูแลใจคุณ <br />
+                    <span className="italic font-serif" style={{ color: BRAND.teal }}>
+                      อย่างอ่อนโยน
+                    </span>
+                  </h1>
 
-      {/* ------------------------------------------------------- */}
-      {/* 🟦 Features (ซ่อนบน Mobile) */}
-      {/* ------------------------------------------------------- */}
-      <section className="hidden md:block py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900">ทำไมต้องเลือกเรา?</h2>
-            <p className="text-gray-500 mt-2">บริการเพื่อสุขภาพจิตที่ดีที่สุดสำหรับนิสิต</p>
-          </div>
+                  <p className="text-slate-600 mt-6 max-w-md leading-relaxed">
+                    ระบบจองคิวให้คำปรึกษาสุขภาพจิตสำหรับนิสิต
+                    ดูแลคุณด้วยความเข้าใจ ความเป็นส่วนตัว และความใส่ใจ
+                  </p>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                icon: <Lock className="w-7 h-7 text-primary-500" />,
-                title: 'ความเป็นส่วนตัว',
-                desc: 'ข้อมูลของคุณได้รับการปกป้องอย่างเข้มงวด',
-              },
-              {
-                icon: <Users className="w-7 h-7 text-primary-500" />,
-                title: 'เจ้าหน้าที่',
-                desc: 'บริการฟรีสำหรับนิสิต',
-              },
-              {
-                icon: <Smartphone className="w-7 h-7 text-primary-500" />,
-                title: 'ใช้งานง่าย',
-                desc: 'จองคิวสะดวกรวดเร็วผ่านระบบออนไลน์',
-              },
-              {
-                icon: <Clock className="w-7 h-7 text-primary-500" />,
-                title: 'ยืดหยุ่น',
-                desc: 'เลือกเวลาได้ตามความสะดวกของคุณ',
-              },
-              {
-                icon: <Heart className="w-7 h-7 text-primary-500" />,
-                title: 'พร้อมรับฟัง',
-                desc: 'ดูแลทุกปัญหา ไม่ว่าจะเรื่องเรียนหรือส่วนตัว',
-              },
-              {
-                icon: <Users className="w-7 h-7 text-primary-500" />,
-                title: 'บริการฟรี',
-                desc: 'สำหรับนิสิตและบุคลากรมหาวิทยาลัย',
-              },
-            ].map((f, i) => (
-              <div
-                key={i}
-                className="bg-gray-50 rounded-2xl p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all"
-              >
-                <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center shadow mb-4">
-                  {f.icon}
+                  {/* CTA */}
+                  <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                    <Link
+                      href="/booking"
+                      className="
+                        px-7 py-3 rounded-full
+                        text-white text-sm font-semibold
+                        shadow-md
+                        transition
+                        inline-flex items-center justify-center gap-2
+                      "
+                      style={{ background: BRAND.teal }}
+                    >
+                      <CalendarDays className="w-4 h-4" />
+                      จองคิวปรึกษา
+                    </Link>
+
+                    <Link
+                      href="/booking/my-appointments"
+                      className="
+                        px-7 py-3 rounded-full
+                        bg-white
+                        text-sm font-semibold
+                        transition
+                        inline-flex items-center justify-center gap-2
+                        hover:bg-[rgba(230,245,245,0.7)]
+                      "
+                      style={{ border: `1px solid ${BRAND.border}`, color: BRAND.deep }}
+                    >
+                      <ClipboardList className="w-4 h-4" />
+                      ตารางนัดของฉัน
+                    </Link>
+                  </div>
                 </div>
-                <h3 className="text-lg font-bold text-gray-900">{f.title}</h3>
-                <p className="text-gray-500 text-sm mt-1">{f.desc}</p>
+
+                {/* Right Image */}
+                <div className="relative">
+                  <div
+                    className="
+                      rounded-3xl overflow-hidden
+                      bg-white
+                      border border-[rgba(209,234,234,0.9)]
+                      shadow-[0_16px_45px_rgba(2,6,23,0.10)]
+                    "
+                  >
+                    <img
+                      src="/images/login-illustration.png"
+                      alt="NU Wellness Center"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
               </div>
-            ))}
+            </div>
+
+            {/* spacing ต่อ section */}
+            <div className="h-10 md:h-14" />
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ------------------------------------------------------- */}
-      {/* 🟪 How it Works (ซ่อนบน Mobile) */}
-      {/* ------------------------------------------------------- */}
-      {/* How it Works – New Style */}
-      {/* วิธีใช้งาน - โทนเดียวกับ ทำไมต้องเลือกเรา */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4">
-
-          {/* Title */}
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-3">วิธีใช้งาน</h2>
-            <p className="text-gray-500">ง่าย ๆ เพียงไม่กี่ขั้นตอน</p>
-          </div>
-
-          {/* Row - 4 items */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-
-            {[
-              {
-                icon: <User className="w-7 h-7 text-primary-500" />,
-                title: "เข้าสู่ระบบ",
-                desc: "เข้าสู่ระบบด้วย LINE Account",
-                step: 1
-              },
-              {
-                icon: <CalendarDays className="w-7 h-7 text-primary-500" />,
-                title: "เลือกวันเวลา",
-                desc: "เลือกเวลาที่คุณสะดวก",
-                step: 2
-              },
-              {
-                icon: <ClipboardList className="w-7 h-7 text-primary-500" />,
-                title: "กรอกข้อมูล",
-                desc: "ระบุรายละเอียดที่ต้องการปรึกษา",
-                step: 3
-              },
-              {
-                icon: <Heart className="w-7 h-7 text-primary-500" />,
-                title: "ยืนยันการจอง",
-                desc: "รับการแจ้งเตือนผ่าน LINE",
-                step: 4
-              }
-            ].map((item, index) => (
+        {/* ------------------------------------------------------- */}
+        {/* 🟦 Features */}
+        {/* ------------------------------------------------------- */}
+        <section className="bg-transparent">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="text-center mb-12">
               <div
-                key={index}
-                className="relative bg-gray-50 p-8 rounded-3xl hover:shadow-lg transition-all text-center"
+                className="
+                  inline-flex items-center gap-2 px-4 py-1.5 rounded-full
+                  bg-white/70 backdrop-blur
+                  border
+                  text-sm font-semibold shadow-sm
+                "
+                style={{ borderColor: BRAND.border, color: BRAND.deep }}
               >
-                {/* Step Number Bubble */}
-                <div className="absolute -top-3 -right-3 w-10 h-10 rounded-full bg-primary-500 text-white flex items-center justify-center font-bold shadow-md">
-                  {item.step}
-                </div>
-
-                {/* Icon Box */}
-                <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mx-auto mb-6">
-                  {item.icon}
-                </div>
-
-                {/* Title */}
-                <h3 className="text-lg font-bold text-gray-900 mb-2">
-                  {item.title}
-                </h3>
-
-                {/* Description */}
-                <p className="text-gray-500 text-sm leading-relaxed">
-                  {item.desc}
-                </p>
+                <span className="w-2 h-2 rounded-full" style={{ background: BRAND.teal }} />
+                จุดเด่นของเรา
               </div>
-            ))}
 
+              <h2 className="text-3xl font-bold text-slate-900 mt-4">
+                ทำไมต้องเลือกเรา?
+              </h2>
+              <p className="text-slate-600 mt-2">
+                บริการเพื่อสุขภาพจิตที่ใส่ใจ ปลอดภัย และเข้าถึงง่าย สำหรับนิสิต
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-7">
+              {[
+                {
+                  icon: <Lock className="w-6 h-6" style={{ color: BRAND.teal }} />,
+                  title: 'ความเป็นส่วนตัว',
+                  desc: 'ข้อมูลของคุณได้รับการปกป้องอย่างเข้มงวด และเข้าถึงได้เฉพาะผู้เกี่ยวข้อง',
+                },
+                {
+                  icon: <Users className="w-6 h-6" style={{ color: BRAND.teal }} />,
+                  title: 'ทีมผู้ให้คำปรึกษา',
+                  desc: 'มีผู้ให้คำปรึกษาและเจ้าหน้าที่ที่พร้อมรับฟังอย่างจริงใจ',
+                },
+                {
+                  icon: <Smartphone className="w-6 h-6" style={{ color: BRAND.teal }} />,
+                  title: 'ใช้งานง่าย',
+                  desc: 'จองคิวได้ภายในไม่กี่ขั้นตอนผ่านระบบออนไลน์',
+                },
+                {
+                  icon: <Clock className="w-6 h-6" style={{ color: BRAND.teal }} />,
+                  title: 'ยืดหยุ่น',
+                  desc: 'เลือกวันเวลาได้ตามความสะดวก พร้อมแจ้งเตือนอัตโนมัติ',
+                },
+                {
+                  icon: <Heart className="w-6 h-6" style={{ color: BRAND.teal }} />,
+                  title: 'พร้อมรับฟัง',
+                  desc: 'ดูแลทุกเรื่องที่กังวล ทั้งการเรียน ความเครียด หรือปัญหาส่วนตัว',
+                },
+                {
+                  icon: <Users className="w-6 h-6" style={{ color: BRAND.teal }} />,
+                  title: 'บริการสำหรับนิสิต',
+                  desc: 'ออกแบบเพื่อการเข้าถึงบริการของนิสิตและบุคลากรมหาวิทยาลัย',
+                },
+              ].map((f, i) => (
+                <div
+                  key={i}
+                  className="
+                    group
+                    rounded-3xl p-7
+                    bg-white/70 backdrop-blur
+                    border
+                    shadow-[0_14px_40px_rgba(2,6,23,0.06)]
+                    hover:shadow-[0_22px_70px_rgba(47,164,169,0.16)]
+                    hover:-translate-y-1
+                    transition-all
+                  "
+                  style={{ borderColor: BRAND.border }}
+                >
+                  <div
+                    className="
+                      w-12 h-12 rounded-2xl
+                      flex items-center justify-center
+                      mb-4
+                      border
+                    "
+                    style={{ background: BRAND.mintSoft, borderColor: BRAND.border }}
+                  >
+                    {f.icon}
+                  </div>
+
+                  <h3 className="text-lg font-bold text-slate-900">{f.title}</h3>
+                  <p className="text-slate-600 text-sm mt-2 leading-relaxed">{f.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="h-14" />
           </div>
-        </div>
-      </section>
+        </section>
 
+        {/* ------------------------------------------------------- */}
+        {/* 🟪 How it Works */}
+        {/* ------------------------------------------------------- */}
+        <section className="bg-transparent">
+          <div className="max-w-7xl mx-auto px-6 pb-20">
+            <div className="text-center mb-12">
+              <div
+                className="
+                  inline-flex items-center gap-2 px-4 py-1.5 rounded-full
+                  bg-white/70 backdrop-blur
+                  border
+                  text-sm font-semibold shadow-sm
+                "
+                style={{ borderColor: BRAND.border, color: BRAND.deep }}
+              >
+                <span className="w-2 h-2 rounded-full" style={{ background: BRAND.teal }} />
+                ขั้นตอนการใช้งาน
+              </div>
 
+              <h2 className="text-3xl font-bold text-slate-900 mt-4 mb-2">วิธีใช้งาน</h2>
+              <p className="text-slate-600">ง่าย ๆ เพียงไม่กี่ขั้นตอน</p>
+            </div>
 
-      {/* ------------------------------------------------------- */}
-      {/* 🟩 Simple Footer */}
-      {/* ------------------------------------------------------- */}
-      {/* <footer className="hidden md:block bg-gray-900 text-white py-6">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <div className="flex justify-center items-center gap-2 mb-3">
-            <Heart className="w-5 h-5 text-primary-400" />
-            <span className="font-semibold">NU Wellness Center</span>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-7">
+              {[
+                {
+                  icon: <User className="w-6 h-6" style={{ color: BRAND.teal }} />,
+                  title: 'เข้าสู่ระบบ',
+                  desc: 'เข้าสู่ระบบด้วย LINE Account',
+                  step: 1,
+                },
+                {
+                  icon: <CalendarDays className="w-6 h-6" style={{ color: BRAND.teal }} />,
+                  title: 'เลือกวันเวลา',
+                  desc: 'เลือกเวลาที่คุณสะดวก',
+                  step: 2,
+                },
+                {
+                  icon: <ClipboardList className="w-6 h-6" style={{ color: BRAND.teal }} />,
+                  title: 'กรอกข้อมูล',
+                  desc: 'ระบุรายละเอียดที่ต้องการปรึกษา',
+                  step: 3,
+                },
+                {
+                  icon: <Heart className="w-6 h-6" style={{ color: BRAND.teal }} />,
+                  title: 'ยืนยันการจอง',
+                  desc: 'รับการแจ้งเตือนผ่าน LINE',
+                  step: 4,
+                },
+              ].map((item) => (
+                <div
+                  key={item.step}
+                  className="
+                    relative
+                    rounded-3xl p-7
+                    bg-white/70 backdrop-blur
+                    border
+                    shadow-[0_14px_40px_rgba(2,6,23,0.06)]
+                    hover:shadow-[0_22px_70px_rgba(47,164,169,0.16)]
+                    hover:-translate-y-1
+                    transition-all
+                    text-center
+                  "
+                  style={{ borderColor: BRAND.border }}
+                >
+                  {/* Step Bubble */}
+                  <div
+                    className="
+                      absolute -top-3 -right-3
+                      w-10 h-10 rounded-full
+                      text-white font-bold
+                      flex items-center justify-center
+                      shadow-md
+                    "
+                    style={{
+                      background: `linear-gradient(135deg, ${BRAND.teal} 0%, #10B981 100%)`,
+                    }}
+                  >
+                    {item.step}
+                  </div>
+
+                  {/* Icon */}
+                  <div
+                    className="w-14 h-14 rounded-2xl bg-white border shadow-sm flex items-center justify-center mx-auto mb-5"
+                    style={{ borderColor: BRAND.border }}
+                  >
+                    {item.icon}
+                  </div>
+
+                  <h3 className="text-lg font-bold text-slate-900 mb-2">{item.title}</h3>
+                  <p className="text-slate-600 text-sm leading-relaxed">{item.desc}</p>
+                </div>
+              ))}
+            </div>
           </div>
-          <p className="text-gray-400 text-sm">
-            © {new Date().getFullYear()} NU Wellness Center
-          </p>
-        </div>
-      </footer> */}
+        </section>
+      </main>
     </div>
   );
 }
