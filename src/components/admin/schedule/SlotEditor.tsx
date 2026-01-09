@@ -1,208 +1,294 @@
 // src/components/admin/schedule/SlotEditor.tsx
+"use client";
 
-'use client';
-
-import { Card, Button, LoadingSpinner } from '@/components/ui';
-import { List, CheckCircle2, Ban, Plus, Clock, Trash2 } from 'lucide-react';
-import { getThaiDayName } from '@/lib/date';
-import { cn } from '@/lib/cn';
-import { SlotCard } from './SlotCard';
-import type { TimeSlot, Booking } from '@/types';
+import { useState, useCallback } from "react";
+import { DayHeader } from "./DayHeader";
+import { SlotGrid } from "./SlotGrid";
+import { SlotFormModal } from "./SlotFormModal";
+import { AutoGenerateModal } from "./AutoGenerateModal";
+import { AlertTriangle, Trash2, Loader2 } from "lucide-react";
+import { Modal, Button } from "@/components/ui";
+import { cn } from "@/lib/cn";
+import type { TimeSlot } from "@/features/schedule/types";
 
 interface SlotEditorProps {
   selectedDate: Date;
   slots: TimeSlot[];
-  bookings: Booking[];
-  dayStatus: { isClosed: boolean; reason?: string } | null;
   isLoading: boolean;
-  isToggling: boolean;
-  isDeleting: boolean;
-  onToggleDayStatus: () => void;
-  onDeleteAllSlots: () => void;
-  onAddSlot: () => void;
-  onEditSlot: (index: number) => void;
-  onDeleteSlot: (index: number) => void;
-  // ✅ เพิ่ม callback สำหรับเปิด/ปิดเฉพาะช่วงเวลา
-  onToggleSlotAvailability?: (index: number, next: boolean) => void;
-  onAssignBooking?: (bookingId: string) => void;
-  onRescheduleBooking?: (booking: Booking) => void;
+  onAddSlot: (data: {
+    startTime: string;
+    endTime: string;
+    maxCapacity: number;
+  }) => Promise<void>;
+  onAddSlotsBatch: (
+    payload: Array<{ startTime: string; endTime: string; maxCapacity: number }>
+  ) => Promise<void>;
+  onEditSlot: (
+    slotId: number,
+    data: { startTime?: string; endTime?: string; maxCapacity?: number }
+  ) => Promise<void>;
+  onDeleteSlot: (slotId: number) => Promise<void>;
+  onDeleteAllSlots: () => Promise<void>;
+  onToggleSlotAvailability: (
+    slotId: number,
+    isAvailable: boolean
+  ) => Promise<void>;
 }
 
 export function SlotEditor({
   selectedDate,
   slots,
-  bookings,
-  dayStatus,
   isLoading,
-  isToggling,
-  isDeleting,
-  onToggleDayStatus,
-  onDeleteAllSlots,
   onAddSlot,
+  onAddSlotsBatch,
   onEditSlot,
   onDeleteSlot,
+  onDeleteAllSlots,
   onToggleSlotAvailability,
-  onAssignBooking: _onAssignBooking,
-  onRescheduleBooking: _onRescheduleBooking,
 }: SlotEditorProps) {
+  // Modal states
+  const [showSlotForm, setShowSlotForm] = useState(false);
+  const [showAutoGenerate, setShowAutoGenerate] = useState(false);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  const [editingSlot, setEditingSlot] = useState<TimeSlot | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Handlers
+  const handleAddSlot = useCallback(() => {
+    setEditingSlot(null);
+    setShowSlotForm(true);
+  }, []);
+
+  const handleSlotClick = useCallback((slot: TimeSlot) => {
+    setEditingSlot(slot);
+    setShowSlotForm(true);
+  }, []);
+
+  // Form submit handler
+  const handleSlotFormSubmit = useCallback(
+    async (data: {
+      startTime: string;
+      endTime: string;
+      maxCapacity: number;
+    }) => {
+      if (editingSlot) {
+        await onEditSlot(editingSlot.id, {
+          startTime: data.startTime,
+          endTime: data.endTime,
+          maxCapacity: data.maxCapacity,
+        });
+      } else {
+        await onAddSlot(data);
+      }
+    },
+    [editingSlot, onAddSlot, onEditSlot]
+  );
+
+  // Toggle availability handler
+  const handleToggleAvailability = useCallback(
+    async (slotId: number, isAvailable: boolean) => {
+      await onToggleSlotAvailability(slotId, isAvailable);
+    },
+    [onToggleSlotAvailability]
+  );
+
+  // Delete slot handler
+  const handleDeleteSlot = useCallback(
+    async (slotId: number) => {
+      await onDeleteSlot(slotId);
+    },
+    [onDeleteSlot]
+  );
+
+  // Auto generate handler
+  const handleAutoGenerate = useCallback(
+    async (config: {
+      startHour: number;
+      endHour: number;
+      slotDuration: number;
+      maxCapacity: number;
+    }) => {
+      const payload: Array<{
+        startTime: string;
+        endTime: string;
+        maxCapacity: number;
+      }> = [];
+
+      let currentMinutes = config.startHour * 60;
+      const endMinutes = config.endHour * 60;
+
+      while (currentMinutes + config.slotDuration <= endMinutes) {
+        const startH = Math.floor(currentMinutes / 60);
+        const startM = currentMinutes % 60;
+        const endH = Math.floor((currentMinutes + config.slotDuration) / 60);
+        const endM = (currentMinutes + config.slotDuration) % 60;
+
+        payload.push({
+          startTime: `${startH.toString().padStart(2, "0")}:${startM
+            .toString()
+            .padStart(2, "0")}`,
+          endTime: `${endH.toString().padStart(2, "0")}:${endM
+            .toString()
+            .padStart(2, "0")}`,
+          maxCapacity: config.maxCapacity,
+        });
+
+        currentMinutes += config.slotDuration;
+      }
+      
+      await onAddSlotsBatch(payload);
+    },
+    [onAddSlotsBatch]
+  );
+
+  // Delete all confirm handler
+  const handleDeleteAllConfirm = useCallback(async () => {
+    setIsDeleting(true);
+    try {
+      await onDeleteAllSlots();
+      setShowDeleteAllConfirm(false);
+      setDeleteConfirmText("");
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [onDeleteAllSlots]);
+
+  const hasBookings = slots.some((s) => s.bookedCount > 0);
+  const deleteConfirmKeyword = "ลบทั้งหมด";
+  const canConfirmDelete = deleteConfirmText === deleteConfirmKeyword;
+
   return (
-    <div className="space-y-4">
-      {/* Day Status Header */}
-      <Card className="px-5 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-gray-200 shadow-sm">
-        <div className="flex items-center gap-4 w-full sm:w-auto">
-          <div className="hidden sm:flex flex-col items-center justify-center w-12 h-12 bg-gray-100 rounded-lg text-gray-600">
-            <span className="text-[10px] uppercase font-bold">
-              {getThaiDayName(selectedDate, 'short')}
-            </span>
-            <span className="text-xl font-bold leading-none">
-              {selectedDate.getDate()}
-            </span>
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-gray-800">
-              {getThaiDayName(selectedDate, 'full')}
-            </h2>
-            <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
-              <List className="w-3.5 h-3.5" />
-              <span>{slots.length} ช่วงเวลา</span>
-              {dayStatus?.isClosed && (
-                <span className="text-red-500 font-medium">
-                  (ปิดให้บริการ)
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
+    <div className="space-y-3">
+      {/* Day Header */}
+      <DayHeader
+        date={selectedDate}
+        slots={slots}
+        isLoading={isLoading}
+        onAutoGenerate={() => setShowAutoGenerate(true)}
+        onDeleteAll={() => setShowDeleteAllConfirm(true)}
+        onAddSlot={handleAddSlot}
+      />
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <button
-            onClick={onToggleDayStatus}
-            disabled={isToggling}
-            className={cn(
-              'flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-2 border',
-              dayStatus?.isClosed
-                ? 'bg-white border-green-200 text-green-700 hover:bg-green-50'
-                : 'bg-white border-red-200 text-red-700 hover:bg-red-50'
-            )}
-          >
-            {isToggling ? (
-              <LoadingSpinner size="sm" />
-            ) : dayStatus?.isClosed ? (
-              <>
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                เปิดวันทำการ
-              </>
-            ) : (
-              <>
-                <Ban className="w-3.5 h-3.5" />
-                ปิดทั้งวัน
-              </>
-            )}
-          </button>
-        </div>
-      </Card>
+      {/* Slot Grid */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3">
+        <SlotGrid
+          slots={slots}
+          isLoading={isLoading}
+          onSlotClick={handleSlotClick}
+          onAddSlot={handleAddSlot}
+        />
+      </div>
 
-      {/* Slots Content */}
-      {isLoading ? (
-        <div className="h-64 flex items-center justify-center">
-          <LoadingSpinner size="lg" />
-        </div>
-      ) : dayStatus?.isClosed ? (
-        <div className="py-16 text-center bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-          <Ban className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 font-medium">วันนี้ปิดให้บริการ</p>
-          <p className="text-xs text-gray-400 mt-1">
-            กด &quot;เปิดวันทำการ&quot; เพื่อจัดการเวลา
-          </p>
-        </div>
-      ) : (
-        <Card className="p-4 border-gray-200 shadow-sm min-h-[400px]">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-              <span className="w-1.5 h-4 bg-primary-500 rounded-full"></span>
-              รายการช่วงเวลา
-            </h3>
-            <div className="flex gap-2">
-              {slots.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-red-500 hover:bg-red-50 hover:text-red-600 h-8 text-xs"
-                  onClick={onDeleteAllSlots}
-                  isLoading={isDeleting}
-                >
-                  <Trash2 className="w-3.5 h-3.5 mr-1.5" /> ลบทั้งหมด
-                </Button>
-              )}
-              <Button
-                size="sm"
-                onClick={onAddSlot}
-                className="h-8 text-xs px-3 bg-gray-800 hover:bg-gray-900 text-white"
-              >
-                <Plus className="w-3.5 h-3.5 mr-1.5" /> เพิ่มช่วงเวลา
-              </Button>
+      {/* Slot Form Modal */}
+      <SlotFormModal
+        isOpen={showSlotForm}
+        onClose={() => {
+          setShowSlotForm(false);
+          setEditingSlot(null);
+        }}
+        onSubmit={handleSlotFormSubmit}
+        onToggleAvailability={handleToggleAvailability}
+        onDelete={handleDeleteSlot}
+        editingSlot={editingSlot}
+        existingSlots={slots}
+      />
+
+      {/* Auto Generate Modal */}
+      <AutoGenerateModal
+        isOpen={showAutoGenerate}
+        onClose={() => setShowAutoGenerate(false)}
+        onGenerate={handleAutoGenerate}
+        date={selectedDate}
+      />
+
+      {/* Delete All Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteAllConfirm}
+        onClose={() => {
+          setShowDeleteAllConfirm(false);
+          setDeleteConfirmText("");
+        }}
+        title="ยืนยันการลบทั้งหมด"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div className="flex justify-center">
+            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center">
+              <AlertTriangle className="w-7 h-7 text-red-600" />
             </div>
           </div>
 
-          {slots.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-gray-100 rounded-xl bg-gray-50/50">
-              <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center mb-3">
-                <Clock className="w-6 h-6 text-gray-300" />
+          <div className="text-center">
+            <p className="text-sm text-slate-600 mb-2">
+              คุณกำลังจะลบช่วงเวลาทั้งหมด ({slots.length} ช่วง) ในวันนี้
+            </p>
+            {hasBookings && (
+              <div className="p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 mb-2">
+                ⚠️ มีบางช่วงเวลาที่มีการจองแล้ว จะลบเฉพาะที่ไม่มีการจอง
               </div>
-              <p className="text-sm text-gray-500 font-medium">
-                ยังไม่มีช่วงเวลา
-              </p>
-              <p className="text-xs text-gray-400">
-                กดปุ่ม &quot;เพิ่มช่วงเวลา&quot; ด้านบน
-              </p>
+            )}
+            <div className="p-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+              ⚠️ การดำเนินการนี้ไม่สามารถย้อนกลับได้
             </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-              {slots.map((slot, idx) => (
-                <div
-                  key={`${slot.startTime}-${idx}`}
-                  className="flex flex-col gap-1"
-                >
-                  {/* การ์ดช่วงเวลาเดิม */}
-                  <SlotCard
-                    slot={slot}
-                    index={idx}
-                    onEdit={onEditSlot}
-                    onDelete={onDeleteSlot}
-                  />
+          </div>
 
-                  {/* ✅ ปุ่มเปิด/ปิดเฉพาะช่วงเวลา */}
-                  {onToggleSlotAvailability && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onToggleSlotAvailability(idx, !slot.isAvailable)
-                      }
-                      className={cn(
-                        'text-[10px] font-medium px-2 py-1 rounded-full border transition-all',
-                        slot.isAvailable
-                          ? 'border-red-200 text-red-600 bg-red-50 hover:bg-red-100'
-                          : 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
-                      )}
-                    >
-                      {slot.isAvailable ? 'ปิดช่วงเวลานี้' : 'เปิดช่วงเวลานี้'}
-                    </button>
-                  )}
-                </div>
-              ))}
+          <div className="space-y-1.5">
+            <label className="block text-xs text-slate-600 text-center">
+              พิมพ์{" "}
+              <span className="font-bold text-red-600">
+                "{deleteConfirmKeyword}"
+              </span>{" "}
+              เพื่อยืนยัน
+            </label>
+            <input
+              type="text"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder={deleteConfirmKeyword}
+              className={cn(
+                "w-full px-3 py-2 text-sm text-center border rounded-lg outline-none transition-all",
+                canConfirmDelete
+                  ? "border-red-500 bg-red-50 focus:ring-2 focus:ring-red-500/20"
+                  : "border-slate-200 focus:ring-2 focus:ring-slate-200"
+              )}
+              disabled={isDeleting}
+              autoFocus
+            />
+          </div>
 
-              {/* Quick Add Button */}
-              <button
-                onClick={onAddSlot}
-                className="flex flex-col items-center justify-center p-3 rounded-lg border border-dashed border-gray-200 text-gray-400 hover:border-primary-300 hover:text-primary-600 hover:bg-primary-50 transition-all min-h-[80px] group"
-              >
-                <Plus className="w-5 h-5 mb-1 group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] font-medium">เพิ่ม</span>
-              </button>
-            </div>
-          )}
-        </Card>
-      )}
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowDeleteAllConfirm(false);
+                setDeleteConfirmText("");
+              }}
+              disabled={isDeleting}
+              className="flex-1"
+            >
+              ยกเลิก
+            </Button>
+            <Button
+              onClick={handleDeleteAllConfirm}
+              disabled={!canConfirmDelete || isDeleting}
+              className="flex-1 bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  ลบทั้งหมด
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
+
+export default SlotEditor;

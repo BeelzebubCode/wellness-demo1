@@ -1,17 +1,25 @@
 "use client";
 
+import { useState } from "react";
 import { Card } from "@/components/ui";
 import { ClipboardList } from "lucide-react";
-import { MyAppointmentCard } from "@/components/booking";
+
+// ✅ เปลี่ยนจาก "@/components/booking" เป็น path ตรงไฟล์จริง
+import { MyAppointmentCard } from "@/components/booking/MyAppointmentCard";
+import { BookingFeedbackModal } from "@/components/booking/BookingFeedbackModal";
+
 import type { Booking } from "@/features/booking/types";
-import { useState } from "react";
 
 interface MyBookingHistoryProps {
   bookings: Booking[];
+  onRefresh?: () => void;
 }
 
-export function MyBookingHistory({ bookings }: MyBookingHistoryProps) {
+export function MyBookingHistory({ bookings, onRefresh }: MyBookingHistoryProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackBookingId, setFeedbackBookingId] = useState<number | null>(null);
 
   return (
     <Card className="rounded-2xl p-6 shadow-sm">
@@ -21,9 +29,7 @@ export function MyBookingHistory({ bookings }: MyBookingHistoryProps) {
             <ClipboardList className="w-5 h-5 text-primary-600" />
             ประวัติการจอง
           </h2>
-          <p className="text-xs text-gray-500 mt-1">
-            ทั้งหมด {bookings.length} รายการ
-          </p>
+          <p className="text-xs text-gray-500 mt-1">ทั้งหมด {bookings.length} รายการ</p>
         </div>
       </div>
 
@@ -39,6 +45,10 @@ export function MyBookingHistory({ bookings }: MyBookingHistoryProps) {
                 isCompact
                 isExpanded={isExpanded}
                 onToggle={() => setExpandedId(isExpanded ? null : booking.id)}
+                onFeedback={() => {
+                  setFeedbackBookingId(booking.id);
+                  setFeedbackOpen(true);
+                }}
               />
             );
           })}
@@ -48,6 +58,20 @@ export function MyBookingHistory({ bookings }: MyBookingHistoryProps) {
           ยังไม่มีประวัติการจอง
         </div>
       )}
+
+      <BookingFeedbackModal
+        isOpen={feedbackOpen}
+        bookingId={feedbackBookingId}
+        onClose={() => {
+          setFeedbackOpen(false);
+          setFeedbackBookingId(null);
+        }}
+        onSuccess={() => {
+          onRefresh?.();
+        }}
+      />
     </Card>
   );
 }
+
+export default MyBookingHistory;

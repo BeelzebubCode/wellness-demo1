@@ -40,6 +40,7 @@ export interface Booking {
   date?: string;
   startTime?: string;
   endTime?: string;
+  hasFeedback?: boolean; 
 }
 
 
