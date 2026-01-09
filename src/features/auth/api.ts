@@ -1,7 +1,7 @@
 // src/features/auth/api.ts
-import type { LoginCredentials, LoginResponse, AuthUser } from './types';
+import type { LoginCredentials, LoginResponse, AuthUser } from "./types";
 
-const API_BASE = '/api/v1/auth';
+const API_BASE = "/api/v1/auth";
 
 export type VerifyResponse = {
   valid: boolean;
@@ -9,11 +9,18 @@ export type VerifyResponse = {
   error?: string;
 };
 
+// ✅ helper: GET แบบ cookie-based และไม่ทำให้ 401/403 กลายเป็น exception
 async function get<T>(url: string): Promise<T> {
   const res = await fetch(url, {
-    method: 'GET',
-    credentials: 'include', // ⭐ cookie-based auth
+    method: "GET",
+    credentials: "include", // ⭐ cookie-based auth
+    cache: "no-store",
   });
+
+  // ✅ 401/403 = expected เมื่อยังไม่ login / logout แล้ว
+  if (res.status === 401 || res.status === 403) {
+    return { valid: false } as unknown as T;
+  }
 
   if (!res.ok) {
     // พยายามอ่าน error แบบไม่พัง
@@ -32,10 +39,10 @@ export const authApi = {
   // Login
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
     const res = await fetch(`${API_BASE}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(credentials),
-      credentials: 'include', // ⭐ สำคัญ ให้ cookie ถูก set
+      credentials: "include", // ⭐ สำคัญ ให้ cookie ถูก set
     });
 
     return res.json();
@@ -61,15 +68,18 @@ export const authApi = {
     return get<VerifyResponse>(`${API_BASE}/verify-student`);
   },
 
-  // Logout (server-side cookie based)
+  // ✅ Logout (server-side cookie based)
   async logout(): Promise<void> {
-    await fetch(`${API_BASE}/logout`, {
-      method: 'POST',
-      credentials: 'include',
+    const res = await fetch(`${API_BASE}/logout`, {
+      method: "POST",
+      credentials: "include",
     });
 
-    // ✅ ใช้ login กลางให้สอดคล้องกับระบบใหม่
-    window.location.href = '/login';
+    // ถ้า backend ส่ง 204 ก็ถือว่า ok
+    if (!res.ok && res.status !== 204) {
+      // ไม่ throw ก็ได้ แต่แนะนำ throw เพื่อให้ UI แสดง toast error ได้
+      throw new Error(`Logout failed: ${res.status}`);
+    }
   },
 };
 

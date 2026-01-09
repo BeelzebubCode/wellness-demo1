@@ -6,6 +6,7 @@ import { LogOut } from "lucide-react";
 
 import { logout } from "@/features/auth/logout";
 import { Button, Modal, ModalFooter } from "@/components/ui";
+import { useNotificationContext } from "@/components/notification/NotificationProvider"; // ✅ เพิ่ม
 
 type Props = {
   redirectTo?: string;
@@ -33,20 +34,46 @@ export default function LogoutButton({
   buttonVariant = "danger",
 }: Props) {
   const router = useRouter();
+  const { push } = useNotificationContext(); // ✅ เพิ่ม
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const onConfirm = async () => {
     setLoading(true);
     try {
+      // ✅ กัน toast “กรุณาเข้าสู่ระบบ” หลัง logout (1 ครั้ง)
+      sessionStorage.setItem("suppress_login_toast_once", "1");
+
       await logout();
+
+      // ✅ ถ้ายังมีของเก่าค้างไว้ ก็ลบกันเหนียวได้ (ไม่ผิด)
+      localStorage.removeItem("token");
+      localStorage.removeItem("auth_user");
+
       window.dispatchEvent(new Event("auth-changed"));
 
+      push({
+        type: "success",
+        title: "ออกจากระบบสำเร็จ",
+        message: "แล้วพบกันใหม่ 👋",
+        duration: 1500,
+      });
+
+      setIsOpen(false);
+
       router.replace(redirectTo);
-      router.refresh(); // ✅ ให้ layout/hook รีอ่านใหม่
+      // router.refresh(); // ❌ แนะนำตัดออก
+    } catch (err) {
+      console.error(err);
+
+      push({
+        type: "error",
+        title: "ออกจากระบบไม่สำเร็จ",
+        message: "ลองใหม่อีกครั้ง หรือเช็กการเชื่อมต่อ",
+        duration: 2000,
+      });
     } finally {
       setLoading(false);
-      setIsOpen(false);
     }
   };
 

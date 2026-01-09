@@ -12,6 +12,7 @@ type StudentUser = AuthUser & {
 };
 
 const LOGIN_TOAST_KEY = "toast_login_required_student";
+const SUPPRESS_TOAST_KEY = "suppress_login_toast_once";
 
 export function useStudentAuth(redirectTo = "/login") {
   const router = useRouter();
@@ -24,10 +25,30 @@ export function useStudentAuth(redirectTo = "/login") {
   useEffect(() => {
     let isMounted = true;
 
+    // ✅ ถ้าอยู่หน้า login อยู่แล้ว ไม่ต้อง verify
+    if (pathname === "/login") {
+      setIsLoading(false);
+      return () => {
+        isMounted = false;
+      };
+    }
+
     const toastLoginOnce = () => {
+      const COOLDOWN_MS = 3000; // ✅ ปรับได้: 3000 = 3 วิ
       try {
-        if (sessionStorage.getItem(LOGIN_TOAST_KEY) === "1") return;
-        sessionStorage.setItem(LOGIN_TOAST_KEY, "1");
+        if (sessionStorage.getItem(SUPPRESS_TOAST_KEY) === "1") {
+          sessionStorage.removeItem(SUPPRESS_TOAST_KEY);
+          return;
+        }
+
+        // ✅ ใช้ timestamp แทน "1"
+        const last = Number(sessionStorage.getItem(LOGIN_TOAST_KEY) || "0");
+        const now = Date.now();
+
+        // ถ้ายังไม่ถึงคูลดาวน์ ก็ไม่ต้องเด้ง
+        if (now - last < COOLDOWN_MS) return;
+
+        sessionStorage.setItem(LOGIN_TOAST_KEY, String(now));
       } catch {
         // ignore
       }
@@ -49,13 +70,13 @@ export function useStudentAuth(redirectTo = "/login") {
     };
 
     const redirectLogin = () => {
+      // กันไว้ เผื่อ pathname เปลี่ยนระหว่างรัน
       if (pathname === "/login") return;
 
       toastLoginOnce();
 
       const next = pathname && pathname !== "/login" ? pathname : "/booking";
       router.replace(`${redirectTo}?next=${encodeURIComponent(next)}`);
-      router.refresh();
     };
 
     const verify = async () => {
@@ -83,11 +104,9 @@ export function useStudentAuth(redirectTo = "/login") {
           });
 
           router.replace("/");
-          router.refresh();
           return;
         }
 
-        // ✅ ผ่านแล้ว เคลียร์ flag กัน toast ค้าง
         clearLoginToastFlag();
         setUser(data.account as StudentUser);
       } catch {
@@ -100,6 +119,7 @@ export function useStudentAuth(redirectTo = "/login") {
     };
 
     verify();
+
     return () => {
       isMounted = false;
     };
