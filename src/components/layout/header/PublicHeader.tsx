@@ -1,7 +1,3 @@
-// ==========================================
-// 📌 Layout Component: PublicHeader (Hydration-safe + Auth Reactive) — Premium Mobile UI
-// ==========================================
-
 // components/layout/header/PublicHeader.tsx
 "use client";
 
@@ -11,7 +7,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { APP_CONFIG, PUBLIC_NAV } from "@/lib/constants";
 import LogoutButton from "@/components/auth/LogoutButton";
-import { LogOut, Menu, X, LogIn, User } from "lucide-react";
+import { BrandLogo } from "@/components/shared";
+import { Menu, X, LogIn, User } from "lucide-react";
 
 type PublicUser = {
   name?: string | null;
@@ -86,8 +83,8 @@ export function PublicHeader({
   }, [hydrated, auth.isLoggedIn]);
 
   const displayName = useMemo(
-    () => auth.user.name ?? "ผู้ใช้",
-    [auth.user.name]
+    () => userName ?? auth.user.name ?? "ผู้ใช้",
+    [userName, auth.user.name]
   );
 
   const displayAvatar = useMemo(
@@ -100,33 +97,39 @@ export function PublicHeader({
       {/* BG */}
       <div className="absolute inset-0 bg-gradient-to-r from-primary-600 via-teal-500 to-cyan-500 opacity-95" />
       <div className="absolute inset-0 backdrop-blur-md" />
+      {/* subtle border */}
+      <div className="absolute inset-x-0 bottom-0 h-px bg-white/15" />
 
       <div className="relative">
         <div className="max-w-7xl mx-auto px-4">
           <div className="h-16 flex items-center justify-between gap-4">
-            {/* Logo */}
+            {/* Logo (clean, no frame) */}
             <Link
               href="/"
               className={cn(
-                "flex items-center gap-2 rounded-full px-3 py-1.5",
-                "bg-white/10 hover:bg-white/15 border border-white/15 shadow-sm transition-all"
+                "flex items-center gap-3 select-none",
+                "transition-opacity hover:opacity-95"
               )}
+              aria-label="NU Wellness Home"
             >
-              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm">
-                <User className="w-4 h-4 text-primary-600" />
-              </div>
-              <div className="flex flex-col leading-tight min-w-0">
-                <span className="text-[11px] text-white/70 tracking-wide">
-                  NU Wellness
-                </span>
+              {/* ใช้ BrandLogo แบบไม่เป็นลิงก์ซ้อน */}
+              <BrandLogo
+                asLink={false}
+                size={34}
+                showText={false}
+                variant="default"
+                className="gap-0"
+                imgClassName="object-contain drop-shadow-[0_1px_6px_rgba(0,0,0,0.25)]"
+              />
 
-                <span className="text-sm font-bold text-white truncate">
-                  {isLoggedIn ? displayName : APP_CONFIG.name}
-                </span>
+              <div className="leading-tight">
+                <div className="text-white font-extrabold text-lg tracking-tight">
+                  NU Wellness Center
+                </div>
               </div>
             </Link>
 
-            {/* Desktop Navigation */}
+            {/* ================= Desktop Navigation ================= */}
             <nav className="hidden md:flex items-center gap-2">
               {PUBLIC_NAV.map((item) => {
                 const isActive = item.exact
@@ -142,9 +145,10 @@ export function PublicHeader({
                     href={item.href}
                     className={cn(
                       "flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all",
+                      "border border-white/0",
                       isActive
-                        ? "bg-white text-slate-900 shadow"
-                        : "text-white/85 hover:bg-white/10"
+                        ? "bg-white text-slate-900 shadow border-white/40"
+                        : "text-white/85 hover:bg-white/10 hover:border-white/15"
                     )}
                   >
                     {Icon && (
@@ -161,7 +165,7 @@ export function PublicHeader({
               })}
             </nav>
 
-            {/* Right */}
+            {/* ================= Right ================= */}
             <div className="flex items-center gap-3" suppressHydrationWarning>
               {/* Logged in (desktop) */}
               {isLoggedIn && (
@@ -203,7 +207,8 @@ export function PublicHeader({
                   onClick={onLogin}
                   className={cn(
                     "hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-full",
-                    "bg-white text-slate-900 text-xs font-bold shadow hover:bg-slate-100 transition"
+                    "bg-white text-slate-900 text-xs font-extrabold shadow",
+                    "hover:bg-slate-100 active:scale-[0.99] transition"
                   )}
                 >
                   <LogIn className="w-4 h-4" />
@@ -236,11 +241,10 @@ export function PublicHeader({
         {/* ================= Mobile Drawer ================= */}
         <div
           className={cn(
-            "md:hidden overflow-hidden transition-all",
-            mobileOpen ? "max-h-[420px] opacity-100" : "max-h-0 opacity-0"
+            "md:hidden overflow-hidden transition-all duration-300",
+            mobileOpen ? "max-h-[440px] opacity-100" : "max-h-0 opacity-0"
           )}
         >
-          {/* overlay-ish strip */}
           <div className="px-4 pt-3 pb-4">
             <div
               className={cn(
@@ -249,6 +253,45 @@ export function PublicHeader({
                 "p-4 space-y-4"
               )}
             >
+              {/* Mobile user chip */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  {isLoggedIn ? (
+                    displayAvatar ? (
+                      <img
+                        src={displayAvatar}
+                        alt={displayName}
+                        className="w-9 h-9 rounded-full ring-2 ring-white/35 object-cover"
+                      />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center">
+                        <User className="w-4 h-4 text-white" />
+                      </div>
+                    )
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center">
+                      <User className="w-4 h-4 text-white" />
+                    </div>
+                  )}
+
+                  <div className="min-w-0">
+                    <div className="text-[11px] text-white/70">สถานะ</div>
+                    <div className="text-sm font-extrabold text-white truncate">
+                      {isLoggedIn ? displayName : "ผู้เยี่ยมชม"}
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setMobileOpen(false)}
+                  className="w-9 h-9 rounded-full bg-white/10 border border-white/15 text-white/90 hover:bg-white/15 transition"
+                  aria-label="Close menu"
+                >
+                  <X className="w-4 h-4 mx-auto" />
+                </button>
+              </div>
+
               {/* nav pills */}
               <nav className="grid grid-cols-2 gap-2">
                 {PUBLIC_NAV.map((item) => {
@@ -273,7 +316,6 @@ export function PublicHeader({
                           : "bg-white/10 text-white hover:bg-white/15 border border-white/15"
                       )}
                     >
-                      {/* glow for active */}
                       {isActive && (
                         <span
                           aria-hidden
@@ -297,7 +339,7 @@ export function PublicHeader({
                 })}
               </nav>
 
-              {/* auth button (full width + premium) */}
+              {/* auth button */}
               <div className="pt-1" suppressHydrationWarning>
                 {isLoggedIn ? (
                   <LogoutButton
