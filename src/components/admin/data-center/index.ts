@@ -1,0 +1,9 @@
+export { default as CategoryTabs } from './CategoryTabs';
+export { default as StudentsTable } from './tables/StudentsTable';
+export { default as ConsultantsTable } from './tables/ConsultantsTable';
+export { default as CategoriesTable } from './tables/CategoriesTable';
+export { default as BookingsTable } from './tables/BookingsTable';
+export { default as StudentDetailModal } from './modals/StudentDetailModal';
+export { default as ConsultantDetailModal } from './modals/ConsultantDetailModal';
+export { default as CategoryDetailModal } from './modals/CategoryDetailModal';
+export { default as BookingDetailModal } from './modals/BookingDetailModal';
