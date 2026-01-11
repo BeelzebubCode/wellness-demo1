@@ -1,69 +1,68 @@
+// src/components/admin/data-center/FilterBar.tsx
+
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, SlidersHorizontal, X, ChevronDown, Check } from "lucide-react";
+import {
+  Search,
+  SlidersHorizontal,
+  X,
+  ChevronDown,
+  Check,
+  Download,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import type { DataCenterFilter } from "@/types/data-center";
+import type {
+  DataCenterFilter,
+  DataCenterCategory,
+} from "@/features/data-center/types";
 
 // ==============================
-// Types (ภายใน FilterBar เท่านั้น)
+// Types
 // ==============================
-type FilterGroupKey = "STUDENT" | "CONSULTANT" | "TOPIC" | "BOOKING";
-
-type FilterItemType =
-  | "select"
-  | "multiSelect"
-  | "text"
-  | "numberMin"
-  | "boolean"
-  | "date";
+type FilterItemType = "select" | "text" | "numberMin" | "boolean" | "date";
 
 type FilterDef = {
   key: keyof DataCenterFilter;
-  group: FilterGroupKey;
+  categories: DataCenterCategory[]; // แสดงใน category ไหนบ้าง
   label: string;
   type: FilterItemType;
   options?: { label: string; value: any }[];
   placeholder?: string;
 };
 
-type ActiveFilter = {
-  key: keyof DataCenterFilter;
-  group: FilterGroupKey;
-};
-
 // ==============================
-// 1) Filter Definitions (ให้ key ตรงกับ src/types/data-center.ts)
+// Filter Definitions
 // ==============================
 const FILTER_DEFS: FilterDef[] = [
-  // ===== Student
+  // ===== Students =====
   {
     key: "facultyId",
-    group: "STUDENT",
+    categories: ["STUDENTS"],
     label: "คณะ",
     type: "select",
     options: [
       { label: "ทั้งหมด", value: "" },
-      { label: "วิทยาการคอมพิวเตอร์", value: 1 },
+      { label: "วิทยาศาสตร์", value: 1 },
       { label: "วิศวกรรมศาสตร์", value: 2 },
       { label: "บริหารธุรกิจ", value: 3 },
     ],
   },
   {
     key: "departmentId",
-    group: "STUDENT",
-    label: "สาขาวิชา/ภาควิชา",
+    categories: ["STUDENTS"],
+    label: "สาขาวิชา",
     type: "select",
     options: [
       { label: "ทั้งหมด", value: "" },
-      { label: "CS", value: 11 },
-      { label: "IT", value: 12 },
-      { label: "SE", value: 13 },
+      { label: "วิทยาการคอมพิวเตอร์", value: 1 },
+      { label: "เทคโนโลยีสารสนเทศ", value: 2 },
+      { label: "วิศวกรรมซอฟต์แวร์", value: 3 },
     ],
   },
   {
     key: "year",
-    group: "STUDENT",
+    categories: ["STUDENTS"],
     label: "ชั้นปี",
     type: "select",
     options: [
@@ -76,7 +75,7 @@ const FILTER_DEFS: FilterDef[] = [
   },
   {
     key: "degree",
-    group: "STUDENT",
+    categories: ["STUDENTS"],
     label: "ระดับการศึกษา",
     type: "select",
     options: [
@@ -86,29 +85,32 @@ const FILTER_DEFS: FilterDef[] = [
       { label: "ปริญญาเอก", value: "PHD" },
     ],
   },
-  { key: "studentCode", group: "STUDENT", label: "รหัสนิสิต", type: "text", placeholder: "เช่น 66012345" },
-  { key: "bookingCountMin", group: "STUDENT", label: "จำนวนครั้งที่จอง ≥", type: "numberMin", placeholder: "เช่น 3" },
-  { key: "noShowCountMin", group: "STUDENT", label: "จำนวนครั้งที่ไม่มาตามนัด ≥", type: "numberMin", placeholder: "เช่น 1" },
-  { key: "isRepeatTopic", group: "STUDENT", label: "จองซ้ำในเรื่องเดิม", type: "boolean" },
-
-  // ===== Consultant
-  { key: "consultantName", group: "CONSULTANT", label: "ชื่อผู้ให้คำปรึกษา", type: "text", placeholder: "ค้นหาชื่อ" },
   {
-    key: "specialization",
-    group: "CONSULTANT",
-    label: "ความเชี่ยวชาญ",
-    type: "select",
-    options: [
-      { label: "ทั้งหมด", value: "" },
-      { label: "สุขภาพจิต", value: "MENTAL" },
-      { label: "การเรียน", value: "ACADEMIC" },
-      { label: "การเงิน", value: "FINANCE" },
-      { label: "ครอบครัว", value: "FAMILY" },
-    ],
+    key: "studentCode",
+    categories: ["STUDENTS"],
+    label: "รหัสนิสิต",
+    type: "text",
+    placeholder: "เช่น 66012345",
   },
   {
+    key: "bookingCountMin",
+    categories: ["STUDENTS"],
+    label: "จำนวนครั้งที่จอง ≥",
+    type: "numberMin",
+    placeholder: "เช่น 3",
+  },
+  {
+    key: "noShowCountMin",
+    categories: ["STUDENTS"],
+    label: "ไม่มาตามนัด ≥",
+    type: "numberMin",
+    placeholder: "เช่น 1",
+  },
+
+  // ===== Consultants =====
+  {
     key: "organizationId",
-    group: "CONSULTANT",
+    categories: ["CONSULTANTS"],
     label: "สังกัดหน่วยงาน",
     type: "select",
     options: [
@@ -117,312 +119,423 @@ const FILTER_DEFS: FilterDef[] = [
       { label: "กองกิจการนิสิต", value: 2 },
     ],
   },
-  { key: "activeQueueMin", group: "CONSULTANT", label: "จำนวนคิวที่รับอยู่ ≥", type: "numberMin" },
-  { key: "workloadMin", group: "CONSULTANT", label: "ภาระงานรวม ≥", type: "numberMin" },
-  { key: "avgDurationMin", group: "CONSULTANT", label: "ระยะเวลาเฉลี่ย (นาที) ≥", type: "numberMin" },
-  { key: "ratingMin", group: "CONSULTANT", label: "คะแนนความพึงพอใจ ≥", type: "numberMin" },
+  {
+    key: "specialization",
+    categories: ["CONSULTANTS"],
+    label: "ความเชี่ยวชาญ",
+    type: "select",
+    options: [
+      { label: "ทั้งหมด", value: "" },
+      { label: "สุขภาพจิต", value: "MENTAL" },
+      { label: "การเรียน", value: "ACADEMIC" },
+      { label: "การเงิน", value: "FINANCE" },
+    ],
+  },
+  {
+    key: "activeQueueMin",
+    categories: ["CONSULTANTS"],
+    label: "คิวที่รับอยู่ ≥",
+    type: "numberMin",
+  },
+  {
+    key: "ratingMin",
+    categories: ["CONSULTANTS"],
+    label: "คะแนนความพึงพอใจ ≥",
+    type: "numberMin",
+  },
 
-  // ===== Topic
+  // ===== Bookings =====
+  {
+    key: "status",
+    categories: ["BOOKINGS"],
+    label: "สถานะ",
+    type: "select",
+    options: [
+      { label: "ทั้งหมด", value: "ALL" },
+      { label: "รอมอบหมาย", value: "PENDING_ASSIGNMENT" },
+      { label: "มอบหมายแล้ว", value: "ASSIGNED" },
+      { label: "กำลังดำเนินการ", value: "IN_PROGRESS" },
+      { label: "เสร็จสิ้น", value: "COMPLETED" },
+      { label: "ยกเลิก", value: "CANCELLED" },
+    ],
+  },
   {
     key: "problemCategoryId",
-    group: "TOPIC",
-    label: "ประเภทเรื่องที่ขอรับคำปรึกษา",
+    categories: ["BOOKINGS"],
+    label: "ประเภทเรื่อง",
     type: "select",
     options: [
       { label: "ทั้งหมด", value: "" },
-      { label: "ความเครียด/สุขภาพจิต", value: 101 },
-      { label: "การเรียน", value: 102 },
-      { label: "ความสัมพันธ์", value: 103 },
-      { label: "การเงิน", value: 104 },
+      { label: "ความเครียด/สุขภาพจิต", value: 1 },
+      { label: "การเรียน", value: 2 },
+      { label: "ความสัมพันธ์", value: 3 },
+      { label: "การเงิน", value: 4 },
     ],
   },
 
-  // ===== Booking
-  { key: "startDate", group: "BOOKING", label: "วันที่เริ่มต้น", type: "date" },
-  { key: "endDate", group: "BOOKING", label: "วันที่สิ้นสุด", type: "date" },
+  // ===== Common (ใช้ได้หลาย category) =====
   {
-    key: "timeRange",
-    group: "BOOKING",
-    label: "ช่วงเวลา",
-    type: "select",
-    options: [
-      { label: "ทั้งหมด", value: "" },
-      { label: "เช้า", value: "MORNING" },
-      { label: "บ่าย", value: "AFTERNOON" },
-      { label: "เย็น", value: "EVENING" },
-    ],
+    key: "startDate",
+    categories: ["STUDENTS", "CONSULTANTS", "BOOKINGS"],
+    label: "ตั้งแต่วันที่",
+    type: "date",
+  },
+  {
+    key: "endDate",
+    categories: ["STUDENTS", "CONSULTANTS", "BOOKINGS"],
+    label: "ถึงวันที่",
+    type: "date",
   },
 ];
 
-const GROUPS: { key: FilterGroupKey; label: string; desc: string }[] = [
-  { key: "STUDENT", label: "ผู้จองคิว", desc: "กรองข้อมูลนิสิต/ผู้จอง" },
-  { key: "CONSULTANT", label: "ผู้ให้คำปรึกษา", desc: "กรองข้อมูลผู้ให้คำปรึกษา" },
-  { key: "TOPIC", label: "ประเภทเรื่อง", desc: "กรองประเภทคำปรึกษา" },
-  { key: "BOOKING", label: "การจองคิว", desc: "กรองวัน/เวลา/สถานะ" },
-];
-
-const INITIAL: DataCenterFilter = { status: "ALL" };
+// ==============================
+// Props
+// ==============================
+interface FilterBarProps {
+  category: DataCenterCategory;
+  filters: DataCenterFilter;
+  onFilterChange: (filters: DataCenterFilter) => void;
+  onExport?: () => void;
+  isLoading?: boolean;
+}
 
 export default function FilterBar({
+  category,
+  filters,
   onFilterChange,
   onExport,
   isLoading,
-}: {
-  onFilterChange: (f: DataCenterFilter) => void;
-  onExport?: () => void;
-  isLoading?: boolean;
-}) {
-  const [filters, setFilters] = useState<DataCenterFilter>(INITIAL);
-
+}: FilterBarProps) {
   const [open, setOpen] = useState(false);
-  const [activeGroup, setActiveGroup] = useState<FilterGroupKey>("STUDENT");
-  const [selected, setSelected] = useState<ActiveFilter[]>([]);
+  const [selectedKeys, setSelectedKeys] = useState<Set<keyof DataCenterFilter>>(
+    new Set()
+  );
   const popRef = useRef<HTMLDivElement | null>(null);
 
+  type Option = { label: string; value: any };
+
+  const [facultyOptions, setFacultyOptions] = useState<Option[]>([
+    { label: "ทั้งหมด", value: "" },
+  ]);
+
+  const [departmentOptions, setDepartmentOptions] = useState<Option[]>([
+    { label: "ทั้งหมด", value: "" },
+  ]);
+
+  // Filter definitions for current category
+  const availableFilters = useMemo(() => {
+    return FILTER_DEFS.filter((f) => f.categories.includes(category));
+  }, [category]);
+
+  // Active filters (selected + has value)
+  const activeFilters = useMemo(() => {
+    return availableFilters.filter((f) => selectedKeys.has(f.key));
+  }, [availableFilters, selectedKeys]);
+
   useEffect(() => {
-    const onDoc = (e: MouseEvent) => {
-      if (!open) return;
-      const t = e.target as Node;
-      if (popRef.current && !popRef.current.contains(t)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [open]);
-
-  // debounce ส่งค่าออก
-  const lastSentRef = useRef<string>("");
-
-  useEffect(() => {
-    const t = setTimeout(() => {
-      const cleaned = cleanFilters(filters);
-      const serialized = JSON.stringify(cleaned);
-
-      if (serialized === lastSentRef.current) return;
-
-      lastSentRef.current = serialized;
-      onFilterChange(cleaned);
-    }, 350);
-
-    return () => clearTimeout(t);
-  }, [filters]);
-
-  const defsByGroup = useMemo(() => {
-    const map = new Map<FilterGroupKey, FilterDef[]>();
-    for (const g of GROUPS) map.set(g.key, []);
-    for (const d of FILTER_DEFS) map.get(d.group)!.push(d);
-    return map;
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/data-center/lookups/faculties");
+        const json = await res.json();
+        setFacultyOptions([{ label: "ทั้งหมด", value: "" }, ...json]);
+      } catch (e) {
+        console.error("Load faculties failed", e);
+      }
+    })();
   }, []);
 
-  const selectedSet = useMemo(() => new Set(selected.map((s) => String(s.key))), [selected]);
+  useEffect(() => {
+    // ถ้า user เปลี่ยนคณะ ให้ล้างสาขา
+    if ((filters as any).departmentId) {
+      onFilterChange({ ...filters, departmentId: "" as any });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [(filters as any).facultyId]);
 
-  const set = <K extends keyof DataCenterFilter>(k: K, v: DataCenterFilter[K]) =>
-    setFilters((prev) => ({ ...prev, [k]: v }));
-
-  const toggleFilter = (key: keyof DataCenterFilter, group: FilterGroupKey) => {
-    setSelected((prev) => {
-      const exists = prev.some((p) => p.key === key);
-      if (exists) {
-        setFilters((f) => {
-          const copy = { ...f } as any;
-          delete copy[key];
-          return copy;
-        });
-        return prev.filter((p) => p.key !== key);
+  useEffect(() => {
+    (async () => {
+      try {
+        const fid = (filters as any).facultyId;
+        const qs = fid ? `?facultyId=${fid}` : "";
+        const res = await fetch(
+          `/api/admin/data-center/lookups/departments${qs}`
+        );
+        const json = await res.json();
+        setDepartmentOptions([{ label: "ทั้งหมด", value: "" }, ...json]);
+      } catch (e) {
+        console.error("Load departments failed", e);
       }
-      return [...prev, { key, group }];
+    })();
+  }, [(filters as any).facultyId]);
+
+  // Click outside to close
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!open) return;
+      if (popRef.current && !popRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  // Reset filters when category changes
+  useEffect(() => {
+    setSelectedKeys(new Set());
+    onFilterChange({ search: filters.search });
+  }, [category]);
+
+  // Update filter value
+  const setFilter = <K extends keyof DataCenterFilter>(
+    key: K,
+    value: DataCenterFilter[K]
+  ) => {
+    onFilterChange({ ...filters, [key]: value });
+  };
+
+  // Toggle filter selection
+  const toggleFilter = (key: keyof DataCenterFilter) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+        // Remove from filters
+        const newFilters = { ...filters };
+        delete newFilters[key];
+        onFilterChange(newFilters);
+      } else {
+        next.add(key);
+      }
+      return next;
     });
   };
 
-  const clearAll = () => {
-    setSelected([]);
-    setFilters(INITIAL);
-  };
-
+  // Remove single chip
   const removeChip = (key: keyof DataCenterFilter) => {
-    setSelected((prev) => prev.filter((p) => p.key !== key));
-    setFilters((f) => {
-      const copy = { ...f } as any;
-      delete copy[key];
-      return copy;
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
     });
+    const newFilters = { ...filters };
+    delete newFilters[key];
+    onFilterChange(newFilters);
   };
 
-  const activeDefs = useMemo(() => {
-    const map = new Map<string, FilterDef>();
-    for (const d of FILTER_DEFS) map.set(String(d.key), d);
-    return selected.map((s) => map.get(String(s.key))).filter(Boolean) as FilterDef[];
-  }, [selected]);
+  // Clear all filters
+  const clearAll = () => {
+    setSelectedKeys(new Set());
+    onFilterChange({ search: filters.search });
+  };
+
+  // Render value preview for chip
+  const renderValuePreview = (def: FilterDef, value: any) => {
+    if (value === undefined || value === "" || value === "ALL")
+      return "ทั้งหมด";
+    if (def.type === "boolean") return value ? "ใช่" : "ไม่";
+    if (def.type === "date") return value;
+    if (def.type === "select") {
+      const hit = def.options?.find((o) => String(o.value) === String(value));
+      return hit?.label ?? String(value);
+    }
+    return String(value);
+  };
 
   return (
     <div className="bg-white border rounded-xl p-4 space-y-3">
+      {/* Search + Filters Button */}
       <div className="flex flex-wrap gap-3 items-center">
+        {/* Search */}
         <div className="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-lg flex-1 min-w-[260px]">
           <Search className="w-4 h-4 text-gray-400" />
           <input
-            placeholder="ค้นหา ชื่อ / รหัสนิสิต / ผู้ให้คำปรึกษา"
+            placeholder={
+              category === "STUDENTS"
+                ? "ค้นหา ชื่อ / รหัสนิสิต / อีเมล"
+                : category === "CONSULTANTS"
+                ? "ค้นหา ชื่อ / อีเมล"
+                : category === "CATEGORIES"
+                ? "ค้นหา รหัส / ชื่อประเภท"
+                : "ค้นหา ชื่อ / รหัส / ผู้ให้คำปรึกษา"
+            }
             className="bg-transparent outline-none text-sm w-full"
             value={filters.search ?? ""}
-            onChange={(e) => set("search", e.target.value)}
+            onChange={(e) => setFilter("search", e.target.value)}
           />
         </div>
 
-        {/* ✅ status type ถูกแล้ว */}
-        <select
-          className="border rounded-lg px-3 py-2 text-sm"
-          value={filters.status ?? "ALL"}
-          onChange={(e) => set("status", e.target.value as DataCenterFilter["status"])}
-        >
-          <option value="ALL">ทุกสถานะ</option>
-          <option value="PENDING_ASSIGNMENT">รอพิจารณา</option>
-          <option value="ASSIGNED">อนุมัติแล้ว</option>
-          <option value="IN_PROGRESS">กำลังดำเนินการ</option>
-          <option value="COMPLETED">เสร็จสิ้น</option>
-          <option value="CANCELLED">ยกเลิก</option>
-          <option value="NO_SHOW">ไม่มาตามนัด</option>
-          <option value="CONFIRMED">ยืนยันแล้ว</option>
-        </select>
-
+        {/* Filters Button */}
         <div className="relative flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setOpen((o) => !o)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setOpen((o) => !o)}
+          >
             <SlidersHorizontal className="w-4 h-4 mr-1" />
-            Filters
+            ตัวกรอง
+            {activeFilters.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-xs bg-indigo-100 text-indigo-700 rounded-full">
+                {activeFilters.length}
+              </span>
+            )}
             <ChevronDown className="w-4 h-4 ml-1 opacity-70" />
           </Button>
 
           {onExport && (
-            <Button variant="outline" size="sm" onClick={onExport} disabled={isLoading}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onExport}
+              disabled={isLoading}
+            >
+              <Download className="w-4 h-4 mr-1" />
               Export
             </Button>
           )}
 
+          {/* Popup */}
           {open && (
             <div
               ref={popRef}
-              className="absolute right-0 mt-2 w-[860px] max-w-[92vw] z-50 bg-white border shadow-lg rounded-2xl overflow-hidden"
+              className="absolute top-full right-0 mt-2 w-[600px] max-w-[92vw] z-50 bg-white border shadow-xl rounded-2xl overflow-hidden"
+              style={{ maxHeight: "70vh" }}
             >
-              <div className="grid grid-cols-[260px,1fr]">
-                <div className="border-r bg-gray-50 p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="text-sm font-semibold text-gray-800">หมวดหมู่</div>
-                    <button className="p-1 rounded hover:bg-gray-200" onClick={() => setOpen(false)} aria-label="close">
+              <div className="grid grid-cols-2">
+                {/* Left: Filter List */}
+                <div className="border-r bg-gray-50 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-sm font-semibold text-gray-800">
+                      เลือกตัวกรอง
+                    </div>
+                    <button
+                      className="p-1 rounded hover:bg-gray-200"
+                      onClick={() => setOpen(false)}
+                    >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
 
-                  <div className="space-y-1">
-                    {GROUPS.map((g) => (
-                      <button
-                        key={g.key}
-                        onClick={() => setActiveGroup(g.key)}
-                        className={[
-                          "w-full text-left px-3 py-2 rounded-xl transition",
-                          activeGroup === g.key ? "bg-white border shadow-sm" : "hover:bg-white/70",
-                        ].join(" ")}
-                      >
-                        <div className="text-sm font-medium text-gray-900">{g.label}</div>
-                        <div className="text-xs text-gray-500">{g.desc}</div>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="mt-3 pt-3 border-t">
-                    <Button variant="outline" size="sm" onClick={clearAll} className="w-full">
-                      ล้างตัวกรองทั้งหมด
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="p-3">
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {activeDefs.length === 0 ? (
-                      <div className="text-sm text-gray-500">เลือกตัวกรองจากฝั่งซ้าย แล้วติ๊กหมวดย่อยที่ต้องการ</div>
-                    ) : (
-                      activeDefs.map((d) => (
-                        <div
-                          key={String(d.key)}
-                          className="flex items-center gap-2 border rounded-full px-3 py-1.5 text-sm bg-white shadow-sm"
+                  <div className="space-y-1 max-h-[400px] overflow-auto">
+                    {availableFilters.map((def) => {
+                      const isSelected = selectedKeys.has(def.key);
+                      return (
+                        <button
+                          key={String(def.key)}
+                          onClick={() => toggleFilter(def.key)}
+                          className={`
+                            w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-left transition
+                            ${
+                              isSelected
+                                ? "bg-indigo-600 text-white border-indigo-600"
+                                : "bg-white hover:bg-gray-50 border-gray-200"
+                            }
+                          `}
                         >
-                          <span className="font-medium text-gray-800">{d.label}</span>
-                          <button className="p-1 rounded-full hover:bg-gray-100" onClick={() => removeChip(d.key)} aria-label="remove">
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))
-                    )}
+                          <span className="text-sm">{def.label}</span>
+                          {isSelected && <Check className="w-4 h-4" />}
+                        </button>
+                      );
+                    })}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="border rounded-2xl p-3">
-                      <div className="text-sm font-semibold text-gray-800 mb-2">เลือกหมวดย่อย</div>
-                      <div className="space-y-1 max-h-[360px] overflow-auto pr-1">
-                        {(defsByGroup.get(activeGroup) ?? []).map((d) => {
-                          const checked = selectedSet.has(String(d.key));
-                          return (
-                            <button
-                              key={String(d.key)}
-                              onClick={() => toggleFilter(d.key, d.group)}
-                              className={[
-                                "w-full flex items-center justify-between px-3 py-2 rounded-xl border text-left",
-                                checked ? "bg-gray-900 text-white border-gray-900" : "hover:bg-gray-50",
-                              ].join(" ")}
-                            >
-                              <span className="text-sm">{d.label}</span>
-                              {checked ? <Check className="w-4 h-4" /> : null}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="border rounded-2xl p-3">
-                      <div className="text-sm font-semibold text-gray-800 mb-2">ตั้งค่าตัวกรอง</div>
-
-                      {activeDefs.length === 0 ? (
-                        <div className="text-sm text-gray-500">ยังไม่ได้เลือกตัวกรอง</div>
-                      ) : (
-                        <div className="space-y-3 max-h-[360px] overflow-auto pr-1">
-                          {activeDefs.map((d) => (
-                            <FilterValueRow
-                              key={String(d.key)}
-                              def={d}
-                              value={(filters as any)[d.key]}
-                              onChange={(v: any) => set(d.key as any, v)}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-3 flex items-center justify-between border-t pt-3">
-                    <div className="text-xs text-gray-500">* ปรับค่าแล้วตารางจะกรองให้อัตโนมัติ (มี debounce)</div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
-                        ปิด
+                  {activeFilters.length > 0 && (
+                    <div className="mt-3 pt-3 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={clearAll}
+                        className="w-full"
+                      >
+                        ล้างตัวกรองทั้งหมด
                       </Button>
                     </div>
-                  </div>
+                  )}
                 </div>
+
+                {/* Right: Filter Values */}
+                <div className="p-4">
+                  <div className="text-sm font-semibold text-gray-800 mb-3">
+                    ตั้งค่าตัวกรอง
+                  </div>
+
+                  {activeFilters.length === 0 ? (
+                    <div className="text-sm text-gray-400 py-8 text-center">
+                      เลือกตัวกรองจากด้านซ้าย
+                    </div>
+                  ) : (
+                    <div className="space-y-4 max-h-[400px] overflow-auto">
+                      {activeFilters.map((def) => (
+                        <FilterValueRow
+                          key={String(def.key)}
+                          def={{
+                            ...def,
+                            options:
+                              def.key === "facultyId"
+                                ? facultyOptions
+                                : def.key === "departmentId"
+                                ? departmentOptions
+                                : def.options,
+                          }}
+                          value={(filters as any)[def.key]}
+                          onChange={(v) => setFilter(def.key as any, v)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-4 py-3 bg-gray-50 border-t flex items-center justify-between">
+                <div className="text-xs text-gray-500">
+                  * ปรับค่าแล้วจะกรองให้อัตโนมัติ
+                </div>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setOpen(false)}
+                >
+                  เสร็จสิ้น
+                </Button>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {activeDefs.length > 0 && (
+      {/* Active Filter Chips */}
+      {activeFilters.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {activeDefs.map((d) => (
-            <div
-              key={String(d.key)}
-              className="flex items-center gap-2 bg-gray-50 border rounded-full px-3 py-1 text-xs"
-            >
-              <span className="font-medium text-gray-700">{d.label}:</span>
-              <span className="text-gray-600">{renderValuePreview(d, (filters as any)[d.key])}</span>
-              <button className="p-1 hover:bg-gray-100 rounded-full" onClick={() => removeChip(d.key)}>
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ))}
+          {activeFilters.map((def) => {
+            const value = (filters as any)[def.key];
+            const preview = renderValuePreview(def, value);
+
+            return (
+              <div
+                key={String(def.key)}
+                className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-full px-3 py-1.5 text-xs"
+              >
+                <span className="font-medium text-indigo-800">
+                  {def.label}:
+                </span>
+                <span className="text-indigo-600">{preview}</span>
+                <button
+                  className="p-0.5 hover:bg-indigo-100 rounded-full"
+                  onClick={() => removeChip(def.key)}
+                >
+                  <X className="w-3.5 h-3.5 text-indigo-500" />
+                </button>
+              </div>
+            );
+          })}
+
+          <button
+            className="text-xs text-gray-500 hover:text-gray-700 underline"
+            onClick={clearAll}
+          >
+            ล้างทั้งหมด
+          </button>
         </div>
       )}
     </div>
@@ -430,7 +543,7 @@ export default function FilterBar({
 }
 
 // ==============================
-// Row
+// Filter Value Row
 // ==============================
 function FilterValueRow({
   def,
@@ -441,13 +554,19 @@ function FilterValueRow({
   value: any;
   onChange: (v: any) => void;
 }) {
+  const normalizeSelect = (v: string) => {
+    if (v === "") return "";
+    if (/^\d+$/.test(v)) return Number(v);
+    return v;
+  };
+
   return (
-    <div className="space-y-1">
-      <div className="text-xs text-gray-500">{def.label}</div>
+    <div className="space-y-1.5">
+      <label className="text-xs font-medium text-gray-600">{def.label}</label>
 
       {def.type === "select" && (
         <select
-          className="border rounded-xl px-3 py-2 text-sm w-full bg-white"
+          className="border rounded-xl px-3 py-2 text-sm w-full bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           value={value ?? ""}
           onChange={(e) => onChange(normalizeSelect(e.target.value))}
         >
@@ -461,7 +580,7 @@ function FilterValueRow({
 
       {def.type === "text" && (
         <input
-          className="border rounded-xl px-3 py-2 text-sm w-full"
+          className="border rounded-xl px-3 py-2 text-sm w-full focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           placeholder={def.placeholder ?? ""}
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}
@@ -471,57 +590,35 @@ function FilterValueRow({
       {def.type === "numberMin" && (
         <input
           type="number"
-          className="border rounded-xl px-3 py-2 text-sm w-full"
+          className="border rounded-xl px-3 py-2 text-sm w-full focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           placeholder={def.placeholder ?? "0"}
           value={value ?? ""}
-          onChange={(e) => onChange(e.target.value === "" ? undefined : Number(e.target.value))}
+          onChange={(e) =>
+            onChange(e.target.value === "" ? undefined : Number(e.target.value))
+          }
         />
       )}
 
       {def.type === "date" && (
         <input
           type="date"
-          className="border rounded-xl px-3 py-2 text-sm w-full"
+          className="border rounded-xl px-3 py-2 text-sm w-full focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value || undefined)}
         />
       )}
 
       {def.type === "boolean" && (
-        <label className="flex items-center gap-2 text-sm border rounded-xl px-3 py-2">
-          <input type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} />
+        <label className="flex items-center gap-2 text-sm border rounded-xl px-3 py-2 cursor-pointer hover:bg-gray-50">
+          <input
+            type="checkbox"
+            className="w-4 h-4 text-indigo-600 rounded"
+            checked={Boolean(value)}
+            onChange={(e) => onChange(e.target.checked)}
+          />
           <span className="text-gray-800">เปิดใช้งาน</span>
         </label>
       )}
     </div>
   );
-}
-
-// ==============================
-// Helpers
-// ==============================
-function cleanFilters(f: DataCenterFilter) {
-  const x: any = { ...f };
-  Object.keys(x).forEach((k) => {
-    if (x[k] === "") delete x[k];
-    if (x[k] === undefined) delete x[k];
-  });
-  return x as DataCenterFilter;
-}
-
-function normalizeSelect(v: string) {
-  if (v === "") return "";
-  if (/^\d+$/.test(v)) return Number(v);
-  return v;
-}
-
-function renderValuePreview(def: FilterDef, value: any) {
-  if (value === undefined || value === "") return "ทั้งหมด";
-  if (def.type === "boolean") return value ? "ใช่" : "ไม่";
-  if (def.type === "date") return value;
-  if (def.type === "select") {
-    const hit = def.options?.find((o) => String(o.value) === String(value));
-    return hit?.label ?? String(value);
-  }
-  return String(value);
 }
