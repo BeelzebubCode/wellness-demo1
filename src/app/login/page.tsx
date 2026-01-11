@@ -96,7 +96,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-white relative overflow-hidden">
+    <div className="min-h-screen w-full bg-white relative overflow-hidden pt-8">
       {/* background blobs (คล้ายรูปตัวอย่าง แต่โทนระบบ teal/mint) */}
       <div className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-teal-100 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-28 -right-20 h-72 w-72 rounded-full bg-emerald-100 blur-3xl" />

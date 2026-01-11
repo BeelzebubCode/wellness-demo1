@@ -85,3 +85,26 @@
   );
   background-size: 200% 100%;
 }
+
+/* ================================
+   Hide scrollbar (still scrollable)
+   ================================ */
+
+/* Chrome, Safari, Edge */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+}
+
+/* Firefox */
+html,
+body {
+  scrollbar-width: none; /* hide */
+}
+
+/* IE/old Edge */
+html,
+body {
+  -ms-overflow-style: none;
+}
