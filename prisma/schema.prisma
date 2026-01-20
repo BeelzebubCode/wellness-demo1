@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -37,7 +37,7 @@ model Student {
   addresses         StudentAddress[]
   profile           StudentProfile?
 
-  @@index([student_status_id], map: "student_student_status_id_fkey")
+  @@index([student_status_id])
   @@map("student")
 }
 
@@ -80,8 +80,8 @@ model StudentAddress {
   province                     Province           @relation(fields: [province_id], references: [province_id])
   student                      Student            @relation(fields: [student_id], references: [student_id])
 
-  @@unique([student_id, student_address_type], map: "student_address_index_0")
-  @@index([province_id], map: "student_address_province_id_fkey")
+  @@unique([student_id, student_address_type])
+  @@index([province_id])
   @@map("student_address")
 }
 
@@ -109,9 +109,9 @@ model StudentAcademic {
   faculty                     Faculty    @relation(fields: [faculty_id], references: [faculty_id])
   student                     Student    @relation(fields: [student_id], references: [student_id])
 
-  @@index([advisor_id], map: "student_academic_advisor_id_fkey")
-  @@index([department_id], map: "student_academic_department_id_fkey")
-  @@index([faculty_id], map: "student_academic_faculty_id_fkey")
+  @@index([advisor_id])
+  @@index([department_id])
+  @@index([faculty_id])
   @@map("student_academic")
 }
 
@@ -137,7 +137,7 @@ model Department {
   faculty            Faculty           @relation(fields: [faculty_id], references: [faculty_id])
   studentAcademics   StudentAcademic[]
 
-  @@index([faculty_id], map: "department_faculty_id_fkey")
+  @@index([faculty_id])
   @@map("department")
 }
 
@@ -156,8 +156,8 @@ model Advisor {
   faculty                 Faculty           @relation(fields: [faculty_id], references: [faculty_id])
   studentAcademics        StudentAcademic[]
 
-  @@index([department_id], map: "advisor_department_id_fkey")
-  @@index([faculty_id], map: "advisor_faculty_id_fkey")
+  @@index([department_id])
+  @@index([faculty_id])
   @@map("advisor")
 }
 
@@ -176,7 +176,7 @@ model Consultant {
   specializations       ConsultantSpecialization[]
   feedbacks             Feedback[]
 
-  @@index([organization_id], map: "consultant_organization_id_fkey")
+  @@index([organization_id])
   @@map("consultant")
 }
 
@@ -202,7 +202,7 @@ model ConsultantLanguage {
   consultant_language_fluency_level String?    @db.VarChar(20)
   consultant                        Consultant @relation(fields: [consultant_id], references: [consultant_id])
 
-  @@unique([consultant_id, consultant_language_code], map: "consultant_language_index_1")
+  @@unique([consultant_id, consultant_language_code])
   @@map("consultant_language")
 }
 
@@ -212,7 +212,7 @@ model ConsultantSpecialization {
   consultant_specialization_topic String     @db.VarChar(100)
   consultant                      Consultant @relation(fields: [consultant_id], references: [consultant_id])
 
-  @@unique([consultant_id, consultant_specialization_topic], map: "consultant_specialization_index_2")
+  @@unique([consultant_id, consultant_specialization_topic])
   @@map("consultant_specialization")
 }
 
@@ -231,37 +231,44 @@ model TimeSlot {
   time_slot_end_datetime   DateTime
   time_slot_max_capacity   Int            @default(1)
   time_slot_status         TimeSlotStatus @default(AVAILABLE)
-  bookingSlots             BookingSlot[]
+  bookings                 Booking[]
 
-  @@index([time_slot_start_datetime, time_slot_end_datetime], map: "time_slot_index_3")
+  @@index([time_slot_start_datetime, time_slot_end_datetime])
   @@map("time_slot")
 }
 
 model Booking {
-  booking_id          Int                  @id @default(autoincrement())
+  booking_id          Int           @id @default(autoincrement())
   student_id          Int
   consultant_id       Int?
+  time_slot_id        Int
   problem_category_id Int
-  booking_detail_text String?              @db.Text
-  booking_status      BookingStatus        @default(PENDING_ASSIGNMENT)
-  booking_created_at  DateTime             @default(now())
-  booking_updated_at  DateTime             @default(now()) @updatedAt
-  consultant          Consultant?          @relation(fields: [consultant_id], references: [consultant_id])
-  problemCategory     ProblemCategory      @relation(fields: [problem_category_id], references: [problem_category_id])
-  student             Student              @relation(fields: [student_id], references: [student_id])
+
+  booking_detail_text String?        @db.Text
+  booking_status      BookingStatus  @default(PENDING_ASSIGNMENT)
+  booking_created_at  DateTime       @default(now())
+  booking_updated_at  DateTime       @default(now()) @updatedAt
+  student             Student        @relation(fields: [student_id], references: [student_id])
+  consultant          Consultant?    @relation(fields: [consultant_id], references: [consultant_id])
+  timeSlot            TimeSlot       @relation(fields: [time_slot_id], references: [time_slot_id])
+  problemCategory     ProblemCategory @relation(fields: [problem_category_id], references: [problem_category_id])
+
   assignments         BookingAssignment[]
   cancellation        BookingCancellation?
   outcome             BookingOutcome?
-  bookingSlots        BookingSlot[]
   feedback            Feedback?
   notifications       Notification[]
 
-  @@index([booking_status], map: "booking_index_4")
-  @@index([student_id], map: "booking_index_5")
-  @@index([consultant_id], map: "booking_index_6")
-  @@index([problem_category_id], map: "booking_problem_category_id_fkey")
+  @@index([time_slot_id])
+  @@index([booking_status])
+  @@index([student_id])
+  @@index([consultant_id])
+  @@index([problem_category_id])
+  @@index([student_id, booking_status])
+  @@unique([student_id, time_slot_id])
   @@map("booking")
 }
+
 
 model ProblemCategory {
   problem_category_id          Int       @id @default(autoincrement())
@@ -272,17 +279,6 @@ model ProblemCategory {
   bookings                     Booking[]
 
   @@map("problem_category")
-}
-
-model BookingSlot {
-  booking_id   Int
-  time_slot_id Int
-  booking      Booking  @relation(fields: [booking_id], references: [booking_id])
-  timeSlot     TimeSlot @relation(fields: [time_slot_id], references: [time_slot_id])
-
-  @@id([booking_id, time_slot_id])
-  @@index([time_slot_id], map: "booking_slot_time_slot_id_fkey")
-  @@map("booking_slot")
 }
 
 model BookingAssignment {
@@ -296,9 +292,9 @@ model BookingAssignment {
   assignedTo                        Consultant @relation("AssignedTo", fields: [booking_assignment_assigned_to_id], references: [consultant_id])
   booking                           Booking    @relation(fields: [booking_id], references: [booking_id])
 
-  @@index([booking_id], map: "booking_assignment_index_7")
-  @@index([booking_assignment_assigned_by_id], map: "booking_assignment_booking_assignment_assigned_by_id_fkey")
-  @@index([booking_assignment_assigned_to_id], map: "booking_assignment_booking_assignment_assigned_to_id_fkey")
+  @@index([booking_id])
+  @@index([booking_assignment_assigned_by_id])
+  @@index([booking_assignment_assigned_to_id])
   @@map("booking_assignment")
 }
 
@@ -321,7 +317,7 @@ model BookingCancellation {
   cancelledBy                          Account  @relation(fields: [booking_cancellation_cancelled_by_id], references: [account_id])
   booking                              Booking  @relation(fields: [booking_id], references: [booking_id])
 
-  @@index([booking_cancellation_cancelled_by_id], map: "booking_cancellation_booking_cancellation_cancelled_by_id_fkey")
+  @@index([booking_cancellation_cancelled_by_id])
   @@map("booking_cancellation")
 }
 
@@ -338,8 +334,8 @@ model Feedback {
   comment               FeedbackComment?
   ratings               FeedbackRating[]
 
-  @@index([consultant_id], map: "feedback_consultant_id_fkey")
-  @@index([student_id], map: "feedback_student_id_fkey")
+  @@index([consultant_id])
+  @@index([student_id])
   @@map("feedback")
 }
 
@@ -362,8 +358,8 @@ model FeedbackRating {
   criterion               EvaluationCriterion @relation(fields: [evaluation_criterion_id], references: [evaluation_criterion_id])
   feedback                Feedback            @relation(fields: [feedback_id], references: [feedback_id])
 
-  @@unique([feedback_id, evaluation_criterion_id], map: "feedback_rating_index_8")
-  @@index([evaluation_criterion_id], map: "feedback_rating_evaluation_criterion_id_fkey")
+  @@unique([feedback_id, evaluation_criterion_id])
+  @@index([evaluation_criterion_id])
   @@map("feedback_rating")
 }
 
@@ -376,7 +372,7 @@ model FeedbackComment {
   repliedBy                      Account?  @relation("FeedbackCommentRepliedBy", fields: [feedback_comment_replied_by_id], references: [account_id])
   feedback                       Feedback  @relation(fields: [feedback_id], references: [feedback_id])
 
-  @@index([feedback_comment_replied_by_id], map: "feedback_comment_feedback_comment_replied_by_id_fkey")
+  @@index([feedback_comment_replied_by_id])
   @@map("feedback_comment")
 }
 
@@ -406,10 +402,10 @@ model Notification {
   booking                    Booking?             @relation(fields: [booking_id], references: [booking_id])
   template                   NotificationTemplate @relation(fields: [notification_template_id], references: [notification_template_id])
 
-  @@index([account_id], map: "notification_index_9")
-  @@index([notification_status], map: "notification_index_10")
-  @@index([booking_id], map: "notification_booking_id_fkey")
-  @@index([notification_template_id], map: "notification_notification_template_id_fkey")
+  @@index([account_id])
+  @@index([notification_status])
+  @@index([booking_id])
+  @@index([notification_template_id])
   @@map("notification")
 }
 

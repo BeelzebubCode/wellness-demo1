@@ -1,5 +1,4 @@
 // src/app/api/admin/data-center/bookings/[id]/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
@@ -29,12 +28,8 @@ function formatDateTime(d?: Date | null) {
   }).format(d);
 }
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const bookingId = Number(params.id);
-
   if (isNaN(bookingId)) {
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
@@ -46,28 +41,14 @@ export async function GET(
         student: {
           include: {
             profile: true,
-            academic: {
-              include: {
-                faculty: true,
-                department: true,
-              },
-            },
+            academic: { include: { faculty: true, department: true } },
           },
         },
-        consultant: {
-          include: {
-            profile: true,
-            organization: true,
-          },
-        },
+        consultant: { include: { profile: true, organization: true } },
         problemCategory: true,
-        bookingSlots: { include: { timeSlot: true } },
+        timeSlot: true, // ✅ เปลี่ยนจาก bookingSlots เป็น timeSlot
         outcome: true,
-        cancellation: {
-          include: {
-            cancelledBy: true,
-          },
-        },
+        cancellation: { include: { cancelledBy: true } },
       },
     });
 
@@ -75,9 +56,8 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    const slot = booking.bookingSlots[0]?.timeSlot ?? null;
-    const start = slot?.time_slot_start_datetime ?? null;
-    const end = slot?.time_slot_end_datetime ?? null;
+    const start = booking.timeSlot?.time_slot_start_datetime ?? null;
+    const end = booking.timeSlot?.time_slot_end_datetime ?? null;
 
     return NextResponse.json({
       id: booking.booking_id,
@@ -127,9 +107,6 @@ export async function GET(
     });
   } catch (error) {
     console.error("[GET /data-center/bookings/:id] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch booking" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch booking" }, { status: 500 });
   }
 }

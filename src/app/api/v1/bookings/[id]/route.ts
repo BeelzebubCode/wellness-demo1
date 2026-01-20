@@ -1,25 +1,20 @@
 // src/app/api/v1/bookings/[id]/route.ts
-// ✅ Fixed: Uses Booking model from schema
-
-import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { getAccountFromRequest } from '@/lib/jwt';
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+import { getAccountFromRequest } from "@/lib/jwt";
+import { BookingStatus, TimeSlotStatus } from "@prisma/client";
 
 interface RouteParams {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }
 
 // GET /api/v1/bookings/:id
 export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
-    const { id } = await params;
-    const bookingId = parseInt(id);
+    const bookingId = Number(params.id);
 
-    if (isNaN(bookingId)) {
-      return NextResponse.json(
-        { error: 'Invalid booking ID' },
-        { status: 400 }
-      );
+    if (Number.isNaN(bookingId)) {
+      return NextResponse.json({ error: "Invalid booking ID" }, { status: 400 });
     }
 
     const booking = await prisma.booking.findUnique({
@@ -28,46 +23,28 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         student: {
           include: {
             profile: true,
-            academic: {
-              include: {
-                faculty: true,
-                department: true,
-              },
-            },
+            academic: { include: { faculty: true, department: true } },
             account: true,
           },
         },
-        consultant: {
-          include: {
-            profile: true,
-          },
-        },
+        consultant: { include: { profile: true } },
         problemCategory: true,
-        bookingSlots: {
-          include: {
-            timeSlot: true,
-          },
-        },
+
+        // ✅ เปลี่ยนจาก bookingSlots -> timeSlot
+        timeSlot: true,
+
         assignments: {
           include: {
             assignedBy: { include: { profile: true } },
             assignedTo: { include: { profile: true } },
           },
-          orderBy: { booking_assignment_assigned_at: 'desc' },
+          orderBy: { booking_assignment_assigned_at: "desc" },
         },
         outcome: true,
-        cancellation: {
-          include: {
-            cancelledBy: true,
-          },
-        },
+        cancellation: { include: { cancelledBy: true } },
         feedback: {
           include: {
-            ratings: {
-              include: {
-                criterion: true,
-              },
-            },
+            ratings: { include: { criterion: true } },
             comment: true,
           },
         },
@@ -75,14 +52,10 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     });
 
     if (!booking) {
-      return NextResponse.json(
-        { error: 'ไม่พบรายการจอง' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "ไม่พบรายการจอง" }, { status: 404 });
     }
 
-    // Format response
-    const timeSlot = booking.bookingSlots[0]?.timeSlot;
+    const timeSlot = booking.timeSlot;
     const studentProfile = booking.student.profile;
     const consultantProfile = booking.consultant?.profile;
 
@@ -95,10 +68,16 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       createdAt: booking.booking_created_at.toISOString(),
       updatedAt: booking.booking_updated_at.toISOString(),
 
-      // Time info
-      date: timeSlot?.time_slot_start_datetime.toISOString().split('T')[0] ?? null,
-      startTime: timeSlot?.time_slot_start_datetime.toTimeString().slice(0, 5) ?? null,
-      endTime: timeSlot?.time_slot_end_datetime.toTimeString().slice(0, 5) ?? null,
+      // Time info (จาก timeSlot ตรง ๆ)
+      date: timeSlot?.time_slot_start_datetime
+        ? timeSlot.time_slot_start_datetime.toISOString().split("T")[0]
+        : null,
+      startTime: timeSlot?.time_slot_start_datetime
+        ? timeSlot.time_slot_start_datetime.toTimeString().slice(0, 5)
+        : null,
+      endTime: timeSlot?.time_slot_end_datetime
+        ? timeSlot.time_slot_end_datetime.toTimeString().slice(0, 5)
+        : null,
 
       // Student info
       student: {
@@ -110,8 +89,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         nickname: studentProfile?.student_nickname,
         phone: studentProfile?.student_phone_number,
         email: studentProfile?.student_email,
-        faculty: booking.student.academic?.faculty.faculty_name_th ?? null,
-        department: booking.student.academic?.department.department_name_th ?? null,
+        faculty: booking.student.academic?.faculty?.faculty_name_th ?? null,
+        department: booking.student.academic?.department?.department_name_th ?? null,
         lineUserId: booking.student.account.account_line_id,
       },
 
@@ -176,70 +155,52 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ success: true, booking: formattedBooking });
   } catch (error) {
-    console.error('Error fetching booking:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch booking' },
-      { status: 500 }
-    );
+    console.error("Error fetching booking:", error);
+    return NextResponse.json({ error: "Failed to fetch booking" }, { status: 500 });
   }
 }
 
 // PUT /api/v1/bookings/:id
 export async function PUT(req: NextRequest, { params }: RouteParams) {
   try {
-    const { id } = await params;
-    const bookingId = parseInt(id);
+    const bookingId = Number(params.id);
     const body = await req.json();
 
-    const { action, consultantId, note, cancelReason, accountId } = body;
-
-    if (isNaN(bookingId)) {
-      return NextResponse.json(
-        { error: 'Invalid booking ID' },
-        { status: 400 }
-      );
+    if (Number.isNaN(bookingId)) {
+      return NextResponse.json({ error: "Invalid booking ID" }, { status: 400 });
     }
+
+    const { action, consultantId, note, cancelReason } = body;
 
     const booking = await prisma.booking.findUnique({
       where: { booking_id: bookingId },
+      select: { booking_id: true, consultant_id: true, time_slot_id: true, booking_status: true },
     });
 
     if (!booking) {
-      return NextResponse.json(
-        { error: 'ไม่พบรายการจอง' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "ไม่พบรายการจอง" }, { status: 404 });
     }
 
     switch (action) {
-      // จ่ายงานให้ Consultant
-      case 'assign': {
+      case "assign": {
         if (!consultantId) {
-          return NextResponse.json(
-            { error: 'กรุณาระบุผู้ให้คำปรึกษา' },
-            { status: 400 }
-          );
+          return NextResponse.json({ error: "กรุณาระบุผู้ให้คำปรึกษา" }, { status: 400 });
         }
 
-        const assignedById = body.assignedById;
+        const assignedById = body.assignedById; // ต้องเป็น consultant_id
         if (!assignedById) {
-          return NextResponse.json(
-            { error: 'กรุณาระบุผู้จ่ายงาน' },
-            { status: 400 }
-          );
+          return NextResponse.json({ error: "กรุณาระบุผู้จ่ายงาน" }, { status: 400 });
         }
 
         await prisma.$transaction(async (tx) => {
-          // อัพเดท booking
           await tx.booking.update({
             where: { booking_id: bookingId },
             data: {
-              booking_status: 'ASSIGNED',
+              booking_status: BookingStatus.ASSIGNED,
               consultant_id: consultantId,
             },
           });
 
-          // สร้าง assignment record
           await tx.bookingAssignment.create({
             data: {
               booking_id: bookingId,
@@ -250,38 +211,31 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
           });
         });
 
-        return NextResponse.json({ success: true, status: 'ASSIGNED' });
+        return NextResponse.json({ success: true, status: BookingStatus.ASSIGNED });
       }
 
-      // เริ่มให้คำปรึกษา
-      case 'start': {
+      case "start": {
         await prisma.booking.update({
           where: { booking_id: bookingId },
-          data: { booking_status: 'IN_PROGRESS' },
+          data: { booking_status: BookingStatus.IN_PROGRESS },
         });
 
-        return NextResponse.json({ success: true, status: 'IN_PROGRESS' });
+        return NextResponse.json({ success: true, status: BookingStatus.IN_PROGRESS });
       }
 
-      // เสร็จสิ้นการให้คำปรึกษา
-      case 'complete': {
+      case "complete": {
         const { consultantNote, nextStep, riskLevel } = body;
 
         if (!consultantNote) {
-          return NextResponse.json(
-            { error: 'กรุณาระบุบันทึกการปรึกษา' },
-            { status: 400 }
-          );
+          return NextResponse.json({ error: "กรุณาระบุบันทึกการปรึกษา" }, { status: 400 });
         }
 
         await prisma.$transaction(async (tx) => {
-          // อัพเดท booking
           await tx.booking.update({
             where: { booking_id: bookingId },
-            data: { booking_status: 'COMPLETED' },
+            data: { booking_status: BookingStatus.COMPLETED },
           });
 
-          // สร้าง outcome record
           await tx.bookingOutcome.create({
             data: {
               booking_id: bookingId,
@@ -292,39 +246,28 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
           });
         });
 
-        return NextResponse.json({ success: true, status: 'COMPLETED' });
+        return NextResponse.json({ success: true, status: BookingStatus.COMPLETED });
       }
-      
-      case 'cancel': {
+
+      case "cancel": {
         if (!cancelReason) {
-          return NextResponse.json(
-            { error: 'กรุณาระบุเหตุผลในการยกเลิก' },
-            { status: 400 }
-          );
+          return NextResponse.json({ error: "กรุณาระบุเหตุผลในการยกเลิก" }, { status: 400 });
         }
 
-        // ✅ ดึง account จาก JWT (cookie / header)
         const account = await getAccountFromRequest(req);
         if (!account) {
-          return NextResponse.json(
-            { error: 'Unauthorized' },
-            { status: 401 }
-          );
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        // (optional แต่แนะนำ) ให้เฉพาะ STUDENT ยกเลิกเองได้
-        if (account.role !== 'STUDENT') {
-          return NextResponse.json(
-            { error: 'Permission denied' },
-            { status: 403 }
-          );
+        if (account.role !== "STUDENT") {
+          return NextResponse.json({ error: "Permission denied" }, { status: 403 });
         }
 
         await prisma.$transaction(async (tx) => {
-          // 1) update booking
+          // 1) cancel booking
           await tx.booking.update({
             where: { booking_id: bookingId },
-            data: { booking_status: 'CANCELLED' },
+            data: { booking_status: BookingStatus.CANCELLED },
           });
 
           // 2) insert cancellation record
@@ -336,33 +279,41 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
             },
           });
 
-          // 3) คืน time slot
-          const slots = await tx.bookingSlot.findMany({
-            where: { booking_id: bookingId },
+          // 3) capacity-aware update timeslot status
+          const slot = await tx.timeSlot.findUnique({
+            where: { time_slot_id: booking.time_slot_id },
+            select: { time_slot_id: true, time_slot_max_capacity: true },
           });
 
-          for (const s of slots) {
+          if (slot) {
+            const activeCount = await tx.booking.count({
+              where: {
+                time_slot_id: slot.time_slot_id,
+                booking_status: { not: BookingStatus.CANCELLED },
+              },
+            });
+
+            // ถ้ายังไม่เต็ม -> AVAILABLE, ถ้าเต็ม -> BOOKED
             await tx.timeSlot.update({
-              where: { time_slot_id: s.time_slot_id },
-              data: { time_slot_status: 'AVAILABLE' },
+              where: { time_slot_id: slot.time_slot_id },
+              data: {
+                time_slot_status:
+                  activeCount < slot.time_slot_max_capacity
+                    ? TimeSlotStatus.AVAILABLE
+                    : TimeSlotStatus.BOOKED,
+              },
             });
           }
         });
 
-        return NextResponse.json({ success: true, status: 'CANCELLED' });
+        return NextResponse.json({ success: true, status: BookingStatus.CANCELLED });
       }
 
       default:
-        return NextResponse.json(
-          { error: 'Invalid action' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
   } catch (error) {
-    console.error('Error updating booking:', error);
-    return NextResponse.json(
-      { error: 'Failed to update booking' },
-      { status: 500 }
-    );
+    console.error("Error updating booking:", error);
+    return NextResponse.json({ error: "Failed to update booking" }, { status: 500 });
   }
 }

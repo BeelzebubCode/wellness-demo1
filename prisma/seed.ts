@@ -1,3 +1,4 @@
+// prisma/seed.ts
 import {
   PrismaClient,
   AccountRole,
@@ -5,13 +6,14 @@ import {
   StudentGender,
   StudentAddressType,
   TimeSlotStatus,
-} from '@prisma/client';
+} from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-// -----------------------------
-// Helpers
-// -----------------------------
+/* =========================================================
+  Helpers
+========================================================= */
 const randomInt = (min: number, max: number) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
 
@@ -19,14 +21,16 @@ const randomItem = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length
 const randomBool = (p = 0.5) => Math.random() < p;
 
 const firstNames = [
-  'Somchai','Somsak','Malee','Manee','Pranee','Wichai','Suda','Naree','Arthit','Kanya',
-  'Decha','Pichai','Ratana','Sunee','Vipa','Narong','Siriporn','Thongchai','Udom','Wanida',
+  "Somchai","Somsak","Malee","Manee","Pranee","Wichai","Suda","Naree","Arthit","Kanya",
+  "Decha","Pichai","Ratana","Sunee","Vipa","Narong","Siriporn","Thongchai","Udom","Wanida",
+  "Pongsak","Nattapong","Jirawat","Chanida","Phanumas","Kritsada","Pimchanok","Nicha","Thanawat","Sirin",
 ];
 const lastNames = [
-  'Jaidee','Meewong','Rakchart','Sukjai','Munjai','Kongthong','Srisuk','Wongsa','Panya','Kaewta',
-  'Rojjana','Saetang','Saelee','Jairak','Boonmee','Chaisri','Wongsuwan','Intara','Promma','Srithep',
+  "Jaidee","Meewong","Rakchart","Sukjai","Munjai","Kongthong","Srisuk","Wongsa","Panya","Kaewta",
+  "Rojjana","Saetang","Saelee","Jairak","Boonmee","Chaisri","Wongsuwan","Intara","Promma","Srithep",
+  "Kongkaew","Suwan","Thongdee","Rattanaporn","Chantara","Srisawat","Petchmanee","Phrom","Kaewsai","Yimyam",
 ];
-const nicknames = ['Mod','Kai','Moo','Nu','Lek','Yai','Ton','Som','Oat','Pim','Nan','May','Best','Keng','Ploy'];
+const nicknames = ["Mod","Kai","Moo","Nu","Lek","Yai","Ton","Som","Oat","Pim","Nan","May","Best","Keng","Ploy","Mew","New","Bam","Mint","Tee"];
 
 function startOfDay(d: Date) {
   const x = new Date(d);
@@ -34,16 +38,16 @@ function startOfDay(d: Date) {
   return x;
 }
 
-// -----------------------------
-// Clear DB (DEV only)
-// -----------------------------
+/* =========================================================
+  Clear DB (DEV only)
+========================================================= */
 async function clearDbIfNeeded() {
-  const CLEAR = process.env.CLEAR_DB === '1';
+  const CLEAR = process.env.CLEAR_DB === "1";
   if (!CLEAR) return;
 
-  console.log('🧨 CLEAR_DB=1 → clearing tables (DEV ONLY) ...');
+  console.log("🧨 CLEAR_DB=1 → clearing tables (DEV ONLY) ...");
 
-  // ลบลูกก่อน (ระวัง FK)
+  // delete children first
   await prisma.notification.deleteMany();
   await prisma.notificationTemplate.deleteMany();
 
@@ -55,7 +59,6 @@ async function clearDbIfNeeded() {
   await prisma.bookingCancellation.deleteMany();
   await prisma.bookingOutcome.deleteMany();
   await prisma.bookingAssignment.deleteMany();
-  await prisma.bookingSlot.deleteMany();
   await prisma.booking.deleteMany();
 
   await prisma.timeSlot.deleteMany();
@@ -81,172 +84,264 @@ async function clearDbIfNeeded() {
 
   await prisma.account.deleteMany();
 
-  console.log('✅ cleared.');
+  console.log("✅ cleared.");
 }
 
-async function main() {
-  console.log('🌱 Starting FULL seed (matches your schema.prisma) ...');
+/* =========================================================
+  Seed Data (Thai university style faculties + departments)
+========================================================= */
 
+// “คณะ” แบบมหาลัยไทย (จัดเต็ม)
+const FACULTIES = [
+  { code: "ENG", th: "วิศวกรรมศาสตร์", en: "Engineering" },
+  { code: "SCI", th: "วิทยาศาสตร์", en: "Science" },
+  { code: "ICT", th: "เทคโนโลยีสารสนเทศและการสื่อสาร", en: "Information & Communication Technology" },
+  { code: "MED", th: "แพทยศาสตร์", en: "Medicine" },
+  { code: "NUR", th: "พยาบาลศาสตร์", en: "Nursing" },
+  { code: "PHA", th: "เภสัชศาสตร์", en: "Pharmacy" },
+  { code: "DEN", th: "ทันตแพทยศาสตร์", en: "Dentistry" },
+  { code: "PHAH", th: "สาธารณสุขศาสตร์", en: "Public Health" },
+  { code: "AHS", th: "สหเวชศาสตร์", en: "Allied Health Sciences" },
+  { code: "EDU", th: "ศึกษาศาสตร์", en: "Education" },
+  { code: "HUM", th: "มนุษยศาสตร์", en: "Humanities" },
+  { code: "SOC", th: "สังคมศาสตร์", en: "Social Sciences" },
+  { code: "BUS", th: "บริหารธุรกิจ", en: "Business Administration" },
+  { code: "ECO", th: "เศรษฐศาสตร์", en: "Economics" },
+  { code: "LAW", th: "นิติศาสตร์", en: "Law" },
+  { code: "ARC", th: "สถาปัตยกรรมศาสตร์", en: "Architecture" },
+  { code: "AGR", th: "เกษตรศาสตร์", en: "Agriculture" },
+  { code: "ART", th: "ศิลปกรรมศาสตร์", en: "Fine Arts" },
+  { code: "COM", th: "นิเทศศาสตร์", en: "Communication Arts" },
+  { code: "TOUR", th: "การท่องเที่ยวและการโรงแรม", en: "Tourism & Hospitality" },
+];
+
+// “สาขา/ภาควิชา” แบบมหาลัยไทย (เยอะพอให้ใช้จริง)
+const DEPARTMENTS: Array<{ facultyCode: string; code: string; th: string; en: string }> = [
+  // ENG
+  { facultyCode: "ENG", code: "CPE", th: "วิศวกรรมคอมพิวเตอร์", en: "Computer Engineering" },
+  { facultyCode: "ENG", code: "EE", th: "วิศวกรรมไฟฟ้า", en: "Electrical Engineering" },
+  { facultyCode: "ENG", code: "ME", th: "วิศวกรรมเครื่องกล", en: "Mechanical Engineering" },
+  { facultyCode: "ENG", code: "CE", th: "วิศวกรรมโยธา", en: "Civil Engineering" },
+  { facultyCode: "ENG", code: "IE", th: "วิศวกรรมอุตสาหการ", en: "Industrial Engineering" },
+  { facultyCode: "ENG", code: "CHE", th: "วิศวกรรมเคมี", en: "Chemical Engineering" },
+  { facultyCode: "ENG", code: "ENV", th: "วิศวกรรมสิ่งแวดล้อม", en: "Environmental Engineering" },
+
+  // SCI
+  { facultyCode: "SCI", code: "CS", th: "วิทยาการคอมพิวเตอร์", en: "Computer Science" },
+  { facultyCode: "SCI", code: "MATH", th: "คณิตศาสตร์", en: "Mathematics" },
+  { facultyCode: "SCI", code: "STAT", th: "สถิติ", en: "Statistics" },
+  { facultyCode: "SCI", code: "PHYS", th: "ฟิสิกส์", en: "Physics" },
+  { facultyCode: "SCI", code: "CHEM", th: "เคมี", en: "Chemistry" },
+  { facultyCode: "SCI", code: "BIO", th: "ชีววิทยา", en: "Biology" },
+  { facultyCode: "SCI", code: "MICRO", th: "จุลชีววิทยา", en: "Microbiology" },
+
+  // ICT
+  { facultyCode: "ICT", code: "IT", th: "เทคโนโลยีสารสนเทศ", en: "Information Technology" },
+  { facultyCode: "ICT", code: "SE", th: "วิศวกรรมซอฟต์แวร์", en: "Software Engineering" },
+  { facultyCode: "ICT", code: "DS", th: "วิทยาการข้อมูล", en: "Data Science" },
+  { facultyCode: "ICT", code: "CY", th: "ความมั่นคงปลอดภัยไซเบอร์", en: "Cybersecurity" },
+  { facultyCode: "ICT", code: "IS", th: "ระบบสารสนเทศ", en: "Information Systems" },
+
+  // MED / Health
+  { facultyCode: "MED", code: "MEDGEN", th: "แพทยศาสตร์", en: "Doctor of Medicine" },
+  { facultyCode: "NUR", code: "NURGEN", th: "พยาบาลศาสตร์", en: "Nursing" },
+  { facultyCode: "PHA", code: "PHARM", th: "เภสัชศาสตร์", en: "Pharmacy" },
+  { facultyCode: "DEN", code: "DENT", th: "ทันตแพทยศาสตร์", en: "Dentistry" },
+  { facultyCode: "PHAH", code: "PH", th: "สาธารณสุขศาสตร์", en: "Public Health" },
+  { facultyCode: "AHS", code: "PT", th: "กายภาพบำบัด", en: "Physical Therapy" },
+  { facultyCode: "AHS", code: "MT", th: "เทคนิคการแพทย์", en: "Medical Technology" },
+
+  // EDU
+  { facultyCode: "EDU", code: "EDGEN", th: "การศึกษา", en: "Education" },
+  { facultyCode: "EDU", code: "EDTECH", th: "เทคโนโลยีการศึกษา", en: "Educational Technology" },
+
+  // HUM / SOC
+  { facultyCode: "HUM", code: "THAI", th: "ภาษาไทย", en: "Thai" },
+  { facultyCode: "HUM", code: "ENG_LANG", th: "ภาษาอังกฤษ", en: "English" },
+  { facultyCode: "HUM", code: "JPN", th: "ภาษาญี่ปุ่น", en: "Japanese" },
+  { facultyCode: "HUM", code: "HIS", th: "ประวัติศาสตร์", en: "History" },
+
+  { facultyCode: "SOC", code: "PSY", th: "จิตวิทยา", en: "Psychology" },
+  { facultyCode: "SOC", code: "POL", th: "รัฐศาสตร์", en: "Political Science" },
+  { facultyCode: "SOC", code: "SOCIO", th: "สังคมวิทยา", en: "Sociology" },
+  { facultyCode: "SOC", code: "IR", th: "ความสัมพันธ์ระหว่างประเทศ", en: "International Relations" },
+
+  // BUS / ECO / LAW
+  { facultyCode: "BUS", code: "ACC", th: "บัญชี", en: "Accounting" },
+  { facultyCode: "BUS", code: "MKT", th: "การตลาด", en: "Marketing" },
+  { facultyCode: "BUS", code: "FIN", th: "การเงิน", en: "Finance" },
+  { facultyCode: "BUS", code: "HR", th: "ทรัพยากรมนุษย์", en: "Human Resource Management" },
+  { facultyCode: "ECO", code: "ECON", th: "เศรษฐศาสตร์", en: "Economics" },
+  { facultyCode: "LAW", code: "LAWGEN", th: "นิติศาสตร์", en: "Law" },
+
+  // ARC / AGR / ART / COM / TOUR
+  { facultyCode: "ARC", code: "ARCH", th: "สถาปัตยกรรม", en: "Architecture" },
+  { facultyCode: "ARC", code: "INTDES", th: "ออกแบบภายใน", en: "Interior Design" },
+  { facultyCode: "AGR", code: "AGRI", th: "เกษตรศาสตร์", en: "Agriculture" },
+  { facultyCode: "AGR", code: "FOOD", th: "เทคโนโลยีอาหาร", en: "Food Technology" },
+  { facultyCode: "ART", code: "FA", th: "ศิลปกรรม", en: "Fine Arts" },
+  { facultyCode: "COM", code: "COMART", th: "นิเทศศาสตร์", en: "Communication Arts" },
+  { facultyCode: "TOUR", code: "HOTEL", th: "การโรงแรม", en: "Hotel Management" },
+  { facultyCode: "TOUR", code: "TOUR", th: "การท่องเที่ยว", en: "Tourism" },
+];
+
+async function main() {
+  console.log("🌱 Starting FULL seed (PostgreSQL + your current schema) ...");
   await clearDbIfNeeded();
 
-  // =========================================================
-  // 1) Static tables
-  // =========================================================
+  /* =========================================================
+    Password policy
+  ========================================================= */
+  const PLAIN_PASSWORD = "wellness@nu.ac.th_123456!";
+  const PASSWORD_HASH = await bcrypt.hash(PLAIN_PASSWORD, 10);
+
+  /* =========================================================
+    1) Static tables
+  ========================================================= */
 
   // StudentStatus
   const statusActive = await prisma.studentStatus.upsert({
-    where: { student_status_code: 'ACTIVE' },
-    update: { student_status_detail: 'กำลังศึกษา' },
-    create: { student_status_code: 'ACTIVE', student_status_detail: 'กำลังศึกษา' },
+    where: { student_status_code: "ACTIVE" },
+    update: { student_status_detail: "กำลังศึกษา" },
+    create: { student_status_code: "ACTIVE", student_status_detail: "กำลังศึกษา" },
   });
 
   const statusInactive = await prisma.studentStatus.upsert({
-    where: { student_status_code: 'INACTIVE' },
-    update: { student_status_detail: 'พักการศึกษา/ลาออก' },
-    create: { student_status_code: 'INACTIVE', student_status_detail: 'พักการศึกษา/ลาออก' },
+    where: { student_status_code: "INACTIVE" },
+    update: { student_status_detail: "พักการศึกษา/ลาออก" },
+    create: { student_status_code: "INACTIVE", student_status_detail: "พักการศึกษา/ลาออก" },
   });
 
   // Organization
   const org = await prisma.organization.upsert({
-    where: { organization_name: 'Counseling Center' },
-    update: { organization_type: 'Internal' },
-    create: { organization_name: 'Counseling Center', organization_type: 'Internal' },
+    where: { organization_name: "Counseling Center" },
+    update: { organization_type: "Internal" },
+    create: { organization_name: "Counseling Center", organization_type: "Internal" },
   });
 
-  // Province
-  const provPHS = await prisma.province.upsert({
-    where: { province_code: 'PHS' },
-    update: { province_name_th: 'พิษณุโลก', province_name_en: 'Phitsanulok' },
-    create: { province_code: 'PHS', province_name_th: 'พิษณุโลก', province_name_en: 'Phitsanulok' },
-  });
-
-  const provBKK = await prisma.province.upsert({
-    where: { province_code: 'BKK' },
-    update: { province_name_th: 'กรุงเทพมหานคร', province_name_en: 'Bangkok' },
-    create: { province_code: 'BKK', province_name_th: 'กรุงเทพมหานคร', province_name_en: 'Bangkok' },
-  });
-
-  // Faculty
-  const facultyENG = await prisma.faculty.upsert({
-    where: { faculty_code: 'ENG' },
-    update: { faculty_name_th: 'วิศวกรรมศาสตร์', faculty_name_en: 'Engineering' },
-    create: { faculty_code: 'ENG', faculty_name_th: 'วิศวกรรมศาสตร์', faculty_name_en: 'Engineering' },
-  });
-
-  // Department
-  const depCPE = await prisma.department.upsert({
-    where: { department_code: 'CPE' },
-    update: {
-      faculty_id: facultyENG.faculty_id,
-      department_name_th: 'วิศวกรรมคอมพิวเตอร์',
-      department_name_en: 'Computer Engineering',
-    },
-    create: {
-      faculty_id: facultyENG.faculty_id,
-      department_code: 'CPE',
-      department_name_th: 'วิศวกรรมคอมพิวเตอร์',
-      department_name_en: 'Computer Engineering',
-    },
-  });
-
-  const depME = await prisma.department.upsert({
-    where: { department_code: 'ME' },
-    update: {
-      faculty_id: facultyENG.faculty_id,
-      department_name_th: 'วิศวกรรมเครื่องกล',
-      department_name_en: 'Mechanical Engineering',
-    },
-    create: {
-      faculty_id: facultyENG.faculty_id,
-      department_code: 'ME',
-      department_name_th: 'วิศวกรรมเครื่องกล',
-      department_name_en: 'Mechanical Engineering',
-    },
-  });
-
-  // Advisor (ไม่มี unique บังคับใน schema → ทำแบบ find + create เพื่อไม่ซ้ำตาม email)
-  async function upsertAdvisor(args: {
-    faculty_id: number;
-    department_id: number;
-    first: string;
-    last: string;
-    email: string;
-  }) {
-    const existing = await prisma.advisor.findFirst({
-      where: { advisor_email: args.email },
-    });
-    if (existing) return existing;
-
-    return prisma.advisor.create({
-      data: {
-        faculty_id: args.faculty_id,
-        department_id: args.department_id,
-        advisor_first_name: args.first,
-        advisor_last_name: args.last,
-        advisor_email: args.email,
-        advisor_academic_rank: 'Asst. Prof.',
-        advisor_prefix: 'อ.',
-        advisor_phone_number: `0${randomInt(800000000, 899999999)}`,
-        advisor_office_location: 'Building A, Room 203',
-      },
-    });
+  // Provinces (เอาใช้จริงพอสำหรับ address)
+  const provincesData = [
+    { code: "PHS", th: "พิษณุโลก", en: "Phitsanulok" },
+    { code: "BKK", th: "กรุงเทพมหานคร", en: "Bangkok" },
+    { code: "CMI", th: "เชียงใหม่", en: "Chiang Mai" },
+    { code: "KKN", th: "ขอนแก่น", en: "Khon Kaen" },
+    { code: "NKI", th: "นครราชสีมา", en: "Nakhon Ratchasima" },
+    { code: "SNI", th: "สงขลา", en: "Songkhla" },
+    { code: "CPN", th: "ชลบุรี", en: "Chonburi" },
+  ];
+  const provinces = [];
+  for (const p of provincesData) {
+    provinces.push(
+      await prisma.province.upsert({
+        where: { province_code: p.code },
+        update: { province_name_th: p.th, province_name_en: p.en },
+        create: { province_code: p.code, province_name_th: p.th, province_name_en: p.en },
+      })
+    );
   }
 
-  const advisor1 = await upsertAdvisor({
-    faculty_id: facultyENG.faculty_id,
-    department_id: depCPE.department_id,
-    first: 'Wuttipong',
-    last: 'Rueanthong',
-    email: 'advisor1@university.ac.th',
-  });
+  // Faculties
+  const facultyByCode = new Map<string, { faculty_id: number; faculty_code: string }>();
+  for (const f of FACULTIES) {
+    const created = await prisma.faculty.upsert({
+      where: { faculty_code: f.code },
+      update: { faculty_name_th: f.th, faculty_name_en: f.en },
+      create: { faculty_code: f.code, faculty_name_th: f.th, faculty_name_en: f.en },
+    });
+    facultyByCode.set(f.code, created);
+  }
 
-  const advisor2 = await upsertAdvisor({
-    faculty_id: facultyENG.faculty_id,
-    department_id: depME.department_id,
-    first: 'Janjira',
-    last: 'Phayakphet',
-    email: 'advisor2@university.ac.th',
-  });
+  // Departments
+  const deptByCode = new Map<string, { department_id: number; department_code: string; faculty_id: number }>();
+  for (const d of DEPARTMENTS) {
+    const fac = facultyByCode.get(d.facultyCode);
+    if (!fac) continue;
+
+    const created = await prisma.department.upsert({
+      where: { department_code: d.code },
+      update: {
+        faculty_id: fac.faculty_id,
+        department_name_th: d.th,
+        department_name_en: d.en,
+      },
+      create: {
+        faculty_id: fac.faculty_id,
+        department_code: d.code,
+        department_name_th: d.th,
+        department_name_en: d.en,
+      },
+    });
+
+    deptByCode.set(d.code, created);
+  }
+
+  // Advisors (สร้าง 1 คนต่อ department แบบกันซ้ำด้วย email)
+  const advisors = [];
+  for (const d of DEPARTMENTS) {
+    const fac = facultyByCode.get(d.facultyCode);
+    const dep = deptByCode.get(d.code);
+    if (!fac || !dep) continue;
+
+    const email = `advisor_${d.code.toLowerCase()}@university.ac.th`;
+    const existing = await prisma.advisor.findFirst({ where: { advisor_email: email } });
+    if (existing) {
+      advisors.push(existing);
+      continue;
+    }
+
+    const created = await prisma.advisor.create({
+      data: {
+        faculty_id: fac.faculty_id,
+        department_id: dep.department_id,
+        advisor_academic_rank: randomItem(["Asst. Prof.", "Assoc. Prof.", "Lecturer"]),
+        advisor_prefix: randomItem(["อ.", "ผศ.", "รศ."]) as any,
+        advisor_first_name: randomItem(firstNames),
+        advisor_last_name: randomItem(lastNames),
+        advisor_email: email,
+        advisor_phone_number: `0${randomInt(800000000, 899999999)}`,
+        advisor_office_location: `Building ${randomItem(["A", "B", "C", "D"])}, Room ${randomInt(101, 499)}`,
+      },
+    });
+    advisors.push(created);
+  }
 
   // ProblemCategory
   const categoriesData = [
-    { code: 'ACAD', th: 'การเรียน', desc: 'ปัญหาเรื่องเกรด, การเรียนไม่ทัน' },
-    { code: 'STRESS', th: 'ความเครียด', desc: 'ความเครียดวิตกกังวลทั่วไป' },
-    { code: 'REL', th: 'ความสัมพันธ์', desc: 'เพื่อน, แฟน, ครอบครัว' },
-    { code: 'ADJ', th: 'การปรับตัว', desc: 'การปรับตัวเข้ากับมหาวิทยาลัย' },
-    { code: 'FIN', th: 'การเงิน', desc: 'ทุนการศึกษา, ค่าใช้จ่าย' },
+    { code: "ACAD", th: "การเรียน", desc: "ปัญหาเรื่องเกรด, การเรียนไม่ทัน" },
+    { code: "STRESS", th: "ความเครียด", desc: "ความเครียดวิตกกังวลทั่วไป" },
+    { code: "REL", th: "ความสัมพันธ์", desc: "เพื่อน, แฟน, ครอบครัว" },
+    { code: "ADJ", th: "การปรับตัว", desc: "การปรับตัวเข้ากับมหาวิทยาลัย" },
+    { code: "FIN", th: "การเงิน", desc: "ทุนการศึกษา, ค่าใช้จ่าย" },
   ];
-
   const problemCategories = [];
   for (const c of categoriesData) {
-    const pc = await prisma.problemCategory.upsert({
-      where: { problem_category_code: c.code },
-      update: {
-        problem_category_name_th: c.th,
-        problem_category_name_en: c.code,
-        problem_category_description: c.desc,
-      },
-      create: {
-        problem_category_code: c.code,
-        problem_category_name_th: c.th,
-        problem_category_name_en: c.code,
-        problem_category_description: c.desc,
-      },
-    });
-    problemCategories.push(pc);
+    problemCategories.push(
+      await prisma.problemCategory.upsert({
+        where: { problem_category_code: c.code },
+        update: {
+          problem_category_name_th: c.th,
+          problem_category_name_en: c.code,
+          problem_category_description: c.desc,
+        },
+        create: {
+          problem_category_code: c.code,
+          problem_category_name_th: c.th,
+          problem_category_name_en: c.code,
+          problem_category_description: c.desc,
+        },
+      })
+    );
   }
 
   // EvaluationCriterion
   const criteriaData = [
-    { th: 'ความพึงพอใจโดยรวม', en: 'Overall satisfaction', w: '1.00', order: 1 },
-    { th: 'ความชัดเจนของคำแนะนำ', en: 'Clarity', w: '1.00', order: 2 },
-    { th: 'ทักษะการรับฟัง', en: 'Listening', w: '1.00', order: 3 },
-    { th: 'ความเป็นส่วนตัวและความไว้วางใจ', en: 'Privacy & trust', w: '1.00', order: 4 },
+    { th: "ความพึงพอใจโดยรวม", en: "Overall satisfaction", w: "1.00", order: 1 },
+    { th: "ความชัดเจนของคำแนะนำ", en: "Clarity", w: "1.00", order: 2 },
+    { th: "ทักษะการรับฟัง", en: "Listening", w: "1.00", order: 3 },
+    { th: "ความเป็นส่วนตัวและความไว้วางใจ", en: "Privacy & trust", w: "1.00", order: 4 },
   ];
-
   const criteria = [];
   for (const c of criteriaData) {
-    // ไม่มี unique ให้ upsert → ใช้ findFirst ตาม topic_th
     const existing = await prisma.evaluationCriterion.findFirst({
       where: { evaluation_criterion_topic_th: c.th },
     });
@@ -254,109 +349,101 @@ async function main() {
       criteria.push(existing);
       continue;
     }
-    const created = await prisma.evaluationCriterion.create({
-      data: {
-        evaluation_criterion_topic_th: c.th,
-        evaluation_criterion_topic_en: c.en,
-        evaluation_criterion_weight: c.w as any, // prisma decimal รับ string ได้
-        evaluation_criterion_display_order: c.order,
-      },
-    });
-    criteria.push(created);
+    criteria.push(
+      await prisma.evaluationCriterion.create({
+        data: {
+          evaluation_criterion_topic_th: c.th,
+          evaluation_criterion_topic_en: c.en,
+          evaluation_criterion_weight: c.w as any,
+          evaluation_criterion_display_order: c.order,
+        },
+      })
+    );
   }
 
   // NotificationTemplate
   const tplCreated = await prisma.notificationTemplate.upsert({
-    where: { notification_template_code: 'BOOKING_CREATED' },
+    where: { notification_template_code: "BOOKING_CREATED" },
     update: {
-      notification_template_title: 'สร้างนัดหมายสำเร็จ',
-      notification_template_body: 'ระบบได้รับคำขอจองของคุณแล้ว กรุณารอการมอบหมายที่ปรึกษา',
-      notification_template_format: 'TEXT',
+      notification_template_title: "สร้างนัดหมายสำเร็จ",
+      notification_template_body: "ระบบได้รับคำขอจองของคุณแล้ว กรุณารอการมอบหมายที่ปรึกษา",
+      notification_template_format: "TEXT",
     },
     create: {
-      notification_template_code: 'BOOKING_CREATED',
-      notification_template_title: 'สร้างนัดหมายสำเร็จ',
-      notification_template_body: 'ระบบได้รับคำขอจองของคุณแล้ว กรุณารอการมอบหมายที่ปรึกษา',
-      notification_template_format: 'TEXT',
+      notification_template_code: "BOOKING_CREATED",
+      notification_template_title: "สร้างนัดหมายสำเร็จ",
+      notification_template_body: "ระบบได้รับคำขอจองของคุณแล้ว กรุณารอการมอบหมายที่ปรึกษา",
+      notification_template_format: "TEXT",
     },
   });
 
   const tplAssigned = await prisma.notificationTemplate.upsert({
-    where: { notification_template_code: 'BOOKING_ASSIGNED' },
+    where: { notification_template_code: "BOOKING_ASSIGNED" },
     update: {
-      notification_template_title: 'มอบหมายที่ปรึกษาแล้ว',
-      notification_template_body: 'ระบบได้มอบหมายที่ปรึกษาให้คุณเรียบร้อยแล้ว',
-      notification_template_format: 'TEXT',
+      notification_template_title: "มอบหมายที่ปรึกษาแล้ว",
+      notification_template_body: "ระบบได้มอบหมายที่ปรึกษาให้คุณเรียบร้อยแล้ว",
+      notification_template_format: "TEXT",
     },
     create: {
-      notification_template_code: 'BOOKING_ASSIGNED',
-      notification_template_title: 'มอบหมายที่ปรึกษาแล้ว',
-      notification_template_body: 'ระบบได้มอบหมายที่ปรึกษาให้คุณเรียบร้อยแล้ว',
-      notification_template_format: 'TEXT',
+      notification_template_code: "BOOKING_ASSIGNED",
+      notification_template_title: "มอบหมายที่ปรึกษาแล้ว",
+      notification_template_body: "ระบบได้มอบหมายที่ปรึกษาให้คุณเรียบร้อยแล้ว",
+      notification_template_format: "TEXT",
     },
   });
 
-  // =========================================================
-  // 2) Accounts: head admin
-  // =========================================================
+  /* =========================================================
+    2) Accounts: head admin (username = head)
+  ========================================================= */
   const headAccount = await prisma.account.upsert({
-    where: { account_username: 'admin' },
-    update: { account_role: AccountRole.HEAD_CONSULTANT },
+    where: { account_username: "head" },
+    update: { account_role: AccountRole.HEAD_CONSULTANT, account_password: PASSWORD_HASH },
     create: {
-      account_username: 'admin',
-      account_password: '$2b$10$mockhash_for_dev_only',
+      account_username: "head",
+      account_password: PASSWORD_HASH,
       account_role: AccountRole.HEAD_CONSULTANT,
       account_line_id: null,
     },
   });
 
-  // =========================================================
-  // 3) Consultants (4) + profile + language + specialization
-  // =========================================================
+  /* =========================================================
+    3) Consultants (consultant1..consultant5)
+  ========================================================= */
   const consultants = [];
-
   const languagePool = [
-    { code: 'TH', level: 'NATIVE' },
-    { code: 'EN', level: 'GOOD' },
-    { code: 'CN', level: 'BASIC' },
+    { code: "TH", level: "NATIVE" },
+    { code: "EN", level: "GOOD" },
+    { code: "CN", level: "BASIC" },
   ];
   const specializationPool = [
-    'Stress Management',
-    'Academic Counseling',
-    'Relationship Counseling',
-    'Financial Stress',
-    'Adjustment to University',
+    "Stress Management",
+    "Academic Counseling",
+    "Relationship Counseling",
+    "Financial Stress",
+    "Adjustment to University",
   ];
 
-  for (let i = 1; i <= 4; i++) {
+  for (let i = 1; i <= 5; i++) {
     const fname = randomItem(firstNames);
     const lname = randomItem(lastNames);
 
     const acc = await prisma.account.upsert({
       where: { account_username: `consultant${i}` },
-      update: { account_role: AccountRole.CONSULTANT },
+      update: { account_role: AccountRole.CONSULTANT, account_password: PASSWORD_HASH },
       create: {
         account_username: `consultant${i}`,
-        account_password: '$2b$10$mockhash_for_dev_only',
+        account_password: PASSWORD_HASH,
         account_role: AccountRole.CONSULTANT,
       },
     });
 
-    // consultant (ไม่มี unique field บังคับนอกจาก account_id) → ใช้ findFirst แล้ว create
-    let consultant = await prisma.consultant.findFirst({
-      where: { account_id: acc.account_id },
-    });
-
+    let consultant = await prisma.consultant.findFirst({ where: { account_id: acc.account_id } });
     if (!consultant) {
       consultant = await prisma.consultant.create({
-        data: {
-          account_id: acc.account_id,
-          organization_id: org.organization_id,
-        },
+        data: { account_id: acc.account_id, organization_id: org.organization_id },
       });
     }
 
-    // profile 1:1 id=consultant_id
     await prisma.consultantProfile.upsert({
       where: { consultant_id: consultant.consultant_id },
       update: {
@@ -364,7 +451,7 @@ async function main() {
         consultant_last_name: lname,
         consultant_nickname: randomItem(nicknames),
         consultant_email: `consultant${i}@university.ac.th`,
-        consultant_gender: 'MALE',
+        consultant_gender: "MALE",
         consultant_phone_number: `08${randomInt(10000000, 99999999)}`,
       },
       create: {
@@ -373,15 +460,18 @@ async function main() {
         consultant_last_name: lname,
         consultant_nickname: randomItem(nicknames),
         consultant_email: `consultant${i}@university.ac.th`,
-        consultant_gender: 'MALE',
+        consultant_gender: "MALE",
         consultant_phone_number: `08${randomInt(10000000, 99999999)}`,
       },
     });
 
-    // languages (unique composite: consultant_id + consultant_language_code)
+    // languages (unique composite)
     const langCount = randomInt(1, 2);
-    const pickedLang = [...new Set(Array.from({ length: langCount }, () => randomItem(languagePool)))];
-    for (const l of pickedLang) {
+    const pickedLangCodes = Array.from(
+      new Set(Array.from({ length: langCount }, () => randomItem(languagePool).code))
+    );
+    for (const code of pickedLangCodes) {
+      const l = languagePool.find((x) => x.code === code)!;
       await prisma.consultantLanguage.upsert({
         where: {
           consultant_id_consultant_language_code: {
@@ -398,10 +488,12 @@ async function main() {
       });
     }
 
-    // specialization (unique composite: consultant_id + consultant_specialization_topic)
+    // specialization (unique composite)
     const specCount = randomInt(1, 2);
-    const pickedSpec = [...new Set(Array.from({ length: specCount }, () => randomItem(specializationPool)))];
-    for (const s of pickedSpec) {
+    const pickedSpecs = Array.from(
+      new Set(Array.from({ length: specCount }, () => randomItem(specializationPool)))
+    );
+    for (const s of pickedSpecs) {
       await prisma.consultantSpecialization.upsert({
         where: {
           consultant_id_consultant_specialization_topic: {
@@ -410,40 +502,43 @@ async function main() {
           },
         },
         update: {},
-        create: {
-          consultant_id: consultant.consultant_id,
-          consultant_specialization_topic: s,
-        },
+        create: { consultant_id: consultant.consultant_id, consultant_specialization_topic: s },
       });
     }
 
     consultants.push(consultant);
   }
 
-  // =========================================================
-  // 4) Students (20) + profile + academic + addresses
-  // =========================================================
+  /* =========================================================
+    4) Students (student1..student20)
+       - student10..student20 มี booking
+       - student1..student9 ไม่มี booking
+       - academic: ผูก faculty/department แบบ realist
+  ========================================================= */
   const students = [];
+  const deptList = Array.from(deptByCode.values());
 
   for (let i = 1; i <= 20; i++) {
     const fname = randomItem(firstNames);
     const lname = randomItem(lastNames);
     const gender = randomItem(Object.values(StudentGender));
-
     const lineId = `U_MOCK_${1000000000 + i}`;
 
     const acc = await prisma.account.upsert({
       where: { account_username: `student${i}` },
-      update: { account_role: AccountRole.STUDENT, account_line_id: lineId },
+      update: {
+        account_role: AccountRole.STUDENT,
+        account_line_id: lineId,
+        account_password: PASSWORD_HASH,
+      },
       create: {
         account_username: `student${i}`,
-        account_password: '$2b$10$mockhash_for_dev_only',
+        account_password: PASSWORD_HASH,
         account_role: AccountRole.STUDENT,
         account_line_id: lineId,
       },
     });
 
-    // student (unique: account_id)
     let student = await prisma.student.findFirst({ where: { account_id: acc.account_id } });
     if (!student) {
       student = await prisma.student.create({
@@ -455,7 +550,6 @@ async function main() {
       });
     }
 
-    // student_profile (1:1 id = student_id)
     await prisma.studentProfile.upsert({
       where: { student_id: student.student_id },
       update: {
@@ -466,7 +560,7 @@ async function main() {
         student_birthday: new Date(`200${randomInt(2, 6)}-${randomInt(1, 12)}-${randomInt(1, 28)}`),
         student_phone_number: `08${randomInt(10000000, 99999999)}`,
         student_email: `student${i}@student.university.ac.th`,
-        student_prefix: randomItem(['นาย', 'นางสาว', 'คุณ']) as any,
+        student_prefix: randomItem(["นาย", "นางสาว", "คุณ"]) as any,
       },
       create: {
         student_id: student.student_id,
@@ -477,39 +571,44 @@ async function main() {
         student_birthday: new Date(`200${randomInt(2, 6)}-${randomInt(1, 12)}-${randomInt(1, 28)}`),
         student_phone_number: `08${randomInt(10000000, 99999999)}`,
         student_email: `student${i}@student.university.ac.th`,
-        student_prefix: randomItem(['นาย', 'นางสาว', 'คุณ']) as any,
+        student_prefix: randomItem(["นาย", "นางสาว", "คุณ"]) as any,
       },
     });
 
-    // student_academic (1:1 id=student_id)
+    // เลือก dept แบบ realistic (ให้หลากหลาย)
+    const dep = deptList[(i - 1) % deptList.length];
+    const advisor = advisors.find((a) => a.department_id === dep.department_id) ?? randomItem(advisors);
+
     await prisma.studentAcademic.upsert({
       where: { student_id: student.student_id },
       update: {
-        faculty_id: facultyENG.faculty_id,
-        department_id: i % 2 === 0 ? depCPE.department_id : depME.department_id,
-        advisor_id: i % 2 === 0 ? advisor1.advisor_id : advisor2.advisor_id,
-        student_program: 'International Program',
-        student_degree: 'Bachelor',
-        student_degree_name: 'Bachelor of Engineering',
+        faculty_id: dep.faculty_id,
+        department_id: dep.department_id,
+        advisor_id: advisor?.advisor_id ?? null,
+        student_program: randomBool(0.2) ? "International Program" : "Regular Program",
+        student_degree: "Bachelor",
+        student_degree_name: "Bachelor Degree",
         student_admit_academic_year: 2566,
       },
       create: {
         student_id: student.student_id,
-        faculty_id: facultyENG.faculty_id,
-        department_id: i % 2 === 0 ? depCPE.department_id : depME.department_id,
-        advisor_id: i % 2 === 0 ? advisor1.advisor_id : advisor2.advisor_id,
-        student_program: 'International Program',
-        student_degree: 'Bachelor',
-        student_degree_name: 'Bachelor of Engineering',
+        faculty_id: dep.faculty_id,
+        department_id: dep.department_id,
+        advisor_id: advisor?.advisor_id ?? null,
+        student_program: randomBool(0.2) ? "International Program" : "Regular Program",
+        student_degree: "Bachelor",
+        student_degree_name: "Bachelor Degree",
         student_admit_academic_year: 2566,
       },
     });
 
-    // addresses (unique composite: student_id + student_address_type)
+    // addresses
     const addressDetail = `บ้านเลขที่ ${randomInt(1, 99)}/${randomInt(1, 99)} ถนนสายหลัก`;
     const postal = `${randomInt(10000, 99999)}`;
 
-    // CURRENT
+    const provCurrent = provinces[(i - 1) % provinces.length];
+    const provHome = provinces[randomInt(0, provinces.length - 1)];
+
     await prisma.studentAddress.upsert({
       where: {
         student_id_student_address_type: {
@@ -518,24 +617,23 @@ async function main() {
         },
       },
       update: {
-        province_id: provPHS.province_id,
+        province_id: provCurrent.province_id,
         student_address_detail: addressDetail,
-        student_address_district: 'Muang',
-        student_address_sub_district: 'Nai Muang',
+        student_address_district: "Muang",
+        student_address_sub_district: "Nai Muang",
         student_address_postal_code: postal,
       },
       create: {
         student_id: student.student_id,
         student_address_type: StudentAddressType.CURRENT,
-        province_id: provPHS.province_id,
+        province_id: provCurrent.province_id,
         student_address_detail: addressDetail,
-        student_address_district: 'Muang',
-        student_address_sub_district: 'Nai Muang',
+        student_address_district: "Muang",
+        student_address_sub_district: "Nai Muang",
         student_address_postal_code: postal,
       },
     });
 
-    // PERMANENT
     await prisma.studentAddress.upsert({
       where: {
         student_id_student_address_type: {
@@ -544,19 +642,19 @@ async function main() {
         },
       },
       update: {
-        province_id: randomBool() ? provBKK.province_id : provPHS.province_id,
+        province_id: provHome.province_id,
         student_address_detail: `ภูมิลำเนา ${addressDetail}`,
-        student_address_district: 'Some District',
-        student_address_sub_district: 'Some Sub',
+        student_address_district: "Some District",
+        student_address_sub_district: "Some Sub",
         student_address_postal_code: `${randomInt(10000, 99999)}`,
       },
       create: {
         student_id: student.student_id,
         student_address_type: StudentAddressType.PERMANENT,
-        province_id: randomBool() ? provBKK.province_id : provPHS.province_id,
+        province_id: provHome.province_id,
         student_address_detail: `ภูมิลำเนา ${addressDetail}`,
-        student_address_district: 'Some District',
-        student_address_sub_district: 'Some Sub',
+        student_address_district: "Some District",
+        student_address_sub_district: "Some Sub",
         student_address_postal_code: `${randomInt(10000, 99999)}`,
       },
     });
@@ -564,127 +662,178 @@ async function main() {
     students.push(student);
   }
 
-  // =========================================================
-  // 5) TimeSlots + Bookings + BookingSlot + Assignment + Outcome + Cancellation + Feedback + Ratings + Comment + Notifications
-  // =========================================================
-  console.log('🗓️ Creating bookings ecosystem ...');
+  /* =========================================================
+    5) TimeSlots + Bookings ecosystem
+       - Booking เฉพาะ student10..student20
+       - ครบทุก status
+       - กัน unique (student_id, time_slot_id)
+       - กัน capacity (max_capacity)
+  ========================================================= */
+  console.log("🗓️ Creating time slots ...");
 
-  // สร้าง time slots (30 slots: past/now/future)
-  const timeSlots: { id: number; status: TimeSlotStatus }[] = [];
+  const today = startOfDay(new Date());
+  const timeSlots: { id: number; status: TimeSlotStatus; maxCap: number }[] = [];
 
-  for (let i = 0; i < 30; i++) {
-    const base = startOfDay(new Date());
-    base.setDate(base.getDate() + randomInt(-14, 14));
+  // สร้าง slot จำนวนเยอะ ๆ กันชน
+  for (let i = 0; i < 80; i++) {
+    const base = new Date(today);
+    base.setDate(base.getDate() + randomInt(-7, 21));
     base.setHours(randomInt(9, 16), 0, 0, 0);
 
     const start = new Date(base);
     const end = new Date(base);
     end.setHours(end.getHours() + 1);
 
-    const status = randomBool(0.6) ? TimeSlotStatus.BOOKED : TimeSlotStatus.AVAILABLE;
+    const maxCap = 3;
+    const status = randomBool(0.7) ? TimeSlotStatus.AVAILABLE : TimeSlotStatus.BOOKED;
 
     const ts = await prisma.timeSlot.create({
       data: {
         time_slot_start_datetime: start,
         time_slot_end_datetime: end,
-        time_slot_max_capacity: 1,
+        time_slot_max_capacity: maxCap,
         time_slot_status: status,
       },
     });
 
-    timeSlots.push({ id: ts.time_slot_id, status });
+    timeSlots.push({ id: ts.time_slot_id, status, maxCap });
   }
 
-  // สร้าง booking 50 รายการ
-  const bookingTargets = [
-    { count: 30, status: BookingStatus.COMPLETED },
-    { count: 10, status: BookingStatus.IN_PROGRESS },
-    { count: 10, status: BookingStatus.PENDING_ASSIGNMENT },
+  async function pickSlotForStudentUnique(studentId: number, prefer?: TimeSlotStatus) {
+    const candidates = prefer ? timeSlots.filter((s) => s.status === prefer) : timeSlots;
+
+    for (let tries = 0; tries < 300; tries++) {
+      const s = randomItem(candidates.length ? candidates : timeSlots);
+
+      // capacity (นับ booking ที่ไม่ CANCELLED)
+      const cnt = await prisma.booking.count({
+        where: { time_slot_id: s.id, booking_status: { not: BookingStatus.CANCELLED } },
+      });
+      if (cnt >= s.maxCap) continue;
+
+      // unique pair (student_id, time_slot_id)
+      const dup = await prisma.booking.findFirst({
+        where: { student_id: studentId, time_slot_id: s.id },
+        select: { booking_id: true },
+      });
+      if (dup) continue;
+
+      return s;
+    }
+
+    // หาไม่ได้จริง ๆ → สร้างใหม่
+    const start = new Date(today);
+    start.setDate(start.getDate() + randomInt(0, 7));
+    start.setHours(randomInt(9, 16), 0, 0, 0);
+    const end = new Date(start);
+    end.setHours(end.getHours() + 1);
+
+    const ts = await prisma.timeSlot.create({
+      data: {
+        time_slot_start_datetime: start,
+        time_slot_end_datetime: end,
+        time_slot_max_capacity: 3,
+        time_slot_status: TimeSlotStatus.AVAILABLE,
+      },
+    });
+
+    const created = { id: ts.time_slot_id, status: TimeSlotStatus.AVAILABLE, maxCap: 3 };
+    timeSlots.push(created);
+    return created;
+  }
+
+  console.log("📌 Creating bookings for student10..student20 only ...");
+
+  const bookingPlan: { status: BookingStatus; count: number }[] = [
+    { status: BookingStatus.COMPLETED, count: 12 },
+    { status: BookingStatus.IN_PROGRESS, count: 6 },
+    { status: BookingStatus.PENDING_ASSIGNMENT, count: 10 },
+    { status: BookingStatus.CANCELLED, count: 6 },
   ];
 
-  const allBookings: number[] = [];
+  const bookingStudents = students.slice(9); // student10..student20
 
-  for (const target of bookingTargets) {
-    for (let i = 0; i < target.count; i++) {
-      const student = randomItem(students);
+  for (const plan of bookingPlan) {
+    for (let i = 0; i < plan.count; i++) {
+      const student = randomItem(bookingStudents);
       const category = randomItem(problemCategories);
 
-      // time slot เลือกตาม status ที่อยากได้
-      let slot = randomItem(timeSlots);
-      if (target.status === BookingStatus.PENDING_ASSIGNMENT) {
-        // เอา AVAILABLE เป็นหลัก
-        const available = timeSlots.filter((s) => s.status === TimeSlotStatus.AVAILABLE);
-        if (available.length) slot = randomItem(available);
-      } else {
-        // เอา BOOKED เป็นหลัก
-        const booked = timeSlots.filter((s) => s.status === TimeSlotStatus.BOOKED);
-        if (booked.length) slot = randomItem(booked);
-      }
+      const prefer =
+        plan.status === BookingStatus.PENDING_ASSIGNMENT ? TimeSlotStatus.AVAILABLE : TimeSlotStatus.BOOKED;
 
-      // consultant สำหรับสถานะที่ไม่ pending
+      const slot = await pickSlotForStudentUnique(student.student_id, prefer);
+
       const consultant =
-        target.status === BookingStatus.PENDING_ASSIGNMENT ? null : randomItem(consultants);
+        plan.status === BookingStatus.PENDING_ASSIGNMENT ? null : randomItem(consultants);
 
+      // สร้าง booking ก่อน
       const booking = await prisma.booking.create({
         data: {
           student_id: student.student_id,
           consultant_id: consultant?.consultant_id ?? null,
-          problem_category_id: category.problem_category_id,
-          booking_detail_text: 'ทดสอบการจอง (seed mock)',
-          booking_status: target.status,
-        },
-      });
-
-      allBookings.push(booking.booking_id);
-
-      // booking_slot (composite PK booking_id+time_slot_id)
-      await prisma.bookingSlot.upsert({
-        where: {
-          booking_id_time_slot_id: {
-            booking_id: booking.booking_id,
-            time_slot_id: slot.id,
-          },
-        },
-        update: {},
-        create: {
-          booking_id: booking.booking_id,
           time_slot_id: slot.id,
+          problem_category_id: category.problem_category_id,
+          booking_detail_text: "ทดสอบการจอง (seed mock)",
+          booking_status:
+            plan.status === BookingStatus.CANCELLED
+              ? BookingStatus.PENDING_ASSIGNMENT
+              : plan.status,
         },
       });
 
-      // assignment (มี field assigned_by/assigned_to เป็น consultant_id ทั้งคู่)
-      if (consultant && consultants.length >= 2) {
-        const assignedBy = randomItem(consultants); // ผู้มอบหมาย (เป็น consultant ตาม schema)
-        const assignedTo = consultant; // ผู้รับงาน
+      // CANCELLED -> สร้าง cancellation + update status
+      if (plan.status === BookingStatus.CANCELLED) {
+        await prisma.bookingCancellation.upsert({
+          where: { booking_id: booking.booking_id },
+          update: {
+            booking_cancellation_reason: "ยกเลิกโดยระบบ (mock)",
+            booking_cancellation_cancelled_by_id: headAccount.account_id,
+            booking_cancellation_cancelled_at: new Date(),
+          },
+          create: {
+            booking_id: booking.booking_id,
+            booking_cancellation_reason: "ยกเลิกโดยระบบ (mock)",
+            booking_cancellation_cancelled_by_id: headAccount.account_id,
+            booking_cancellation_cancelled_at: new Date(),
+          },
+        });
 
+        await prisma.booking.update({
+          where: { booking_id: booking.booking_id },
+          data: { booking_status: BookingStatus.CANCELLED },
+        });
+      }
+
+      // Assignment สำหรับ status ที่มี consultant
+      if (consultant && consultants.length >= 2) {
+        const assignedBy = randomItem(consultants);
         await prisma.bookingAssignment.create({
           data: {
             booking_id: booking.booking_id,
             booking_assignment_assigned_by_id: assignedBy.consultant_id,
-            booking_assignment_assigned_to_id: assignedTo.consultant_id,
-            booking_assignment_note: randomBool() ? 'มอบหมายงานโดยระบบ (mock)' : null,
+            booking_assignment_assigned_to_id: consultant.consultant_id,
+            booking_assignment_note: randomBool() ? "มอบหมายงานโดยระบบ (mock)" : null,
           },
         });
       }
 
-      // outcome เฉพาะ COMPLETED
-      if (target.status === BookingStatus.COMPLETED) {
+      // Outcome + Feedback เฉพาะ COMPLETED
+      if (plan.status === BookingStatus.COMPLETED) {
         await prisma.bookingOutcome.upsert({
           where: { booking_id: booking.booking_id },
           update: {
-            booking_outcome_consultant_note: 'ให้คำปรึกษาแล้ว นักศึกษาดีขึ้น (mock)',
-            booking_outcome_next_step: randomBool() ? 'ติดตามผลใน 2 สัปดาห์' : null,
+            booking_outcome_consultant_note: "ให้คำปรึกษาแล้ว นักศึกษาดีขึ้น (mock)",
+            booking_outcome_next_step: randomBool() ? "ติดตามผลใน 2 สัปดาห์" : null,
             booking_outcome_risk_level: randomInt(1, 3),
           },
           create: {
             booking_id: booking.booking_id,
-            booking_outcome_consultant_note: 'ให้คำปรึกษาแล้ว นักศึกษาดีขึ้น (mock)',
-            booking_outcome_next_step: randomBool() ? 'ติดตามผลใน 2 สัปดาห์' : null,
+            booking_outcome_consultant_note: "ให้คำปรึกษาแล้ว นักศึกษาดีขึ้น (mock)",
+            booking_outcome_next_step: randomBool() ? "ติดตามผลใน 2 สัปดาห์" : null,
             booking_outcome_risk_level: randomInt(1, 3),
           },
         });
 
-        // feedback (ต้องมี consultant_id not null ตาม schema)
         const consultantId = booking.consultant_id ?? randomItem(consultants).consultant_id;
 
         const feedback = await prisma.feedback.create({
@@ -696,7 +845,6 @@ async function main() {
           },
         });
 
-        // feedback_ratings
         for (const cr of criteria) {
           await prisma.feedbackRating.upsert({
             where: {
@@ -714,89 +862,72 @@ async function main() {
           });
         }
 
-        // feedback_comment (1:1 id = feedback_id)
         await prisma.feedbackComment.upsert({
           where: { feedback_id: feedback.feedback_id },
           update: {
             feedback_comment_text: randomBool()
-              ? 'รู้สึกดีขึ้นและได้รับคำแนะนำชัดเจน (mock)'
-              : 'อยากได้แนวทางปฏิบัติที่ละเอียดขึ้น (mock)',
-            feedback_comment_admin_reply: randomBool(0.3) ? 'ขอบคุณสำหรับความคิดเห็นครับ/ค่ะ (mock)' : null,
+              ? "รู้สึกดีขึ้นและได้รับคำแนะนำชัดเจน (mock)"
+              : "อยากได้แนวทางปฏิบัติที่ละเอียดขึ้น (mock)",
+            feedback_comment_admin_reply: randomBool(0.3)
+              ? "ขอบคุณสำหรับความคิดเห็นครับ/ค่ะ (mock)"
+              : null,
             feedback_comment_replied_by_id: randomBool(0.2) ? headAccount.account_id : null,
             feedback_comment_replied_at: randomBool(0.2) ? new Date() : null,
           },
           create: {
             feedback_id: feedback.feedback_id,
             feedback_comment_text: randomBool()
-              ? 'รู้สึกดีขึ้นและได้รับคำแนะนำชัดเจน (mock)'
-              : 'อยากได้แนวทางปฏิบัติที่ละเอียดขึ้น (mock)',
-            feedback_comment_admin_reply: randomBool(0.3) ? 'ขอบคุณสำหรับความคิดเห็นครับ/ค่ะ (mock)' : null,
+              ? "รู้สึกดีขึ้นและได้รับคำแนะนำชัดเจน (mock)"
+              : "อยากได้แนวทางปฏิบัติที่ละเอียดขึ้น (mock)",
+            feedback_comment_admin_reply: randomBool(0.3)
+              ? "ขอบคุณสำหรับความคิดเห็นครับ/ค่ะ (mock)"
+              : null,
             feedback_comment_replied_by_id: randomBool(0.2) ? headAccount.account_id : null,
             feedback_comment_replied_at: randomBool(0.2) ? new Date() : null,
           },
         });
       }
 
-      // cancellation บางรายการ (เช่น บาง PENDING)
-      if (target.status === BookingStatus.PENDING_ASSIGNMENT && randomBool(0.15)) {
-        await prisma.bookingCancellation.upsert({
-          where: { booking_id: booking.booking_id },
-          update: {
-            booking_cancellation_reason: 'ติดธุระกะทันหัน (mock)',
-            booking_cancellation_cancelled_by_id: headAccount.account_id,
-            booking_cancellation_cancelled_at: new Date(),
-          },
-          create: {
-            booking_id: booking.booking_id,
-            booking_cancellation_reason: 'ติดธุระกะทันหัน (mock)',
-            booking_cancellation_cancelled_by_id: headAccount.account_id,
-            booking_cancellation_cancelled_at: new Date(),
-          },
-        });
-
-        // update booking_status เป็น CANCELLED
-        await prisma.booking.update({
-          where: { booking_id: booking.booking_id },
-          data: { booking_status: BookingStatus.CANCELLED },
-        });
-      }
-
-      // notification (ผูกกับ account_id ของ student)
+      // Notification
       const studentAcc = await prisma.student.findUnique({
         where: { student_id: booking.student_id },
         select: { account_id: true },
       });
 
-      if (studentAcc && randomBool(0.4)) {
+      if (studentAcc && randomBool(0.5)) {
         await prisma.notification.create({
           data: {
             account_id: studentAcc.account_id,
-            notification_template_id: randomBool() ? tplCreated.notification_template_id : tplAssigned.notification_template_id,
+            notification_template_id: randomBool()
+              ? tplCreated.notification_template_id
+              : tplAssigned.notification_template_id,
             booking_id: booking.booking_id,
-            notification_channel: 'LINE',
-            notification_data: { bookingId: booking.booking_id, status: booking.booking_status } as any,
-            notification_status: randomBool(0.6) ? 'SENT' : 'PENDING',
-            notification_sent_at: randomBool(0.6) ? new Date() : null,
+            notification_channel: "LINE",
+            notification_data: { bookingId: booking.booking_id, status: plan.status } as any,
+            notification_status: randomBool(0.7) ? "SENT" : "PENDING",
+            notification_sent_at: randomBool(0.7) ? new Date() : null,
           },
         });
       }
     }
   }
 
-  console.log('✅ Seed completed!');
-  console.log('📌 ตัวอย่าง mock lineUserId: U_MOCK_1000000001 (student1)');
-  console.log('📌 ลองจองด้วย POST /api/v1/bookings payload:');
-  console.log(JSON.stringify({
-    lineUserId: 'U_MOCK_1000000001',
-    timeSlotId: timeSlots.find(s => s.status === TimeSlotStatus.AVAILABLE)?.id ?? timeSlots[0].id,
-    problemCategoryCode: 'STRESS',
-    detailText: 'ทดสอบจองแบบ mock line',
-  }, null, 2));
+  /* =========================================================
+    Done
+  ========================================================= */
+  console.log("✅ Seed completed!");
+  console.log("🔐 Login accounts:");
+  console.log(`- head / ${PLAIN_PASSWORD}`);
+  console.log("- consultant1..consultant5 / same password");
+  console.log("- student1..student20 / same password");
+  console.log("");
+  console.log("📌 Booking created only for: student10..student20");
+  console.log("📌 student1..student9 have NO bookings (as requested)");
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Seed error:', e);
+    console.error("❌ Seed error:", e);
     process.exit(1);
   })
   .finally(async () => {

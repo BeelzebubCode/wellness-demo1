@@ -1,5 +1,4 @@
 // src/app/api/admin/data-center/bookings/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
@@ -27,7 +26,7 @@ export async function GET(req: NextRequest) {
   const limit = Number(searchParams.get("limit") ?? 20);
   const skip = (page - 1) * limit;
 
-  const search = searchParams.get("search") ?? "";
+  const search = (searchParams.get("search") ?? "").trim();
   const status = searchParams.get("status");
   const startDate = searchParams.get("startDate");
   const endDate = searchParams.get("endDate");
@@ -46,25 +45,23 @@ export async function GET(req: NextRequest) {
 
     if (search) {
       where.OR = [
-        { student: { student_code: { contains: search } } },
-        { student: { profile: { student_first_name: { contains: search } } } },
-        { student: { profile: { student_last_name: { contains: search } } } },
-        { consultant: { profile: { consultant_first_name: { contains: search } } } },
-        { consultant: { profile: { consultant_last_name: { contains: search } } } },
+        { student: { student_code: { contains: search, mode: "insensitive" } } },
+        { student: { profile: { student_first_name: { contains: search, mode: "insensitive" } } } },
+        { student: { profile: { student_last_name: { contains: search, mode: "insensitive" } } } },
+        { consultant: { profile: { consultant_first_name: { contains: search, mode: "insensitive" } } } },
+        { consultant: { profile: { consultant_last_name: { contains: search, mode: "insensitive" } } } },
       ];
     }
 
+    // ✅ แก้จาก bookingSlots.some → timeSlot.time_slot_start_datetime
     if (startDate || endDate) {
-      where.bookingSlots = {
-        some: {
-          timeSlot: {
-            time_slot_start_datetime: {
-              ...(startDate && { gte: new Date(`${startDate}T00:00:00`) }),
-              ...(endDate && { lte: new Date(`${endDate}T23:59:59.999`) }),
-            },
-          },
+      where.timeSlot = {
+        time_slot_start_datetime: {
+          ...(startDate && { gte: new Date(`${startDate}T00:00:00.000Z`) }),
+          ...(endDate && { lte: new Date(`${endDate}T23:59:59.999Z`) }),
         },
       };
+      // ถ้าอยากตีตามเวลาไทยจริง ๆ แบบเป๊ะ ๆ ค่อยทำ TZ conversion ทีหลัง
     }
 
     const [items, total] = await Promise.all([
@@ -77,22 +74,23 @@ export async function GET(req: NextRequest) {
           student: { include: { profile: true } },
           consultant: { include: { profile: true } },
           problemCategory: true,
-          bookingSlots: { include: { timeSlot: true } },
+          timeSlot: true, // ✅ เปลี่ยนเป็น timeSlot
         },
       }),
       prisma.booking.count({ where }),
     ]);
 
     const data = items.map((b) => {
-      const slot = b.bookingSlots[0]?.timeSlot ?? null;
-      const start = slot?.time_slot_start_datetime ?? null;
-      const end = slot?.time_slot_end_datetime ?? null;
+      const start = b.timeSlot?.time_slot_start_datetime ?? null;
+      const end = b.timeSlot?.time_slot_end_datetime ?? null;
 
       return {
         id: b.booking_id,
         status: b.booking_status,
         problemType: b.problemCategory.problem_category_name_th,
-        studentName: `${b.student.profile?.student_first_name ?? ""} ${b.student.profile?.student_last_name ?? ""}`.trim() || "ไม่ระบุ",
+        studentName:
+          `${b.student.profile?.student_first_name ?? ""} ${b.student.profile?.student_last_name ?? ""}`.trim() ||
+          "ไม่ระบุ",
         studentCode: b.student.student_code ?? "-",
         consultantName: b.consultant
           ? `${b.consultant.profile?.consultant_first_name ?? ""} ${b.consultant.profile?.consultant_last_name ?? ""}`.trim()
@@ -109,9 +107,6 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error("[GET /data-center/bookings] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch bookings" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch bookings" }, { status: 500 });
   }
 }

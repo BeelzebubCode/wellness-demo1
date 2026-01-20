@@ -1,13 +1,10 @@
 // src/app/api/v1/time-slots/route.ts
-// ✅ Fixed: Auto-regenerate if slots are incomplete
-
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
-// ============================================
-// Helper Functions
-// ============================================
-
+/* ============================================
+   Helpers
+============================================ */
 function createDateTime(dateStr: string, timeStr: string): Date {
   return new Date(`${dateStr}T${timeStr}:00`);
 }
@@ -16,19 +13,14 @@ function addMinutes(date: Date, minutes: number): Date {
   return new Date(date.getTime() + minutes * 60000);
 }
 
-// ✅ คำนวณจำนวน slots ที่ควรมีในแต่ละวัน
 function getExpectedSlotCount(dateStr: string): number {
   const dayOfWeek = new Date(dateStr).getDay();
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-
-  // วันธรรมดา: 08:00-20:00 = 12 slots (ชั่วโมงละ 1)
-  // วันหยุด: 08:00-16:00 = 8 slots
-  return isWeekend ? 8 : 12;
+  return isWeekend ? 8 : 12; // weekend 08-16, weekday 08-20
 }
 
-// ✅ Generate default slots พร้อม logging
-async function generateDefaultSlots(date: string): Promise<number> {
-  const dayOfWeek = new Date(date).getDay();
+async function generateDefaultSlots(dateStr: string): Promise<number> {
+  const dayOfWeek = new Date(dateStr).getDay();
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
   const openTime = "08:00";
@@ -36,22 +28,23 @@ async function generateDefaultSlots(date: string): Promise<number> {
   const slotDuration = 60;
 
   const slots: { start: Date; end: Date }[] = [];
-
-  let currentTime = createDateTime(date, openTime);
-  const endTime = createDateTime(date, closeTime);
+  let currentTime = createDateTime(dateStr, openTime);
+  const endTime = createDateTime(dateStr, closeTime);
 
   while (currentTime < endTime) {
     const slotEnd = addMinutes(currentTime, slotDuration);
-    if (slotEnd <= endTime) {
-      slots.push({ start: new Date(currentTime), end: slotEnd });
-    }
+    if (slotEnd <= endTime) slots.push({ start: new Date(currentTime), end: slotEnd });
     currentTime = slotEnd;
   }
 
-  console.log(`[generateDefaultSlots] ${date}: Generating ${slots.length} slots (${openTime}-${closeTime})`);
+  console.log(
+    `[generateDefaultSlots] ${dateStr}: Generating ${slots.length} slots (${openTime}-${closeTime})`
+  );
 
   if (slots.length === 0) return 0;
 
+  // NOTE: skipDuplicates จะทำงานได้ “ต้องมี unique index” ใน schema
+  // เช่น @@unique([time_slot_start_datetime, time_slot_end_datetime])
   const result = await prisma.timeSlot.createMany({
     data: slots.map((s) => ({
       time_slot_start_datetime: s.start,
@@ -62,105 +55,80 @@ async function generateDefaultSlots(date: string): Promise<number> {
     skipDuplicates: true,
   });
 
-  console.log(`[generateDefaultSlots] ${date}: Created ${result.count} slots`);
+  console.log(`[generateDefaultSlots] ${dateStr}: Created ${result.count} slots`);
   return result.count;
 }
 
-// ============================================
-// GET /api/v1/time-slots?date=YYYY-MM-DD
-// ============================================
+/* ============================================
+   GET /api/v1/time-slots?date=YYYY-MM-DD
+============================================ */
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const dateStr = searchParams.get("date");
 
     if (!dateStr) {
-      return NextResponse.json(
-        { error: "Date is required (YYYY-MM-DD)" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Date is required (YYYY-MM-DD)" }, { status: 400 });
     }
 
-    // Validate date format
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(dateStr)) {
-      return NextResponse.json(
-        { error: "Invalid date format. Use YYYY-MM-DD" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid date format. Use YYYY-MM-DD" }, { status: 400 });
     }
 
     const startOfDay = new Date(`${dateStr}T00:00:00`);
-    const endOfDay = new Date(`${dateStr}T23:59:59`);
+    const endOfDay = new Date(`${dateStr}T23:59:59.999`);
 
-    // Validate parsed date
     if (isNaN(startOfDay.getTime())) {
-      return NextResponse.json(
-        { error: "Invalid date value" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid date value" }, { status: 400 });
     }
 
     const whereClause = {
-      time_slot_start_datetime: {
-        gte: startOfDay,
-        lte: endOfDay,
-      },
+      time_slot_start_datetime: { gte: startOfDay, lte: endOfDay },
     };
 
-    // ดึง time slots
+    // ✅ schema ใหม่: TimeSlot include bookings (ไม่ใช่ bookingSlots)
     let timeSlots = await prisma.timeSlot.findMany({
       where: whereClause,
       include: {
-        bookingSlots: {
-          include: {
-            booking: {
-              select: {
-                booking_id: true,
-                booking_status: true,
-              },
-            },
+        bookings: {
+          select: {
+            booking_id: true,
+            booking_status: true,
           },
         },
       },
       orderBy: { time_slot_start_datetime: "asc" },
     });
 
-    // ✅ เช็คว่ามีครบไหม ไม่ใช่แค่มีหรือไม่
     const expectedCount = getExpectedSlotCount(dateStr);
     const currentCount = timeSlots.length;
 
     console.log(`[GET /time-slots] ${dateStr}: Found ${currentCount}/${expectedCount} slots`);
 
+    // ✅ ถ้า slot ไม่ครบ → regenerate (ลบเฉพาะ slots ที่ไม่มี booking)
     if (currentCount < expectedCount) {
       console.log(`[GET /time-slots] ${dateStr}: Incomplete slots, regenerating...`);
 
-      // ลบ slots เดิมที่ไม่มี booking (ถ้ามี)
       if (currentCount > 0) {
         const deleted = await prisma.timeSlot.deleteMany({
           where: {
             time_slot_start_datetime: { gte: startOfDay, lte: endOfDay },
-            bookingSlots: { none: {} },
+            bookings: { none: {} }, // ✅ ไม่มี booking เลย ถึงลบได้
           },
         });
         console.log(`[GET /time-slots] ${dateStr}: Deleted ${deleted.count} orphan slots`);
       }
 
-      // Generate ใหม่
       await generateDefaultSlots(dateStr);
 
-      // Query อีกครั้ง
       timeSlots = await prisma.timeSlot.findMany({
         where: whereClause,
         include: {
-          bookingSlots: {
-            include: {
-              booking: {
-                select: {
-                  booking_id: true,
-                  booking_status: true,
-                },
-              },
+          bookings: {
+            select: {
+              booking_id: true,
+              booking_status: true,
             },
           },
         },
@@ -178,26 +146,19 @@ export async function GET(req: NextRequest) {
       "IN_PROGRESS",
     ] as const;
 
-    // Format response
     const formattedSlots = timeSlots.map((slot) => {
-      const activeBookings = slot.bookingSlots.filter((bs) =>
-        ACTIVE_STATUSES.includes(
-          bs.booking.booking_status as (typeof ACTIVE_STATUSES)[number]
-        )
+      const activeBookings = slot.bookings.filter((b) =>
+        ACTIVE_STATUSES.includes(b.booking_status as (typeof ACTIVE_STATUSES)[number])
       ).length;
 
-      const availableCount = Math.max(
-        0,
-        slot.time_slot_max_capacity - activeBookings
-      );
+      const maxCap = Number(slot.time_slot_max_capacity ?? 0);
+      const availableCount = Math.max(0, maxCap - activeBookings);
 
-      const isClosed =
-        slot.time_slot_status === "LOCKED" ||
-        slot.time_slot_status === "CANCELLED";
+      const isClosed = slot.time_slot_status === "LOCKED" || slot.time_slot_status === "CANCELLED";
 
       const slotStart = slot.time_slot_start_datetime;
 
-      // เวลาเลยแล้ว (วันนี้เท่านั้น)
+      // เวลาผ่านแล้ว (เฉพาะวันเดียวกัน)
       const isPastTime =
         slotStart.toDateString() === now.toDateString() && slotStart <= now;
 
@@ -207,12 +168,7 @@ export async function GET(req: NextRequest) {
         !isClosed &&
         !isPastTime;
 
-      let unavailableReason:
-        | "PAST_TIME"
-        | "FULL"
-        | "CLOSED"
-        | "UNAVAILABLE"
-        | null = null;
+      let unavailableReason: "PAST_TIME" | "FULL" | "CLOSED" | "UNAVAILABLE" | null = null;
 
       if (!isAvailable) {
         if (isPastTime) unavailableReason = "PAST_TIME";
@@ -230,7 +186,7 @@ export async function GET(req: NextRequest) {
         startDateTime: slotStart.toISOString(),
         endDateTime: slot.time_slot_end_datetime.toISOString(),
 
-        maxCapacity: slot.time_slot_max_capacity,
+        maxCapacity: maxCap,
         bookedCount: activeBookings,
         availableCount,
         status: slot.time_slot_status,
@@ -249,84 +205,42 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error("[GET /time-slots] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch time slots" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch time slots" }, { status: 500 });
   }
 }
 
-// ============================================
-// POST /api/v1/time-slots
-// ============================================
+/* ============================================
+   POST /api/v1/time-slots
+============================================ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { date, slots, generateDefault } = body;
 
-    if (!date) {
-      return NextResponse.json({ error: "Date is required" }, { status: 400 });
-    }
+    if (!date) return NextResponse.json({ error: "Date is required" }, { status: 400 });
 
-    // ถ้าต้องการสร้าง slots อัตโนมัติ
+    // auto-generate
     if (generateDefault) {
-      const dayOfWeek = new Date(date).getDay();
-      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-
-      const openTime = "08:00";
-      const closeTime = isWeekend ? "16:00" : "20:00";
-      const slotDuration = 60;
-
-      const generatedSlots: { start: Date; end: Date }[] = [];
-
-      let currentTime = createDateTime(date, openTime);
-      const endTime = createDateTime(date, closeTime);
-
-      while (currentTime < endTime) {
-        const slotEnd = addMinutes(currentTime, slotDuration);
-        if (slotEnd <= endTime) {
-          generatedSlots.push({
-            start: new Date(currentTime),
-            end: slotEnd,
-          });
-        }
-        currentTime = slotEnd;
-      }
-
-      const created = await prisma.timeSlot.createMany({
-        data: generatedSlots.map((s) => ({
-          time_slot_start_datetime: s.start,
-          time_slot_end_datetime: s.end,
-          time_slot_max_capacity: body.maxCapacity || 1,
-          time_slot_status: "AVAILABLE",
-        })),
-        skipDuplicates: true,
-      });
-
+      const created = await generateDefaultSlots(date);
       return NextResponse.json({
         success: true,
-        message: `Created ${created.count} time slots`,
+        message: `Created ${created} time slots`,
         date,
       });
     }
 
-    // ถ้าระบุ slots เอง
+    // manual slots
     if (!slots || !Array.isArray(slots) || slots.length === 0) {
-      return NextResponse.json(
-        { error: "Slots array is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Slots array is required" }, { status: 400 });
     }
 
     const created = await prisma.timeSlot.createMany({
-      data: slots.map(
-        (s: { startTime: string; endTime: string; maxCapacity?: number }) => ({
-          time_slot_start_datetime: createDateTime(date, s.startTime),
-          time_slot_end_datetime: createDateTime(date, s.endTime),
-          time_slot_max_capacity: s.maxCapacity || 1,
-          time_slot_status: "AVAILABLE",
-        })
-      ),
+      data: slots.map((s: { startTime: string; endTime: string; maxCapacity?: number }) => ({
+        time_slot_start_datetime: createDateTime(date, s.startTime),
+        time_slot_end_datetime: createDateTime(date, s.endTime),
+        time_slot_max_capacity: s.maxCapacity || 1,
+        time_slot_status: "AVAILABLE",
+      })),
       skipDuplicates: true,
     });
 
@@ -337,38 +251,28 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("[POST /time-slots] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to create time slots" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create time slots" }, { status: 500 });
   }
 }
 
-// ============================================
-// DELETE /api/v1/time-slots?date=YYYY-MM-DD
-// ============================================
+/* ============================================
+   DELETE /api/v1/time-slots?date=YYYY-MM-DD
+   ลบเฉพาะ slots ที่ไม่มี booking เลย
+============================================ */
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const dateStr = searchParams.get("date");
 
-    if (!dateStr) {
-      return NextResponse.json({ error: "Date is required" }, { status: 400 });
-    }
+    if (!dateStr) return NextResponse.json({ error: "Date is required" }, { status: 400 });
 
     const startOfDay = new Date(`${dateStr}T00:00:00`);
-    const endOfDay = new Date(`${dateStr}T23:59:59`);
+    const endOfDay = new Date(`${dateStr}T23:59:59.999`);
 
-    // ลบเฉพาะ slots ที่ไม่มี booking
     const deleted = await prisma.timeSlot.deleteMany({
       where: {
-        time_slot_start_datetime: {
-          gte: startOfDay,
-          lte: endOfDay,
-        },
-        bookingSlots: {
-          none: {},
-        },
+        time_slot_start_datetime: { gte: startOfDay, lte: endOfDay },
+        bookings: { none: {} }, // ✅ schema ใหม่
       },
     });
 
@@ -379,64 +283,50 @@ export async function DELETE(req: NextRequest) {
     });
   } catch (error) {
     console.error("[DELETE /time-slots] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to delete time slots" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete time slots" }, { status: 500 });
   }
 }
 
-// ============================================
-// PATCH /api/v1/time-slots?date=YYYY-MM-DD&action=regenerate
-// Force regenerate slots (สำหรับ Admin)
-// ============================================
+/* ============================================
+   PATCH /api/v1/time-slots?date=YYYY-MM-DD&action=regenerate
+============================================ */
 export async function PATCH(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const dateStr = searchParams.get("date");
     const action = searchParams.get("action");
 
-    if (!dateStr) {
-      return NextResponse.json({ error: "Date is required" }, { status: 400 });
+    if (!dateStr) return NextResponse.json({ error: "Date is required" }, { status: 400 });
+
+    if (action !== "regenerate") {
+      return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
 
-    if (action === "regenerate") {
-      const startOfDay = new Date(`${dateStr}T00:00:00`);
-      const endOfDay = new Date(`${dateStr}T23:59:59`);
+    const startOfDay = new Date(`${dateStr}T00:00:00`);
+    const endOfDay = new Date(`${dateStr}T23:59:59.999`);
 
-      // ลบ slots ที่ไม่มี booking
-      const deleted = await prisma.timeSlot.deleteMany({
-        where: {
-          time_slot_start_datetime: { gte: startOfDay, lte: endOfDay },
-          bookingSlots: { none: {} },
-        },
-      });
+    const deleted = await prisma.timeSlot.deleteMany({
+      where: {
+        time_slot_start_datetime: { gte: startOfDay, lte: endOfDay },
+        bookings: { none: {} }, // ✅ ลบได้เฉพาะ slot ที่ไม่ผูก booking
+      },
+    });
 
-      // Generate ใหม่
-      const created = await generateDefaultSlots(dateStr);
+    const created = await generateDefaultSlots(dateStr);
 
-      // นับ slots ใหม่
-      const newCount = await prisma.timeSlot.count({
-        where: {
-          time_slot_start_datetime: { gte: startOfDay, lte: endOfDay },
-        },
-      });
+    const total = await prisma.timeSlot.count({
+      where: { time_slot_start_datetime: { gte: startOfDay, lte: endOfDay } },
+    });
 
-      return NextResponse.json({
-        success: true,
-        message: `Regenerated slots for ${dateStr}`,
-        deleted: deleted.count,
-        created,
-        total: newCount,
-      });
-    }
-
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    return NextResponse.json({
+      success: true,
+      message: `Regenerated slots for ${dateStr}`,
+      deleted: deleted.count,
+      created,
+      total,
+    });
   } catch (error) {
     console.error("[PATCH /time-slots] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to regenerate" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to regenerate" }, { status: 500 });
   }
 }

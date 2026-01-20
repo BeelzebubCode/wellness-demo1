@@ -1,7 +1,6 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  # เว็บแอปของเรา
   app:
     container_name: wellness-app
     build:
@@ -11,36 +10,30 @@ services:
     ports:
       - "3000:3000"
     environment:
-      # ต่อ DB ผ่านชื่อ service "db"
-      - DATABASE_URL=mysql://root:rootpassword@db:3306/wellness_db
+      - DATABASE_URL=postgresql://postgres:postgrespassword@db:5432/wellness_db?schema=public
     depends_on:
       - db
 
-  # ฐานข้อมูล MySQL
   db:
     container_name: wellness-db
-    image: mysql:8.0
-    command: --default-authentication-plugin=mysql_native_password
+    image: postgres:16
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: wellness_db
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: wellness_db
     ports:
-      - "3307:3306" # Forward port ออกมาที่ 3307 (กันชนกับเครื่องตัวเอง)
+      - "5434:5432" 
     volumes:
-      - db_data:/var/lib/mysql
+      - db_data:/var/lib/postgresql/data
 
-  # ตัวจัดการฐานข้อมูล (Admin UI)
-  phpmyadmin:
+  pgadmin:
     container_name: wellness-admin
-    image: phpmyadmin/phpmyadmin
+    image: dpage/pgadmin4
     restart: always
     environment:
-      PMA_HOST: db
-      PMA_USER: user
-      PMA_PASSWORD: password
+      PGADMIN_DEFAULT_EMAIL: admin@local.com
+      PGADMIN_DEFAULT_PASSWORD: adminpassword
     ports:
       - "8080:80"
     depends_on:

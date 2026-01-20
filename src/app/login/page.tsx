@@ -225,7 +225,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() =>
-                      handleDemoFill("head", "wellness_center_123456!")
+                      handleDemoFill("head", "wellness@nu.ac.th_123456!")
                     }
                     className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white
                                hover:bg-slate-50 transition"
@@ -235,7 +235,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() =>
-                      handleDemoFill("consultant1", "wellness_center_123456!")
+                      handleDemoFill("consultant1", "wellness@nu.ac.th_123456!")
                     }
                     className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white
                                hover:bg-slate-50 transition"
@@ -245,7 +245,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() =>
-                      handleDemoFill("student1", "wellness_center_123456!")
+                      handleDemoFill("student1", "wellness@nu.ac.th_123456!")
                     }
                     className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white
                                hover:bg-slate-50 transition"
