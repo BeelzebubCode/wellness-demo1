@@ -9,37 +9,42 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // ธีมหลัก: Teal/Mint (สดชื่น, สะอาด, การแพทย์)
+        // ✅ ใช้ CSS Variables จาก tenants.css
+        bg: 'rgb(var(--bg) / <alpha-value>)',
+        fg: 'rgb(var(--fg) / <alpha-value>)',
+        muted: 'rgb(var(--muted) / <alpha-value>)',
+
+        card: 'rgb(var(--card) / <alpha-value>)',
+        'card-fg': 'rgb(var(--card-fg) / <alpha-value>)',
+        border: 'rgb(var(--border) / <alpha-value>)',
+
         primary: {
-          50: '#F0FDFA',
-          100: '#CCFBF1',
-          200: '#99F6E4',
-          300: '#5EEAD4',
-          400: '#2DD4BF',
-          500: '#14B8A6',
-          600: '#0D9488',
-          700: '#0F766E',
-          800: '#115E59',
-          900: '#134E4A',
+          DEFAULT: 'rgb(var(--primary) / <alpha-value>)',
+          50: 'rgb(var(--primary) / 0.06)',
+          100: 'rgb(var(--primary) / 0.10)',
+          200: 'rgb(var(--primary) / 0.16)',
+          300: 'rgb(var(--primary) / 0.22)',
+          400: 'rgb(var(--primary) / 0.30)',
+          500: 'rgb(var(--primary) / 1)',
+          600: 'rgb(var(--primary-600) / 1)',
+          700: 'rgb(var(--primary-600) / 1)', // ถ้ายังไม่แยก var 700 ก็ใช้ 600 ไปก่อน
         },
-        // ธีมรอง: Warm Gray / Sand (ผ่อนคลาย, ธรรมชาติ) แทนสีม่วงเดิม
-        secondary: {
-          50: '#FAFAF9',
-          100: '#F5F5F4',
-          200: '#E7E5E4',
-          300: '#D6D3D1',
-          400: '#A8A29E',
-          500: '#78716C',
-          600: '#57534E',
-          700: '#44403C',
-          800: '#292524',
-          900: '#1C1917',
+
+        accent: {
+          DEFAULT: 'rgb(var(--accent) / <alpha-value>)',
         },
-        // เพิ่มสีพื้นหลังแบบ Cream/Off-white
+
+        ring: 'rgb(var(--ring) / <alpha-value>)',
+
+        // ✅ gradient tokens (เอาไว้ทำพื้นหลังแบบ tenant)
+        'bg-grad-1': 'rgb(var(--bg-grad-1) / <alpha-value>)',
+        'bg-grad-2': 'rgb(var(--bg-grad-2) / <alpha-value>)',
+
+        // คงไว้ได้ถ้าอยากมี background paper
         background: {
           DEFAULT: '#FAFAFA',
           paper: '#FFFFFF',
-        }
+        },
       },
       fontFamily: {
         sans: ['Sarabun', 'IBM Plex Sans Thai', 'sans-serif'],
