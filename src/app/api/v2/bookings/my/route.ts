@@ -1,7 +1,7 @@
 // src/app/api/v1/bookings/my/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { requireTenant, assertRole } from "@/lib/tenants/server";
+import { requireTenant, assertRole } from "@/lib/tenant/server";
 
 export async function GET(req: NextRequest) {
   try {

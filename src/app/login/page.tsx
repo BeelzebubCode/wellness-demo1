@@ -12,9 +12,9 @@ import {
   EyeOff,
   Sparkles,
   HeartPulse,
-  Megaphone,
 } from "lucide-react";
 import { useNotificationContext } from "@/components/notification/NotificationProvider";
+import { useTheme } from "@/contexts/ThemeContext"; // ✅ เพิ่ม
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,6 +23,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ username: "", password: "" });
   const { push } = useNotificationContext();
+  const { setTenant } = useTheme(); // ✅ เพิ่ม
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,8 +41,8 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        // ❌ ไม่จำเป็นแล้วถ้าใช้ cookie-based
-        // if (data.token) localStorage.setItem("token", data.token);
+        // ✅ สำคัญสุด: ตั้งธีมตามมหาลัย (set <html data-tenant="..."> + save localStorage)
+        setTenant(data.tenant?.universityCode || "DEFAULT");
 
         // ✅ เก็บ user ไว้ใช้กับ UI (optional)
         localStorage.setItem(
@@ -52,7 +53,7 @@ export default function LoginPage() {
             role: data.account?.role || null,
             homeUniversityId: data.account?.homeUniversityId ?? null,
             allowedUniversityIds: data.account?.allowedUniversityIds ?? [],
-          }),
+          })
         );
 
         window.dispatchEvent(new Event("auth-changed"));
@@ -100,18 +101,16 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen w-full bg-white relative overflow-hidden pt-8">
-      {/* background blobs (คล้ายรูปตัวอย่าง แต่โทนระบบ teal/mint) */}
+      {/* background blobs */}
       <div className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-teal-100 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-28 -right-20 h-72 w-72 rounded-full bg-emerald-100 blur-3xl" />
       <div className="pointer-events-none absolute top-10 right-10 h-28 w-28 rounded-full bg-teal-200/40" />
 
       <div className="relative z-10 min-h-screen flex items-center justify-center px-4 py-10">
-        {/* Main Card */}
         <div className="w-full max-w-5xl rounded-[26px] bg-white shadow-[0_22px_60px_rgba(2,6,23,0.12)] border border-slate-200 overflow-hidden">
           <div className="grid lg:grid-cols-2">
-            {/* ================= LEFT: form ================= */}
+            {/* LEFT: form */}
             <div className="p-8 sm:p-10 lg:p-12">
-              {/* Logo/Brand (สไตล์ HermesPay แต่เป็น NU Wellness) */}
               <div className="flex items-center gap-2 mb-10">
                 <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-teal-600 to-emerald-600 shadow-sm">
                   <HeartPulse className="w-4 h-4 text-white" />
@@ -121,7 +120,6 @@ export default function LoginPage() {
                 </span>
               </div>
 
-              {/* Error */}
               {error && (
                 <div className="mb-5 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-red-500 mt-0.5" />
@@ -183,7 +181,6 @@ export default function LoginPage() {
                   </button>
                 </div>
 
-                {/* Row: forgot + login button (เหมือนรูป) */}
                 <div className="flex items-center justify-between pt-1">
                   <button
                     type="button"
@@ -216,7 +213,6 @@ export default function LoginPage() {
                 </div>
               </form>
 
-              {/* Demo buttons (ยังอยู่เหมือนเดิม แต่จัดให้กลืนกับ UI) */}
               <div className="mt-10 max-w-sm">
                 <div className="flex items-center gap-2 text-xs text-slate-500">
                   <Sparkles className="w-4 h-4 text-amber-500" />
@@ -263,15 +259,13 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* ================= RIGHT: illustration area ================= */}
+            {/* RIGHT: illustration */}
             <div className="relative hidden lg:flex items-center justify-center bg-teal-50">
-              {/* วงกลม/ลวดลายแบบในรูป */}
               <div className="pointer-events-none absolute -top-14 -right-14 w-48 h-48 rounded-full bg-emerald-200/45" />
               <div className="pointer-events-none absolute top-24 right-10 w-24 h-24 rounded-full bg-teal-200/55" />
               <div className="pointer-events-none absolute bottom-10 left-10 w-28 h-28 rounded-full bg-emerald-200/35" />
               <div className="pointer-events-none absolute bottom-20 right-8 w-36 h-36 rounded-full bg-teal-200/25" />
 
-              {/* เส้นคลื่นๆ */}
               <div className="pointer-events-none absolute top-8 left-10 text-teal-400/60 select-none">
                 <svg width="70" height="30" viewBox="0 0 70 30" fill="none">
                   <path
@@ -283,46 +277,22 @@ export default function LoginPage() {
                 </svg>
               </div>
 
-              {/* TODO: ใส่รูปทีหลัง */}
               <div className="relative w-[78%] max-w-md mx-auto">
-                <div
-                  className="
-                    relative
-                    w-full
-                    aspect-[4/3]
-                    bg-white
-                    rounded-[24px]
-                    border border-teal-100
-                    shadow-[0_16px_40px_rgba(2,6,23,0.12)]
-                    overflow-hidden
-                  "
-                >
-                  {/* shimmer background */}
+                <div className="relative w-full aspect-[4/3] bg-white rounded-[24px] border border-teal-100 shadow-[0_16px_40px_rgba(2,6,23,0.12)] overflow-hidden">
                   <div className="absolute inset-0 animate-shimmer bg-shimmer" />
-
-                  {/* image */}
                   <div className="relative z-10 flex h-full w-full items-center justify-center">
                     <img
                       src="/images/login-illustration.png"
                       alt="login illustration"
-                      className="
-                        w-[86%]
-                        max-h-[86%]
-                        object-contain
-                        rounded-[15px]
-                        drop-shadow-[0_14px_28px_rgba(2,6,23,0.12)]
-                        animate-pop-in
-                      "
+                      className="w-[86%] max-h-[86%] object-contain rounded-[15px] drop-shadow-[0_14px_28px_rgba(2,6,23,0.12)] animate-pop-in"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* จุดกลมๆ */}
               <div className="pointer-events-none absolute top-1/2 right-14 w-2 h-2 rounded-full bg-teal-500/60" />
               <div className="pointer-events-none absolute top-[58%] right-20 w-1.5 h-1.5 rounded-full bg-emerald-500/55" />
 
-              {/* วงแหวนขวา */}
               <div className="pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 opacity-40">
                 <svg width="90" height="90" viewBox="0 0 90 90" fill="none">
                   <circle
@@ -355,32 +325,13 @@ export default function LoginPage() {
 
             {/* Mobile illustration */}
             <div className="lg:hidden bg-teal-50 border-t border-slate-200 p-4">
-              <div
-                className="
-                  relative
-                  w-full
-                  aspect-[16/9]
-                  bg-white
-                  rounded-[20px]
-                  border border-teal-100
-                  shadow-[0_14px_32px_rgba(2,6,23,0.12)]
-                  overflow-hidden
-                "
-              >
-                {/* shimmer background */}
+              <div className="relative w-full aspect-[16/9] bg-white rounded-[20px] border border-teal-100 shadow-[0_14px_32px_rgba(2,6,23,0.12)] overflow-hidden">
                 <div className="absolute inset-0 animate-shimmer bg-shimmer" />
-
-                {/* image */}
                 <div className="relative z-10 flex h-full w-full items-center justify-center">
                   <img
                     src="/images/login-illustration.png"
                     alt="login illustration"
-                    className="
-                      w-full
-                      h-full
-                      object-cover
-                      animate-pop-in
-                    "
+                    className="w-full h-full object-cover animate-pop-in"
                   />
                 </div>
               </div>

@@ -12,7 +12,7 @@ import {
   initTenantTheme,
   setTenantTheme,
   clearTenantTheme,
-} from "@/lib/tenants/client";
+} from "@/lib/tenant/client";
 
 /**
  * ThemeContext ใช้สำหรับ:

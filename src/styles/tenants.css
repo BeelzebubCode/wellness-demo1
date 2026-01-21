@@ -90,3 +90,72 @@ html[data-tenant="KKU"] {
   box-shadow: 0 0 0 4px rgba(var(--ring), 0.25);
   border-color: rgb(var(--ring));
 }
+
+/* ================================
+   Tailwind-friendly Tenant Helpers
+   ใช้กับ className ได้เลย
+================================ */
+
+/* สีพื้น/ตัวอักษรหลัก */
+.bg-primary {
+  background-color: rgb(var(--primary));
+}
+.bg-primary-600 {
+  background-color: rgb(var(--primary-600));
+}
+.text-primary {
+  color: rgb(var(--primary));
+}
+.border-primary {
+  border-color: rgb(var(--primary));
+}
+
+/* ปุ่มหลัก */
+.btn-tenant {
+  background: rgb(var(--primary));
+  color: #fff;
+}
+.btn-tenant:hover {
+  background: rgb(var(--primary-600));
+}
+
+/* สำหรับ element ที่ใช้ ring ตอน focus */
+.focus-tenant:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(var(--ring), 0.25);
+  border-color: rgb(var(--ring));
+}
+
+/* badge / tab active */
+.pill-tenant {
+  background: rgb(var(--primary));
+  color: #fff;
+}
+.pill-tenant:hover {
+  background: rgb(var(--primary-600));
+}
+
+/* sidebar style */
+.sidebar-tenant {
+  background: rgb(var(--primary-600));
+  color: #fff;
+}
+.sidebar-tenant-soft {
+  background: rgba(var(--primary), 0.12);
+  color: rgb(var(--primary));
+}
+
+/* icon circle */
+.icon-tenant {
+  background: rgba(var(--primary), 0.12);
+  color: rgb(var(--primary));
+}
+
+/* ช่วยทำให้ “active item” ใน sidebar ดูเข้าธีม */
+.sidebar-item-active {
+  background: rgba(255, 255, 255, 0.92);
+  color: rgb(var(--primary-600));
+}
+.sidebar-item-active svg {
+  color: rgb(var(--primary-600));
+}

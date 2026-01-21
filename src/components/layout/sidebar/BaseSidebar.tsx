@@ -29,7 +29,6 @@ export function BaseSidebar({
     light: {
       wrapper: "bg-white text-gray-600",
       border: "border-gray-200",
-      // ⬇️ ไม่ต้องใช้ logoBg แล้ว เพราะ BrandLogo เป็นรูป
       navActive: "bg-primary-50 text-primary-700",
       navInactive: "text-gray-500 hover:bg-gray-50 hover:text-gray-900",
       divider: "border-gray-100",
@@ -38,10 +37,17 @@ export function BaseSidebar({
       logoText: "text-gray-800",
       logoSubtext: "text-gray-500",
     },
+
     primary: {
-      wrapper: "bg-gradient-to-b from-primary-600 to-teal-600 text-white",
+      /**
+       * ✅ สำคัญ:
+       * - ไม่ใช้ from-primary-600 to-teal-600 แล้ว (มัน hardcode teal)
+       * - ใช้ CSS var จาก tenants.css: --primary-600 / --primary
+       */
+      wrapper:
+        "text-white bg-[linear-gradient(180deg,rgb(var(--primary-600))_0%,rgb(var(--primary))_100%)]",
       border: "border-white/10",
-      navActive: "bg-white text-primary-700",
+      navActive: "bg-white text-[rgb(var(--primary-600))]",
       navInactive: "text-white/80 hover:bg-white/10 hover:text-white",
       divider: "border-white/10",
       backLink: "text-white/60 hover:bg-white/10 hover:text-white",
@@ -49,6 +55,7 @@ export function BaseSidebar({
       logoText: "text-white",
       logoSubtext: "text-white/70",
     },
+
     dark: {
       wrapper: "bg-gray-900 text-gray-300",
       border: "border-gray-800",
@@ -64,7 +71,6 @@ export function BaseSidebar({
 
   const t = themes[theme];
 
-  // ✅ ให้ BrandLogo ใช้ variant ตามธีมอัตโนมัติ ถ้า config ไม่ได้กำหนด
   const logoVariant =
     logo.variant ?? (theme === "primary" || theme === "dark" ? "white" : "default");
 
@@ -78,17 +84,13 @@ export function BaseSidebar({
           isCollapsed && "justify-center px-2"
         )}
       >
-        {/* ✅ collapsed = แสดงแค่รูป, expanded = แสดงรูป+ข้อความ */}
         <BrandLogo
           href={logo.href ?? "/"}
-          size={isCollapsed ? 56 : 44} // ⬅️ ใหญ่ขึ้นชัดเจน
+          size={isCollapsed ? 56 : 44}
           showText={!isCollapsed}
           subtitle={!isCollapsed ? logo.subtitle : undefined}
           variant={logoVariant}
-          className={cn(
-            "min-w-0",
-            isCollapsed ? "justify-center" : "justify-start"
-          )}
+          className={cn("min-w-0", isCollapsed ? "justify-center" : "justify-start")}
           textClassName={t.logoText}
         />
       </div>
@@ -109,9 +111,7 @@ export function BaseSidebar({
               className={cn(
                 "flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-200 group relative overflow-hidden",
                 isCollapsed && "justify-center px-2",
-                isActive
-                  ? cn(t.navActive, "font-semibold shadow-sm")
-                  : cn(t.navInactive, "font-medium")
+                isActive ? cn(t.navActive, "font-semibold shadow-sm") : cn(t.navInactive, "font-medium")
               )}
             >
               <span

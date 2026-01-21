@@ -1,25 +1,27 @@
 // src/app/api/v2/auth/me/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
-import { getAuth } from "@/lib/auth";
+import { getAccountFromRequest } from "@/lib/jwt";
 
 export async function GET(req: NextRequest) {
   try {
-    const payload = await getAuth(req);
-    if (!payload) return NextResponse.json({ valid: false }, { status: 401 });
+    const account = await getAccountFromRequest(req);
+    if (!account) return NextResponse.json({ valid: false }, { status: 401 });
 
     return NextResponse.json({
       valid: true,
       account: {
-        id: payload.accountId,
-        username: payload.username,
-        role: payload.role,
-        consultantId: payload.consultantId ?? null,
-        homeUniversityId: payload.homeUniversityId ?? null,
-        allowedUniversityIds: payload.allowedUniversityIds ?? [],
+        id: account.accountId,
+        username: account.username,
+        role: account.role,
+        consultantId: account.consultantId ?? null,
+        studentId: account.studentId ?? null,
+        homeUniversityId: account.homeUniversityId ?? null,
+        activeUniversityId: account.activeUniversityId ?? null,
+        allowedUniversityIds: account.allowedUniversityIds ?? [],
       },
     });
-  } catch {
+  } catch (e) {
+    console.error("[AUTH_ME_V2]", e);
     return NextResponse.json({ valid: false }, { status: 401 });
   }
 }

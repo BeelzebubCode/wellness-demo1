@@ -1,4 +1,4 @@
-// src/lib/tenant.ts
+// src/lib/tenant/server.ts
 import type { NextRequest } from "next/server";
 import { getAccountFromRequest } from "@/lib/jwt";
 import type { AccountContext } from "@/lib/jwt";
@@ -19,25 +19,28 @@ function err(message: string, status: number) {
 /**
  * tenant guard (สำคัญสุด)
  * - ต้อง login
- * - STUDENT/CONSULTANT: บังคับใช้ homeUniversityId เท่านั้น (ห้ามเลือกเอง)
- * - STAFF: เลือกได้ แต่ต้องอยู่ใน allowedUniversityIds (ถ้ามี)
+ * - STUDENT/CONSULTANT: lock tenant (ใช้ activeUniversityId ที่ resolve จาก DB แล้ว)
+ * - STAFF: เลือกได้ แต่ต้องอยู่ใน allowedUniversityIds
  *
  * priority ของ tenant สำหรับ STAFF:
  *   1) header x-university-id
- *   2) account.activeUniversityId (มาจาก token/claim ถ้าคุณมี)
+ *   2) account.activeUniversityId
  *   3) account.homeUniversityId
  */
 export async function requireTenant(request: NextRequest): Promise<TenantContext> {
   const account = await getAccountFromRequest(request);
   if (!account) throw err("UNAUTHORIZED", 401);
 
-  // ====== 1) STUDENT / CONSULTANT: lock tenant ======
-  if (account.role === "STUDENT" || account.role === "CONSULTANT") {
-    const home = account.homeUniversityId;
-    if (!home) throw err("NO_HOME_UNIVERSITY", 400);
+  const role = String(account.role || "").toUpperCase();
 
-    // ✅ ignore activeUniversityId / header ทั้งหมด
-    return { account, activeUniversityId: home };
+  // ====== 1) STUDENT / CONSULTANT: lock tenant ======
+  if (role === "STUDENT" || role === "CONSULTANT") {
+    // ✅ ใช้ activeUniversityId ก่อน (ถูกล็อกจาก DB แล้วใน getAccountFromRequest)
+    const locked = account.activeUniversityId ?? account.homeUniversityId ?? null;
+    if (!locked) throw err("NO_UNIVERSITY_CONTEXT", 400);
+
+    // ✅ ignore header x-university-id ทั้งหมด
+    return { account, activeUniversityId: locked };
   }
 
   // ====== 2) STAFF: allow switching ======
@@ -51,7 +54,7 @@ export async function requireTenant(request: NextRequest): Promise<TenantContext
 
   if (!picked) throw err("NO_UNIVERSITY_CONTEXT", 400);
 
-  // ✅ check allow-list (ถ้าคุณมีระบบยืมมหาลัย)
+  // ✅ check allow-list
   const allowed = account.allowedUniversityIds ?? [];
   if (allowed.length > 0 && !allowed.includes(picked)) {
     throw err("UNIVERSITY_NOT_ALLOWED", 403);
@@ -62,7 +65,5 @@ export async function requireTenant(request: NextRequest): Promise<TenantContext
 
 /** เช็ค role แบบง่าย ๆ (ถ้าไม่ผ่าน -> 403) */
 export function assertRole(role: string, allow: string[]) {
-  if (!allow.includes(role)) {
-    throw err("FORBIDDEN", 403);
-  }
+  if (!allow.includes(role)) throw err("FORBIDDEN", 403);
 }

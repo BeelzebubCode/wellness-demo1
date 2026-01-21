@@ -13,7 +13,7 @@ export interface JWTPayload {
   username: string;
   role: string;
   consultantId?: number;
-  
+
   homeUniversityId?: number;
   activeUniversityId?: number;
   allowedUniversityIds?: number[];
@@ -57,6 +57,18 @@ function parseOptionalNumber(v: any): number | undefined {
   return undefined;
 }
 
+// ✅ เพิ่ม: parse array ของตัวเลข (รองรับ token claim ที่เป็น string/number)
+function parseNumberArray(v: any): number[] | undefined {
+  if (!Array.isArray(v)) return undefined;
+
+  const arr = v
+    .map((x) => parseOptionalNumber(x))
+    .filter((n): n is number => typeof n === "number" && Number.isFinite(n) && n > 0);
+
+  if (!arr.length) return undefined;
+  return Array.from(new Set(arr));
+}
+
 export async function verifyToken(token: string): Promise<JWTPayload | null> {
   try {
     const clean = token.trim();
@@ -70,6 +82,7 @@ export async function verifyToken(token: string): Promise<JWTPayload | null> {
     const consultantId = parseOptionalNumber((payload as any)?.consultantId);
     const homeUniversityId = parseOptionalNumber((payload as any)?.homeUniversityId);
     const activeUniversityId = parseOptionalNumber((payload as any)?.activeUniversityId);
+    const allowedUniversityIds = parseNumberArray((payload as any)?.allowedUniversityIds);
 
     return {
       accountId: (payload as any).accountId,
@@ -78,6 +91,7 @@ export async function verifyToken(token: string): Promise<JWTPayload | null> {
       consultantId,
       homeUniversityId,
       activeUniversityId,
+      allowedUniversityIds, // ✅ เพิ่ม
     };
   } catch {
     return null;
@@ -212,12 +226,10 @@ export async function getAccountFromRequest(
     studentId = student?.student_id;
     if (student?.university_id) {
       activeUniversityId = student.university_id;
-      // และบังคับ allowed = แค่มหาลัยตัวเอง (optional แต่ปลอดภัย)
-      // allowedUniversityIds = [student.university_id]; // ถ้าคุณอยากล็อกแน่น ๆ
     }
   }
 
-  // CONSULTANT: ถ้า token ไม่มี consultantId ให้ดึงจาก DB
+  // CONSULTANT: ถ้า token ไม่มี consultantId ให้ดึงจาก DB + ✅ lock tenant ชัด ๆ
   if (acc.account_role === "CONSULTANT") {
     const c = await prisma.consultant.findFirst({
       where: { account_id: payload.accountId },
@@ -226,8 +238,8 @@ export async function getAccountFromRequest(
 
     consultantId = consultantId ?? c?.consultant_id;
 
-    // consultant ปกติควรอยู่มหาลัยเดียว → ถ้าไม่อนุญาตสลับ ก็ lock แบบ student ได้
-    if (c?.university_id && !allowedUniversityIds.includes(activeUniversityId ?? -1)) {
+    // ✅ consultant ปกติควรอยู่มหาลัยเดียว → lock เลย
+    if (c?.university_id) {
       activeUniversityId = c.university_id;
     }
   }

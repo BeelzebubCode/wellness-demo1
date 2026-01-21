@@ -5,18 +5,14 @@ const STORAGE_KEY = "tenant_code";
 
 /**
  * ตั้งค่า data-tenant ที่ <html> เพื่อให้ CSS theme เปลี่ยนทั้งเว็บ
- * - DEFAULT => ลบ attribute ออก
- * - อื่น ๆ => set data-tenant="NU|CU|KKU|..."
+ * ✅ เปลี่ยนใหม่: DEFAULT ก็ยัง set data-tenant="DEFAULT" (ไม่ remove)
+ * เพื่อ:
+ * - debug ง่าย (ไม่เป็น null)
+ * - ทำ CSS selector ได้ชัด
  */
 export function applyTenantTheme(code: TenantCode) {
   if (typeof document === "undefined") return;
-  const html = document.documentElement;
-
-  if (code === "DEFAULT") {
-    html.removeAttribute("data-tenant");
-  } else {
-    html.setAttribute("data-tenant", code);
-  }
+  document.documentElement.setAttribute("data-tenant", code);
 }
 
 /** บันทึก tenant ไว้เพื่อให้ refresh แล้วยังเป็นธีมเดิม */
@@ -35,11 +31,11 @@ export function loadTenantTheme(): TenantCode {
 export function clearTenantTheme() {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(STORAGE_KEY);
-  applyTenantTheme("DEFAULT");
+  applyTenantTheme("DEFAULT"); // ✅ set DEFAULT ไม่ remove
 }
 
 /**
- * helper: รับ string (เช่น university_code จาก backend) แล้ว normalize + apply + save
+ * helper: รับ string แล้ว normalize + apply + save
  * ใช้หลัง login ได้เลย
  */
 export function setTenantTheme(input?: string | null) {
@@ -50,7 +46,7 @@ export function setTenantTheme(input?: string | null) {
 }
 
 /**
- * helper: เรียกครั้งเดียวตอนเปิดเว็บ (เช่นใน ThemeProvider useEffect)
+ * helper: เรียกตอนเปิดเว็บ
  * จะโหลดค่าที่เคย save และ apply ให้ทันที
  */
 export function initTenantTheme() {

@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     if (!username || !password) {
       return NextResponse.json(
         { success: false, error: "กรุณากรอกชื่อผู้ใช้และรหัสผ่าน" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     if (!account) {
       return NextResponse.json(
         { success: false, error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     if (!ok) {
       return NextResponse.json(
         { success: false, error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
@@ -68,28 +68,32 @@ export async function POST(request: NextRequest) {
 
     const consultantId = account.consultant?.consultant_id ?? null;
 
-    const grantedUniversityIds = account.universityAccesses.map(
-      (x) => x.university_id,
-    );
+    const grantedUniversityIds = account.universityAccesses.map((x) => x.university_id);
 
     const allowedUniversityIds = Array.from(
       new Set([
-        ...(account.account_home_university_id
-          ? [account.account_home_university_id]
-          : []),
+        ...(account.account_home_university_id ? [account.account_home_university_id] : []),
         ...grantedUniversityIds,
-      ]),
+      ])
     );
+
+    // ✅ ดึง university_code เพื่อส่งกลับให้ client set theme
+    const homeUniversityId = account.account_home_university_id ?? null;
+
+    const uni = homeUniversityId
+      ? await prisma.university.findUnique({
+          where: { university_id: homeUniversityId },
+          select: { university_id: true, university_code: true },
+        })
+      : null;
 
     const token = await generateToken({
       accountId: account.account_id,
       username: account.account_username,
       role: account.account_role,
       consultantId: consultantId ?? undefined,
-      homeUniversityId: account.account_home_university_id ?? undefined,
-      allowedUniversityIds: allowedUniversityIds.length
-        ? allowedUniversityIds
-        : undefined,
+      homeUniversityId: homeUniversityId ?? undefined,
+      allowedUniversityIds: allowedUniversityIds.length ? allowedUniversityIds : undefined,
     });
 
     let displayName = account.account_username;
@@ -100,18 +104,24 @@ export async function POST(request: NextRequest) {
     const res = NextResponse.json({
       success: true,
       token,
+
+      // ✅ เพิ่ม tenant ให้ client ใช้ setTenant(...)
+      tenant: {
+        universityId: uni?.university_id ?? homeUniversityId,
+        universityCode: uni?.university_code ?? "DEFAULT",
+      },
+
       account: {
         id: account.account_id,
         username: account.account_username,
         name: displayName,
         role: account.account_role,
         consultantId,
-        homeUniversityId: account.account_home_university_id ?? null,
+        homeUniversityId,
         allowedUniversityIds,
       },
     });
 
-    // ✅ cookie: httpOnly + secure + sameSite
     res.cookies.set({
       name: "auth_token",
       value: token,
@@ -127,7 +137,7 @@ export async function POST(request: NextRequest) {
     console.error("[LOGIN_API_ERROR]", e);
     return NextResponse.json(
       { success: false, error: "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
