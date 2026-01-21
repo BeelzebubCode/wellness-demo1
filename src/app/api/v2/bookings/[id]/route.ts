@@ -12,24 +12,33 @@ function allowedUniversitySet(payload: any) {
   const arr: number[] = Array.isArray(payload?.allowedUniversityIds)
     ? payload.allowedUniversityIds
     : [];
-  const home = typeof payload?.homeUniversityId === "number" ? payload.homeUniversityId : null;
+  const home =
+    typeof payload?.homeUniversityId === "number"
+      ? payload.homeUniversityId
+      : null;
 
   return new Set<number>([...(home ? [home] : []), ...arr]);
 }
 
 function isAdminRole(role: AccountRole) {
-  return role === "HEAD_CONSULTANT" || role === "SUPER_ADMIN" || role === "RECTOR";
+  return (
+    role === "HEAD_CONSULTANT" || role === "SUPER_ADMIN" || role === "RECTOR"
+  );
 }
 
 // GET /api/v1/bookings/:id
 export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
     const payload = await getAuth(req);
-    if (!payload) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!payload)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const bookingId = Number(params.id);
     if (Number.isNaN(bookingId)) {
-      return NextResponse.json({ error: "Invalid booking ID" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid booking ID" },
+        { status: 400 },
+      );
     }
 
     const booking = await prisma.booking.findUnique({
@@ -79,12 +88,21 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     if (role === "STUDENT") {
       // student ดูได้เฉพาะ booking ของตัวเอง
       if (booking.student.account.account_id !== payload.accountId) {
-        return NextResponse.json({ error: "Permission denied" }, { status: 403 });
+        return NextResponse.json(
+          { error: "Permission denied" },
+          { status: 403 },
+        );
       }
     } else if (role === "CONSULTANT") {
       // consultant ดูได้เฉพาะงานที่ assign ให้ตัวเอง (หรือจะเปิดให้ดูทั้งมหาลัยก็ได้ แต่แนะนำแบบนี้ก่อน)
-      if (!payload.consultantId || booking.consultant_id !== payload.consultantId) {
-        return NextResponse.json({ error: "Permission denied" }, { status: 403 });
+      if (
+        !payload.consultantId ||
+        booking.consultant_id !== payload.consultantId
+      ) {
+        return NextResponse.json(
+          { error: "Permission denied" },
+          { status: 403 },
+        );
       }
     } else if (!isAdminRole(role)) {
       return NextResponse.json({ error: "Permission denied" }, { status: 403 });
@@ -123,7 +141,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         phone: studentProfile?.student_phone_number,
         email: studentProfile?.student_email,
         faculty: booking.student.academic?.faculty?.faculty_name_th ?? null,
-        department: booking.student.academic?.department?.department_name_th ?? null,
+        department:
+          booking.student.academic?.department?.department_name_th ?? null,
         lineUserId: booking.student.account.account_line_id,
       },
 
@@ -155,7 +174,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
             note: booking.outcome.booking_outcome_consultant_note,
             nextStep: booking.outcome.booking_outcome_next_step,
             riskLevel: booking.outcome.booking_outcome_risk_level,
-            recordedAt: booking.outcome.booking_outcome_recorded_at.toISOString(),
+            recordedAt:
+              booking.outcome.booking_outcome_recorded_at.toISOString(),
           }
         : null,
 
@@ -163,7 +183,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         ? {
             reason: booking.cancellation.booking_cancellation_reason,
             cancelledBy: booking.cancellation.cancelledBy.account_username,
-            cancelledAt: booking.cancellation.booking_cancellation_cancelled_at.toISOString(),
+            cancelledAt:
+              booking.cancellation.booking_cancellation_cancelled_at.toISOString(),
           }
         : null,
 
@@ -184,7 +205,10 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ success: true, booking: formattedBooking });
   } catch (error) {
     console.error("Error fetching booking:", error);
-    return NextResponse.json({ error: "Failed to fetch booking" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch booking" },
+      { status: 500 },
+    );
   }
 }
 
@@ -192,14 +216,18 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 export async function PUT(req: NextRequest, { params }: RouteParams) {
   try {
     const payload = await getAuth(req);
-    if (!payload) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!payload)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const bookingId = Number(params.id);
     if (Number.isNaN(bookingId)) {
-      return NextResponse.json({ error: "Invalid booking ID" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid booking ID" },
+        { status: 400 },
+      );
     }
 
-    const body = await req.json().catch(() => ({} as any));
+    const body = await req.json().catch(() => ({}) as any);
     const { action, consultantId, note, cancelReason } = body;
 
     const booking = await prisma.booking.findUnique({
@@ -231,18 +259,25 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       // ===================== ASSIGN (HEAD_CONSULTANT เท่านั้น) =====================
       case "assign": {
         if (role !== "HEAD_CONSULTANT") {
-          return NextResponse.json({ error: "Permission denied" }, { status: 403 });
-        }
-        if (!payload.consultantId) {
-          return NextResponse.json({ error: "Missing head consultant id" }, { status: 400 });
-        }
-        if (!consultantId) {
-          return NextResponse.json({ error: "กรุณาระบุผู้ให้คำปรึกษา" }, { status: 400 });
+          return NextResponse.json(
+            { error: "Permission denied" },
+            { status: 403 },
+          );
         }
 
-        // กัน assign ซ้ำตอนจบงานแล้ว
-        if (booking.booking_status === BookingStatus.COMPLETED) {
-          return NextResponse.json({ error: "ไม่สามารถจ่ายงานหลังปิดเคสแล้ว" }, { status: 400 });
+        const assignedById = payload.consultantId; // ✅ ดึงออกมาก่อน
+        if (typeof assignedById !== "number") {
+          return NextResponse.json(
+            { error: "Missing head consultant id" },
+            { status: 400 },
+          );
+        }
+
+        if (typeof consultantId !== "number") {
+          return NextResponse.json(
+            { error: "กรุณาระบุผู้ให้คำปรึกษา" },
+            { status: 400 },
+          );
         }
 
         await prisma.$transaction(async (tx) => {
@@ -257,48 +292,35 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
           await tx.bookingAssignment.create({
             data: {
               booking_id: bookingId,
-              booking_assignment_assigned_by_id: payload.consultantId, // ✅ ไม่รับจาก body กันปลอม
+              booking_assignment_assigned_by_id: assignedById, // ✅ ตอนนี้เป็น number 100%
               booking_assignment_assigned_to_id: consultantId,
-              booking_assignment_note: note,
+              booking_assignment_note: note ?? null, // ✅ กัน note undefined
             },
           });
-
-          // (optional) อัปเดตสถานะ slot ให้ BOOKED ถ้าถึง capacity
-          const slot = await tx.timeSlot.findUnique({
-            where: { time_slot_id: booking.time_slot_id },
-            select: { time_slot_id: true, time_slot_max_capacity: true },
-          });
-
-          if (slot) {
-            const activeCount = await tx.booking.count({
-              where: {
-                time_slot_id: slot.time_slot_id,
-                booking_status: { not: BookingStatus.CANCELLED },
-              },
-            });
-
-            await tx.timeSlot.update({
-              where: { time_slot_id: slot.time_slot_id },
-              data: {
-                time_slot_status:
-                  activeCount >= slot.time_slot_max_capacity
-                    ? TimeSlotStatus.BOOKED
-                    : TimeSlotStatus.AVAILABLE,
-              },
-            });
-          }
         });
 
-        return NextResponse.json({ success: true, status: BookingStatus.ASSIGNED });
+        return NextResponse.json({
+          success: true,
+          status: BookingStatus.ASSIGNED,
+        });
       }
 
       // ===================== START (CONSULTANT ที่ถูก assign เท่านั้น) =====================
       case "start": {
         if (role !== "CONSULTANT") {
-          return NextResponse.json({ error: "Permission denied" }, { status: 403 });
+          return NextResponse.json(
+            { error: "Permission denied" },
+            { status: 403 },
+          );
         }
-        if (!payload.consultantId || booking.consultant_id !== payload.consultantId) {
-          return NextResponse.json({ error: "Permission denied" }, { status: 403 });
+        if (
+          !payload.consultantId ||
+          booking.consultant_id !== payload.consultantId
+        ) {
+          return NextResponse.json(
+            { error: "Permission denied" },
+            { status: 403 },
+          );
         }
 
         await prisma.booking.update({
@@ -306,21 +328,36 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
           data: { booking_status: BookingStatus.IN_PROGRESS },
         });
 
-        return NextResponse.json({ success: true, status: BookingStatus.IN_PROGRESS });
+        return NextResponse.json({
+          success: true,
+          status: BookingStatus.IN_PROGRESS,
+        });
       }
 
       // ===================== COMPLETE (CONSULTANT ที่ถูก assign เท่านั้น) =====================
       case "complete": {
         if (role !== "CONSULTANT") {
-          return NextResponse.json({ error: "Permission denied" }, { status: 403 });
+          return NextResponse.json(
+            { error: "Permission denied" },
+            { status: 403 },
+          );
         }
-        if (!payload.consultantId || booking.consultant_id !== payload.consultantId) {
-          return NextResponse.json({ error: "Permission denied" }, { status: 403 });
+        if (
+          !payload.consultantId ||
+          booking.consultant_id !== payload.consultantId
+        ) {
+          return NextResponse.json(
+            { error: "Permission denied" },
+            { status: 403 },
+          );
         }
 
         const { consultantNote, nextStep, riskLevel } = body;
         if (!consultantNote) {
-          return NextResponse.json({ error: "กรุณาระบุบันทึกการปรึกษา" }, { status: 400 });
+          return NextResponse.json(
+            { error: "กรุณาระบุบันทึกการปรึกษา" },
+            { status: 400 },
+          );
         }
 
         await prisma.$transaction(async (tx) => {
@@ -346,22 +383,34 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
           });
         });
 
-        return NextResponse.json({ success: true, status: BookingStatus.COMPLETED });
+        return NextResponse.json({
+          success: true,
+          status: BookingStatus.COMPLETED,
+        });
       }
 
       // ===================== CANCEL (STUDENT เจ้าของ booking เท่านั้น) =====================
       case "cancel": {
         if (role !== "STUDENT") {
-          return NextResponse.json({ error: "Permission denied" }, { status: 403 });
+          return NextResponse.json(
+            { error: "Permission denied" },
+            { status: 403 },
+          );
         }
 
         // owner check
         if (booking.student.account_id !== payload.accountId) {
-          return NextResponse.json({ error: "Permission denied" }, { status: 403 });
+          return NextResponse.json(
+            { error: "Permission denied" },
+            { status: 403 },
+          );
         }
 
         if (!cancelReason) {
-          return NextResponse.json({ error: "กรุณาระบุเหตุผลในการยกเลิก" }, { status: 400 });
+          return NextResponse.json(
+            { error: "กรุณาระบุเหตุผลในการยกเลิก" },
+            { status: 400 },
+          );
         }
 
         // กันยกเลิกซ้ำ/ยกเลิกหลังปิดเคส
@@ -369,7 +418,10 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
           booking.booking_status === BookingStatus.CANCELLED ||
           booking.booking_status === BookingStatus.COMPLETED
         ) {
-          return NextResponse.json({ error: "ไม่สามารถยกเลิกสถานะนี้ได้" }, { status: 400 });
+          return NextResponse.json(
+            { error: "ไม่สามารถยกเลิกสถานะนี้ได้" },
+            { status: 400 },
+          );
         }
 
         await prisma.$transaction(async (tx) => {
@@ -416,7 +468,10 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
           }
         });
 
-        return NextResponse.json({ success: true, status: BookingStatus.CANCELLED });
+        return NextResponse.json({
+          success: true,
+          status: BookingStatus.CANCELLED,
+        });
       }
 
       default:
@@ -424,6 +479,9 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     }
   } catch (error) {
     console.error("Error updating booking:", error);
-    return NextResponse.json({ error: "Failed to update booking" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update booking" },
+      { status: 500 },
+    );
   }
 }
