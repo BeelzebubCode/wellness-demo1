@@ -24,16 +24,16 @@ const randomItem = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length
 const randomBool = (p = 0.5) => Math.random() < p;
 
 const firstNames = [
-  "Somchai","Somsak","Malee","Manee","Pranee","Wichai","Suda","Naree","Arthit","Kanya",
-  "Decha","Pichai","Ratana","Sunee","Vipa","Narong","Siriporn","Thongchai","Udom","Wanida",
-  "Pongsak","Nattapong","Jirawat","Chanida","Phanumas","Kritsada","Pimchanok","Nicha","Thanawat","Sirin",
+  "Somchai", "Somsak", "Malee", "Manee", "Pranee", "Wichai", "Suda", "Naree", "Arthit", "Kanya",
+  "Decha", "Pichai", "Ratana", "Sunee", "Vipa", "Narong", "Siriporn", "Thongchai", "Udom", "Wanida",
+  "Pongsak", "Nattapong", "Jirawat", "Chanida", "Phanumas", "Kritsada", "Pimchanok", "Nicha", "Thanawat", "Sirin",
 ];
 const lastNames = [
-  "Jaidee","Meewong","Rakchart","Sukjai","Munjai","Kongthong","Srisuk","Wongsa","Panya","Kaewta",
-  "Rojjana","Saetang","Saelee","Jairak","Boonmee","Chaisri","Wongsuwan","Intara","Promma","Srithep",
-  "Kongkaew","Suwan","Thongdee","Rattanaporn","Chantara","Srisawat","Petchmanee","Phrom","Kaewsai","Yimyam",
+  "Jaidee", "Meewong", "Rakchart", "Sukjai", "Munjai", "Kongthong", "Srisuk", "Wongsa", "Panya", "Kaewta",
+  "Rojjana", "Saetang", "Saelee", "Jairak", "Boonmee", "Chaisri", "Wongsuwan", "Intara", "Promma", "Srithep",
+  "Kongkaew", "Suwan", "Thongdee", "Rattanaporn", "Chantara", "Srisawat", "Petchmanee", "Phrom", "Kaewsai", "Yimyam",
 ];
-const nicknames = ["Mod","Kai","Moo","Nu","Lek","Yai","Ton","Som","Oat","Pim","Nan","May","Best","Keng","Ploy","Mew","New","Bam","Mint","Tee"];
+const nicknames = ["Mod", "Kai", "Moo", "Nu", "Lek", "Yai", "Ton", "Som", "Oat", "Pim", "Nan", "May", "Best", "Keng", "Ploy", "Mew", "New", "Bam", "Mint", "Tee"];
 
 function startOfDay(d: Date) {
   const x = new Date(d);
@@ -826,19 +826,22 @@ async function main() {
     },
   });
 
-    /* =========================================================
-    8) TimeSlots + Bookings ecosystem
-    IMPORTANT:
-    - Booking.time_slot_id UNIQUE => 1 slot ต่อ 1 booking เท่านั้น
-    - ดังนั้น max_capacity ใช้ 1 และ "ห้าม reuse slot เดียวทำหลาย booking"
+  /* =========================================================
+  8) TimeSlots + Bookings ecosystem
+  IMPORTANT:
+  - Booking.time_slot_id UNIQUE => 1 slot ต่อ 1 booking เท่านั้น
+  - ดังนั้น max_capacity ใช้ 1 และ "ห้าม reuse slot เดียวทำหลาย booking"
   ========================================================= */
   console.log("Creating time slots ...");
 
   const today = startOfDay(new Date());
   const timeSlots: { id: number; university_id: number; consultant_id: number; status: TimeSlotStatus }[] = [];
 
-  // สร้าง slot ให้ consultant แต่ละคน (อิง university ของ consultant)
-  // รวม ~ 120 slots
+  // สร้าง slot แบบ deterministic กันชน unique (consultant_id + start + end)
+  const DAY_COUNT = 14; // 2 สัปดาห์
+  const HOURS = [9, 10, 13, 14]; // 4 slots/วัน (ปรับได้)
+  const SLOT_DURATION_HOURS = 1;
+
   for (const c of consultants) {
     const cFull = await prisma.consultant.findUnique({
       where: { consultant_id: c.consultant_id },
@@ -846,34 +849,44 @@ async function main() {
     });
     if (!cFull) continue;
 
-    for (let i = 0; i < 24; i++) {
-      const base = new Date(today);
-      base.setDate(base.getDate() + randomInt(-7, 21));
-      base.setHours(randomInt(9, 16), 0, 0, 0);
+    for (let d = 0; d < DAY_COUNT; d++) {
+      for (const h of HOURS) {
+        const start = new Date(today);
+        start.setDate(start.getDate() + d); // ไล่วันไปเรื่อยๆ
+        start.setHours(h, 0, 0, 0);
 
-      const start = new Date(base);
-      const end = new Date(base);
-      end.setHours(end.getHours() + 1);
+        const end = new Date(start);
+        end.setHours(end.getHours() + SLOT_DURATION_HOURS);
 
-      const status = TimeSlotStatus.AVAILABLE;
+        // กันซ้ำไว้เพิ่มอีกชั้น (เผื่อเคย seed มาแล้วตอน CLEAR_DB=0)
+        const exists = await prisma.timeSlot.findFirst({
+          where: {
+            consultant_id: cFull.consultant_id,
+            time_slot_start_datetime: start,
+            time_slot_end_datetime: end,
+          },
+          select: { time_slot_id: true },
+        });
+        if (exists) continue;
 
-      const ts = await prisma.timeSlot.create({
-        data: {
-          consultant_id: cFull.consultant_id,
+        const ts = await prisma.timeSlot.create({
+          data: {
+            consultant_id: cFull.consultant_id,
+            university_id: cFull.university_id,
+            time_slot_start_datetime: start,
+            time_slot_end_datetime: end,
+            time_slot_max_capacity: 1,
+            time_slot_status: TimeSlotStatus.AVAILABLE,
+          },
+        });
+
+        timeSlots.push({
+          id: ts.time_slot_id,
           university_id: cFull.university_id,
-          time_slot_start_datetime: start,
-          time_slot_end_datetime: end,
-          time_slot_max_capacity: 1, // สำคัญ: ให้สอดคล้อง "1 booking = 1 slot"
-          time_slot_status: status,
-        },
-      });
-
-      timeSlots.push({
-        id: ts.time_slot_id,
-        university_id: cFull.university_id,
-        consultant_id: cFull.consultant_id,
-        status,
-      });
+          consultant_id: cFull.consultant_id,
+          status: ts.time_slot_status,
+        });
+      }
     }
   }
 

@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import type { BookingStatus } from "@prisma/client";
-import { requireTenant, assertRole } from "@/lib/tenant";
+import { requireTenant, assertRole } from "@/lib/tenants/server";
 
 /* =========================
    GET /api/v2/bookings

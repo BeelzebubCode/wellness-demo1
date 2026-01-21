@@ -1,7 +1,7 @@
 // src/app/api/v2/time-slots/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { requireTenant, assertRole } from "@/lib/tenant";
+import { requireTenant, assertRole } from "@/lib/tenants/server";
 
 /* ============================================
    Helpers

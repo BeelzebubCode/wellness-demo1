@@ -1,4 +1,5 @@
 /* src/app/globals.css */
+@import "../styles/tenants.css";
 
 @tailwind base;
 @tailwind components;
@@ -8,33 +9,29 @@
 
 @layer base {
   html {
-    /* 📱 Mobile: มาตรฐาน 16px */
     font-size: 16px;
   }
 
   @media (min-width: 1024px) {
-    html {
-      /* 🖥️ Desktop: ปรับฐานเป็น 18px (ทำให้ทุกอย่างใหญ่ขึ้น 12.5% ทันที) */
-      font-size: 18px; 
-    }
+    html { font-size: 18px; }
   }
 
   @media (min-width: 1536px) {
-    html {
-      /* 🖥️ Large Desktop: จอใหญ่มาก ปรับเป็น 20px */
-      font-size: 20px;
-    }
+    html { font-size: 20px; }
   }
 
   body {
-    @apply bg-gray-50 text-gray-900 leading-relaxed antialiased;
+    background: rgb(var(--bg));
+    color: rgb(var(--fg));
+    @apply leading-relaxed antialiased;
   }
 
-  /* ปรับ Heading ให้ใหญ่สะใจ */
   h1 { @apply text-3xl md:text-4xl lg:text-5xl font-bold mb-6; }
   h2 { @apply text-2xl md:text-3xl lg:text-4xl font-bold mb-4; }
   h3 { @apply text-xl md:text-2xl lg:text-3xl font-bold mb-3; }
-  p  { @apply text-base md:text-lg text-gray-600; }
+
+  /* ✅ แนะนำให้ใช้ muted จาก tenant */
+  p  { @apply text-base md:text-lg; color: rgb(var(--muted)); }
 }
 
 @layer components {
