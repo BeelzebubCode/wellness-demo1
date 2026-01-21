@@ -1,7 +1,6 @@
-// src/features/auth/hooks/useRoleAuth.ts
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { authApi } from "../api";
 import type { AuthUser } from "../types";
@@ -10,9 +9,9 @@ import { useNotificationContext } from "@/components/notification/NotificationPr
 type Role = AuthUser["role"];
 
 type UseRoleAuthOptions = {
-  redirectTo?: string;          // default "/login"
-  allowedRoles: Role[];         // เช่น ["STUDENT"]
-  loginToastKey: string;        // กัน toast เด้งรัว
+  redirectTo?: string; // default "/login"
+  allowedRoles: readonly Role[];
+  loginToastKey: string;
 };
 
 const SUPPRESS_TOAST_KEY = "suppress_login_toast_once";
@@ -29,10 +28,13 @@ export function useRoleAuth<TUser extends AuthUser = AuthUser>({
   const [user, setUser] = useState<TUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // ✅ ทำให้ dependency "เสถียร"
+  const rolesKey = useMemo(() => allowedRoles.join("|"), [allowedRoles]);
+  const allowedSet = useMemo(() => new Set<Role>(allowedRoles), [rolesKey]);
+
   useEffect(() => {
     let isMounted = true;
 
-    // ถ้าอยู่หน้า login อยู่แล้ว ไม่ต้องเช็ค
     if (pathname === "/login") {
       setIsLoading(false);
       return () => {
@@ -47,15 +49,11 @@ export function useRoleAuth<TUser extends AuthUser = AuthUser>({
           sessionStorage.removeItem(SUPPRESS_TOAST_KEY);
           return;
         }
-
         const last = Number(sessionStorage.getItem(loginToastKey) || "0");
         const now = Date.now();
         if (now - last < COOLDOWN_MS) return;
-
         sessionStorage.setItem(loginToastKey, String(now));
-      } catch {
-        // ignore
-      }
+      } catch {}
 
       push({
         type: "warning",
@@ -68,14 +66,11 @@ export function useRoleAuth<TUser extends AuthUser = AuthUser>({
     const clearLoginToastFlag = () => {
       try {
         sessionStorage.removeItem(loginToastKey);
-      } catch {
-        // ignore
-      }
+      } catch {}
     };
 
     const redirectLogin = () => {
       if (pathname === "/login") return;
-
       toastLoginOnce();
       const next = pathname && pathname !== "/login" ? pathname : "/";
       router.replace(`${redirectTo}?next=${encodeURIComponent(next)}`);
@@ -92,7 +87,7 @@ export function useRoleAuth<TUser extends AuthUser = AuthUser>({
           return;
         }
 
-        if (!allowedRoles.includes(data.account.role)) {
+        if (!allowedSet.has(data.account.role)) {
           setUser(null);
           push({
             type: "error",
@@ -116,10 +111,12 @@ export function useRoleAuth<TUser extends AuthUser = AuthUser>({
     };
 
     verify();
+
     return () => {
       isMounted = false;
     };
-  }, [router, pathname, redirectTo, push, allowedRoles, loginToastKey]);
+    // ✅ สำคัญ: ใช้ rolesKey แทน allowedRoles
+  }, [router, pathname, redirectTo, push, rolesKey, loginToastKey, allowedSet]);
 
   return {
     user,

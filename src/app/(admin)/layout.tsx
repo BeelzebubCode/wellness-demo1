@@ -1,36 +1,37 @@
+// app/admin/layout.tsx (หรือ path ที่คุณใช้จริง)
 "use client";
 
-import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { AdminHeader, AdminSidebar } from "@/components/layout";
 import { LoadingSpinner } from "@/components/ui";
-import useAdminAuth from "@/features/auth/hooks/useAdminAuth";
+import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
   const pathname = usePathname();
 
-  // ✅ หน้า login กลาง (/login) ห้ามโดน guard
-  const isLoginPage = pathname === "/login";
-  if (isLoginPage) return <>{children}</>;
+  // ✅ หน้า login ไม่ต้อง guard
+  if (pathname === "/login") return <>{children}</>;
 
-  const { user, isLoading, isAuthenticated } = useAdminAuth();
+  // ✅ roles admin ของคุณ
+  const allowedRoles = useMemo(
+    () => ["HEAD_CONSULTANT", "SUPER_ADMIN", "RECTOR"] as const,
+    [],
+  );
+
+  // ✅ guard ทั้งหมดอยู่ใน hook แล้ว (login/role/toast/redirect)
+  const { user, isLoading, isAuthenticated } = useRoleAuth({
+    redirectTo: "/login",
+    allowedRoles: ["HEAD_CONSULTANT", "SUPER_ADMIN", "RECTOR"] as const,
+    loginToastKey: "toast_login_required_admin",
+  });
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      const safeNext =
-        pathname && pathname !== "/login" ? pathname : "/admin/data-center";
-
-      router.replace(`/login?next=${encodeURIComponent(safeNext)}`);
-    }
-  }, [isLoading, isAuthenticated, pathname, router]);
 
   if (isLoading || !isAuthenticated) {
     return (

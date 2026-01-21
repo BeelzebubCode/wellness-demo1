@@ -68,15 +68,17 @@ export default function LoginPage() {
 
         // ✅ map role ตาม schema ใหม่
         const nextPath =
-          role === "SUPER_ADMIN" || role === "RECTOR"
-            ? "/admin/data-center"
-            : role === "HEAD_CONSULTANT"
-              ? "/admin/data-center" // หรือจะเปลี่ยนเป็นหน้าหัวหน้าที่ปรึกษาโดยเฉพาะก็ได้
-              : role === "CONSULTANT"
-                ? "/consultant/my-jobs"
-                : role === "STUDENT"
-                  ? "/booking"
-                  : "/";
+          role === "SUPER_ADMIN"
+            ? "/admin/super"
+            : role === "RECTOR"
+              ? "/admin/rector"
+              : role === "HEAD_CONSULTANT"
+                ? "/admin/data-center"
+                : role === "CONSULTANT"
+                  ? "/consultant/my-jobs"
+                  : role === "STUDENT"
+                    ? "/booking"
+                    : "/";
 
         router.replace(nextPath);
         router.refresh();

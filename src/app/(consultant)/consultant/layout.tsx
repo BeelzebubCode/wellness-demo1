@@ -1,21 +1,27 @@
 // app/consultant/layout.tsx
-'use client';
+"use client";
 
-import { useEffect, useState, useCallback } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
-import useConsultantAuth from '@/features/auth/hooks/useConsultantAuth';
-import { ConsultantSidebar } from '@/components/layout/sidebar';
-import { ConsultantHeader } from '@/components/layout/header';
-import { LoadingSpinner } from '@/components/ui';
+import { useState, useCallback, useMemo } from "react";
+import { ConsultantSidebar } from "@/components/layout/sidebar";
+import { ConsultantHeader } from "@/components/layout/header";
+import { LoadingSpinner } from "@/components/ui";
+
+import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
 
 export default function ConsultantLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const { user, isLoading, isAuthenticated } = useConsultantAuth();
+  // ✅ กัน effect rerun เพราะ array literal เปลี่ยนทุก render
+  const allowedRoles = useMemo(() => ["CONSULTANT"] as const, []);
+
+  // ✅ Role guard อยู่ใน hook แล้ว (redirect + toast + deny)
+  const { user, isLoading, isAuthenticated } = useRoleAuth({
+    redirectTo: "/login",
+    allowedRoles: ["CONSULTANT"] as const,
+    loginToastKey: "toast_login_required_consultant",
+  });
 
   // Sidebar state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -23,26 +29,14 @@ export default function ConsultantLayout({
 
   // Handlers
   const handleCloseMobile = useCallback(() => setIsSidebarOpen(false), []);
-  const handleToggleCollapse = useCallback(() => setIsSidebarCollapsed((prev) => !prev), []);
+  const handleToggleCollapse = useCallback(
+    () => setIsSidebarCollapsed((prev) => !prev),
+    [],
+  );
   const handleOpenMobile = useCallback(() => setIsSidebarOpen(true), []);
 
-  // Auth guard
-  useEffect(() => {
-    if (isLoading) return;
-
-    if (!isAuthenticated) {
-      const next = pathname && pathname !== '/login' ? pathname : '/consultant/my-jobs';
-      router.replace(`/login?next=${encodeURIComponent(next)}`);
-      return;
-    }
-
-    if (user?.role !== 'CONSULTANT') {
-      router.replace('/');
-    }
-  }, [isLoading, isAuthenticated, user, pathname, router]);
-
-  // Loading state
-  if (isLoading || !isAuthenticated || user?.role !== 'CONSULTANT') {
+  // ✅ Loading/unauth state
+  if (isLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <LoadingSpinner size="xl" label="กำลังตรวจสอบสิทธิ์..." />
@@ -52,7 +46,6 @@ export default function ConsultantLayout({
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar */}
       <ConsultantSidebar
         isOpen={isSidebarOpen}
         isCollapsed={isSidebarCollapsed}
@@ -60,22 +53,10 @@ export default function ConsultantLayout({
         onToggleCollapse={handleToggleCollapse}
       />
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
-        <ConsultantHeader
-          // user={{
-          //   username: user.username,
-          //   displayName: user.displayName,
-          //   avatar: user.avatar,
-          // }}
-          onMenuClick={handleOpenMobile}
-        />
+        <ConsultantHeader onMenuClick={handleOpenMobile} />
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-auto">
-          {children}
-        </main>
+        <main className="flex-1 overflow-auto">{children}</main>
       </div>
     </div>
   );

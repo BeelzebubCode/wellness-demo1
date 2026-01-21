@@ -1,19 +1,23 @@
 // app/booking/layout.tsx
-'use client';
+"use client";
 
-import { useState, useCallback } from 'react';
-import { useStudentAuth } from '@/features/auth/hooks/useStudentAuth';
-import { BookingSidebar } from '@/components/layout/sidebar';
-import { BookingHeader } from '@/components/layout/header';
-import { LoadingSpinner } from '@/components/ui';
+import { useState, useCallback } from "react";
+import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
+import { BookingSidebar } from "@/components/layout/sidebar";
+import { BookingHeader } from "@/components/layout/header";
+import { LoadingSpinner } from "@/components/ui";
 
 export default function BookingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // ✅ hook จะ redirect เองถ้าไม่ผ่าน
-  const { user, isLoading, isAuthenticated } = useStudentAuth('/login');
+  // ✅ me() + role guard
+  const { user, isLoading, isAuthenticated } = useRoleAuth({
+    redirectTo: "/login",
+    allowedRoles: ["STUDENT"] as const,
+    loginToastKey: "toast_login_required_student",
+  });
 
   // Sidebar state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -23,7 +27,7 @@ export default function BookingLayout({
   const handleCloseMobile = useCallback(() => setIsSidebarOpen(false), []);
   const handleToggleCollapse = useCallback(
     () => setIsSidebarCollapsed((prev) => !prev),
-    []
+    [],
   );
   const handleOpenMobile = useCallback(() => setIsSidebarOpen(true), []);
 
@@ -36,12 +40,11 @@ export default function BookingLayout({
     );
   }
 
-  // ✅ ถ้าไม่ auth: hook จะพาไป /login แล้ว ดังนั้น render null ได้เลย
+  // ✅ ถ้าไม่ auth: hook จะ redirect ไป /login แล้ว
   if (!isAuthenticated || !user) return null;
 
   return (
     <div className="flex min-h-screen bg-slate-50">
-      {/* Sidebar */}
       <BookingSidebar
         isOpen={isSidebarOpen}
         isCollapsed={isSidebarCollapsed}
@@ -49,11 +52,9 @@ export default function BookingLayout({
         onToggleCollapse={handleToggleCollapse}
       />
 
-      {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
         <BookingHeader
-          // ✅ กัน field ไม่มี
-          userName={(user as any).displayName ?? user.username}
+          userName={user.name ?? user.username}
           userRole="นักศึกษา"
           onMenuClick={handleOpenMobile}
         />
