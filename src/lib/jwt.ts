@@ -1,11 +1,11 @@
 // src/lib/jwt.ts
-import { SignJWT, jwtVerify } from 'jose';
-import type { NextRequest } from 'next/server';
-import bcrypt from 'bcryptjs';
-import prisma from '@/lib/prisma';
+import { SignJWT, jwtVerify } from "jose";
+import type { NextRequest } from "next/server";
+import bcrypt from "bcryptjs";
+import prisma from "@/lib/prisma";
 
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'your-super-secret-key-change-in-production'
+  process.env.JWT_SECRET || "your-super-secret-key-change-in-production"
 );
 
 export interface JWTPayload {
@@ -13,10 +13,16 @@ export interface JWTPayload {
   username: string;
   role: string;
   consultantId?: number;
+  // (optional) ถ้าอนาคตอยากฝัง tenant ลง token ก็เพิ่มได้ แต่ตอนนี้เราดึงจาก DB เป็นหลัก
+  homeUniversityId?: number;
+  activeUniversityId?: number;
 }
 
 export interface AccountContext extends JWTPayload {
   studentId?: number;
+  homeUniversityId?: number;
+  activeUniversityId?: number;
+  allowedUniversityIds?: number[];
 }
 
 // =======================
@@ -24,19 +30,30 @@ export interface AccountContext extends JWTPayload {
 // =======================
 export async function generateToken(payload: JWTPayload): Promise<string> {
   return new SignJWT({ ...payload })
-    .setProtectedHeader({ alg: 'HS256' })
+    .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime('7d')
+    .setExpirationTime("7d")
     .sign(JWT_SECRET);
 }
 
 function isValidPayload(p: any): p is JWTPayload {
   return (
     p &&
-    typeof p.accountId === 'number' &&
-    typeof p.username === 'string' &&
-    typeof p.role === 'string'
+    typeof p.accountId === "number" &&
+    typeof p.username === "string" &&
+    typeof p.role === "string"
   );
+}
+
+function parseOptionalNumber(v: any): number | undefined {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string") {
+    const s = v.trim();
+    if (!s) return undefined;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : undefined;
+  }
+  return undefined;
 }
 
 export async function verifyToken(token: string): Promise<JWTPayload | null> {
@@ -46,33 +63,21 @@ export async function verifyToken(token: string): Promise<JWTPayload | null> {
 
     const { payload } = await jwtVerify(clean, JWT_SECRET);
 
-    // jose payload เป็น object กว้าง ๆ เลย validate เบื้องต้นกันพัง
     const p = payload as any;
     if (!isValidPayload(p)) return null;
 
-    // consultantId อาจมาเป็น number หรือ string ได้ (กันเคสแปลก ๆ)
-    const rawConsultantId = (payload as any)?.consultantId;
+    const consultantId = parseOptionalNumber((payload as any)?.consultantId);
+    const homeUniversityId = parseOptionalNumber((payload as any)?.homeUniversityId);
+    const activeUniversityId = parseOptionalNumber((payload as any)?.activeUniversityId);
 
-    let consultantId: number | undefined = undefined;
-
-    if (typeof rawConsultantId === 'number') {
-      consultantId = rawConsultantId;
-    } else if (typeof rawConsultantId === 'string') {
-      const s = rawConsultantId.trim();
-      if (s !== '') {
-        const n = Number(s);
-        consultantId = Number.isFinite(n) ? n : undefined;
-      }
-    }
-
-    // แล้วค่อย return
     return {
       accountId: (payload as any).accountId,
       username: (payload as any).username,
       role: (payload as any).role,
       consultantId,
+      homeUniversityId,
+      activeUniversityId,
     };
-
   } catch {
     return null;
   }
@@ -80,27 +85,27 @@ export async function verifyToken(token: string): Promise<JWTPayload | null> {
 
 export function extractToken(request: NextRequest): string | null {
   const auth =
-    request.headers.get('authorization') ||
-    request.headers.get('Authorization') ||
-    '';
+    request.headers.get("authorization") ||
+    request.headers.get("Authorization") ||
+    "";
 
-  if (auth.startsWith('Bearer ')) {
+  if (auth.startsWith("Bearer ")) {
     const token = auth.slice(7).trim();
     if (token) return token;
   }
 
   // ✅ FIX: เพิ่ม auth_token (สำคัญมาก)
   const cookieToken =
-    request.cookies.get('auth_token')?.value ||   // 👈 เพิ่มบรรทัดนี้
-    request.cookies.get('admin_token')?.value ||
-    request.cookies.get('access_token')?.value ||
-    request.cookies.get('token')?.value;
+    request.cookies.get("auth_token")?.value ||
+    request.cookies.get("admin_token")?.value ||
+    request.cookies.get("access_token")?.value ||
+    request.cookies.get("token")?.value;
 
   if (cookieToken) return cookieToken;
 
   try {
     const url = new URL(request.url);
-    const q = url.searchParams.get('token');
+    const q = url.searchParams.get("token");
     if (q) return q.trim();
   } catch {
     // ignore
@@ -109,6 +114,24 @@ export function extractToken(request: NextRequest): string | null {
   return null;
 }
 
+/** อ่าน "active university" จาก header/cookie (สำหรับ staff ที่สลับมหาลัยได้) */
+function getRequestedUniversityId(request: NextRequest): number | null {
+  // header (แนะนำให้ใช้)
+  const h =
+    request.headers.get("x-university-id") ||
+    request.headers.get("X-University-Id") ||
+    null;
+
+  const fromHeader = h ? Number(h) : NaN;
+  if (Number.isFinite(fromHeader) && fromHeader > 0) return fromHeader;
+
+  // cookie (ถ้าคุณทำ switcher แล้วค่อย set)
+  const c = request.cookies.get("active_university_id")?.value;
+  const fromCookie = c ? Number(c) : NaN;
+  if (Number.isFinite(fromCookie) && fromCookie > 0) return fromCookie;
+
+  return null;
+}
 
 // =======================
 // Password (bcrypt)
@@ -124,9 +147,8 @@ export async function verifyPassword(
   return bcrypt.compare(password, hashedPassword);
 }
 
-
 // =======================
-// Helper for API Route
+// Helper for API Route (✅ เพิ่ม tenant context ที่นี่)
 // =======================
 export async function getAccountFromRequest(
   request: NextRequest
@@ -137,19 +159,85 @@ export async function getAccountFromRequest(
   const payload = await verifyToken(token);
   if (!payload) return null;
 
-  let studentId: number | undefined = undefined;
+  // 1) โหลด account เพิ่ม เพื่อรู้ homeUniversityId (source of truth)
+  const acc = await prisma.account.findUnique({
+    where: { account_id: payload.accountId },
+    select: {
+      account_id: true,
+      account_role: true,
+      account_home_university_id: true,
+    },
+  });
 
-  if (payload.role === 'STUDENT') {
+  if (!acc) return null;
+
+  const homeUniversityId = acc.account_home_university_id ?? undefined;
+
+  // 2) หาสิทธิ์ข้ามมหาลัย (allowedUniversityIds)
+  const accessRows = await prisma.accountUniversityAccess.findMany({
+    where: {
+      account_id: payload.accountId,
+      access_revoked_at: null,
+    },
+    select: { university_id: true },
+  });
+
+  const allowedUniversityIds = Array.from(
+    new Set([
+      ...(homeUniversityId ? [homeUniversityId] : []),
+      ...accessRows.map((r) => r.university_id),
+    ])
+  );
+
+  // 3) resolve activeUniversityId (default = home)
+  let activeUniversityId: number | undefined = homeUniversityId;
+
+  const requestedUniId = getRequestedUniversityId(request);
+  if (requestedUniId && allowedUniversityIds.includes(requestedUniId)) {
+    activeUniversityId = requestedUniId;
+  }
+
+  // 4) เติม studentId / consultantId จาก DB + lock tenant ให้ถูกต้อง
+  let studentId: number | undefined = undefined;
+  let consultantId: number | undefined = payload.consultantId;
+
+  // STUDENT: บังคับ active = uni ของ student (กันหลุด)
+  if (acc.account_role === "STUDENT") {
     const student = await prisma.student.findFirst({
       where: { account_id: payload.accountId },
-      select: { student_id: true },
+      select: { student_id: true, university_id: true },
     });
 
     studentId = student?.student_id;
+    if (student?.university_id) {
+      activeUniversityId = student.university_id;
+      // และบังคับ allowed = แค่มหาลัยตัวเอง (optional แต่ปลอดภัย)
+      // allowedUniversityIds = [student.university_id]; // ถ้าคุณอยากล็อกแน่น ๆ
+    }
+  }
+
+  // CONSULTANT: ถ้า token ไม่มี consultantId ให้ดึงจาก DB
+  if (acc.account_role === "CONSULTANT") {
+    const c = await prisma.consultant.findFirst({
+      where: { account_id: payload.accountId },
+      select: { consultant_id: true, university_id: true },
+    });
+
+    consultantId = consultantId ?? c?.consultant_id;
+
+    // consultant ปกติควรอยู่มหาลัยเดียว → ถ้าไม่อนุญาตสลับ ก็ lock แบบ student ได้
+    if (c?.university_id && !allowedUniversityIds.includes(activeUniversityId ?? -1)) {
+      activeUniversityId = c.university_id;
+    }
   }
 
   return {
     ...payload,
+    role: acc.account_role, // ใช้ role จาก DB เป็นหลัก กัน token เพี้ยน
     studentId,
+    consultantId,
+    homeUniversityId,
+    activeUniversityId,
+    allowedUniversityIds,
   };
 }
