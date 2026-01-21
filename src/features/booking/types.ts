@@ -7,8 +7,6 @@ export type BookingStatus =
   | 'COMPLETED' 
   | 'CANCELLED';
 
-// src/features/booking/types.ts
-
 export interface TimeSlot {
   id: number;
   startTime: string;
@@ -32,8 +30,6 @@ export interface TimeSlot {
   unavailableReason?: 'PAST_TIME' | 'FULL' | 'CLOSED' | 'UNAVAILABLE' | null;
 }
 
-
-
 export interface Booking {
   id: number;     
   studentId: number;
@@ -47,6 +43,21 @@ export interface Booking {
   startTime?: string;
   endTime?: string;
   hasFeedback?: boolean; 
+}
+
+export interface MyBooking {
+  id: number;
+  status: BookingStatus;
+  problemType: string | null;
+
+  createdAt: string | null;
+  updatedAt: string | null;
+
+  date: string | null;
+  startTime: string | null;
+  endTime: string | null;
+
+  hasFeedback?: boolean;
 }
 
 

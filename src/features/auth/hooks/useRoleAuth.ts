@@ -1,3 +1,5 @@
+// src/features/auth/hooks/useRoleAuth.ts
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";

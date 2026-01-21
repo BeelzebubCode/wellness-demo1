@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { Booking } from '@/features/booking/types';
+import type { MyBooking, BookingStatus } from '@/features/booking/types';
 
 interface UseMyAppointmentsReturn {
-  bookings: Booking[];
-  activeBooking: Booking | null;
-  pastBookings: Booking[];
+  bookings: MyBooking[];
+  activeBooking: MyBooking | null;
+  pastBookings: MyBooking[];
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
@@ -14,7 +14,7 @@ interface UseMyAppointmentsReturn {
 }
 
 export function useMyAppointments(): UseMyAppointmentsReturn {
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookings, setBookings] = useState<MyBooking[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,18 +23,28 @@ export function useMyAppointments(): UseMyAppointmentsReturn {
     setError(null);
 
     try {
-      // ✅ API สำหรับ "ของฉัน" เท่านั้น
-      const response = await fetch('/api/v1/bookings/my');
+      const response = await fetch('/api/v2/bookings/my', {
+        method: 'GET',
+        credentials: 'include', // ✅ ส่ง cookie auth_token ชัวร์
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch bookings');
+      let data: any = null;
+      try {
+        data = await response.json();
+      } catch {
+        // server อาจตอบ HTML ตอน 500
       }
 
-      const data = await response.json();
-      setBookings(data.bookings || []);
-    } catch (err) {
+      if (!response.ok) {
+        throw new Error(data?.error || `HTTP ${response.status}`);
+      }
+
+      setBookings((data?.bookings || []) as MyBooking[]);
+    } catch (err: any) {
       console.error('Error fetching bookings:', err);
-      setError('ไม่สามารถโหลดข้อมูลการจองได้');
+      setError(err?.message || 'ไม่สามารถโหลดข้อมูลการจองได้');
       setBookings([]);
     } finally {
       setIsLoading(false);
@@ -47,11 +57,11 @@ export function useMyAppointments(): UseMyAppointmentsReturn {
 
   const activeBooking =
     bookings.find((b) =>
-      ['PENDING_ASSIGNMENT', 'ASSIGNED', 'IN_PROGRESS'].includes(b.status)
+      (['PENDING_ASSIGNMENT', 'ASSIGNED', 'IN_PROGRESS'] as BookingStatus[]).includes(b.status)
     ) || null;
 
   const pastBookings = bookings.filter((b) =>
-    ['COMPLETED', 'CANCELLED'].includes(b.status)
+    (['COMPLETED', 'CANCELLED'] as BookingStatus[]).includes(b.status)
   );
 
   return {

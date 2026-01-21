@@ -5,32 +5,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { useMyAppointments } from "@/features/booking/hooks/useMyAppointments";
 import { useBooking } from "@/features/booking/hooks/useBooking";
-import { useStudentAuth } from "@/features/auth/hooks/useStudentAuth";
 import { MyAppointmentCard } from "@/components/booking";
 import { AlertBox } from "@/components/notification/AlertBox";
-import {
-  Card,
-  Button,
-  LoadingSpinner,
-  Modal,
-  ModalFooter,
-} from "@/components/ui";
-import {
-  ClipboardList,
-  Clock3,
-  UserRound,
-  Inbox,
-  CalendarPlus,
-  History,
-} from "lucide-react";
+import { Card, Button, LoadingSpinner, Modal, ModalFooter } from "@/components/ui";
+import { ClipboardList, Clock3, Inbox, CalendarPlus, History } from "lucide-react";
 
 export default function MyAppointmentsPage() {
-  const {
-    user,
-    isLoading: authLoading,
-    isAuthenticated,
-  } = useStudentAuth("/login");
-
   /* ---------------- STATE (CANCEL) ---------------- */
   const [bookingToCancel, setBookingToCancel] = useState<number | null>(null);
   const [cancelReason, setCancelReason] = useState("");
@@ -46,8 +26,7 @@ export default function MyAppointmentsPage() {
   };
 
   /* ---------------- DATA ---------------- */
-  const { activeBooking, pastBookings, isLoading, refetch } =
-    useMyAppointments();
+  const { activeBooking, pastBookings, isLoading, refetch } = useMyAppointments();
   const { cancelBooking, isLoading: isCancelling } = useBooking();
 
   /* ---------------- ACTION ---------------- */
@@ -71,18 +50,6 @@ export default function MyAppointmentsPage() {
       setCancelError("ไม่สามารถยกเลิกการจองได้ กรุณาลองใหม่");
     }
   };
-
-  /* ---------------- AUTH LOADING (สำคัญ: มาก่อน data) ---------------- */
-  if (authLoading) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <LoadingSpinner size="xl" label="กำลังตรวจสอบสิทธิ์..." />
-      </div>
-    );
-  }
-
-  // hook จะ redirect เอง ถ้าไม่ผ่าน → render null กัน UI กระพริบ
-  if (!isAuthenticated || !user) return null;
 
   /* ---------------- DATA LOADING ---------------- */
   if (isLoading || isCancelling) {
@@ -132,12 +99,8 @@ export default function MyAppointmentsPage() {
             ) : (
               <div className="py-12 text-center border border-dashed rounded-xl bg-gray-50">
                 <Inbox className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <p className="font-semibold text-gray-700">
-                  ไม่มีการจองที่กำลังดำเนินการ
-                </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  คุณสามารถจองคิวใหม่ได้
-                </p>
+                <p className="font-semibold text-gray-700">ไม่มีการจองที่กำลังดำเนินการ</p>
+                <p className="text-sm text-gray-500 mt-1">คุณสามารถจองคิวใหม่ได้</p>
               </div>
             )}
           </Card>
@@ -160,15 +123,8 @@ export default function MyAppointmentsPage() {
               </div>
               <div className="flex justify-between text-gray-600">
                 <span>ประวัติการจอง</span>
-                <span className="font-semibold text-gray-800">
-                  {pastBookings.length} รายการ
-                </span>
+                <span className="font-semibold text-gray-800">{pastBookings.length} รายการ</span>
               </div>
-            </div>
-
-            <div className="mt-4 flex items-center gap-2 pt-3 border-t text-xs text-gray-500">
-              <UserRound className="w-4 h-4" />
-              {(user as any).displayName ?? user.username}
             </div>
           </Card>
 
@@ -181,9 +137,7 @@ export default function MyAppointmentsPage() {
                     ดูประวัติการจองทั้งหมด
                   </span>
                 </div>
-                <span className="text-xs text-gray-500">
-                  {pastBookings.length} รายการ →
-                </span>
+                <span className="text-xs text-gray-500">{pastBookings.length} รายการ →</span>
               </div>
             </Card>
           </Link>
@@ -198,22 +152,19 @@ export default function MyAppointmentsPage() {
         size="sm"
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-            คุณแน่ใจหรือไม่ที่จะยกเลิกการจองนี้?
-          </p>
+          <p className="text-sm text-gray-600">คุณแน่ใจหรือไม่ที่จะยกเลิกการจองนี้?</p>
 
           <textarea
             value={cancelReason}
             onChange={(e) => {
               setCancelReason(e.target.value);
               setCancelError(null);
-              setHasSubmitted(false); // ✅ พอเริ่มพิมพ์ ล้าง error look
+              setHasSubmitted(false);
             }}
             placeholder="เหตุผล (จำเป็น)"
             rows={3}
             className={`
-              w-full p-3 rounded-xl text-sm transition
-              border
+              w-full p-3 rounded-xl text-sm transition border
               ${
                 cancelError && hasSubmitted
                   ? "border-red-400 bg-red-50 focus:ring-red-300"
@@ -223,7 +174,6 @@ export default function MyAppointmentsPage() {
             `}
           />
 
-          {/* ✅ แก้ตรงนี้: AlertBox signature แบบใหม่ + render เฉพาะตอนมี error */}
           {cancelError && <AlertBox type="error" message={cancelError} />}
         </div>
 

@@ -6,47 +6,51 @@ import { LogOut } from "lucide-react";
 
 import { logout } from "@/features/auth/logout";
 import { Button, Modal, ModalFooter } from "@/components/ui";
-import { useNotificationContext } from "@/components/notification/NotificationProvider"; // ✅ เพิ่ม
+import { useNotificationContext } from "@/components/notification/NotificationProvider";
 
 type Props = {
   redirectTo?: string;
   label?: string;
   className?: string;
   iconOnly?: boolean;
-
-  // modal text
   confirmTitle?: string;
   confirmDescription?: string;
-
-  // button style
   buttonVariant?: "ghost" | "primary" | "danger";
 };
+
+function getWellnessRootUrl() {
+  const protocol = window.location.protocol; // http:
+  const hostname = window.location.hostname.toLowerCase(); // nu.wellness.local
+  const port = window.location.port; // 3000
+
+  const parts = hostname.split(".");
+  const baseDomain = parts.length >= 3 ? parts.slice(1).join(".") : hostname; // wellness.local
+
+  const targetHost = port ? `${baseDomain}:${port}` : baseDomain;
+  return `${protocol}//${targetHost}`;
+}
 
 export default function LogoutButton({
   redirectTo = "/login",
   label = "ออก",
   className,
   iconOnly = false,
-
   confirmTitle = "ยืนยันออกจากระบบ",
   confirmDescription = "ต้องการออกจากระบบใช่ไหม?",
-
   buttonVariant = "danger",
 }: Props) {
-  const router = useRouter();
-  const { push } = useNotificationContext(); // ✅ เพิ่ม
+  const router = useRouter(); // ยังเก็บไว้ได้ (ไม่ใช้ก็ได้)
+  const { push } = useNotificationContext();
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const onConfirm = async () => {
     setLoading(true);
     try {
-      // ✅ กัน toast “กรุณาเข้าสู่ระบบ” หลัง logout (1 ครั้ง)
       sessionStorage.setItem("suppress_login_toast_once", "1");
 
       await logout();
 
-      // ✅ ถ้ายังมีของเก่าค้างไว้ ก็ลบกันเหนียวได้ (ไม่ผิด)
       localStorage.removeItem("token");
       localStorage.removeItem("auth_user");
 
@@ -61,11 +65,13 @@ export default function LogoutButton({
 
       setIsOpen(false);
 
-      router.replace(redirectTo);
-      // router.refresh(); // ❌ แนะนำตัดออก
+      // ✅ ข้ามโดเมน ต้องใช้ window.location
+      const root = getWellnessRootUrl();
+      const path = redirectTo.startsWith("/") ? redirectTo : `/${redirectTo}`;
+      window.location.assign(`${root}${path}`);
+      return;
     } catch (err) {
       console.error(err);
-
       push({
         type: "error",
         title: "ออกจากระบบไม่สำเร็จ",

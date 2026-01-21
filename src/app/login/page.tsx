@@ -41,10 +41,13 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        // ✅ สำคัญสุด: ตั้งธีมตามมหาลัย (set <html data-tenant="..."> + save localStorage)
-        setTenant(data.tenant?.universityCode || "DEFAULT");
+        const tenantCode = String(
+          data.tenant?.universityCode || "DEFAULT",
+        ).toUpperCase();
 
-        // ✅ เก็บ user ไว้ใช้กับ UI (optional)
+        // ✅ set theme (ยังทำได้)
+        setTenant(tenantCode || "DEFAULT");
+
         localStorage.setItem(
           "auth_user",
           JSON.stringify({
@@ -53,7 +56,7 @@ export default function LoginPage() {
             role: data.account?.role || null,
             homeUniversityId: data.account?.homeUniversityId ?? null,
             allowedUniversityIds: data.account?.allowedUniversityIds ?? [],
-          })
+          }),
         );
 
         window.dispatchEvent(new Event("auth-changed"));
@@ -64,10 +67,10 @@ export default function LoginPage() {
           type: "success",
           title: "เข้าสู่ระบบสำเร็จ",
           message: `ยินดีต้อนรับ ${data.account?.username}`,
-          duration: 1500,
+          duration: 1200,
         });
 
-        // ✅ map role ตาม schema ใหม่
+        // ✅ map role -> path (เหมือนเดิม)
         const nextPath =
           role === "SUPER_ADMIN"
             ? "/admin/super"
@@ -81,8 +84,26 @@ export default function LoginPage() {
                     ? "/booking"
                     : "/";
 
-        router.replace(nextPath);
-        router.refresh();
+        // ✅ map tenantCode -> subdomain
+        const subdomainMap: Record<string, string> = {
+          NU: "nu",
+          KKU: "kku",
+          CU: "cu",
+        };
+
+        const sub = subdomainMap[tenantCode];
+
+        // ✅ ถ้า tenantCode ไม่อยู่ใน map -> อยู่โดเมนกลาง
+        const host = window.location.host; // เช่น wellness.local:3000
+        const protocol = window.location.protocol; // http:
+
+        const targetHost = sub
+          ? `${sub}.wellness.local${host.includes(":") ? ":" + host.split(":")[1] : ""}`
+          : host;
+        const targetUrl = `${protocol}//${targetHost}${nextPath}`;
+
+        // ✅ ข้ามโดเมนต้องใช้ window.location
+        window.location.assign(targetUrl);
         return;
       }
 

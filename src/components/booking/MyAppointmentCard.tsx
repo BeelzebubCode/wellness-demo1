@@ -4,17 +4,11 @@ import { cn } from "@/lib/cn";
 import { formatThaiDate } from "@/lib/date";
 import { BOOKING_STATUS } from "@/lib/constants";
 import { Card, Button } from "@/components/ui";
-import type { Booking } from "@/features/booking/types";
-import {
-  Clock,
-  XCircle,
-  Star,
-  ChevronDown,
-  MessageSquarePlus,
-} from "lucide-react";
+import type { MyBooking } from "@/features/booking/types";
+import { Clock, XCircle, Star, ChevronDown, MessageSquarePlus } from "lucide-react";
 
 export interface MyAppointmentCardProps {
-  booking: Booking;
+  booking: MyBooking;
   onCancel?: () => void;
   isCompact?: boolean;
   isExpanded?: boolean;
@@ -49,6 +43,7 @@ export function MyAppointmentCard({
   const StatusIcon = statusConfig.icon;
 
   const hasDate = Boolean(booking.date && booking.startTime && booking.endTime);
+  const dateObj = booking.date ? new Date(booking.date) : null;
 
   // ✅ Completed แบบทนเคส backend ส่งค่าแปลกๆ
   const isCompleted = statusKey === "COMPLETED";
@@ -58,8 +53,7 @@ export function MyAppointmentCard({
     Boolean((booking as any).hasFeedback) ||
     Boolean((booking as any).feedbackId) ||
     Boolean((booking as any).feedbackSubmitted) ||
-    (Array.isArray((booking as any).feedbacks) &&
-      (booking as any).feedbacks.length > 0);
+    (Array.isArray((booking as any).feedbacks) && (booking as any).feedbacks.length > 0);
 
   // ✅ ปุ่ม Feedback แสดงเมื่อ: จบงาน + ยังไม่เคยประเมิน + มี callback
   const showFeedbackAction = true;
@@ -70,8 +64,8 @@ export function MyAppointmentCard({
      ✅ COMPACT MODE (History) — Enhanced UI
   ====================================================== */
   if (isCompact) {
-    const fullDate = booking.date
-      ? new Date(booking.date).toLocaleDateString("th-TH", {
+    const fullDate = dateObj
+      ? dateObj.toLocaleDateString("th-TH", {
           weekday: "long",
           year: "numeric",
           month: "long",
@@ -114,7 +108,7 @@ export function MyAppointmentCard({
           )}
         >
           {/* 1. DATE BOX */}
-          {booking.date ? (
+          {dateObj ? (
             <div
               className={cn(
                 "shrink-0 w-[52px] flex flex-col items-center rounded-lg border bg-white overflow-hidden shadow-sm",
@@ -122,13 +116,9 @@ export function MyAppointmentCard({
               )}
             >
               <div className="w-full bg-gray-100 text-[10px] font-medium text-gray-500 text-center py-0.5 border-b border-gray-100">
-                {new Date(booking.date).toLocaleDateString("th-TH", {
-                  weekday: "short",
-                })}
+                {dateObj.toLocaleDateString("th-TH", { weekday: "short" })}
               </div>
-              <div className="text-xl font-bold text-gray-800 py-1">
-                {new Date(booking.date).getDate()}
-              </div>
+              <div className="text-xl font-bold text-gray-800 py-1">{dateObj.getDate()}</div>
             </div>
           ) : (
             <div className="w-[52px] shrink-0" />
@@ -158,7 +148,7 @@ export function MyAppointmentCard({
             </div>
 
             <div className="font-medium text-sm text-gray-900 truncate pr-2">
-              {booking.problemType || "ไม่ระบุหัวข้อปัญหา"}
+              {booking.problemType ?? "ไม่ระบุหัวข้อปัญหา"}
             </div>
           </div>
 
@@ -168,7 +158,7 @@ export function MyAppointmentCard({
             {showFeedbackAction && (
               <Button
                 size="sm"
-                variant="primary" // ✅ เปลี่ยนจาก default (กัน type error)
+                variant="primary"
                 className="h-8 px-3 text-xs shadow-sm bg-amber-500 hover:bg-amber-600 text-white border-amber-600 animate-in fade-in zoom-in duration-300 shrink-0"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -209,9 +199,7 @@ export function MyAppointmentCard({
                 <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">
                   Booking ID
                 </p>
-                <p className="text-sm font-mono text-gray-600 select-all">
-                  {bookingIdText}
-                </p>
+                <p className="text-sm font-mono text-gray-600 select-all">{bookingIdText}</p>
               </div>
 
               {/* Mobile hint */}
@@ -228,9 +216,7 @@ export function MyAppointmentCard({
               {consultantName && (
                 <div className="col-span-1 sm:col-span-2 bg-white border rounded-lg p-3 shadow-sm">
                   <p className="text-xs text-gray-400 mb-1">ผู้ให้คำปรึกษา</p>
-                  <p className="text-sm font-semibold text-gray-800">
-                    {consultantName}
-                  </p>
+                  <p className="text-sm font-semibold text-gray-800">{consultantName}</p>
                 </div>
               )}
 
@@ -240,7 +226,7 @@ export function MyAppointmentCard({
                 <p className="text-sm text-gray-700">{fullDate || "-"}</p>
               </div>
 
-              {/* Time (กัน undefined) */}
+              {/* Time */}
               <div className="bg-white border rounded-lg p-3">
                 <p className="text-xs text-gray-400 mb-1">เวลา</p>
                 <p className="text-sm text-gray-700">
@@ -261,9 +247,7 @@ export function MyAppointmentCard({
               {/* Cancel Reason */}
               {cancelReason && (
                 <div className="sm:col-span-2 bg-red-50 border border-red-100 rounded-lg p-3">
-                  <p className="text-xs text-red-500 font-semibold mb-1">
-                    เหตุผลการยกเลิก
-                  </p>
+                  <p className="text-xs text-red-500 font-semibold mb-1">เหตุผลการยกเลิก</p>
                   <p className="text-sm text-red-700">{cancelReason}</p>
                 </div>
               )}
@@ -287,35 +271,23 @@ export function MyAppointmentCard({
      ✅ NORMAL MODE (Active booking) — Card Style
   ====================================================== */
   return (
-    <Card
-      className="overflow-hidden border shadow-sm hover:shadow-md transition-shadow duration-200"
-      padding="none"
-    >
-      <div
-        className={cn(
-          "px-4 py-3 border-b flex items-center justify-between",
-          statusConfig.bgColor
-        )}
-      >
+    <Card className="overflow-hidden border shadow-sm hover:shadow-md transition-shadow duration-200" padding="none">
+      <div className={cn("px-4 py-3 border-b flex items-center justify-between", statusConfig.bgColor)}>
         <span className={cn("text-sm font-semibold flex items-center gap-2", statusConfig.textColor)}>
           <StatusIcon className="w-4 h-4" />
           {statusConfig.label}
         </span>
-        <span className="text-xs font-mono opacity-60">
-          #{String(booking.id).padStart(6, "0")}
-        </span>
+        <span className="text-xs font-mono opacity-60">#{String(booking.id).padStart(6, "0")}</span>
       </div>
 
       <div className="p-5 space-y-4">
-        {hasDate && (
+        {dateObj && booking.startTime && booking.endTime && (
           <div className="flex items-start gap-3">
             <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
               <Clock className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-base font-semibold text-gray-900">
-                {formatThaiDate(new Date(booking.date!))}
-              </p>
+              <p className="text-base font-semibold text-gray-900">{formatThaiDate(dateObj)}</p>
               <p className="text-sm text-gray-500 mt-0.5">
                 เวลา {booking.startTime} – {booking.endTime} น.
               </p>
@@ -323,12 +295,12 @@ export function MyAppointmentCard({
           </div>
         )}
 
-        {booking.problemType && (
+        {booking.problemType ? (
           <div className="bg-gray-50 border border-gray-100 rounded-lg p-3">
             <p className="text-xs text-gray-400 mb-1 uppercase tracking-wide">หัวข้อปัญหา</p>
             <p className="text-sm font-medium text-gray-700">{booking.problemType}</p>
           </div>
-        )}
+        ) : null}
 
         {onCancel && (
           <div className="pt-2">
