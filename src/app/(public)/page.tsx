@@ -5,70 +5,53 @@ import {
   Heart,
   CalendarDays,
   ClipboardList,
-  Lock,
-  Users,
-  Smartphone,
-  Clock,
   User,
 } from "lucide-react";
 import AuthLikeBackground from "@/components/layout/background/AuthLikeBackground";
-import { PRGrid } from "@/components/public/pr/PRGrid";
 import { PRCard } from "@/components/public/pr/PRCard";
 import { PR_MOCK } from "@/features/pr/mock";
 
-const BRAND = {
-  teal: "#2FA4A9",
-  tealHover: "#278F93",
-  mintBg: "#F7FAF9",
-  mintSoft: "#E6F5F5",
-  border: "#D1EAEA",
-  deep: "#1F3D3D",
-};
-
-function formatThaiDateShort(iso: string) {
-  try {
-    return new Date(iso).toLocaleDateString("th-TH", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return iso;
-  }
-}
-
 export default function HomePage() {
   return (
-    <div className="min-h-screen w-full bg-white relative overflow-hidden">
-      {/* ✅ background blobs (เหมือนหน้า login) */}
+    <div className="min-h-screen w-full relative overflow-hidden bg-tenant">
+      {/* ✅ background blobs */}
       <AuthLikeBackground />
 
-      {/* ✅ เนื้อหาทั้งหน้าให้ทับ background ได้ */}
       <main className="relative z-10">
-        {/* ✅ กันชิด header: ปรับ pt ให้เข้ากับความสูง header ของคุณ */}
         <div className="pt-24 md:pt-28" />
 
-        {/* ------------------------------------------------------- */}
-        {/* 🟩 Hero */}
-        {/* ------------------------------------------------------- */}
+        {/* =========================
+            HERO
+        ========================= */}
         <section className="bg-transparent">
           <div className="max-w-7xl mx-auto px-6">
             <div
               className="
                 rounded-[32px]
-                border border-[rgba(209,234,234,0.9)]
+                border
                 bg-white/70 backdrop-blur
                 shadow-[0_18px_55px_rgba(2,6,23,0.08)]
                 overflow-hidden
               "
+              style={{ borderColor: "rgb(var(--border))" }}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10 p-8 md:p-12 items-center">
                 {/* Left */}
                 <div>
-                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/70 border border-[rgba(209,234,234,0.9)] text-[#1F3D3D] text-sm font-semibold shadow-sm">
+                  <div
+                    className="
+                      inline-flex items-center gap-2 px-4 py-1.5 rounded-full
+                      bg-white/70 border
+                      text-sm font-semibold shadow-sm
+                    "
+                    style={{
+                      borderColor: "rgb(var(--border))",
+                      color: "rgb(var(--fg))",
+                    }}
+                  >
                     <span
                       className="w-2 h-2 rounded-full"
-                      style={{ background: BRAND.teal }}
+                      style={{ background: "rgb(var(--primary))" }}
                     />
                     NU Wellness Center
                   </div>
@@ -77,7 +60,7 @@ export default function HomePage() {
                     ดูแลใจคุณ <br />
                     <span
                       className="italic font-serif"
-                      style={{ color: BRAND.teal }}
+                      style={{ color: "rgb(var(--primary))" }}
                     >
                       อย่างอ่อนโยน
                     </span>
@@ -90,34 +73,34 @@ export default function HomePage() {
 
                   {/* CTA */}
                   <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                    {/* ✅ ปุ่มหลัก ใช้ var --primary */}
                     <Link
                       href="/booking"
                       className="
                         px-7 py-3 rounded-full
                         text-white text-sm font-semibold
-                        shadow-md
-                        transition
+                        shadow-md transition
                         inline-flex items-center justify-center gap-2
                       "
-                      style={{ background: BRAND.teal }}
+                      style={{ background: "rgb(var(--primary))" }}
                     >
                       <CalendarDays className="w-4 h-4" />
                       จองคิวปรึกษา
                     </Link>
 
+                    {/* ✅ ปุ่มรอง ใช้ var --border / --fg */}
                     <Link
                       href="/booking/my-appointments"
                       className="
                         px-7 py-3 rounded-full
-                        bg-white
-                        text-sm font-semibold
+                        bg-white text-sm font-semibold
                         transition
                         inline-flex items-center justify-center gap-2
-                        hover:bg-[rgba(230,245,245,0.7)]
+                        hover:bg-white/80
                       "
                       style={{
-                        border: `1px solid ${BRAND.border}`,
-                        color: BRAND.deep,
+                        border: "1px solid rgb(var(--border))",
+                        color: "rgb(var(--fg))",
                       }}
                     >
                       <ClipboardList className="w-4 h-4" />
@@ -131,10 +114,10 @@ export default function HomePage() {
                   <div
                     className="
                       rounded-3xl overflow-hidden
-                      bg-white
-                      border border-[rgba(209,234,234,0.9)]
+                      bg-white border
                       shadow-[0_16px_45px_rgba(2,6,23,0.10)]
                     "
+                    style={{ borderColor: "rgb(var(--border))" }}
                   >
                     <img
                       src="/images/login-illustration.png"
@@ -146,29 +129,30 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* spacing ต่อ section */}
             <div className="h-10 md:h-14" />
           </div>
         </section>
 
-        {/* ------------------------------------------------------- */}
-        {/* 🟪 How it Works */}
-        {/* ------------------------------------------------------- */}
+        {/* =========================
+            HOW IT WORKS
+        ========================= */}
         <section className="bg-transparent">
           <div className="max-w-7xl mx-auto px-6 pb-20">
             <div className="text-center mb-12">
               <div
                 className="
                   inline-flex items-center gap-2 px-4 py-1.5 rounded-full
-                  bg-white/70 backdrop-blur
-                  border
+                  bg-white/70 backdrop-blur border
                   text-sm font-semibold shadow-sm
                 "
-                style={{ borderColor: BRAND.border, color: BRAND.deep }}
+                style={{
+                  borderColor: "rgb(var(--border))",
+                  color: "rgb(var(--fg))",
+                }}
               >
                 <span
                   className="w-2 h-2 rounded-full"
-                  style={{ background: BRAND.teal }}
+                  style={{ background: "rgb(var(--primary))" }}
                 />
                 ขั้นตอนการใช้งาน
               </div>
@@ -181,59 +165,25 @@ export default function HomePage() {
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-7">
               {[
-                {
-                  icon: (
-                    <User className="w-6 h-6" style={{ color: BRAND.teal }} />
-                  ),
-                  title: "เข้าสู่ระบบ",
-                  desc: "เข้าสู่ระบบด้วย LINE Account",
-                  step: 1,
-                },
-                {
-                  icon: (
-                    <CalendarDays
-                      className="w-6 h-6"
-                      style={{ color: BRAND.teal }}
-                    />
-                  ),
-                  title: "เลือกวันเวลา",
-                  desc: "เลือกเวลาที่คุณสะดวก",
-                  step: 2,
-                },
-                {
-                  icon: (
-                    <ClipboardList
-                      className="w-6 h-6"
-                      style={{ color: BRAND.teal }}
-                    />
-                  ),
-                  title: "กรอกข้อมูล",
-                  desc: "ระบุรายละเอียดที่ต้องการปรึกษา",
-                  step: 3,
-                },
-                {
-                  icon: (
-                    <Heart className="w-6 h-6" style={{ color: BRAND.teal }} />
-                  ),
-                  title: "ยืนยันการจอง",
-                  desc: "รับการแจ้งเตือนผ่าน LINE",
-                  step: 4,
-                },
+                { icon: <User className="w-6 h-6" />, title: "เข้าสู่ระบบ", desc: "เข้าสู่ระบบด้วย LINE Account", step: 1 },
+                { icon: <CalendarDays className="w-6 h-6" />, title: "เลือกวันเวลา", desc: "เลือกเวลาที่คุณสะดวก", step: 2 },
+                { icon: <ClipboardList className="w-6 h-6" />, title: "กรอกข้อมูล", desc: "ระบุรายละเอียดที่ต้องการปรึกษา", step: 3 },
+                { icon: <Heart className="w-6 h-6" />, title: "ยืนยันการจอง", desc: "รับการแจ้งเตือนผ่าน LINE", step: 4 },
               ].map((item) => (
                 <div
                   key={item.step}
                   className="
-                    relative
-                    rounded-3xl p-7
-                    bg-white/70 backdrop-blur
-                    border
+                    relative rounded-3xl p-7
+                    bg-white/70 backdrop-blur border
                     shadow-[0_14px_40px_rgba(2,6,23,0.06)]
-                    hover:shadow-[0_22px_70px_rgba(47,164,169,0.16)]
-                    hover:-translate-y-1
-                    transition-all
+                    hover:-translate-y-1 transition-all
                     text-center
                   "
-                  style={{ borderColor: BRAND.border }}
+                  style={{
+                    borderColor: "rgb(var(--border))",
+                    // hover shadow ให้ติด primary ของ tenant
+                    boxShadow: "0 14px 40px rgba(2,6,23,0.06)",
+                  }}
                 >
                   {/* Step Bubble */}
                   <div
@@ -245,7 +195,7 @@ export default function HomePage() {
                       shadow-md
                     "
                     style={{
-                      background: `linear-gradient(135deg, ${BRAND.teal} 0%, #10B981 100%)`,
+                      background: `linear-gradient(135deg, rgb(var(--primary)) 0%, rgb(var(--accent)) 100%)`,
                     }}
                   >
                     {item.step}
@@ -253,10 +203,15 @@ export default function HomePage() {
 
                   {/* Icon */}
                   <div
-                    className="w-14 h-14 rounded-2xl bg-white border shadow-sm flex items-center justify-center mx-auto mb-5"
-                    style={{ borderColor: BRAND.border }}
+                    className="
+                      w-14 h-14 rounded-2xl bg-white border shadow-sm
+                      flex items-center justify-center mx-auto mb-5
+                    "
+                    style={{ borderColor: "rgb(var(--border))" }}
                   >
-                    {item.icon}
+                    <div style={{ color: "rgb(var(--primary))" }}>
+                      {item.icon}
+                    </div>
                   </div>
 
                   <h3 className="text-lg font-bold text-slate-900 mb-2">
@@ -270,20 +225,28 @@ export default function HomePage() {
             </div>
           </div>
         </section>
-        {/* ------------------------------------------------------- */}
-        {/* 📰 PR (ใช้ PRGrid ที่มีอยู่) */}
-        {/* ------------------------------------------------------- */}
+
+        {/* =========================
+            PR
+        ========================= */}
         <section className="bg-transparent">
           <div className="max-w-7xl mx-auto px-6">
             <div className="flex items-start justify-between gap-4 mb-6">
               <div className="min-w-0">
                 <div
-                  className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/70 backdrop-blur border text-xs font-semibold shadow-sm"
-                  style={{ borderColor: BRAND.border, color: BRAND.deep }}
+                  className="
+                    inline-flex items-center gap-2 px-3 py-1 rounded-full
+                    bg-white/70 backdrop-blur border
+                    text-xs font-semibold shadow-sm
+                  "
+                  style={{
+                    borderColor: "rgb(var(--border))",
+                    color: "rgb(var(--fg))",
+                  }}
                 >
                   <span
                     className="w-2 h-2 rounded-full"
-                    style={{ background: BRAND.teal }}
+                    style={{ background: "rgb(var(--primary))" }}
                   />
                   ข่าวประชาสัมพันธ์
                 </div>
@@ -299,13 +262,20 @@ export default function HomePage() {
 
               <Link
                 href="/pr"
-                className="shrink-0 inline-flex items-center gap-2 rounded-full px-4 py-2 bg-white/60 backdrop-blur border text-xs font-semibold shadow-sm hover:shadow-md transition"
-                style={{ borderColor: BRAND.border, color: BRAND.deep }}
+                className="
+                  shrink-0 inline-flex items-center gap-2 rounded-full
+                  px-4 py-2 bg-white/60 backdrop-blur border
+                  text-xs font-semibold shadow-sm hover:shadow-md transition
+                "
+                style={{
+                  borderColor: "rgb(var(--border))",
+                  color: "rgb(var(--fg))",
+                }}
               >
                 ดูทั้งหมด
                 <span
                   className="text-base leading-none"
-                  style={{ color: BRAND.teal }}
+                  style={{ color: "rgb(var(--primary))" }}
                 >
                   ›
                 </span>
