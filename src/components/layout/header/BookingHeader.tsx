@@ -1,8 +1,7 @@
 // components/layout/header/BookingHeader.tsx
 "use client";
 
-import { useRouter } from "next/navigation";
-import { Menu, LogOut, User } from "lucide-react";
+import { Menu, User } from "lucide-react";
 import LogoutButton from "@/components/auth/LogoutButton";
 
 export interface BookingHeaderProps {
@@ -16,8 +15,6 @@ export function BookingHeader({
   userRole,
   onMenuClick,
 }: BookingHeaderProps) {
-  const router = useRouter();
-
   return (
     <header className="bg-white sticky top-0 z-30 border-b border-gray-200 shadow-sm px-6 h-20 flex items-center justify-between">
       {/* Left: Menu & Title */}
@@ -52,7 +49,7 @@ export function BookingHeader({
           <User className="w-7 h-7" />
         </div>
 
-        <div className="h-8 w-px bg-gray-300 mx-1 hidden sm:block"></div>
+        <div className="h-8 w-px bg-gray-300 mx-1 hidden sm:block" />
 
         {/* Logout Button */}
         <LogoutButton

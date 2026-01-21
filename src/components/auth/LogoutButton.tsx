@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { LogOut } from "lucide-react";
 
@@ -9,7 +8,7 @@ import { Button, Modal, ModalFooter } from "@/components/ui";
 import { useNotificationContext } from "@/components/notification/NotificationProvider";
 
 type Props = {
-  redirectTo?: string;
+  redirectTo?: string; // ปกติ "/login"
   label?: string;
   className?: string;
   iconOnly?: boolean;
@@ -39,37 +38,28 @@ export default function LogoutButton({
   confirmDescription = "ต้องการออกจากระบบใช่ไหม?",
   buttonVariant = "danger",
 }: Props) {
-  const router = useRouter(); // ยังเก็บไว้ได้ (ไม่ใช้ก็ได้)
   const { push } = useNotificationContext();
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-
+  
   const onConfirm = async () => {
     setLoading(true);
     try {
-      sessionStorage.setItem("suppress_login_toast_once", "1");
-
       await logout();
 
-      localStorage.removeItem("token");
-      localStorage.removeItem("auth_user");
+      try {
+        localStorage.removeItem("token");
+        localStorage.removeItem("auth_user");
+      } catch {}
 
       window.dispatchEvent(new Event("auth-changed"));
-
-      push({
-        type: "success",
-        title: "ออกจากระบบสำเร็จ",
-        message: "แล้วพบกันใหม่ 👋",
-        duration: 1500,
-      });
-
       setIsOpen(false);
 
-      // ✅ ข้ามโดเมน ต้องใช้ window.location
       const root = getWellnessRootUrl();
-      const path = redirectTo.startsWith("/") ? redirectTo : `/${redirectTo}`;
-      window.location.assign(`${root}${path}`);
-      return;
+      const url = new URL(`${root}${redirectTo}`);
+      url.searchParams.set("logout", "1");
+
+      window.location.assign(url.toString());
     } catch (err) {
       console.error(err);
       push({
