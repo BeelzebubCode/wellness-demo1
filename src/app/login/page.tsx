@@ -30,7 +30,7 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const res = await fetch("/api/v1/auth/login", {
+      const res = await fetch("/api/v2/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -40,21 +40,21 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        // ✅ 1) token
-        if (data.token) localStorage.setItem("token", data.token);
+        // ❌ ไม่จำเป็นแล้วถ้าใช้ cookie-based
+        // if (data.token) localStorage.setItem("token", data.token);
 
-        // ✅ 2) user
+        // ✅ เก็บ user ไว้ใช้กับ UI (optional)
         localStorage.setItem(
           "auth_user",
           JSON.stringify({
             name:
               data.account?.name || data.account?.username || formData.username,
-            avatar: data.account?.avatar || null,
             role: data.account?.role || null,
-          })
+            homeUniversityId: data.account?.homeUniversityId ?? null,
+            allowedUniversityIds: data.account?.allowedUniversityIds ?? [],
+          }),
         );
 
-        // ✅ 3) event
         window.dispatchEvent(new Event("auth-changed"));
 
         const role = data.account?.role;
@@ -66,27 +66,28 @@ export default function LoginPage() {
           duration: 1500,
         });
 
-        // เลือกปลายทางให้จบก่อน
+        // ✅ map role ตาม schema ใหม่
         const nextPath =
-          role === "HEAD_CONSULTANT" || role === "ADMIN"
+          role === "SUPER_ADMIN" || role === "RECTOR"
             ? "/admin/data-center"
-            : role === "CONSULTANT"
-            ? "/consultant/my-jobs"
-            : role === "STUDENT"
-            ? "/booking"
-            : "/";
+            : role === "HEAD_CONSULTANT"
+              ? "/admin/data-center" // หรือจะเปลี่ยนเป็นหน้าหัวหน้าที่ปรึกษาโดยเฉพาะก็ได้
+              : role === "CONSULTANT"
+                ? "/consultant/my-jobs"
+                : role === "STUDENT"
+                  ? "/booking"
+                  : "/";
 
-        // แล้วค่อย redirect ครั้งเดียว
         router.replace(nextPath);
         router.refresh();
         return;
       }
 
       setError(data.error || "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
-      setLoading(false);
     } catch (err) {
       console.error(err);
       setError("Connection Error");
+    } finally {
       setLoading(false);
     }
   };
