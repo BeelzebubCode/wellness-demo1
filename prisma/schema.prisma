@@ -7,37 +7,143 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ==========================================
+// ✅ MULTI-UNIVERSITY + REGION/PROVINCE + POINTS + 1 BOOKING = 1 SLOT
+// - เพิ่ม Region / Province.region_id
+// - เพิ่ม University (tenant) + ผูกทุก entity ที่ต้องรู้มหาลัย
+// - เพิ่ม AccountRole: RECTOR, SUPER_ADMIN
+// - เพิ่ม Account.account_home_university_id
+// - เพิ่ม AccountUniversityAccess (ยืมคนข้ามมหาลัย)
+// - Booking.time_slot_id = UNIQUE (1 booking = 1 slot และ 1 slot ถูกจองได้ครั้งเดียว)
+// - TimeSlot ผูก consultant_id + university_id
+// - เพิ่มระบบสะสมแต้ม: PointRule, StudentPointWallet, StudentPointTransaction
+// ==========================================
+
+model Region {
+  region_id      Int        @id @default(autoincrement())
+  region_code    RegionCode @unique
+  region_name_th String     @db.VarChar(50)
+  provinces      Province[]
+
+  @@map("region")
+}
+
+model Province {
+  province_id      Int     @id @default(autoincrement())
+  region_id        Int
+  province_code    String  @unique @db.VarChar(10)
+  province_name_th String  @db.VarChar(100)
+  province_name_en String? @db.VarChar(100)
+
+  region           Region           @relation(fields: [region_id], references: [region_id])
+  studentAddresses StudentAddress[]
+  universities     University[]
+
+  @@index([region_id])
+  @@map("province")
+}
+
+model University {
+  university_id         Int      @id @default(autoincrement())
+  university_code       String   @unique @db.VarChar(20)
+  university_name_th    String   @db.VarChar(200)
+  university_name_en    String?  @db.VarChar(200)
+  province_id           Int
+  university_is_active  Boolean  @default(true)
+  university_created_at DateTime @default(now())
+
+  province Province @relation(fields: [province_id], references: [province_id])
+
+  accountsHome  Account[]                 @relation("AccountHomeUniversity")
+  accessMembers AccountUniversityAccess[]
+  students      Student[]
+  consultants   Consultant[]
+  faculties     Faculty[]
+  departments   Department[]
+  advisors      Advisor[]
+  timeSlots     TimeSlot[]
+  bookings      Booking[]
+
+  @@index([province_id])
+  @@index([university_is_active])
+  @@map("university")
+}
+
+model AccountUniversityAccess {
+  account_university_access_id Int                  @id @default(autoincrement())
+  account_id                   Int
+  university_id                Int
+  access_role                  UniversityAccessRole @default(STUDENT)
+  access_granted_by_account_id Int?
+  access_granted_at            DateTime             @default(now())
+  access_revoked_at            DateTime?
+
+  account          Account    @relation(fields: [account_id], references: [account_id])
+  university       University @relation(fields: [university_id], references: [university_id])
+  grantedByAccount Account?   @relation("AccessGrantedBy", fields: [access_granted_by_account_id], references: [account_id])
+
+  @@unique([account_id, university_id])
+  @@index([university_id])
+  @@index([access_role])
+  @@index([access_granted_by_account_id])
+  @@map("account_university_access")
+}
+
+// ==========================================
+// 👤 ACCOUNT
+// ==========================================
+
 model Account {
-  account_id             Int                   @id @default(autoincrement())
-  account_username       String                @unique @db.VarChar(50)
-  account_password       String                @db.VarChar(255)
-  account_role           AccountRole
-  account_line_id        String?               @unique @db.VarChar(100)
-  account_created_at     DateTime              @default(now())
-  account_last_login_at  DateTime?
+  account_id                 Int         @id @default(autoincrement())
+  account_username           String      @unique @db.VarChar(50)
+  account_password           String      @db.VarChar(255)
+  account_role               AccountRole
+  account_home_university_id Int?
+  account_line_id            String?     @unique @db.VarChar(100)
+  account_created_at         DateTime    @default(now())
+  account_last_login_at      DateTime?
+
+  homeUniversity        University?               @relation("AccountHomeUniversity", fields: [account_home_university_id], references: [university_id])
+  universityAccesses    AccountUniversityAccess[]
+  accessGrantedToOthers AccountUniversityAccess[] @relation("AccessGrantedBy")
+
   bookingCancellations   BookingCancellation[]
   consultant             Consultant?
   feedbackCommentReplies FeedbackComment[]     @relation("FeedbackCommentRepliedBy")
   notifications          Notification[]
   student                Student?
 
+  @@index([account_role])
+  @@index([account_home_university_id])
   @@map("account")
 }
 
-model Student {
-  student_id        Int              @id @default(autoincrement())
-  account_id        Int              @unique
-  student_status_id Int
-  student_code      String?          @unique @db.VarChar(20)
-  bookings          Booking[]
-  feedbacks         Feedback[]
-  account           Account          @relation(fields: [account_id], references: [account_id])
-  status            StudentStatus    @relation(fields: [student_status_id], references: [student_status_id])
-  academic          StudentAcademic?
-  addresses         StudentAddress[]
-  profile           StudentProfile?
+// ==========================================
+// 🎓 STUDENT
+// ==========================================
 
+model Student {
+  student_id        Int     @id @default(autoincrement())
+  account_id        Int     @unique
+  university_id     Int
+  student_status_id Int
+  student_code      String? @db.VarChar(20)
+
+  bookings   Booking[]
+  feedbacks  Feedback[]
+  account    Account          @relation(fields: [account_id], references: [account_id])
+  university University       @relation(fields: [university_id], references: [university_id])
+  status     StudentStatus    @relation(fields: [student_status_id], references: [student_status_id])
+  academic   StudentAcademic?
+  addresses  StudentAddress[]
+  profile    StudentProfile?
+
+  pointWallet       StudentPointWallet?
+  pointTransactions StudentPointTransaction[]
+
+  @@unique([university_id, student_code])
   @@index([student_status_id])
+  @@index([university_id])
   @@map("student")
 }
 
@@ -85,16 +191,6 @@ model StudentAddress {
   @@map("student_address")
 }
 
-model Province {
-  province_id      Int              @id @default(autoincrement())
-  province_code    String           @unique @db.VarChar(10)
-  province_name_th String           @db.VarChar(100)
-  province_name_en String?          @db.VarChar(100)
-  studentAddresses StudentAddress[]
-
-  @@map("province")
-}
-
 model StudentAcademic {
   student_id                  Int        @id
   faculty_id                  Int
@@ -115,68 +211,102 @@ model StudentAcademic {
   @@map("student_academic")
 }
 
+// ==========================================
+// 🏢 FACULTY & DEPARTMENT (ผูกมหาลัย)
+// ==========================================
+
 model Faculty {
-  faculty_id       Int               @id @default(autoincrement())
-  faculty_code     String            @unique @db.VarChar(10)
-  faculty_name_th  String            @db.VarChar(100)
-  faculty_name_en  String?           @db.VarChar(100)
+  faculty_id      Int     @id @default(autoincrement())
+  university_id   Int
+  faculty_code    String  @db.VarChar(10)
+  faculty_name_th String  @db.VarChar(100)
+  faculty_name_en String? @db.VarChar(100)
+
+  university University @relation(fields: [university_id], references: [university_id])
+
   advisors         Advisor[]
   departments      Department[]
   studentAcademics StudentAcademic[]
 
+  @@unique([university_id, faculty_code])
+  @@index([university_id])
   @@map("faculty")
 }
 
 model Department {
-  department_id      Int               @id @default(autoincrement())
+  department_id      Int     @id @default(autoincrement())
+  university_id      Int
   faculty_id         Int
-  department_code    String            @unique @db.VarChar(10)
-  department_name_th String            @db.VarChar(100)
-  department_name_en String?           @db.VarChar(100)
-  advisors           Advisor[]
-  faculty            Faculty           @relation(fields: [faculty_id], references: [faculty_id])
-  studentAcademics   StudentAcademic[]
+  department_code    String  @db.VarChar(10)
+  department_name_th String  @db.VarChar(100)
+  department_name_en String? @db.VarChar(100)
 
+  university       University        @relation(fields: [university_id], references: [university_id])
+  advisors         Advisor[]
+  faculty          Faculty           @relation(fields: [faculty_id], references: [faculty_id])
+  studentAcademics StudentAcademic[]
+
+  @@unique([university_id, department_code])
   @@index([faculty_id])
+  @@index([university_id])
   @@map("department")
 }
 
+// ==========================================
+// 🎓 ADVISOR (ผูกมหาลัย)
+// ==========================================
+
 model Advisor {
-  advisor_id              Int               @id @default(autoincrement())
+  advisor_id              Int     @id @default(autoincrement())
+  university_id           Int
   faculty_id              Int
   department_id           Int
-  advisor_academic_rank   String?           @db.VarChar(50)
-  advisor_prefix          String?           @db.VarChar(50)
-  advisor_first_name      String            @db.VarChar(100)
-  advisor_last_name       String            @db.VarChar(100)
-  advisor_email           String?           @db.VarChar(100)
-  advisor_phone_number    String?           @db.VarChar(50)
-  advisor_office_location String?           @db.VarChar(100)
-  department              Department        @relation(fields: [department_id], references: [department_id])
-  faculty                 Faculty           @relation(fields: [faculty_id], references: [faculty_id])
-  studentAcademics        StudentAcademic[]
+  advisor_academic_rank   String? @db.VarChar(50)
+  advisor_prefix          String? @db.VarChar(50)
+  advisor_first_name      String  @db.VarChar(100)
+  advisor_last_name       String  @db.VarChar(100)
+  advisor_email           String? @db.VarChar(100)
+  advisor_phone_number    String? @db.VarChar(50)
+  advisor_office_location String? @db.VarChar(100)
+
+  university       University        @relation(fields: [university_id], references: [university_id])
+  department       Department        @relation(fields: [department_id], references: [department_id])
+  faculty          Faculty           @relation(fields: [faculty_id], references: [faculty_id])
+  studentAcademics StudentAcademic[]
 
   @@index([department_id])
   @@index([faculty_id])
+  @@index([university_id])
   @@map("advisor")
 }
 
+// ==========================================
+// 🧠 CONSULTANT (ผูกมหาลัย)
+// ==========================================
+
 model Consultant {
-  consultant_id         Int                        @id @default(autoincrement())
-  account_id            Int                        @unique
+  consultant_id         Int      @id @default(autoincrement())
+  account_id            Int      @unique
+  university_id         Int
   organization_id       Int
-  consultant_created_at DateTime                   @default(now())
-  bookings              Booking[]
-  assignmentsMade       BookingAssignment[]        @relation("AssignedBy")
-  assignmentsReceived   BookingAssignment[]        @relation("AssignedTo")
-  account               Account                    @relation(fields: [account_id], references: [account_id])
-  organization          Organization               @relation(fields: [organization_id], references: [organization_id])
-  languages             ConsultantLanguage[]
-  profile               ConsultantProfile?
-  specializations       ConsultantSpecialization[]
-  feedbacks             Feedback[]
+  consultant_created_at DateTime @default(now())
+
+  bookings            Booking[]
+  assignmentsMade     BookingAssignment[] @relation("AssignedBy")
+  assignmentsReceived BookingAssignment[] @relation("AssignedTo")
+
+  account      Account      @relation(fields: [account_id], references: [account_id])
+  university   University   @relation(fields: [university_id], references: [university_id])
+  organization Organization @relation(fields: [organization_id], references: [organization_id])
+
+  languages       ConsultantLanguage[]
+  profile         ConsultantProfile?
+  specializations ConsultantSpecialization[]
+  feedbacks       Feedback[]
+  timeSlots       TimeSlot[]
 
   @@index([organization_id])
+  @@index([university_id])
   @@map("consultant")
 }
 
@@ -225,50 +355,69 @@ model Organization {
   @@map("organization")
 }
 
+// ==========================================
+// ⏰ TIME SLOT (ผูก consultant + university)
+// ==========================================
+
 model TimeSlot {
   time_slot_id             Int            @id @default(autoincrement())
+  consultant_id            Int
+  university_id            Int
   time_slot_start_datetime DateTime
   time_slot_end_datetime   DateTime
   time_slot_max_capacity   Int            @default(1)
   time_slot_status         TimeSlotStatus @default(AVAILABLE)
-  bookings                 Booking[]
 
-  @@index([time_slot_start_datetime, time_slot_end_datetime])
+  consultant Consultant @relation(fields: [consultant_id], references: [consultant_id])
+  university University @relation(fields: [university_id], references: [university_id])
+
+  booking Booking? @relation("BookingToTimeSlot")
+
+  @@unique([consultant_id, time_slot_start_datetime, time_slot_end_datetime])
+  @@index([university_id, time_slot_start_datetime])
   @@map("time_slot")
 }
 
+// ==========================================
+// 📅 BOOKING (1 booking = 1 slot, 1 slot ถูกจองได้ครั้งเดียว)
+// ==========================================
+
 model Booking {
-  booking_id          Int           @id @default(autoincrement())
+  booking_id          Int  @id @default(autoincrement())
+  university_id       Int
   student_id          Int
   consultant_id       Int?
-  time_slot_id        Int
+  time_slot_id        Int  @unique
   problem_category_id Int
 
-  booking_detail_text String?        @db.Text
-  booking_status      BookingStatus  @default(PENDING_ASSIGNMENT)
-  booking_created_at  DateTime       @default(now())
-  booking_updated_at  DateTime       @default(now()) @updatedAt
-  student             Student        @relation(fields: [student_id], references: [student_id])
-  consultant          Consultant?    @relation(fields: [consultant_id], references: [consultant_id])
-  timeSlot            TimeSlot       @relation(fields: [time_slot_id], references: [time_slot_id])
-  problemCategory     ProblemCategory @relation(fields: [problem_category_id], references: [problem_category_id])
+  booking_detail_text String?       @db.Text
+  booking_status      BookingStatus @default(PENDING_ASSIGNMENT)
+  booking_created_at  DateTime      @default(now())
+  booking_updated_at  DateTime      @default(now()) @updatedAt
 
-  assignments         BookingAssignment[]
-  cancellation        BookingCancellation?
-  outcome             BookingOutcome?
-  feedback            Feedback?
-  notifications       Notification[]
+  university University  @relation(fields: [university_id], references: [university_id])
+  student    Student     @relation(fields: [student_id], references: [student_id])
+  consultant Consultant? @relation(fields: [consultant_id], references: [consultant_id])
 
-  @@index([time_slot_id])
+  timeSlot TimeSlot @relation("BookingToTimeSlot", fields: [time_slot_id], references: [time_slot_id])
+
+  problemCategory ProblemCategory @relation(fields: [problem_category_id], references: [problem_category_id])
+
+  assignments       BookingAssignment[]
+  cancellation      BookingCancellation?
+  outcome           BookingOutcome?
+  feedback          Feedback?
+  notifications     Notification[]
+  pointTransactions StudentPointTransaction[] @relation("BookingPointTx")
+
+  @@index([university_id])
   @@index([booking_status])
   @@index([student_id])
   @@index([consultant_id])
   @@index([problem_category_id])
   @@index([student_id, booking_status])
-  @@unique([student_id, time_slot_id])
   @@map("booking")
 }
-
 
 model ProblemCategory {
   problem_category_id          Int       @id @default(autoincrement())
@@ -282,15 +431,16 @@ model ProblemCategory {
 }
 
 model BookingAssignment {
-  booking_assignment_id             Int        @id @default(autoincrement())
+  booking_assignment_id             Int      @id @default(autoincrement())
   booking_id                        Int
   booking_assignment_assigned_by_id Int
   booking_assignment_assigned_to_id Int
-  booking_assignment_note           String?    @db.Text
-  booking_assignment_assigned_at    DateTime   @default(now())
-  assignedBy                        Consultant @relation("AssignedBy", fields: [booking_assignment_assigned_by_id], references: [consultant_id])
-  assignedTo                        Consultant @relation("AssignedTo", fields: [booking_assignment_assigned_to_id], references: [consultant_id])
-  booking                           Booking    @relation(fields: [booking_id], references: [booking_id])
+  booking_assignment_note           String?  @db.Text
+  booking_assignment_assigned_at    DateTime @default(now())
+
+  assignedBy Consultant @relation("AssignedBy", fields: [booking_assignment_assigned_by_id], references: [consultant_id])
+  assignedTo Consultant @relation("AssignedTo", fields: [booking_assignment_assigned_to_id], references: [consultant_id])
+  booking    Booking    @relation(fields: [booking_id], references: [booking_id])
 
   @@index([booking_id])
   @@index([booking_assignment_assigned_by_id])
@@ -320,6 +470,10 @@ model BookingCancellation {
   @@index([booking_cancellation_cancelled_by_id])
   @@map("booking_cancellation")
 }
+
+// ==========================================
+// ⭐ FEEDBACK
+// ==========================================
 
 model Feedback {
   feedback_id           Int              @id @default(autoincrement())
@@ -376,6 +530,10 @@ model FeedbackComment {
   @@map("feedback_comment")
 }
 
+// ==========================================
+// 🔔 NOTIFICATION
+// ==========================================
+
 model NotificationTemplate {
   notification_template_id     Int            @id @default(autoincrement())
   notification_template_code   String         @unique @db.VarChar(50)
@@ -409,10 +567,83 @@ model Notification {
   @@map("notification")
 }
 
+// ==========================================
+// ⭐ POINTS (สะสมแต้ม - เฉพาะนิสิต)
+// ==========================================
+
+model PointRule {
+  point_rule_id         Int      @id @default(autoincrement())
+  point_rule_code       String   @unique @db.VarChar(50)
+  point_rule_name_th    String   @db.VarChar(200)
+  point_rule_points     Int
+  point_rule_is_active  Boolean  @default(true)
+  point_rule_created_at DateTime @default(now())
+
+  transactions StudentPointTransaction[]
+
+  @@index([point_rule_is_active])
+  @@map("point_rule")
+}
+
+model StudentPointWallet {
+  student_id               Int      @id
+  student_point_balance    Int      @default(0)
+  student_point_updated_at DateTime @default(now())
+
+  student Student @relation(fields: [student_id], references: [student_id])
+
+  @@map("student_point_wallet")
+}
+
+model StudentPointTransaction {
+  student_point_transaction_id Int  @id @default(autoincrement())
+  student_id                   Int
+  point_rule_id                Int?
+  booking_id                   Int?
+
+  student_point_txn_type   PointTxnType
+  student_point_amount     Int
+  student_point_note       String?      @db.Text
+  student_point_created_at DateTime     @default(now())
+
+  student Student    @relation(fields: [student_id], references: [student_id])
+  rule    PointRule? @relation(fields: [point_rule_id], references: [point_rule_id])
+  booking Booking?   @relation("BookingPointTx", fields: [booking_id], references: [booking_id])
+
+  @@index([student_id])
+  @@index([booking_id])
+  @@index([point_rule_id])
+  @@index([student_point_txn_type])
+  @@map("student_point_transaction")
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+
 enum AccountRole {
   STUDENT
   CONSULTANT
   HEAD_CONSULTANT
+  RECTOR
+  SUPER_ADMIN
+}
+
+enum UniversityAccessRole {
+  STUDENT
+  CONSULTANT
+  HEAD_CONSULTANT
+  RECTOR
+  ADMIN
+}
+
+enum RegionCode {
+  NORTH
+  NORTHEAST
+  CENTRAL
+  EAST
+  WEST
+  SOUTH
 }
 
 enum StudentGender {
@@ -441,4 +672,11 @@ enum BookingStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
+}
+
+enum PointTxnType {
+  EARN
+  REDEEM
+  ADJUST
+  EXPIRE
 }
