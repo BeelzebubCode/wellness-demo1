@@ -1,3 +1,4 @@
+// src/features/booking/hooks/useTimeSlots.ts
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -12,7 +13,7 @@ interface UseTimeSlotsReturn {
   refetch: () => Promise<void>;
 }
 
-export function useTimeSlots(selectedDate: Date): UseTimeSlotsReturn {
+export function useTimeSlots(selectedDate: Date, opts?: { universityId?: number }): UseTimeSlotsReturn {
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,16 +24,16 @@ export function useTimeSlots(selectedDate: Date): UseTimeSlotsReturn {
 
     try {
       const dateStr = toISODateString(selectedDate);
-      const slots = await getTimeSlots(dateStr);
+      const slots = await getTimeSlots(dateStr, opts);
       setSlots(slots);
     } catch (err) {
       console.error(err);
-      setError('ไม่สามารถโหลดข้อมูลช่วงเวลาได้');
+      setError('ไม่สามารถโหลดข้อมูลช่วงเวลาได้ (กรุณาเข้าสู่ระบบใหม่)');
       setSlots([]);
     } finally {
       setIsLoading(false);
     }
-  }, [selectedDate]);
+  }, [selectedDate, opts?.universityId]);
 
   useEffect(() => {
     fetchTimeSlots();

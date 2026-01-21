@@ -1,10 +1,10 @@
 // src/features/auth/hooks/useAdminAuth.ts
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { authApi } from '../api';
-import type { AuthUser } from '../types';
+import { useEffect, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { authApi } from "../api";
+import type { AuthUser } from "../types";
 
 interface UseAdminAuthReturn {
   user: AuthUser | null;
@@ -12,11 +12,10 @@ interface UseAdminAuthReturn {
   isAuthenticated: boolean;
 }
 
-const ADMIN_ROLES = new Set(['ADMIN', 'HEAD_CONSULTANT']);
+// ✅ ปรับให้ตรง schema: SUPER_ADMIN / RECTOR
+const ADMIN_ROLES = new Set<AuthUser["role"]>(["SUPER_ADMIN", "RECTOR"]);
 
-export function useAdminAuth(
-  redirectTo = '/login'
-): UseAdminAuthReturn {
+export function useAdminAuth(redirectTo = "/login"): UseAdminAuthReturn {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -28,20 +27,17 @@ export function useAdminAuth(
     let isMounted = true;
 
     const redirectLogin = () => {
-      // กัน loop: ถ้าอยู่หน้า /login อยู่แล้ว ไม่ต้อง replace ซ้ำ
-      if (pathname === '/login') return;
-
-      const next = pathname && pathname !== '/login' ? pathname : '/admin/data-center';
+      if (pathname === "/login") return;
+      const next = pathname && pathname !== "/login" ? pathname : "/admin/data-center";
       router.replace(`${redirectTo}?next=${encodeURIComponent(next)}`);
     };
 
     const checkAuth = async () => {
       try {
-        const response = await authApi.verifyAdmin();
+        const response = await authApi.me();
 
         if (!isMounted) return;
 
-        // response ต้องมีทั้ง valid + account
         if (!response?.valid || !response?.account) {
           setUser(null);
           setIsAuthenticated(false);
@@ -49,11 +45,10 @@ export function useAdminAuth(
           return;
         }
 
-        // กันหลุด role (เผื่อ backend คืนผิด)
         if (!ADMIN_ROLES.has(response.account.role)) {
           setUser(null);
           setIsAuthenticated(false);
-          router.replace('/'); // หรือจะ redirectLogin() ก็ได้ตาม flow
+          router.replace("/");
           return;
         }
 

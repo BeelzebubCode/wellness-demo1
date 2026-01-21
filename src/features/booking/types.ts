@@ -7,11 +7,17 @@ export type BookingStatus =
   | 'COMPLETED' 
   | 'CANCELLED';
 
+// src/features/booking/types.ts
+
 export interface TimeSlot {
   id: number;
   startTime: string;
   endTime: string;
   isAvailable: boolean;
+
+  universityId?: number;
+  consultantId?: number;
+  consultantName?: string | null;
 
   date?: string;
   startDateTime?: string;

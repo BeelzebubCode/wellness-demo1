@@ -8,40 +8,61 @@ export type TenantContext = {
   activeUniversityId: number;
 };
 
-/** บังคับต้อง login + ต้องมี activeUniversityId */
+const STAFF_ROLES = ["HEAD_CONSULTANT", "ADMIN", "SUPER_ADMIN", "RECTOR"] as const;
+
+function err(message: string, status: number) {
+  const e: any = new Error(message);
+  e.status = status;
+  return e;
+}
+
+/**
+ * tenant guard (สำคัญสุด)
+ * - ต้อง login
+ * - STUDENT/CONSULTANT: บังคับใช้ homeUniversityId เท่านั้น (ห้ามเลือกเอง)
+ * - STAFF: เลือกได้ แต่ต้องอยู่ใน allowedUniversityIds (ถ้ามี)
+ *
+ * priority ของ tenant สำหรับ STAFF:
+ *   1) header x-university-id
+ *   2) account.activeUniversityId (มาจาก token/claim ถ้าคุณมี)
+ *   3) account.homeUniversityId
+ */
 export async function requireTenant(request: NextRequest): Promise<TenantContext> {
   const account = await getAccountFromRequest(request);
+  if (!account) throw err("UNAUTHORIZED", 401);
 
-  if (!account) {
-    const e: any = new Error("UNAUTHORIZED");
-    e.status = 401;
-    throw e;
+  // ====== 1) STUDENT / CONSULTANT: lock tenant ======
+  if (account.role === "STUDENT" || account.role === "CONSULTANT") {
+    const home = account.homeUniversityId;
+    if (!home) throw err("NO_HOME_UNIVERSITY", 400);
+
+    // ✅ ignore activeUniversityId / header ทั้งหมด
+    return { account, activeUniversityId: home };
   }
 
-  const activeUniversityId = account.activeUniversityId ?? account.homeUniversityId ?? null;
+  // ====== 2) STAFF: allow switching ======
+  const headerUni = request.headers.get("x-university-id");
+  const headerUniId = headerUni ? Number(headerUni) : NaN;
 
-  if (!activeUniversityId) {
-    const e: any = new Error("NO_UNIVERSITY_CONTEXT");
-    e.status = 400;
-    throw e;
-  }
+  const picked =
+    Number.isFinite(headerUniId) && headerUniId > 0
+      ? headerUniId
+      : account.activeUniversityId ?? account.homeUniversityId ?? null;
 
-  // ✅ เช็คว่ามหาลัยที่ active อยู่ใน allowed (กันคนแก้ header มั่ว)
+  if (!picked) throw err("NO_UNIVERSITY_CONTEXT", 400);
+
+  // ✅ check allow-list (ถ้าคุณมีระบบยืมมหาลัย)
   const allowed = account.allowedUniversityIds ?? [];
-  if (allowed.length > 0 && !allowed.includes(activeUniversityId)) {
-    const e: any = new Error("UNIVERSITY_NOT_ALLOWED");
-    e.status = 403;
-    throw e;
+  if (allowed.length > 0 && !allowed.includes(picked)) {
+    throw err("UNIVERSITY_NOT_ALLOWED", 403);
   }
 
-  return { account, activeUniversityId };
+  return { account, activeUniversityId: picked };
 }
 
 /** เช็ค role แบบง่าย ๆ (ถ้าไม่ผ่าน -> 403) */
 export function assertRole(role: string, allow: string[]) {
   if (!allow.includes(role)) {
-    const e: any = new Error("FORBIDDEN");
-    e.status = 403;
-    throw e;
+    throw err("FORBIDDEN", 403);
   }
 }

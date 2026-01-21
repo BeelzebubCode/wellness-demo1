@@ -1,4 +1,5 @@
 // src/features/auth/types.ts
+import type { AccountRole } from "@prisma/client";
 
 export interface LoginCredentials {
   username: string;
@@ -9,8 +10,12 @@ export interface AuthUser {
   id: number;
   username: string;
   name: string;
-  role: 'STUDENT' | 'CONSULTANT' | 'HEAD_CONSULTANT';
+  role: AccountRole;
   consultantId?: number | null;
+
+  // ✅ tenant context (มาจาก /me และจาก login response v2)
+  homeUniversityId?: number | null;
+  allowedUniversityIds?: number[];
 }
 
 export interface LoginResponse {

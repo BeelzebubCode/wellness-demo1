@@ -13,9 +13,10 @@ export interface JWTPayload {
   username: string;
   role: string;
   consultantId?: number;
-  // (optional) ถ้าอนาคตอยากฝัง tenant ลง token ก็เพิ่มได้ แต่ตอนนี้เราดึงจาก DB เป็นหลัก
+  
   homeUniversityId?: number;
   activeUniversityId?: number;
+  allowedUniversityIds?: number[];
 }
 
 export interface AccountContext extends JWTPayload {
