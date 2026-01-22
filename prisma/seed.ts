@@ -866,39 +866,61 @@ async function main() {
   }
 
   /* =========================================================
-    8) TimeSlots - University Pool (คิวรวม)
-  ========================================================= */
+  8) TimeSlots - University Pool (คิวรวม)
+  - จ-ศ 08:00-20:00
+  - ส-อา 08:00-16:00
+  - slotDuration = 60 นาที
+========================================================= */
   console.log("⏰ Creating time slots (university pool)...");
 
   const today = startOfDay(new Date());
   const timeSlots: Map<number, any[]> = new Map(); // university_id -> slots[]
 
   const DAY_COUNT = 14;
-  const TIME_SLOTS_PER_DAY = [
-    { hour: 9, duration: 1 }, // 09:00-10:00
-    { hour: 10, duration: 1 }, // 10:00-11:00
-    { hour: 13, duration: 1 }, // 13:00-14:00
-    { hour: 14, duration: 1 }, // 14:00-15:00
-  ];
-
+  const SLOT_DURATION_MINUTES = 60;
   const DEFAULT_CAPACITY = 2;
+
+  function isWeekend(date: Date) {
+    const day = date.getDay(); // 0=Sun,6=Sat
+    return day === 0 || day === 6;
+  }
+
+  function buildSlotsForDate(date: Date) {
+    // จ-ศ 08-20, ส-อา 08-16
+    const openHour = 8;
+    const closeHour = isWeekend(date) ? 16 : 20;
+
+    const slots: Array<{ start: Date; end: Date }> = [];
+
+    // ทำ slot ชั่วโมงต่อชั่วโมง: [08-09], [09-10] ... จนถึง closeHour
+    for (let hour = openHour; hour < closeHour; hour++) {
+      const start = new Date(date);
+      start.setHours(hour, 0, 0, 0);
+
+      const end = new Date(start);
+      end.setMinutes(end.getMinutes() + SLOT_DURATION_MINUTES);
+
+      slots.push({ start, end });
+    }
+
+    return slots;
+  }
 
   for (const uni of universities) {
     const data: any[] = [];
 
     for (let day = 0; day < DAY_COUNT; day++) {
-      for (const t of TIME_SLOTS_PER_DAY) {
-        const start = new Date(today);
-        start.setDate(start.getDate() + day);
-        start.setHours(t.hour, 0, 0, 0);
+      const d = new Date(today);
+      d.setDate(d.getDate() + day);
+      d.setHours(0, 0, 0, 0);
 
-        const end = new Date(start);
-        end.setHours(end.getHours() + t.duration);
+      const slots = buildSlotsForDate(d);
 
+      for (const s of slots) {
         data.push({
           university_id: uni.university_id,
-          time_slot_start_datetime: start,
-          time_slot_end_datetime: end,
+          time_slot_start_datetime: s.start,
+          time_slot_end_datetime: s.end,
           time_slot_max_capacity: DEFAULT_CAPACITY,
           time_slot_status: TimeSlotStatus.AVAILABLE,
         });
