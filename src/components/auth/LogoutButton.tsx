@@ -6,6 +6,7 @@ import { LogOut } from "lucide-react";
 import { logout } from "@/features/auth/logout";
 import { Button, Modal, ModalFooter } from "@/components/ui";
 import { useNotificationContext } from "@/components/notification/NotificationProvider";
+import { clearTenantTheme, setTenantTheme } from "@/lib/tenant/client"; // ✅ เพิ่ม
 
 type Props = {
   redirectTo?: string; // default "/login"
@@ -22,16 +23,11 @@ function getCentralOriginFromHost() {
   const hostname = window.location.hostname.toLowerCase();
   const port = window.location.port;
 
-  // localhost / ip -> ไม่มี central domain ให้ตัด
   if (hostname === "localhost" || hostname === "127.0.0.1") {
     return window.location.origin;
   }
 
   const parts = hostname.split(".");
-
-  // tenant.root.tld -> ตัด tenant ออก = root.tld
-  // kku.wellness.local -> wellness.local
-  // nu.wellness.local  -> wellness.local
   const baseDomain = parts.length >= 3 ? parts.slice(1).join(".") : hostname;
 
   return `${protocol}//${baseDomain}${port ? `:${port}` : ""}`;
@@ -60,12 +56,20 @@ export default function LogoutButton({
     setLoading(true);
 
     try {
-      await logout(); // ✅ ต้อง include cookies ในฟังก์ชันนี้ (ดูไฟล์ล่าง)
+      await logout(); // server clears cookies
 
+      // ✅ ล้าง state ฝั่ง client ให้ theme/tenant ไม่ค้าง
       try {
         localStorage.removeItem("token");
         localStorage.removeItem("auth_user");
-      } catch {}
+
+        // tenant + theme ที่ทำให้สีค้าง
+        // ✅ ล้าง tenant + รีเซ็ต data-tenant เป็น DEFAULT
+        clearTenantTheme();
+
+        // (optional) กันเหนียวถ้านายอยากให้มัน save DEFAULT กลับเข้าไปด้วย
+        // setTenantTheme("DEFAULT"); // ✅ รีเซ็ต data-tenant + localStorage ให้เป็น DEFAULT
+      } catch { }
 
       window.dispatchEvent(new Event("auth-changed"));
       setIsOpen(false);
@@ -74,11 +78,8 @@ export default function LogoutButton({
       const central = getCentralOriginFromHost();
       const url = new URL(`${central}${redirectTo}`);
 
-      // ✅ toast
       url.searchParams.set("toast", "logout");
       url.searchParams.set("toastId", newToastId());
-
-      // ✅ tenant กลับ DEFAULT
       url.searchParams.set("tenant", "DEFAULT");
 
       window.location.assign(url.toString());

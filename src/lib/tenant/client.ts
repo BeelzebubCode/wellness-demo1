@@ -3,41 +3,27 @@ import { normalizeTenant, type TenantCode } from "@/config/tenants";
 
 const STORAGE_KEY = "tenant_code";
 
-/**
- * ตั้งค่า data-tenant ที่ <html> เพื่อให้ CSS theme เปลี่ยนทั้งเว็บ
- * ✅ เปลี่ยนใหม่: DEFAULT ก็ยัง set data-tenant="DEFAULT" (ไม่ remove)
- * เพื่อ:
- * - debug ง่าย (ไม่เป็น null)
- * - ทำ CSS selector ได้ชัด
- */
 export function applyTenantTheme(code: TenantCode) {
   if (typeof document === "undefined") return;
   document.documentElement.setAttribute("data-tenant", code);
 }
 
-/** บันทึก tenant ไว้เพื่อให้ refresh แล้วยังเป็นธีมเดิม */
 export function saveTenantTheme(code: TenantCode) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(STORAGE_KEY, code);
 }
 
-/** โหลด tenant ที่เคยบันทึกไว้ */
 export function loadTenantTheme(): TenantCode {
   if (typeof window === "undefined") return "DEFAULT";
   return normalizeTenant(window.localStorage.getItem(STORAGE_KEY));
 }
 
-/** ล้างค่า (เช่นตอน logout) */
 export function clearTenantTheme() {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(STORAGE_KEY);
-  applyTenantTheme("DEFAULT"); // ✅ set DEFAULT ไม่ remove
+  applyTenantTheme("DEFAULT");
 }
 
-/**
- * helper: รับ string แล้ว normalize + apply + save
- * ใช้หลัง login ได้เลย
- */
 export function setTenantTheme(input?: string | null) {
   const code = normalizeTenant(input);
   applyTenantTheme(code);
@@ -46,10 +32,31 @@ export function setTenantTheme(input?: string | null) {
 }
 
 /**
- * helper: เรียกตอนเปิดเว็บ
- * จะโหลดค่าที่เคย save และ apply ให้ทันที
+ * ✅ FIX: โดเมนกลาง (ไม่มี subdomain) ต้องเป็น DEFAULT เสมอ
+ * - wellness.local → DEFAULT
+ * - nu.wellness.local → ใช้ค่าที่ save ไว้ (หรือค่าที่ detect)
  */
 export function initTenantTheme() {
+  if (typeof window === "undefined") return "DEFAULT";
+
+  const hostname = window.location.hostname.toLowerCase();
+
+  // localhost / ip ถือว่าเป็นโดเมนกลาง
+  if (hostname === "localhost" || hostname === "127.0.0.1") {
+    clearTenantTheme();
+    return "DEFAULT";
+  }
+
+  const parts = hostname.split(".");
+  const hasSubdomain = parts.length >= 3; // nu.wellness.local => true, wellness.local => false
+
+  // ✅ ถ้าไม่มี subdomain -> บังคับ DEFAULT และล้างที่เคยจำ
+  if (!hasSubdomain) {
+    clearTenantTheme();
+    return "DEFAULT";
+  }
+
+  // มี subdomain -> ใช้ค่าที่เคยบันทึกไว้
   const code = loadTenantTheme();
   applyTenantTheme(code);
   return code;
