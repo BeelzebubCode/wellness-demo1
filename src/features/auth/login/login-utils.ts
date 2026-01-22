@@ -47,9 +47,9 @@ export const ROLE_CONFIG: Record<
   string,
   { defaultPath: string; isAdmin?: boolean }
 > = {
-  SUPER_ADMIN: { defaultPath: "/admin/super", isAdmin: true },
-  RECTOR: { defaultPath: "/admin/rector", isAdmin: true },
-  HEAD_CONSULTANT: { defaultPath: "/admin/data-center", isAdmin: true },
+  SUPER_ADMIN: { defaultPath: "/super-admin", isAdmin: true },
+  RECTOR: { defaultPath: "/rector", isAdmin: true },
+  HEAD_CONSULTANT: { defaultPath: "/counseling-admin/data-center", isAdmin: true },
 
   CONSULTANT: { defaultPath: "/consultant/my-jobs" },
   STUDENT: { defaultPath: "/booking" },
