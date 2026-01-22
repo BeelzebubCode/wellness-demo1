@@ -95,7 +95,6 @@ export function useAiChat() {
         return next;
       });
     } catch (err) {
-      // ❌ ไม่เพิ่ม assistant message
       setError(friendlyErrorMessage(err));
     } finally {
       setLoading(false);

@@ -1,3 +1,5 @@
+// api/v2/ai/help/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";

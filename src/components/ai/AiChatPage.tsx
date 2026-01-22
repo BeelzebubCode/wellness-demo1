@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import { useAiChat } from "@/features/ai/hooks/useAiChat";
 import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
 import { Bot, RotateCcw, Send } from "lucide-react";
@@ -119,29 +118,28 @@ export default function AiChatPage() {
               onClick={reset}
               disabled={isLoading}
               className="
-        inline-flex h-11 items-center gap-2
-        rounded-2xl border border-slate-200 bg-white
-        px-4 text-sm font-medium text-slate-600
-        hover:bg-slate-50
-        disabled:opacity-50 disabled:cursor-not-allowed
-      "
+                    inline-flex h-11 w-11 items-center justify-center
+                    rounded-2xl border border-slate-200 bg-white
+                    text-slate-600 hover:bg-slate-50
+                    disabled:opacity-50 disabled:cursor-not-allowed
+                    outline-none focus:outline-none focus-visible:outline-none
+                "
               aria-label="เริ่มใหม่"
               title="เริ่มใหม่"
             >
               <RotateCcw className="h-4 w-4" />
-              เริ่มใหม่
             </button>
 
-            {/* Input shell (กล่องจริงที่คุม focus) */}
+            {/* Input shell */}
             <div
               className="
-        flex h-11 flex-1 items-center
-        rounded-2xl border border-slate-300 bg-white
-        px-4
-        transition
-        focus-within:border-slate-400
-        focus-within:ring-2 focus-within:ring-slate-200/70
-      "
+                    flex h-11 flex-1 items-center
+                    rounded-2xl border border-slate-200 bg-white px-4
+                    transition hover:border-slate-300
+                    outline-none
+                    focus-within:border-slate-300
+                    focus-within:ring-0 focus-within:ring-offset-0
+                "
             >
               <Input
                 value={input}
@@ -155,32 +153,39 @@ export default function AiChatPage() {
                 }}
                 disabled={isLoading}
                 className="
-          h-full w-full
-          border-0 bg-transparent shadow-none
-          px-0 py-0
-          text-sm font-normal text-slate-900
-          placeholder:text-sm placeholder:font-normal placeholder:text-slate-400
-          focus:outline-none focus:ring-0
-        "
+                    h-full w-full
+                    appearance-none
+                    border-0 bg-transparent px-0 py-0
+                    !text-sm !leading-5 !font-normal
+                    !placeholder:text-sm !placeholder:font-normal !placeholder:text-slate-400
+                    text-slate-900
+                    shadow-none
+                    outline-none focus:outline-none focus-visible:outline-none
+                    ring-0 ring-offset-0
+                    focus:ring-0 focus:ring-offset-0
+                    focus-visible:ring-0 focus-visible:ring-offset-0
+                    !ring-0 !ring-offset-0
+                "
               />
             </div>
 
-            {/* Send (สีเข้มแบบเดิม + สูงเท่าช่อง) */}
-            <Button
+            {/* Send icon only */}
+            <button
+              type="button"
               onClick={send}
               disabled={!canSend}
               className="
-        h-11 rounded-2xl px-5
-        text-sm font-medium
-        bg-slate-900 hover:bg-slate-800
-        disabled:bg-slate-300
-      "
+                    inline-flex h-11 w-11 items-center justify-center
+                    rounded-2xl bg-slate-900 text-white
+                    hover:bg-slate-800
+                    disabled:bg-slate-300 disabled:cursor-not-allowed
+                    outline-none focus:outline-none focus-visible:outline-none
+                "
               aria-label="ส่ง"
               title="ส่ง"
             >
-              <Send className="mr-2 h-4 w-4" />
-              ส่ง
-            </Button>
+              <Send className="h-4 w-4" />
+            </button>
           </div>
 
           <p className="mt-2 text-[11px] text-slate-400">
