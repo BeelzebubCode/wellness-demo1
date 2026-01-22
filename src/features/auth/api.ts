@@ -11,6 +11,9 @@ export type MeResponse = {
 
 type ApiErrorShape = { error?: string; message?: string };
 
+// =======================
+// JSON helper
+// =======================
 async function safeJson<T>(res: Response): Promise<T | null> {
   try {
     return (await res.json()) as T;
@@ -19,43 +22,63 @@ async function safeJson<T>(res: Response): Promise<T | null> {
   }
 }
 
+// =======================
+// ✅ Request de-dup (inflight)
+// =======================
+const inflight = new Map<string, Promise<any>>();
+function dedupe<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const exist = inflight.get(key);
+  if (exist) return exist as Promise<T>;
+
+  const p = fn().finally(() => inflight.delete(key));
+  inflight.set(key, p);
+  return p;
+}
+
+// =======================
+// Base methods
+// =======================
 async function get<T>(url: string): Promise<T> {
-  const res = await fetch(url, {
-    method: "GET",
-    credentials: "include",
-    cache: "no-store",
-    headers: { "Accept": "application/json" },
+  return dedupe(`GET:${url}`, async () => {
+    const res = await fetch(url, {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+
+    if (res.status === 401 || res.status === 403) {
+      const data = await safeJson<ApiErrorShape>(res);
+      return ({ valid: false, ...(data || {}) } as unknown) as T;
+    }
+
+    if (!res.ok) {
+      const data = await safeJson<ApiErrorShape>(res);
+      return ({
+        valid: false,
+        error: data?.error || data?.message || `HTTP ${res.status}`,
+      } as unknown) as T;
+    }
+
+    const data = await safeJson<T>(res);
+    return (data ??
+      (({ valid: false, error: "Invalid JSON response" } as unknown) as T)) as T;
   });
-
-  // auth fail (token missing/expired/forbidden)
-  if (res.status === 401 || res.status === 403) {
-    const data = await safeJson<ApiErrorShape>(res);
-    return ({ valid: false, ...(data || {}) } as unknown) as T;
-  }
-
-  if (!res.ok) {
-    const data = await safeJson<ApiErrorShape>(res);
-    return ({ valid: false, error: data?.error || data?.message || `HTTP ${res.status}` } as unknown) as T;
-  }
-
-  const data = await safeJson<T>(res);
-  // กันกรณี server ส่งไม่ใช่ JSON
-  return (data ?? ({ valid: false, error: "Invalid JSON response" } as unknown)) as T;
 }
 
 async function post<T>(url: string, body?: unknown): Promise<T> {
+  // login ไม่ควร dedupe ตาม body เพราะแต่ละครั้งต่างกัน → ไม่ dedupe
   const res = await fetch(url, {
     method: "POST",
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      "Accept": "application/json",
+      Accept: "application/json",
     },
     body: body === undefined ? undefined : JSON.stringify(body),
     cache: "no-store",
   });
 
-  // login / switch-tenant อาจได้ 401/403 เหมือนกัน
   if (res.status === 401 || res.status === 403) {
     const data = await safeJson<ApiErrorShape>(res);
     return ({ success: false, ...(data || {}) } as unknown) as T;
@@ -63,16 +86,19 @@ async function post<T>(url: string, body?: unknown): Promise<T> {
 
   if (!res.ok) {
     const data = await safeJson<ApiErrorShape>(res);
-    return ({ success: false, error: data?.error || data?.message || `HTTP ${res.status}` } as unknown) as T;
+    return ({
+      success: false,
+      error: data?.error || data?.message || `HTTP ${res.status}`,
+    } as unknown) as T;
   }
 
   const data = await safeJson<T>(res);
-  return (data ?? ({ success: false, error: "Invalid JSON response" } as unknown)) as T;
+  return (data ??
+    (({ success: false, error: "Invalid JSON response" } as unknown) as T)) as T;
 }
 
 export const authApi = {
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
-    // ✅ ใช้ post() เพื่อได้ error handling มาตรฐานเดียว
     return post<LoginResponse>(`${API_BASE}/login`, credentials);
   },
 
@@ -85,17 +111,20 @@ export const authApi = {
       method: "POST",
       credentials: "include",
       cache: "no-store",
+      headers: { Accept: "application/json" },
     });
 
-    // logout บางทีอาจคืน 204
     if (!res.ok && res.status !== 204) {
       const data = await safeJson<ApiErrorShape>(res);
       throw new Error(data?.error || data?.message || `Logout failed: ${res.status}`);
     }
   },
 
-  /** ✅ เผื่อคุณทำ route /api/v2/auth/switch-tenant แล้ว */
-  async switchTenant(universityId: number): Promise<{ success: boolean; activeUniversityId?: number; error?: string }> {
+  async switchTenant(universityId: number): Promise<{
+    success: boolean;
+    activeUniversityId?: number;
+    error?: string;
+  }> {
     return post(`${API_BASE}/switch-tenant`, { universityId });
   },
 };

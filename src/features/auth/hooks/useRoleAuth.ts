@@ -1,8 +1,8 @@
 // src/features/auth/hooks/useRoleAuth.ts
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { authApi } from "../api";
 import type { AuthUser } from "../types";
 import { useNotificationContext } from "@/components/notification/NotificationProvider";
@@ -14,20 +14,20 @@ type UseRoleAuthOptions = {
   allowedRoles: readonly Role[];
   loginToastKey: string;
 
-  /** ถ้า false จะไม่ redirect/ไม่ toast (เหมาะกับหน้า public) */
-  guard?: boolean;
-
-  /** ✅ ถ้าหน้านี้ต้องมี tenant เสมอ (default true) */
-  requireTenant?: boolean;
-
-  /**
-   * ✅ จำกัดมหาลัยเฉพาะ (optional)
-   * - ถ้าให้มา จะต้อง match กับ account.activeUniversityId หรือ account.allowedUniversityIds
-   */
-  allowedUniversityIds?: readonly number[];
+  guard?: boolean; // default true
+  requireTenant?: boolean; // default true
+  allowedUniversityIds?: readonly number[]; // optional
 };
 
 const SUPPRESS_TOAST_KEY = "suppress_login_toast_once";
+
+type VerifyResult =
+  | { ok: true; user: AuthUser }
+  | { ok: false; reason: "UNAUTH" | "FORBIDDEN" | "NO_TENANT" | "UNI_NOT_ALLOWED" };
+
+function uniqKey(list: readonly unknown[]) {
+  return list.join("|");
+}
 
 export function useRoleAuth<TUser extends AuthUser = AuthUser>({
   redirectTo = "/login",
@@ -39,28 +39,40 @@ export function useRoleAuth<TUser extends AuthUser = AuthUser>({
 }: UseRoleAuthOptions) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { push } = useNotificationContext();
 
+  // ---- stable refs (avoid re-creating callbacks) ----
+  const pushRef = useRef(push);
+  useEffect(() => {
+    pushRef.current = push;
+  }, [push]);
+
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // ---- state ----
   const [user, setUser] = useState<TUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // ✅ เก็บ next เป็น "pathname + query" เพื่อกลับมาหน้าเดิมจริงๆ
-  const nextUrl = useMemo(() => {
-    const qs = searchParams?.toString();
-    return qs ? `${pathname}?${qs}` : pathname;
-  }, [pathname, searchParams]);
+  // ---- stable guards ----
+  const rolesKey = useMemo(() => uniqKey(allowedRoles), [allowedRoles]);
+  const allowedRoleSet = useMemo(() => new Set<Role>(allowedRoles), [rolesKey]);
 
-  // ทำ dependency เสถียร
-  const rolesKey = useMemo(() => allowedRoles.join("|"), [allowedRoles]);
-  const allowedSet = useMemo(() => new Set<Role>(allowedRoles), [rolesKey]); // rely on rolesKey
-
+  const allowedUniKey = useMemo(
+    () => uniqKey((allowedUniversityIds || []).filter(Number.isFinite)),
+    [allowedUniversityIds],
+  );
   const allowedUniSet = useMemo(() => {
-    return new Set<number>(
-      (allowedUniversityIds || []).filter((n) => Number.isFinite(n))
-    );
-  }, [allowedUniversityIds]);
+    const list = (allowedUniversityIds || []).filter((n) => Number.isFinite(n)) as number[];
+    return new Set<number>(list);
+  }, [allowedUniKey]);
 
+  // ---- helpers ----
   const toastLoginOnce = useCallback(() => {
     const COOLDOWN_MS = 3000;
 
@@ -75,13 +87,13 @@ export function useRoleAuth<TUser extends AuthUser = AuthUser>({
       sessionStorage.setItem(loginToastKey, String(now));
     } catch {}
 
-    push({
+    pushRef.current({
       type: "warning",
       title: "กรุณาเข้าสู่ระบบ",
       message: "คุณต้องเข้าสู่ระบบก่อนใช้งานหน้านี้",
       duration: 2200,
     });
-  }, [push, loginToastKey]);
+  }, [loginToastKey]);
 
   const clearLoginToastFlag = useCallback(() => {
     try {
@@ -89,118 +101,151 @@ export function useRoleAuth<TUser extends AuthUser = AuthUser>({
     } catch {}
   }, [loginToastKey]);
 
+  const redirectingRef = useRef(false);
+
   const redirectLogin = useCallback(() => {
     if (!guard) return;
-
-    // กัน loop
     if (pathname === "/login") return;
+
+    // ✅ กัน redirect ซ้อน
+    if (redirectingRef.current) return;
+    redirectingRef.current = true;
 
     toastLoginOnce();
 
-    // normalize redirectTo
     const to = redirectTo.startsWith("/") ? redirectTo : `/${redirectTo}`;
 
-    const next = nextUrl && nextUrl !== "/login" ? nextUrl : "/";
+    const next =
+      typeof window !== "undefined"
+        ? `${window.location.pathname}${window.location.search || ""}`
+        : pathname;
 
-    router.replace(`${to}?next=${encodeURIComponent(next)}`);
-  }, [guard, pathname, router, redirectTo, toastLoginOnce, nextUrl]);
+    router.replace(`${to}?next=${encodeURIComponent(next || "/")}`);
+
+    // ปลดล็อคภายหลังสั้นๆ กันกรณี user กลับมาเร็ว
+    setTimeout(() => {
+      redirectingRef.current = false;
+    }, 800);
+  }, [guard, pathname, redirectTo, router, toastLoginOnce]);
 
   const redirectHomeDenied = useCallback(() => {
     if (!guard) return;
-    push({
+
+    if (redirectingRef.current) return;
+    redirectingRef.current = true;
+
+    pushRef.current({
       type: "error",
       title: "ไม่มีสิทธิ์เข้าถึง",
       message: "บัญชีนี้ไม่สามารถเข้าหน้านี้ได้",
       duration: 2400,
     });
+
     router.replace("/");
-  }, [guard, push, router]);
+
+    setTimeout(() => {
+      redirectingRef.current = false;
+    }, 800);
+  }, [guard, router]);
+
+  const verifyOnce = useCallback(async (): Promise<VerifyResult> => {
+    const data = await authApi.me();
+    const acc = data?.account;
+
+    if (!data?.valid || !acc) return { ok: false, reason: "UNAUTH" };
+
+    // role guard
+    if (!allowedRoleSet.has(acc.role as Role)) {
+      return { ok: false, reason: "FORBIDDEN" };
+    }
+
+    // tenant required
+    if (requireTenant) {
+      const activeUni = (acc as any).activeUniversityId as number | null | undefined;
+      if (!activeUni) return { ok: false, reason: "NO_TENANT" };
+    }
+
+    // optional allowed university restriction
+    if (allowedUniSet.size > 0) {
+      const activeUni = (acc as any).activeUniversityId as number | null | undefined;
+      const allowedUnis = Array.isArray((acc as any).allowedUniversityIds)
+        ? ((acc as any).allowedUniversityIds as number[])
+        : [];
+
+      const ok =
+        (activeUni != null && allowedUniSet.has(activeUni)) ||
+        allowedUnis.some((u) => allowedUniSet.has(u));
+
+      if (!ok) return { ok: false, reason: "UNI_NOT_ALLOWED" };
+    }
+
+    return { ok: true, user: acc };
+  }, [allowedRoleSet, allowedUniSet, requireTenant]);
+
+  const inflightRef = useRef<Promise<void> | null>(null);
 
   const verify = useCallback(async () => {
-    setIsLoading(true);
+    // ✅ dedupe (ถ้า verify อยู่แล้วให้ใช้ตัวเดิม)
+    if (inflightRef.current) return inflightRef.current;
 
-    try {
-      const data = await authApi.me(); // ✅ ต้อง include cookies ใน authApi.me()
-      const acc = data?.account;
+    const run = (async () => {
+      if (!mountedRef.current) return;
+      setIsLoading(true);
 
-      if (!data?.valid || !acc) {
+      try {
+        const result = await verifyOnce();
+
+        if (!mountedRef.current) return;
+
+        if (result.ok) {
+          clearLoginToastFlag();
+          setUser(result.user as TUser);
+          return;
+        }
+
+        // fail cases
         setUser(null);
-        redirectLogin();
-        return;
-      }
 
-      // 1) role guard
-      if (!allowedSet.has(acc.role as Role)) {
-        setUser(null);
-        redirectHomeDenied();
-        return;
-      }
-
-      // 2) tenant required
-      if (requireTenant) {
-        const activeUni = (acc as any).activeUniversityId as number | null | undefined;
-        if (!activeUni) {
-          setUser(null);
+        if (result.reason === "UNAUTH" || result.reason === "NO_TENANT") {
           redirectLogin();
           return;
         }
+
+        // forbidden / uni not allowed
+        redirectHomeDenied();
+      } catch {
+        if (!mountedRef.current) return;
+        setUser(null);
+        redirectLogin();
+      } finally {
+        if (!mountedRef.current) return;
+        setIsLoading(false);
+        inflightRef.current = null;
       }
+    })();
 
-      // 3) uni restriction (optional)
-      if (allowedUniSet.size > 0) {
-        const activeUni = (acc as any).activeUniversityId as number | null | undefined;
-        const allowedUnis = Array.isArray((acc as any).allowedUniversityIds)
-          ? ((acc as any).allowedUniversityIds as number[])
-          : [];
+    inflightRef.current = run;
+    return run;
+  }, [clearLoginToastFlag, redirectHomeDenied, redirectLogin, verifyOnce]);
 
-        const ok =
-          (activeUni && allowedUniSet.has(activeUni)) ||
-          allowedUnis.some((u) => allowedUniSet.has(u));
-
-        if (!ok) {
-          setUser(null);
-          redirectHomeDenied();
-          return;
-        }
-      }
-
-      clearLoginToastFlag();
-      setUser(acc as TUser);
-    } catch {
-      setUser(null);
-      redirectLogin();
-    } finally {
-      setIsLoading(false);
-    }
-  }, [
-    allowedSet,
-    allowedUniSet,
-    clearLoginToastFlag,
-    redirectHomeDenied,
-    redirectLogin,
-    requireTenant,
-  ]);
+  // ---- init + listen auth-changed (NO pathname-based re-verify) ----
+  const didInitRef = useRef(false);
 
   useEffect(() => {
-    let isMounted = true;
-
     if (pathname === "/login") {
       setIsLoading(false);
-      return () => {
-        isMounted = false;
-      };
+      return;
     }
 
-    verify();
-
-    const onAuthChanged = () => {
-      if (!isMounted) return;
+    if (!didInitRef.current) {
+      didInitRef.current = true;
       verify();
-    };
+    }
+
+    const onAuthChanged = () => verify();
     window.addEventListener("auth-changed", onAuthChanged);
 
     return () => {
-      isMounted = false;
       window.removeEventListener("auth-changed", onAuthChanged);
     };
   }, [pathname, verify]);
