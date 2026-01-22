@@ -1,4 +1,3 @@
-// src/lib/auth/context.ts
 import type { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { extractToken, verifyToken, JWTPayload } from "./jwt";
@@ -25,7 +24,7 @@ export async function getAccountFromRequest(
   const jwt = await verifyToken(token);
   if (!jwt) return null;
 
-  // ✅ Validate account ยังมีอยู่จริง / role ตรง (กัน user ถูกลบ/โดนเปลี่ยน role แล้ว token เก่า)
+  // ✅ Validate account ยังอยู่จริง (เลือก field เท่าที่จำเป็น)
   const account = await prisma.account.findUnique({
     where: { account_id: jwt.accountId },
     select: {
@@ -33,16 +32,16 @@ export async function getAccountFromRequest(
       account_username: true,
       account_role: true,
       account_home_university_id: true,
+      // ถ้าคุณมี account_token_version: true ก็เอามาเทียบกับ jwt.tv ได้
     },
   });
   if (!account) return null;
 
-  // ✅ เอา allowed/active จาก JWT เป็น baseline (fast + consistent กับ login)
+  // ✅ allowed จาก JWT + merge กับ DB accesses ปัจจุบัน (กัน revoke)
   const allowedFromJwt = Array.isArray(jwt.allowedUniversityIds)
     ? jwt.allowedUniversityIds.filter((n) => Number.isFinite(n))
     : [];
 
-  // ✅ แล้ว “ค่อย” merge กับ access ปัจจุบันจาก DB (กันกรณี revoke แล้ว token ยังมี)
   const accesses = await prisma.accountUniversityAccess.findMany({
     where: { account_id: account.account_id, access_revoked_at: null },
     select: { university_id: true },
@@ -56,7 +55,7 @@ export async function getAccountFromRequest(
     ])
   ).sort((a, b) => a - b);
 
-  // ✅ active: ใช้จาก JWT ก่อน แล้วค่อยให้ header override (ถ้ามีและอยู่ใน allowed)
+  // ✅ active: jwt.active -> header override -> fallback home -> fallback first allowed
   let activeUniversityId =
     (Number.isFinite(jwt.activeUniversityId) ? jwt.activeUniversityId : undefined) ??
     (account.account_home_university_id ?? undefined);
@@ -65,6 +64,11 @@ export async function getAccountFromRequest(
   const requested = h ? Number(h) : NaN;
   if (Number.isFinite(requested) && allowedUniversityIds.includes(requested)) {
     activeUniversityId = requested;
+  }
+
+  // ✅ safety: active ต้องอยู่ใน allowed (กัน active หลุด)
+  if (activeUniversityId && !allowedUniversityIds.includes(activeUniversityId)) {
+    activeUniversityId = allowedUniversityIds[0] ?? undefined;
   }
 
   return {

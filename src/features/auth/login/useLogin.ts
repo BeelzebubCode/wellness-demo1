@@ -1,20 +1,25 @@
 "use client";
 
-// src/features/auth/login/useLogin.ts
-
 import { useCallback, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
   LoginResponse,
-  buildTargetHostFromTenant,
+  buildTargetHostFromTenantCode,
   isAdminPath,
   isAdminRole,
   isSafeNextPath,
   roleDefaultPath,
+  withToastUrl,
 } from "./login-utils";
 
-type FormData = { username: string; password: string };
+type FormData = {
+  username: string;
+  password: string;
+
+  // optional (เผื่อทำ dropdown เลือกมหาลัยตอน root domain)
+  preferredUniversityId?: number | null;
+};
 
 export function useLogin() {
   const router = useRouter();
@@ -24,12 +29,16 @@ export function useLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState<FormData>({ username: "", password: "" });
+  const [formData, setFormData] = useState<FormData>({
+    username: "",
+    password: "",
+    preferredUniversityId: null,
+  });
 
   const nextParam = useMemo(() => searchParams.get("next"), [searchParams]);
 
   const demoFill = useCallback((username: string, password: string) => {
-    setFormData({ username, password });
+    setFormData((p) => ({ ...p, username, password }));
   }, []);
 
   const login = useCallback(
@@ -42,7 +51,11 @@ export function useLogin() {
         const res = await fetch("/api/v2/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
+          body: JSON.stringify({
+            username: formData.username,
+            password: formData.password,
+            preferredUniversityId: formData.preferredUniversityId ?? null,
+          }),
           credentials: "include",
         });
 
@@ -53,17 +66,17 @@ export function useLogin() {
           return;
         }
 
+        // ✅ tenantCode จาก server (active tenant)
         const tenantCode = String(data.tenant?.universityCode || "DEFAULT").toUpperCase();
         setTenant(tenantCode || "DEFAULT");
 
+        // ✅ localStorage เก็บเพื่อ UX เท่านั้น (ไม่เอาไปใช้ตัดสิทธิ์จริง)
         localStorage.setItem(
           "auth_user",
           JSON.stringify({
             name: data.account?.name || data.account?.username || formData.username,
             role: data.account?.role || null,
-            homeUniversityId: data.account?.homeUniversityId ?? null,
-            allowedUniversityIds: data.account?.allowedUniversityIds ?? [],
-          }),
+          })
         );
 
         window.dispatchEvent(new Event("auth-changed"));
@@ -81,25 +94,24 @@ export function useLogin() {
         // 3) ไม่มี next -> ใช้ default ตาม role
         if (!nextPath) nextPath = roleDefaultPath(role);
 
-        // ✅ ถ้า targetHost != currentHost ให้ย้าย subdomain ด้วย full reload
-        // ถ้าเท่ากัน ให้ใช้ router.replace (ไม่กระพริบ/ไม่รีเฟรชทั้งหน้า)
-        const { protocol, targetHost, currentHost } = buildTargetHostFromTenant(tenantCode);
+        // 4) ย้าย subdomain ถ้าจำเป็น
+        const { protocol, targetHost, currentHost } = buildTargetHostFromTenantCode(tenantCode);
 
-        const withToastUrl = (basePath: string) => {
-          const url = new URL(`${protocol}//${targetHost}${basePath}`);
-          url.searchParams.set("toast", "login");
-          url.searchParams.set("name", data.account?.username || "");
-          url.searchParams.set("toastId", String(Date.now()));
-          return url.toString();
-        };
+        const url = withToastUrl(
+          protocol,
+          targetHost,
+          nextPath,
+          "login",
+          data.account?.username || ""
+        );
 
         if (targetHost !== currentHost) {
-          window.location.assign(withToastUrl(nextPath));
+          window.location.assign(url); // full reload to new subdomain
           return;
         }
 
         // same host => SPA navigation
-        router.replace(withToastUrl(nextPath).replace(`${protocol}//${targetHost}`, ""));
+        router.replace(url.replace(`${protocol}//${targetHost}`, ""));
       } catch (err) {
         console.error(err);
         setError("Connection Error");
@@ -107,7 +119,7 @@ export function useLogin() {
         setLoading(false);
       }
     },
-    [formData, nextParam, router, setTenant],
+    [formData, nextParam, router, setTenant]
   );
 
   return {

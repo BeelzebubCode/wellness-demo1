@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { generateToken, verifyPassword } from "@/lib/auth/jwt";
 
+/* =========================================================
+  Tenant Helpers
+========================================================= */
 function parseHost(req: NextRequest) {
   const hostHeader = req.headers.get("host") || ""; // nu.wellness.local:3000
   const host = hostHeader.split(":")[0].toLowerCase();
@@ -13,32 +16,64 @@ function parseHost(req: NextRequest) {
   return { hostHeader, host, subdomain, baseDomain };
 }
 
-function cookieDomainFor(baseDomain: string) {
-  if (
-    baseDomain === "localhost" ||
-    baseDomain === "127.0.0.1" ||
-    baseDomain.endsWith(".localhost")
-  ) {
-    return undefined;
-  }
-  return `.${baseDomain}`; // .wellness.local
+function isLocalHostLike(domain: string) {
+  return (
+    domain === "localhost" ||
+    domain === "127.0.0.1" ||
+    domain.endsWith(".localhost")
+  );
 }
 
+/**
+ * ✅ normalize base domain for cookie sharing across subdomains
+ * - wellness.local  -> wellness.local
+ * - nu.wellness.local -> wellness.local (handled by parseHost)
+ * - localhost -> localhost (no domain attr)
+ */
+function normalizeRootDomain(baseDomain: string) {
+  const d = String(baseDomain || "").toLowerCase().trim();
+  // remove any port if somehow included
+  return d.split(":")[0];
+}
+
+function cookieDomainFor(rootDomain: string) {
+  const d = normalizeRootDomain(rootDomain);
+  if (!d || isLocalHostLike(d)) return undefined;
+  return `.${d}`; // .wellness.local
+}
+
+/* =========================================================
+  Main
+========================================================= */
 export async function POST(request: NextRequest) {
   try {
-    const { subdomain, baseDomain } = parseHost(request);
+    const { subdomain, baseDomain, hostHeader } = parseHost(request);
 
     const body = await request.json().catch(() => null);
-    const username = body?.username;
-    const password = body?.password;
+    const username = String(body?.username || "").trim();
+    const password = String(body?.password || "").trim();
+    const preferredUniversityIdRaw = body?.preferredUniversityId;
+
+    const preferredUniversityId =
+      preferredUniversityIdRaw === null || preferredUniversityIdRaw === undefined
+        ? null
+        : Number(preferredUniversityIdRaw);
 
     if (!username || !password) {
       return NextResponse.json(
         { success: false, error: "กรุณากรอกชื่อผู้ใช้และรหัสผ่าน" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
+    if (preferredUniversityId !== null && !Number.isFinite(preferredUniversityId)) {
+      return NextResponse.json(
+        { success: false, error: "preferredUniversityId ไม่ถูกต้อง" },
+        { status: 400 }
+      );
+    }
+
+    // 1) tenant from subdomain (optional)
     const requestedUni = subdomain
       ? await prisma.university.findUnique({
           where: { university_code: subdomain.toUpperCase() },
@@ -46,6 +81,7 @@ export async function POST(request: NextRequest) {
         })
       : null;
 
+    // 2) load account + role entities + accesses
     const account = await prisma.account.findUnique({
       where: { account_username: username },
       select: {
@@ -86,7 +122,7 @@ export async function POST(request: NextRequest) {
     if (!account) {
       return NextResponse.json(
         { success: false, error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
@@ -94,10 +130,11 @@ export async function POST(request: NextRequest) {
     if (!ok) {
       return NextResponse.json(
         { success: false, error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
+    // update last login (fire and forget)
     prisma.account
       .update({
         where: { account_id: account.account_id },
@@ -105,17 +142,16 @@ export async function POST(request: NextRequest) {
       })
       .catch(() => {});
 
+    // 3) resolve memberships
     const consultantId = account.consultant?.consultant_id ?? null;
+    const studentId = account.student?.student_id ?? null;
 
     const homeUniversityId = account.account_home_university_id ?? null;
     const studentUniId = account.student?.university_id ?? null;
     const consultantUniId = account.consultant?.university_id ?? null;
 
-    const grantedUniversityIds = account.universityAccesses.map(
-      (x) => x.university_id,
-    );
+    const grantedUniversityIds = account.universityAccesses.map((x) => x.university_id);
 
-    // ✅ FIX #1: allowedUniversityIds ต้องรวม uni จาก entity ด้วย (กันหลุดสิทธิ์)
     const allowedUniversityIds = Array.from(
       new Set(
         [
@@ -123,70 +159,95 @@ export async function POST(request: NextRequest) {
           ...(studentUniId ? [studentUniId] : []),
           ...(consultantUniId ? [consultantUniId] : []),
           ...grantedUniversityIds,
-        ].filter(Boolean),
-      ),
+        ].filter(Boolean)
+      )
     ).sort((a, b) => a - b);
 
-    // ✅ ถ้า login ผ่านโดเมนมหาลัย → ต้องมีสิทธิ์ในมหาลัยนั้น
-    if (requestedUni) {
-      const canUseThisDomain = allowedUniversityIds.includes(
-        requestedUni.university_id,
+    if (!allowedUniversityIds.length) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "บัญชีนี้ไม่มีสิทธิ์ผูกกับมหาวิทยาลัยใดเลย (home_university / entity / universityAccesses ว่าง)",
+        },
+        { status: 403 }
       );
-      if (!canUseThisDomain) {
+    }
+
+    // 4) domain lock: if login from uni subdomain -> must have access
+    if (requestedUni) {
+      if (!allowedUniversityIds.includes(requestedUni.university_id)) {
         return NextResponse.json(
           {
             success: false,
             error:
               "บัญชีไม่มีสิทธิ์ในมหาวิทยาลัยของโดเมนนี้ (ตรวจสอบ home_university / entity / universityAccesses)",
           },
-          { status: 403 },
+          { status: 403 }
         );
       }
     }
 
-    // ✅ เลือก activeUni แบบ deterministic
+    // 5) choose active university
+    const role = account.account_role;
+
+    const roleDefaultUniId =
+      role === "STUDENT"
+        ? studentUniId
+        : role === "CONSULTANT" || role === "HEAD_CONSULTANT"
+          ? consultantUniId
+          : null;
+
+    const canUsePreferred =
+      preferredUniversityId !== null && allowedUniversityIds.includes(preferredUniversityId);
+
     const activeUniId =
       requestedUni?.university_id ??
-      (account.account_role === "STUDENT" ? studentUniId : null) ??
-      (account.account_role === "CONSULTANT" ||
-      account.account_role === "HEAD_CONSULTANT"
-        ? consultantUniId
-        : null) ??
+      (canUsePreferred ? preferredUniversityId : null) ??
+      roleDefaultUniId ??
       homeUniversityId ??
       allowedUniversityIds[0] ??
       null;
 
-    const activeUni = activeUniId
-      ? await prisma.university.findUnique({
-          where: { university_id: activeUniId },
-          select: { university_id: true, university_code: true },
-        })
-      : null;
+    const activeUni =
+      activeUniId !== null
+        ? await prisma.university.findUnique({
+            where: { university_id: activeUniId },
+            select: { university_id: true, university_code: true },
+          })
+        : null;
 
-    // ✅ FIX #2: ใส่ activeUniversityId ลง token ตั้งแต่ login
+    // 6) issue token
     const token = await generateToken({
       accountId: account.account_id,
       username: account.account_username,
-      role: account.account_role,
+      role: role,
 
       consultantId: consultantId ?? undefined,
-      studentId: account.student?.student_id ?? undefined,
+      studentId: studentId ?? undefined,
 
       homeUniversityId: homeUniversityId ?? undefined,
       activeUniversityId: activeUniId ?? undefined,
-      allowedUniversityIds: allowedUniversityIds.length
-        ? allowedUniversityIds
-        : undefined,
+      allowedUniversityIds: allowedUniversityIds,
     });
 
+    // 7) display name
     let displayName = account.account_username;
     if (account.consultant?.profile) {
       displayName = `${account.consultant.profile.consultant_first_name} ${account.consultant.profile.consultant_last_name}`;
     }
 
+    // 8) tenants list
+    const tenants = await prisma.university.findMany({
+      where: { university_id: { in: allowedUniversityIds } },
+      select: { university_id: true, university_code: true },
+      orderBy: { university_id: "asc" },
+    });
+
     const res = NextResponse.json({
       success: true,
       token,
+
       tenant: {
         universityId: activeUni?.university_id ?? null,
         universityCode: activeUni?.university_code ?? "DEFAULT",
@@ -194,21 +255,45 @@ export async function POST(request: NextRequest) {
           ? activeUni.university_code.toLowerCase()
           : null,
       },
+
+      tenants: tenants.map((t) => ({
+        universityId: t.university_id,
+        code: t.university_code,
+      })),
+
       account: {
         id: account.account_id,
         username: account.account_username,
         name: displayName,
-        role: account.account_role,
+        role: role,
         consultantId,
+        studentId,
         homeUniversityId,
         allowedUniversityIds,
-        activeUniversityId: activeUniId ?? null, // (optional) ส่งให้ client ด้วย
+        activeUniversityId: activeUniId,
       },
     });
 
-    const ROOT_DOMAIN = process.env.ROOT_DOMAIN || baseDomain;
-    const cookieDomain = cookieDomainFor(ROOT_DOMAIN);
+    /* =========================================================
+      ✅ Cookie domain: ใช้ baseDomain จาก host เป็นหลัก (กัน ENV ตั้งผิด)
+    ========================================================= */
+    const rootDomain = normalizeRootDomain(process.env.ROOT_DOMAIN || baseDomain);
+    const cookieDomain = cookieDomainFor(rootDomain);
 
+    // ✅ debug header (เฉพาะ dev) ดูว่า domain ถูกคำนวณเป็นอะไร
+    if (process.env.NODE_ENV !== "production") {
+      res.headers.set(
+        "x-auth-debug",
+        JSON.stringify({
+          hostHeader,
+          baseDomain,
+          rootDomain,
+          cookieDomain: cookieDomain ?? null,
+        })
+      );
+    }
+
+    // auth_token (httpOnly)
     res.cookies.set({
       name: "auth_token",
       value: token,
@@ -225,6 +310,7 @@ export async function POST(request: NextRequest) {
       activeUni?.university_code?.toUpperCase() ??
       "DEFAULT";
 
+    // tenant_code (readable by client)
     res.cookies.set({
       name: "tenant_code",
       value: tenantCode,
@@ -241,7 +327,7 @@ export async function POST(request: NextRequest) {
     console.error("[LOGIN_API_ERROR]", e);
     return NextResponse.json(
       { success: false, error: "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

@@ -9,20 +9,38 @@ import { requireTenant, assertRole } from "@/lib/tenant/server";
 const BKK_TZ = "Asia/Bangkok";
 const BKK_OFFSET = "+07:00";
 
+// ✅ เปิด/ปิด auto-generate เมื่อ GET แล้ววันนั้นไม่มี slot เลย
+const AUTO_GENERATE_IF_EMPTY = true;
+
+// ✅ Roles ที่เข้าถึง time-slots ได้ (แก้ที่นี่ที่เดียว)
+const TIME_SLOT_VIEW_ROLES = [
+  "STUDENT",
+  "CONSULTANT",
+  "HEAD_CONSULTANT",
+  "ADMIN",
+  "SUPER_ADMIN",
+  "RECTOR",
+] as const;
+
+const TIME_SLOT_STAFF_ROLES = [
+  "HEAD_CONSULTANT",
+  "ADMIN",
+  "SUPER_ADMIN",
+  "RECTOR",
+] as const;
+
 function createDateTime(dateStr: string, timeStr: string): Date {
-  // creates an exact instant based on Bangkok local time
+  // exact instant based on Bangkok local time
   return new Date(`${dateStr}T${timeStr}:00.000${BKK_OFFSET}`);
 }
 
 function getDayRangeBangkok(dateStr: string) {
-  // query range for the Bangkok calendar day (converted to UTC instants automatically)
   const start = new Date(`${dateStr}T00:00:00.000${BKK_OFFSET}`);
   const end = new Date(`${dateStr}T23:59:59.999${BKK_OFFSET}`);
   return { start, end };
 }
 
 function fmtDateBkk(d: Date) {
-  // YYYY-MM-DD (Bangkok)
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: BKK_TZ,
     year: "numeric",
@@ -32,7 +50,6 @@ function fmtDateBkk(d: Date) {
 }
 
 function fmtTimeBkk(d: Date) {
-  // HH:mm (Bangkok)
   return new Intl.DateTimeFormat("en-GB", {
     timeZone: BKK_TZ,
     hour: "2-digit",
@@ -45,8 +62,14 @@ function addMinutes(date: Date, minutes: number): Date {
   return new Date(date.getTime() + minutes * 60000);
 }
 
+function isValidDateStr(dateStr: string) {
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(dateStr)) return false;
+  const { start } = getDayRangeBangkok(dateStr);
+  return !isNaN(start.getTime());
+}
+
 function getSlotTemplate(dateStr: string) {
-  // make sure weekend calc follows Bangkok day boundary
   const dayOfWeek = new Date(`${dateStr}T00:00:00.000${BKK_OFFSET}`).getDay();
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
@@ -57,22 +80,10 @@ function getSlotTemplate(dateStr: string) {
   return { openTime, closeTime, slotDuration, isWeekend };
 }
 
-function expectedSlotCount(dateStr: string) {
-  const { openTime, closeTime, slotDuration } = getSlotTemplate(dateStr);
-
-  const start = createDateTime(dateStr, openTime);
-  const end = createDateTime(dateStr, closeTime);
-
-  const minutes = (end.getTime() - start.getTime()) / 60000;
-  if (minutes <= 0) return 0;
-  return Math.floor(minutes / slotDuration);
-}
-
-
 /** สร้าง slot แบบ "คิวรวมของมหาลัย" สำหรับวันนั้น */
 async function generateDefaultSlotsForUniversity(
   dateStr: string,
-  universityId: number,
+  universityId: number
 ): Promise<number> {
   const { openTime, closeTime, slotDuration } = getSlotTemplate(dateStr);
 
@@ -85,10 +96,6 @@ async function generateDefaultSlotsForUniversity(
     if (slotEnd <= endTime) slots.push({ start: new Date(currentTime), end: slotEnd });
     currentTime = slotEnd;
   }
-
-  console.log(
-    `[generateDefaultSlotsForUniversity] ${dateStr} uni=${universityId}: slots=${slots.length}`,
-  );
 
   if (slots.length === 0) return 0;
 
@@ -108,7 +115,6 @@ async function generateDefaultSlotsForUniversity(
     skipDuplicates: true,
   });
 
-  console.log(`[generateDefaultSlotsForUniversity] created=${result.count}`);
   return result.count;
 }
 
@@ -124,33 +130,23 @@ export async function GET(req: NextRequest) {
   try {
     const { account, activeUniversityId } = await requireTenant(req);
 
-    assertRole(account.role, [
-      "STUDENT",
-      "CONSULTANT",
-      "HEAD_CONSULTANT",
-      "ADMIN",
-      "SUPER_ADMIN",
-      "RECTOR",
-    ]);
+    // ✅ role gate
+    assertRole(account.role, [...TIME_SLOT_VIEW_ROLES]);
 
     const { searchParams } = new URL(req.url);
     const dateStr = searchParams.get("date");
 
     if (!dateStr) {
-      return NextResponse.json({ error: "Date is required (YYYY-MM-DD)" }, { status: 400 });
+      return NextResponse.json({ success: false, error: "Date is required (YYYY-MM-DD)" }, { status: 400 });
     }
-
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(dateStr)) {
-      return NextResponse.json({ error: "Invalid date format. Use YYYY-MM-DD" }, { status: 400 });
+    if (!isValidDateStr(dateStr)) {
+      return NextResponse.json({ success: false, error: "Invalid date format/value. Use YYYY-MM-DD" }, { status: 400 });
     }
 
     const { start: startOfDay, end: endOfDay } = getDayRangeBangkok(dateStr);
-    if (isNaN(startOfDay.getTime())) {
-      return NextResponse.json({ error: "Invalid date value" }, { status: 400 });
-    }
 
-    const timeSlots = await prisma.timeSlot.findMany({
+    // 1) โหลด slots
+    let timeSlots = await prisma.timeSlot.findMany({
       where: {
         university_id: activeUniversityId,
         time_slot_start_datetime: { gte: startOfDay, lte: endOfDay },
@@ -158,9 +154,21 @@ export async function GET(req: NextRequest) {
       orderBy: { time_slot_start_datetime: "asc" },
     });
 
+    // ✅ optional: ถ้าไม่มี slot เลย => generate default แล้วโหลดใหม่
+    if (AUTO_GENERATE_IF_EMPTY && timeSlots.length === 0) {
+      await generateDefaultSlotsForUniversity(dateStr, activeUniversityId);
+      timeSlots = await prisma.timeSlot.findMany({
+        where: {
+          university_id: activeUniversityId,
+          time_slot_start_datetime: { gte: startOfDay, lte: endOfDay },
+        },
+        orderBy: { time_slot_start_datetime: "asc" },
+      });
+    }
+
     const slotIds = timeSlots.map((s) => s.time_slot_id);
 
-    // ✅ ลด N+1: groupBy นับ booking ต่อ slot ทีเดียว
+    // 2) groupBy นับ booking ต่อ slot ทีเดียว
     const bookingCounts = slotIds.length
       ? await prisma.booking.groupBy({
           by: ["time_slot_id"],
@@ -177,26 +185,27 @@ export async function GET(req: NextRequest) {
       countMap.set(row.time_slot_id, row._count._all);
     }
 
+    const now = Date.now();
+
     const formattedSlots = timeSlots.map((slot) => {
       const activeBookings = countMap.get(slot.time_slot_id) ?? 0;
 
       const maxCap = Number(slot.time_slot_max_capacity ?? 0);
       const availableCount = Math.max(0, maxCap - activeBookings);
 
+      // ✅ ปิด slot ถ้า LOCKED/CANCELLED หรือ status ไม่ AVAILABLE
       const isClosed =
-        slot.time_slot_status === "LOCKED" || slot.time_slot_status === "CANCELLED";
+        slot.time_slot_status === "LOCKED" ||
+        slot.time_slot_status === "CANCELLED" ||
+        slot.time_slot_status !== "AVAILABLE";
 
       const slotStart = slot.time_slot_start_datetime;
       const slotEnd = slot.time_slot_end_datetime;
 
-      // ✅ ชัวร์สุด: ถ้า start <= now ถือว่า past (ไม่ต้องเทียบวัน)
-      const isPastTime = slotStart.getTime() <= Date.now();
+      // ✅ past ที่ “สมเหตุสมผล” กว่า: ถ้า end <= now ถือว่าหมดเวลา
+      const isPastTime = slotEnd.getTime() <= now;
 
-      const isAvailable =
-        slot.time_slot_status === "AVAILABLE" &&
-        availableCount > 0 &&
-        !isClosed &&
-        !isPastTime;
+      const isAvailable = !isClosed && availableCount > 0 && !isPastTime;
 
       let unavailableReason: UnavailableReason | null = null;
       if (!isAvailable) {
@@ -210,12 +219,10 @@ export async function GET(req: NextRequest) {
         id: slot.time_slot_id,
         universityId: slot.university_id,
 
-        // ✅ แสดงวัน/เวลาเป็น Bangkok เสมอ (ไม่เพี้ยน)
         date: fmtDateBkk(slotStart),
         startTime: fmtTimeBkk(slotStart),
         endTime: fmtTimeBkk(slotEnd),
 
-        // เก็บ ISO ไว้ให้ client ใช้งานต่อได้ (เป็น UTC instant ถูกต้อง)
         startDateTime: slotStart.toISOString(),
         endDateTime: slotEnd.toISOString(),
 
@@ -231,17 +238,21 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       success: true,
       date: dateStr,
       universityId: activeUniversityId,
       slots: formattedSlots,
     });
+
+    // ✅ กัน cache
+    res.headers.set("Cache-Control", "no-store");
+    return res;
   } catch (error: any) {
     console.error("[GET /v2/time-slots] Error:", error);
     return NextResponse.json(
-      { error: error?.message ?? "Failed to fetch time slots" },
-      { status: error?.status ?? 500 },
+      { success: false, error: error?.message ?? "Failed to fetch time slots" },
+      { status: error?.status ?? 500 }
     );
   }
 }
@@ -255,13 +266,16 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const { account, activeUniversityId } = await requireTenant(req);
+    assertRole(account.role, [...TIME_SLOT_STAFF_ROLES]);
 
-    assertRole(account.role, ["HEAD_CONSULTANT", "ADMIN", "SUPER_ADMIN", "RECTOR"]);
+    const body = await req.json().catch(() => ({}));
+    const date = String(body?.date || "").trim();
+    const generateDefault = Boolean(body?.generateDefault);
 
-    const body = await req.json();
-    const { date, generateDefault } = body;
-
-    if (!date) return NextResponse.json({ error: "Date is required" }, { status: 400 });
+    if (!date) return NextResponse.json({ success: false, error: "Date is required" }, { status: 400 });
+    if (!isValidDateStr(date)) {
+      return NextResponse.json({ success: false, error: "Invalid date format/value. Use YYYY-MM-DD" }, { status: 400 });
+    }
 
     if (generateDefault) {
       const created = await generateDefaultSlotsForUniversity(date, activeUniversityId);
@@ -273,12 +287,12 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ error: "Only generateDefault is supported in v2" }, { status: 400 });
+    return NextResponse.json({ success: false, error: "Only generateDefault is supported in v2" }, { status: 400 });
   } catch (error: any) {
     console.error("[POST /v2/time-slots] Error:", error);
     return NextResponse.json(
-      { error: error?.message ?? "Failed to create time slots" },
-      { status: error?.status ?? 500 },
+      { success: false, error: error?.message ?? "Failed to create time slots" },
+      { status: error?.status ?? 500 }
     );
   }
 }
@@ -291,11 +305,14 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const { account, activeUniversityId } = await requireTenant(req);
-    assertRole(account.role, ["HEAD_CONSULTANT", "ADMIN", "SUPER_ADMIN", "RECTOR"]);
+    assertRole(account.role, [...TIME_SLOT_STAFF_ROLES]);
 
     const { searchParams } = new URL(req.url);
     const dateStr = searchParams.get("date");
-    if (!dateStr) return NextResponse.json({ error: "Date is required" }, { status: 400 });
+    if (!dateStr) return NextResponse.json({ success: false, error: "Date is required" }, { status: 400 });
+    if (!isValidDateStr(dateStr)) {
+      return NextResponse.json({ success: false, error: "Invalid date format/value. Use YYYY-MM-DD" }, { status: 400 });
+    }
 
     const { start: startOfDay, end: endOfDay } = getDayRangeBangkok(dateStr);
 
@@ -339,8 +356,8 @@ export async function DELETE(req: NextRequest) {
   } catch (error: any) {
     console.error("[DELETE /v2/time-slots] Error:", error);
     return NextResponse.json(
-      { error: error?.message ?? "Failed to delete time slots" },
-      { status: error?.status ?? 500 },
+      { success: false, error: error?.message ?? "Failed to delete time slots" },
+      { status: error?.status ?? 500 }
     );
   }
 }
@@ -352,15 +369,18 @@ export async function DELETE(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const { account, activeUniversityId } = await requireTenant(req);
-    assertRole(account.role, ["HEAD_CONSULTANT", "ADMIN", "SUPER_ADMIN", "RECTOR"]);
+    assertRole(account.role, [...TIME_SLOT_STAFF_ROLES]);
 
     const { searchParams } = new URL(req.url);
     const dateStr = searchParams.get("date");
     const action = searchParams.get("action");
 
-    if (!dateStr) return NextResponse.json({ error: "Date is required" }, { status: 400 });
+    if (!dateStr) return NextResponse.json({ success: false, error: "Date is required" }, { status: 400 });
+    if (!isValidDateStr(dateStr)) {
+      return NextResponse.json({ success: false, error: "Invalid date format/value. Use YYYY-MM-DD" }, { status: 400 });
+    }
     if (action !== "regenerate") {
-      return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+      return NextResponse.json({ success: false, error: "Invalid action" }, { status: 400 });
     }
 
     const { start: startOfDay, end: endOfDay } = getDayRangeBangkok(dateStr);
@@ -414,8 +434,8 @@ export async function PATCH(req: NextRequest) {
   } catch (error: any) {
     console.error("[PATCH /v2/time-slots] Error:", error);
     return NextResponse.json(
-      { error: error?.message ?? "Failed to regenerate" },
-      { status: error?.status ?? 500 },
+      { success: false, error: error?.message ?? "Failed to regenerate" },
+      { status: error?.status ?? 500 }
     );
   }
 }
