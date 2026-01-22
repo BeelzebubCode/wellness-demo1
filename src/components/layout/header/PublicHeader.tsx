@@ -1,11 +1,12 @@
-// components/layout/header/PublicHeader.tsx
+// src/components/layout/header/PublicHeader.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
-import { PUBLIC_NAV } from "@/lib/constants";
+import { PUBLIC_NAV } from "@/lib/constants/public-nav";
+import type { NavItem } from "@/components/layout/sidebar/types";
 import LogoutButton from "@/components/auth/LogoutButton";
 import { BrandLogo } from "@/components/shared";
 import { Menu, X, LogIn, User } from "lucide-react";
@@ -48,17 +49,14 @@ async function fetchMe(): Promise<{ isLoggedIn: boolean; user: PublicUser }> {
     if (!res.ok) return { isLoggedIn: false, user: {} };
 
     const data = await res.json();
-
     if (!data?.valid || !data?.account) return { isLoggedIn: false, user: {} };
 
-    // name อาจไม่มีจาก /me ก็ fallback username
     const name = data.account.name ?? data.account.username ?? null;
 
     return {
       isLoggedIn: true,
       user: {
         name,
-        // ถ้า /me ไม่มี avatar ก็ใช้ null (หรือดึงจาก storage ได้ใน merge ด้านล่าง)
         avatar: data.account.avatar ?? null,
         role: data.account.role ?? null,
       },
@@ -74,7 +72,11 @@ export interface PublicHeaderProps {
   onLogin?: () => void;
 }
 
-export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProps) {
+export function PublicHeader({
+  userName,
+  userAvatar,
+  onLogin,
+}: PublicHeaderProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -92,17 +94,14 @@ export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProp
     let mounted = true;
 
     const sync = async () => {
-      // 1) fetch login state จาก cookie
       const me = await fetchMe();
       if (!mounted) return;
 
-      // 2) merge profile จาก storage (ช่วยให้ชื่อ/รูปขึ้นเร็วหรือมี avatar ที่ me ไม่มี)
       const cached = readUserProfileFromStorage();
 
       const mergedUser: PublicUser = {
         ...cached,
         ...me.user,
-        // ให้ server มาก่อน แต่ถ้า server ไม่มี name/avatar ก็ใช้ cached
         name: me.user.name ?? cached.name ?? null,
         avatar: me.user.avatar ?? cached.avatar ?? null,
         role: me.user.role ?? cached.role ?? null,
@@ -111,12 +110,8 @@ export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProp
       setAuth({ isLoggedIn: me.isLoggedIn, user: mergedUser });
     };
 
-    const onStorage = () => {
-      // กรณี tab อื่น login/logout
-      sync();
-    };
+    const onStorage = () => sync();
 
-    // sync ครั้งแรก
     sync();
     setHydrated(true);
 
@@ -126,11 +121,13 @@ export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProp
     return () => {
       mounted = false;
       window.removeEventListener("storage", onStorage);
-      window.removeEventListener("auth-changed", sync as unknown as EventListener);
+      window.removeEventListener(
+        "auth-changed",
+        sync as unknown as EventListener,
+      );
     };
   }, []);
 
-  // ✅ scroll hide / hover show
   useEffect(() => {
     let lastY = typeof window !== "undefined" ? window.scrollY : 0;
 
@@ -150,9 +147,7 @@ export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProp
       lastY = y;
     };
 
-    const onMouseMove = (e: MouseEvent) => {
-      setCursorTop(e.clientY <= 12);
-    };
+    const onMouseMove = (e: MouseEvent) => setCursorTop(e.clientY <= 12);
 
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("mousemove", onMouseMove);
@@ -170,25 +165,36 @@ export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProp
 
   const displayName = useMemo(
     () => userName ?? auth.user.name ?? "ผู้ใช้",
-    [userName, auth.user.name]
+    [userName, auth.user.name],
   );
 
   const displayAvatar = useMemo(
     () => userAvatar ?? auth.user.avatar ?? null,
-    [userAvatar, auth.user.avatar]
+    [userAvatar, auth.user.avatar],
   );
 
   const toggleMobile = () => setMobileOpen((v) => !v);
 
-  // ✅ เงื่อนไขโชว์ header
   const shouldShow = headerVisible || cursorTop || mobileOpen;
+
+  // ✅ เมนู Public แบบเดียวกับ booking nav (แก้เมนูที่ไฟล์ public-nav.ts อย่างเดียว)
+  const navItems: NavItem[] = useMemo(() => {
+    const base = [...PUBLIC_NAV];
+
+    return base;
+  }, [isLoggedIn]);
+
+  const isActiveNav = (item: NavItem) =>
+    item.exact
+      ? pathname === item.href
+      : pathname === item.href || pathname.startsWith(`${item.href}/`);
 
   return (
     <header
       className={cn(
         "fixed top-0 inset-x-0 z-50",
         "transition-transform duration-300 ease-out",
-        shouldShow ? "translate-y-0" : "-translate-y-full"
+        shouldShow ? "translate-y-0" : "-translate-y-full",
       )}
     >
       <div className="absolute top-0 left-0 right-0 h-3" />
@@ -209,7 +215,10 @@ export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProp
             <div className="h-16 flex items-center justify-between gap-4">
               <Link
                 href="/"
-                className={cn("flex items-center gap-3 select-none", "transition-opacity hover:opacity-95")}
+                className={cn(
+                  "flex items-center gap-3 select-none",
+                  "transition-opacity hover:opacity-95",
+                )}
                 aria-label="NU Wellness Home"
               >
                 <BrandLogo
@@ -231,12 +240,10 @@ export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProp
                 </div>
               </Link>
 
+              {/* ✅ Desktop menu */}
               <nav className="hidden md:flex items-center gap-2">
-                {PUBLIC_NAV.map((item) => {
-                  const isActive = item.exact
-                    ? pathname === item.href
-                    : pathname === item.href || pathname.startsWith(`${item.href}/`);
-
+                {navItems.map((item) => {
+                  const active = isActiveNav(item);
                   const Icon = item.icon;
 
                   return (
@@ -244,20 +251,41 @@ export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProp
                       key={item.href}
                       href={item.href}
                       className={cn(
-                        "flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full transition-all",
+                        "group relative flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full",
                         "border border-[#D1EAEA]/70",
-                        isActive
-                          ? "bg-white/75 text-slate-900 shadow-sm"
-                          : "bg-white/35 text-[#1F3D3D] hover:bg-white/55"
+                        "transition-all duration-200 ease-out",
+                        "hover:-translate-y-[1px] hover:shadow-sm hover:bg-white/60",
+                        "active:translate-y-0 active:scale-[0.98]",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2FA4A9]/40",
+                        active
+                          ? "bg-white/80 text-slate-900 shadow-sm"
+                          : "bg-white/35 text-[#1F3D3D]",
                       )}
                     >
                       {Icon && (
                         <Icon
-                          className="w-4 h-4"
-                          style={{ color: isActive ? BRAND.teal : "rgba(31,61,61,0.65)" }}
+                          className={cn(
+                            "w-4 h-4 transition-transform duration-200",
+                            "group-hover:-rotate-3 group-hover:scale-[1.05]",
+                          )}
+                          style={{
+                            color: active ? BRAND.teal : "rgba(31,61,61,0.65)",
+                          }}
                         />
                       )}
-                      {item.label}
+                      <span className="transition-transform duration-200 group-active:translate-y-[0.5px]">
+                        {item.label}
+                      </span>
+
+                      {/* ✅ little shine effect */}
+                      <span
+                        className={cn(
+                          "pointer-events-none absolute inset-0 rounded-full opacity-0",
+                          "bg-gradient-to-r from-white/0 via-white/30 to-white/0",
+                          "transition-opacity duration-200",
+                          "group-hover:opacity-100",
+                        )}
+                      />
                     </Link>
                   );
                 })}
@@ -275,7 +303,10 @@ export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProp
                         />
                       ) : (
                         <div className="w-8 h-8 rounded-full bg-white/60 border border-[#D1EAEA]/70 flex items-center justify-center">
-                          <User className="w-4 h-4" style={{ color: BRAND.teal }} />
+                          <User
+                            className="w-4 h-4"
+                            style={{ color: BRAND.teal }}
+                          />
                         </div>
                       )}
                       <span className="text-sm font-semibold max-w-[140px] truncate text-slate-900">
@@ -291,7 +322,7 @@ export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProp
                         "inline-flex items-center gap-2 px-4 py-2 rounded-full",
                         "text-xs font-extrabold transition shadow-sm",
                         "border border-[#D1EAEA]/70 text-[#1F3D3D]",
-                        "bg-white/45 hover:bg-white/70"
+                        "bg-white/45 hover:bg-white/70",
                       )}
                     />
                   </div>
@@ -304,11 +335,15 @@ export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProp
                     className={cn(
                       "hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-full",
                       "text-xs font-extrabold shadow-sm transition",
-                      "active:scale-[0.99]"
+                      "active:scale-[0.99]",
                     )}
                     style={{ background: BRAND.teal, color: "white" }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = BRAND.tealHover)}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = BRAND.teal)}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background = BRAND.tealHover)
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = BRAND.teal)
+                    }
                   >
                     <LogIn className="w-4 h-4" />
                     เข้าสู่ระบบ
@@ -321,19 +356,56 @@ export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProp
                   className={cn(
                     "md:hidden inline-flex items-center justify-center",
                     "w-10 h-10 rounded-full transition active:scale-95",
-                    "border border-[#D1EAEA]/70 bg-white/45 hover:bg-white/70"
+                    "border border-[#D1EAEA]/70 bg-white/45 hover:bg-white/70",
                   )}
                   style={{ color: BRAND.deep }}
                   aria-label="Toggle menu"
                 >
-                  {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                  {mobileOpen ? (
+                    <X className="w-5 h-5" />
+                  ) : (
+                    <Menu className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </div>
           </div>
 
-          {/* ✅ ส่วน Mobile Drawer ของคุณเดิม เอาต่อได้เหมือนเดิมเลย */}
-          {/* ... */}
+          {/* ✅ Mobile Drawer: ใช้เมนูชุดเดียวกัน */}
+          {mobileOpen && (
+            <div className="md:hidden px-4 pb-4">
+              <div className="mt-2 rounded-2xl border border-[#D1EAEA]/70 bg-white/45 backdrop-blur-xl p-2">
+                <div className="flex flex-col gap-1">
+                  {navItems.map((item) => {
+                    const active = isActiveNav(item);
+                    const Icon = item.icon;
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMobileOpen(false)}
+                        className={cn(
+                          "group flex items-center gap-3 px-3 py-2 rounded-xl",
+                          "transition-all duration-200 ease-out",
+                          "hover:-translate-y-[1px] hover:bg-white/60 hover:shadow-sm",
+                          "active:translate-y-0 active:scale-[0.98]",
+                          active ? "bg-white/75" : "bg-transparent",
+                        )}
+                      >
+                        {Icon ? (
+                          <Icon className="w-5 h-5 opacity-80 transition-transform duration-200 group-hover:scale-[1.05]" />
+                        ) : null}
+                        <span className="text-sm font-semibold text-slate-900">
+                          {item.label}
+                        </span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>

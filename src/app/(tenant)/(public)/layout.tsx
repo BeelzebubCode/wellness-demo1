@@ -1,23 +1,25 @@
-// src/app/(public)/layout.tsx
+// src/app/(tenant)/(public)/layout.tsx
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { PublicHeader, PublicFooter } from "@/components/layout";
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
+
+  const showFooter = pathname === "/";
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* header เป็น fixed แล้ว */}
       <PublicHeader onLogin={() => router.push("/login")} />
 
-      {/* ✅ ดันเนื้อหาลงเท่าความสูง header (h-16 = 64px) */}
-      <main className="flex-1 pt-50">
+      {/* ✅ ดันเนื้อหาลงเท่าความสูง header */}
+      <main className="flex-1 pt-16">
         {children}
       </main>
 
-      <PublicFooter />
+      {showFooter && <PublicFooter />}
     </div>
   );
 }
