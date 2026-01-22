@@ -1,11 +1,13 @@
 // src/config/tenants.ts
+
 export type TenantCode = 'DEFAULT' | 'NU' | 'CU' | 'KKU';
 
 export type TenantConfig = {
   code: TenantCode;
   nameTh: string;
   nameEn: string;
-  logo?: string; // optional
+  brandName: string;
+  logo?: string;
 };
 
 export const TENANTS: Record<TenantCode, TenantConfig> = {
@@ -13,25 +15,32 @@ export const TENANTS: Record<TenantCode, TenantConfig> = {
     code: 'DEFAULT',
     nameTh: 'ระบบให้คำปรึกษา',
     nameEn: 'Wellness System',
-    logo: '/logos/default.png',
+    brandName: 'Wellness System',
+    logo: '/images/Brand_wellness_center1.png',
   },
+
   NU: {
     code: 'NU',
     nameTh: 'มหาวิทยาลัยนเรศวร',
     nameEn: 'Naresuan University',
-    logo: '/logos/nu.png',
+    brandName: 'NU Wellness',
+    logo: '/images/Brand_wellness_center1.png',
   },
+
   CU: {
     code: 'CU',
     nameTh: 'จุฬาลงกรณ์มหาวิทยาลัย',
     nameEn: 'Chulalongkorn University',
-    logo: '/logos/cu.png',
+    brandName: 'Chula Wellness',
+    logo: '/images/Brand_wellness_center1.png',
   },
+
   KKU: {
     code: 'KKU',
     nameTh: 'มหาวิทยาลัยขอนแก่น',
     nameEn: 'Khon Kaen University',
-    logo: '/logos/kku.png',
+    brandName: 'KKU Wellness',
+    logo: '/images/Brand_wellness_center1.png',
   },
 };
 

@@ -1,8 +1,10 @@
+// components/shared/BrandLogo.tsx (หรือ path ที่นายใช้)
 "use client";
 
 import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/cn";
+import { TENANTS, normalizeTenant, type TenantCode } from "@/config/tenants";
 
 type BrandLogoProps = {
   href?: string;
@@ -13,11 +15,12 @@ type BrandLogoProps = {
   textClassName?: string;
   subtitle?: string;
 
-  // ✅ เพิ่ม: ใช้คุม class ของรูป (เช่น rounded-full, p-1)
   imgClassName?: string;
-
-  // ✅ เพิ่ม: กัน Link ซ้อน Link (ใช้ใน Header)
   asLink?: boolean;
+  tenantCode?: TenantCode | string | null;
+  title?: string;
+  logoSrc?: string;
+  alt?: string;
 };
 
 export function BrandLogo({
@@ -30,18 +33,33 @@ export function BrandLogo({
   textClassName,
   subtitle,
   imgClassName,
+
+  tenantCode,
+  title,
+  logoSrc,
+  alt,
 }: BrandLogoProps) {
-  const src =
-    variant === "white"
+  const code = normalizeTenant(typeof tenantCode === "string" ? tenantCode : tenantCode ?? null);
+  const tenant = TENANTS[code] ?? TENANTS.DEFAULT;
+
+  // ✅ default จาก tenant (override ได้)
+  const resolvedTitle = title ?? tenant.brandName;
+  const resolvedAlt = alt ?? resolvedTitle;
+
+  // ✅ logo (override ได้)
+  const resolvedLogo =
+    logoSrc ??
+    tenant.logo ??
+    (variant === "white"
       ? "/images/Brand_wellness_center1.png"
-      : "/images/Brand_wellness_center1.png";
+      : "/images/Brand_wellness_center1.png");
 
   const content = (
     <div className={cn("flex items-center gap-4 select-none", className)}>
       <div className="relative shrink-0" style={{ width: size, height: size }}>
         <Image
-          src={src}
-          alt="NU Wellness"
+          src={resolvedLogo}
+          alt={resolvedAlt}
           fill
           sizes={`${size}px`}
           priority
@@ -52,7 +70,7 @@ export function BrandLogo({
       {showText && (
         <div className="leading-tight min-w-0">
           <div className={cn("font-semibold tracking-tight text-[22px] truncate", textClassName)}>
-            NU Wellness Center
+            {resolvedTitle}
           </div>
 
           {subtitle && (
@@ -65,11 +83,10 @@ export function BrandLogo({
     </div>
   );
 
-  // ✅ ไม่ให้เกิด <Link> ซ้อน <Link>
   if (!asLink) return content;
 
   return (
-    <Link href={href} aria-label="NU Wellness">
+    <Link href={href} aria-label={resolvedAlt}>
       {content}
     </Link>
   );
