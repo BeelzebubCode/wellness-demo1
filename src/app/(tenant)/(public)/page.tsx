@@ -1,12 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Heart,
-  CalendarDays,
-  ClipboardList,
-  User,
-} from "lucide-react";
+import { Heart, CalendarDays, ClipboardList, User } from "lucide-react";
 import AuthLikeBackground from "@/components/layout/background/AuthLikeBackground";
 import { PRCard } from "@/components/public/pr/PRCard";
 import { PR_MOCK } from "@/features/pr/mock";
@@ -14,7 +9,7 @@ import { PR_MOCK } from "@/features/pr/mock";
 export default function HomePage() {
   return (
     <div className="min-h-screen w-full relative overflow-hidden bg-tenant">
-      {/* ✅ background blobs */}
+      {/* ✅ dynamic background (ตาม tenant) */}
       <AuthLikeBackground />
 
       <main className="relative z-10">
@@ -28,8 +23,7 @@ export default function HomePage() {
             <div
               className="
                 rounded-[32px]
-                border
-                bg-white/70 backdrop-blur
+                bg-white/65 backdrop-blur-sm
                 shadow-[0_18px_55px_rgba(2,6,23,0.08)]
                 overflow-hidden
               "
@@ -38,6 +32,7 @@ export default function HomePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10 p-8 md:p-12 items-center">
                 {/* Left */}
                 <div>
+                  {/* pill */}
                   <div
                     className="
                       inline-flex items-center gap-2 px-4 py-1.5 rounded-full
@@ -53,27 +48,28 @@ export default function HomePage() {
                       className="w-2 h-2 rounded-full"
                       style={{ background: "rgb(var(--primary))" }}
                     />
-                    NU Wellness Center
+                    Wellness Center
                   </div>
 
-                  <h1 className="text-4xl md:text-5xl font-semibold text-slate-900 leading-tight mt-5">
+                  {/* title */}
+                  <h1
+                    className="text-4xl md:text-5xl font-semibold leading-tight mt-5"
+                    style={{ color: "rgb(var(--fg))" }}
+                  >
                     ดูแลใจคุณ <br />
-                    <span
-                      className="italic font-serif"
-                      style={{ color: "rgb(var(--primary))" }}
-                    >
+                    <span className="italic font-serif" style={{ color: "rgb(var(--primary))" }}>
                       อย่างอ่อนโยน
                     </span>
                   </h1>
 
-                  <p className="text-slate-600 mt-6 max-w-md leading-relaxed">
+                  <p className="mt-6 max-w-md leading-relaxed" style={{ color: "rgb(var(--muted))" }}>
                     ระบบจองคิวให้คำปรึกษาสุขภาพจิตสำหรับนิสิต
                     ดูแลคุณด้วยความเข้าใจ ความเป็นส่วนตัว และความใส่ใจ
                   </p>
 
                   {/* CTA */}
                   <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                    {/* ✅ ปุ่มหลัก ใช้ var --primary */}
+                    {/* ปุ่มหลัก */}
                     <Link
                       href="/booking"
                       className="
@@ -81,22 +77,24 @@ export default function HomePage() {
                         text-white text-sm font-semibold
                         shadow-md transition
                         inline-flex items-center justify-center gap-2
+                        btn-tenant
                       "
-                      style={{ background: "rgb(var(--primary))" }}
                     >
                       <CalendarDays className="w-4 h-4" />
                       จองคิวปรึกษา
                     </Link>
 
-                    {/* ✅ ปุ่มรอง ใช้ var --border / --fg */}
+                    {/* ปุ่มรอง */}
                     <Link
                       href="/booking/my-appointments"
                       className="
                         px-7 py-3 rounded-full
-                        bg-white text-sm font-semibold
+                        bg-white/70 backdrop-blur
+                        text-sm font-semibold
                         transition
                         inline-flex items-center justify-center gap-2
                         hover:bg-white/80
+                        ring-tenant
                       "
                       style={{
                         border: "1px solid rgb(var(--border))",
@@ -121,7 +119,7 @@ export default function HomePage() {
                   >
                     <img
                       src="/images/login-illustration.png"
-                      alt="NU Wellness Center"
+                      alt="Wellness Center"
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -150,17 +148,14 @@ export default function HomePage() {
                   color: "rgb(var(--fg))",
                 }}
               >
-                <span
-                  className="w-2 h-2 rounded-full"
-                  style={{ background: "rgb(var(--primary))" }}
-                />
+                <span className="w-2 h-2 rounded-full" style={{ background: "rgb(var(--primary))" }} />
                 ขั้นตอนการใช้งาน
               </div>
 
-              <h2 className="text-3xl font-bold text-slate-900 mt-4 mb-2">
+              <h2 className="text-3xl font-bold mt-4 mb-2" style={{ color: "rgb(var(--fg))" }}>
                 วิธีใช้งาน
               </h2>
-              <p className="text-slate-600">ง่าย ๆ เพียงไม่กี่ขั้นตอน</p>
+              <p style={{ color: "rgb(var(--muted))" }}>ง่าย ๆ เพียงไม่กี่ขั้นตอน</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-7">
@@ -179,11 +174,7 @@ export default function HomePage() {
                     hover:-translate-y-1 transition-all
                     text-center
                   "
-                  style={{
-                    borderColor: "rgb(var(--border))",
-                    // hover shadow ให้ติด primary ของ tenant
-                    boxShadow: "0 14px 40px rgba(2,6,23,0.06)",
-                  }}
+                  style={{ borderColor: "rgb(var(--border))" }}
                 >
                   {/* Step Bubble */}
                   <div
@@ -195,7 +186,8 @@ export default function HomePage() {
                       shadow-md
                     "
                     style={{
-                      background: `linear-gradient(135deg, rgb(var(--primary)) 0%, rgb(var(--accent)) 100%)`,
+                      background:
+                        "linear-gradient(135deg, rgb(var(--primary)) 0%, rgb(var(--accent)) 100%)",
                     }}
                   >
                     {item.step}
@@ -209,15 +201,13 @@ export default function HomePage() {
                     "
                     style={{ borderColor: "rgb(var(--border))" }}
                   >
-                    <div style={{ color: "rgb(var(--primary))" }}>
-                      {item.icon}
-                    </div>
+                    <div style={{ color: "rgb(var(--primary))" }}>{item.icon}</div>
                   </div>
 
-                  <h3 className="text-lg font-bold text-slate-900 mb-2">
+                  <h3 className="text-lg font-bold mb-2" style={{ color: "rgb(var(--fg))" }}>
                     {item.title}
                   </h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">
+                  <p className="text-sm leading-relaxed" style={{ color: "rgb(var(--muted))" }}>
                     {item.desc}
                   </p>
                 </div>
@@ -244,18 +234,15 @@ export default function HomePage() {
                     color: "rgb(var(--fg))",
                   }}
                 >
-                  <span
-                    className="w-2 h-2 rounded-full"
-                    style={{ background: "rgb(var(--primary))" }}
-                  />
+                  <span className="w-2 h-2 rounded-full" style={{ background: "rgb(var(--primary))" }} />
                   ข่าวประชาสัมพันธ์
                 </div>
 
-                <h2 className="mt-3 text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
+                <h2 className="mt-3 text-2xl md:text-3xl font-extrabold tracking-tight" style={{ color: "rgb(var(--fg))" }}>
                   อัปเดตล่าสุดสำหรับนิสิต
                 </h2>
 
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="mt-1 text-sm" style={{ color: "rgb(var(--muted))" }}>
                   รวมข่าวสารและประกาศสำคัญจากมหาวิทยาลัย
                 </p>
               </div>
@@ -273,10 +260,7 @@ export default function HomePage() {
                 }}
               >
                 ดูทั้งหมด
-                <span
-                  className="text-base leading-none"
-                  style={{ color: "rgb(var(--primary))" }}
-                >
+                <span className="text-base leading-none" style={{ color: "rgb(var(--primary))" }}>
                   ›
                 </span>
               </Link>

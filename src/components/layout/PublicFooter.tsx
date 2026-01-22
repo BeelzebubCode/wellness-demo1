@@ -22,14 +22,16 @@ export function PublicFooter() {
 
   return (
     <footer className="relative overflow-hidden">
-      {/* ✅ ใช้ background เดียวกับหน้า login / หน้าแรก */}
+      {/* ✅ bg เดิม */}
       <div className="absolute inset-0 -z-10 opacity-80">
         <AuthLikeBackground />
       </div>
 
-      {/* ✅ glass layer เหมือน header */}
+      {/* ✅ glass layer */}
       <div className="absolute inset-0 bg-white/35 backdrop-blur-xl" />
-      <div className="absolute inset-x-0 top-0 h-px bg-[#D1EAEA]/70" />
+
+      {/* ✅ divider ใช้ border ของ tenant */}
+      <div className="absolute inset-x-0 top-0 h-px bg-[rgb(var(--border)/0.70)]" />
 
       <div className="relative">
         <div className="max-w-7xl mx-auto px-4 py-14">
@@ -45,10 +47,10 @@ export function PublicFooter() {
                 subtitle="Student Portal"
                 variant="default"
                 className="gap-3"
-                textClassName="text-slate-900"
+                textClassName="text-[rgb(var(--fg))]"
               />
 
-              <p className="mt-3 text-slate-600 text-sm leading-relaxed">
+              <p className="mt-3 text-[rgb(var(--muted))] text-sm leading-relaxed">
                 ระบบบริการให้คำปรึกษาสำหรับนิสิตมหาวิทยาลัยนเรศวร
                 ใช้งานง่าย ปลอดภัย และเป็นส่วนตัว
               </p>
@@ -58,10 +60,10 @@ export function PublicFooter() {
                   href="/about"
                   className="inline-flex items-center gap-2 rounded-full
                              bg-white/55 hover:bg-white/75
-                             border border-[#D1EAEA]/70
-                             px-3 py-2 text-xs font-semibold text-[#1F3D3D] transition"
+                             border border-[rgb(var(--border)/0.70)]
+                             px-3 py-2 text-xs font-semibold text-[rgb(var(--fg))] transition"
                 >
-                  <Info className="w-4 h-4 text-[#2FA4A9]" />
+                  <Info className="w-4 h-4 text-[rgb(var(--primary))]" />
                   เกี่ยวกับเรา
                 </Link>
 
@@ -69,49 +71,52 @@ export function PublicFooter() {
                   href="/pr"
                   className="inline-flex items-center gap-2 rounded-full
                              bg-white/55 hover:bg-white/75
-                             border border-[#D1EAEA]/70
-                             px-3 py-2 text-xs font-semibold text-[#1F3D3D] transition"
+                             border border-[rgb(var(--border)/0.70)]
+                             px-3 py-2 text-xs font-semibold text-[rgb(var(--fg))] transition"
                 >
-                  <Newspaper className="w-4 h-4 text-[#2FA4A9]" />
+                  <Newspaper className="w-4 h-4 text-[rgb(var(--primary))]" />
                   ประชาสัมพันธ์
                 </Link>
 
                 <Link
                   href="/login"
                   className="inline-flex items-center gap-2 rounded-full
-                             bg-[#2FA4A9] hover:bg-[#278F93]
+                             bg-[rgb(var(--primary))] hover:bg-[rgb(var(--primary-600))]
                              text-white px-3 py-2 text-xs font-extrabold
-                             shadow-sm transition"
+                             shadow-sm shadow-[rgba(var(--primary),0.18)]
+                             transition"
                 >
                   เข้าสู่ระบบ
                   <ExternalLink className="w-4 h-4" />
                 </Link>
               </div>
 
-              <p className="mt-6 text-xs text-slate-500">
+              <p className="mt-6 text-xs text-[rgb(var(--muted))]">
                 © {new Date().getFullYear()} {APP_CONFIG.name}. All rights reserved.
               </p>
             </div>
 
             {/* Contact */}
             <div className="lg:col-span-3">
-              <div className="rounded-2xl bg-white/55 border border-[#D1EAEA]/70 p-5">
-                <p className="font-extrabold text-sm text-slate-900">ติดต่อเรา</p>
+              <div className="rounded-2xl bg-white/55 border border-[rgb(var(--border)/0.70)] p-5">
+                <p className="font-extrabold text-sm text-[rgb(var(--fg))]">
+                  ติดต่อเรา
+                </p>
 
                 <div className="mt-3 space-y-2.5">
                   <a
                     href="tel:055961273"
-                    className="flex items-center gap-2 text-slate-700 text-sm"
+                    className="flex items-center gap-2 text-[rgb(var(--fg))] text-sm"
                   >
-                    <Phone className="w-4 h-4 text-[#2FA4A9]" />
+                    <Phone className="w-4 h-4 text-[rgb(var(--primary))]" />
                     055-961-273
                   </a>
 
                   <a
                     href="mailto:support@wellness.nu.ac.th"
-                    className="flex items-center gap-2 text-slate-700 text-sm"
+                    className="flex items-center gap-2 text-[rgb(var(--fg))] text-sm"
                   >
-                    <Mail className="w-4 h-4 text-[#2FA4A9]" />
+                    <Mail className="w-4 h-4 text-[rgb(var(--primary))]" />
                     support@wellness.nu.ac.th
                   </a>
 
@@ -119,9 +124,9 @@ export function PublicFooter() {
                     href={mapHref}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700"
+                    className="inline-flex items-center gap-2 text-xs font-semibold text-[rgb(var(--fg))]"
                   >
-                    <MapPin className="w-4 h-4 text-[#2FA4A9]" />
+                    <MapPin className="w-4 h-4 text-[rgb(var(--primary))]" />
                     เปิดแผนที่ Google Maps
                     <ExternalLink className="w-4 h-4" />
                   </a>
@@ -131,7 +136,7 @@ export function PublicFooter() {
 
             {/* Map */}
             <div className="lg:col-span-5">
-              <div className="rounded-2xl overflow-hidden border border-[#D1EAEA]/70 bg-white/55">
+              <div className="rounded-2xl overflow-hidden border border-[rgb(var(--border)/0.70)] bg-white/55">
                 <GoogleMapEmbed
                   title="ศูนย์สุขภาวะนิสิต มหาวิทยาลัยนเรศวร"
                   subtitle="Naresuan University Wellness Center"
@@ -144,12 +149,12 @@ export function PublicFooter() {
           </div>
 
           {/* Divider */}
-          <div className="mt-10 border-t border-[#D1EAEA]/70" />
+          <div className="mt-10 border-t border-[rgb(var(--border)/0.70)]" />
 
           {/* Bottom */}
           <div className="pt-6 text-center">
-            <p className="inline-flex items-center gap-2 text-slate-600 text-xs">
-              <ShieldCheck size={14} className="text-[#2FA4A9]" />
+            <p className="inline-flex items-center gap-2 text-[rgb(var(--muted))] text-xs">
+              <ShieldCheck size={14} className="text-[rgb(var(--primary))]" />
               ข้อมูลของคุณได้รับการปกป้องตามนโยบายความเป็นส่วนตัวของมหาวิทยาลัย
             </p>
           </div>
