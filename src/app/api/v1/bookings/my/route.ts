@@ -1,7 +1,7 @@
 // src/app/api/v1/bookings/my/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getAccountFromRequest } from "@/lib/jwt";
+import { getAccountFromRequest } from "@/lib/auth/jwt";
 
 export async function GET(req: NextRequest) {
   try {

@@ -1,7 +1,7 @@
 // src/app/api/v2/auth/login/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { generateToken, verifyPassword } from "@/lib/jwt";
+import { generateToken, verifyPassword } from "@/lib/auth/jwt";
 
 function parseHost(req: NextRequest) {
   const hostHeader = req.headers.get("host") || ""; // nu.wellness.local:3000
@@ -39,7 +39,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ✅ ถ้ามี subdomain → map ไปมหาลัยจาก university_code
     const requestedUni = subdomain
       ? await prisma.university.findUnique({
           where: { university_code: subdomain.toUpperCase() },
@@ -59,7 +58,7 @@ export async function POST(request: NextRequest) {
         consultant: {
           select: {
             consultant_id: true,
-            university_id: true, // ✅ เอามาใช้เลือก tenant แบบชัวร์
+            university_id: true,
             profile: {
               select: {
                 consultant_first_name: true,
@@ -72,14 +71,14 @@ export async function POST(request: NextRequest) {
         student: {
           select: {
             student_id: true,
-            university_id: true, // ✅ เอามาใช้เลือก tenant แบบชัวร์
+            university_id: true,
           },
         },
 
         universityAccesses: {
           where: { access_revoked_at: null },
           select: { university_id: true },
-          orderBy: { university_id: "asc" }, // ✅ ให้ลำดับเสถียร
+          orderBy: { university_id: "asc" },
         },
       },
     });
@@ -108,18 +107,24 @@ export async function POST(request: NextRequest) {
 
     const consultantId = account.consultant?.consultant_id ?? null;
 
+    const homeUniversityId = account.account_home_university_id ?? null;
+    const studentUniId = account.student?.university_id ?? null;
+    const consultantUniId = account.consultant?.university_id ?? null;
+
     const grantedUniversityIds = account.universityAccesses.map(
       (x) => x.university_id,
     );
 
-    // ✅ ทำ allowedUniversityIds ให้เสถียร (sort)
+    // ✅ FIX #1: allowedUniversityIds ต้องรวม uni จาก entity ด้วย (กันหลุดสิทธิ์)
     const allowedUniversityIds = Array.from(
-      new Set([
-        ...(account.account_home_university_id
-          ? [account.account_home_university_id]
-          : []),
-        ...grantedUniversityIds,
-      ]),
+      new Set(
+        [
+          ...(homeUniversityId ? [homeUniversityId] : []),
+          ...(studentUniId ? [studentUniId] : []),
+          ...(consultantUniId ? [consultantUniId] : []),
+          ...grantedUniversityIds,
+        ].filter(Boolean),
+      ),
     ).sort((a, b) => a - b);
 
     // ✅ ถ้า login ผ่านโดเมนมหาลัย → ต้องมีสิทธิ์ในมหาลัยนั้น
@@ -132,22 +137,16 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             error:
-              "บัญชีไม่มีสิทธิ์ในมหาวิทยาลัยของโดเมนนี้ (ตรวจสอบ home_university หรือ universityAccesses)",
+              "บัญชีไม่มีสิทธิ์ในมหาวิทยาลัยของโดเมนนี้ (ตรวจสอบ home_university / entity / universityAccesses)",
           },
           { status: 403 },
         );
       }
     }
 
-    const homeUniversityId = account.account_home_university_id ?? null;
-
-    // ✅ เลือก tenant แบบ deterministic ตาม role/entity จริง
-    const studentUniId = account.student?.university_id ?? null;
-    const consultantUniId = account.consultant?.university_id ?? null;
-
+    // ✅ เลือก activeUni แบบ deterministic
     const activeUniId =
       requestedUni?.university_id ??
-      // ถ้าโดเมนกลาง ให้ใช้ entity จริงก่อน
       (account.account_role === "STUDENT" ? studentUniId : null) ??
       (account.account_role === "CONSULTANT" ||
       account.account_role === "HEAD_CONSULTANT"
@@ -164,12 +163,17 @@ export async function POST(request: NextRequest) {
         })
       : null;
 
+    // ✅ FIX #2: ใส่ activeUniversityId ลง token ตั้งแต่ login
     const token = await generateToken({
       accountId: account.account_id,
       username: account.account_username,
       role: account.account_role,
+
       consultantId: consultantId ?? undefined,
+      studentId: account.student?.student_id ?? undefined,
+
       homeUniversityId: homeUniversityId ?? undefined,
+      activeUniversityId: activeUniId ?? undefined,
       allowedUniversityIds: allowedUniversityIds.length
         ? allowedUniversityIds
         : undefined,
@@ -198,13 +202,13 @@ export async function POST(request: NextRequest) {
         consultantId,
         homeUniversityId,
         allowedUniversityIds,
+        activeUniversityId: activeUniId ?? null, // (optional) ส่งให้ client ด้วย
       },
     });
 
     const ROOT_DOMAIN = process.env.ROOT_DOMAIN || baseDomain;
     const cookieDomain = cookieDomainFor(ROOT_DOMAIN);
 
-    // ✅ 1) auth_token shared ข้าม subdomain ได้
     res.cookies.set({
       name: "auth_token",
       value: token,
@@ -216,8 +220,6 @@ export async function POST(request: NextRequest) {
       ...(cookieDomain ? { domain: cookieDomain } : {}),
     });
 
-    // ✅ 2) tenant_code (สำคัญมาก) ให้ shared ด้วยเหมือนกัน
-    // เลือก: ถ้ามี requestedUni ให้ใช้ requestedUni ก่อน ไม่งั้นใช้ activeUni
     const tenantCode =
       requestedUni?.university_code?.toUpperCase() ??
       activeUni?.university_code?.toUpperCase() ??
@@ -226,7 +228,7 @@ export async function POST(request: NextRequest) {
     res.cookies.set({
       name: "tenant_code",
       value: tenantCode,
-      httpOnly: false, // ปกติ tenant_code เอาไว้ให้ client อ่านได้ (ถ้านายอยากให้ client อ่าน)
+      httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 7,

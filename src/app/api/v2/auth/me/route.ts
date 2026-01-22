@@ -1,11 +1,13 @@
 // src/app/api/v2/auth/me/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getAccountFromRequest } from "@/lib/jwt";
+import { getAccountFromRequest } from "@/lib/auth/context";
 
 export async function GET(req: NextRequest) {
   try {
     const account = await getAccountFromRequest(req);
-    if (!account) return NextResponse.json({ valid: false }, { status: 401 });
+    if (!account) {
+      return NextResponse.json({ valid: false }, { status: 401 });
+    }
 
     return NextResponse.json({
       valid: true,

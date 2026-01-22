@@ -1,7 +1,7 @@
 // src/app/api/v1/bookings/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getAccountFromRequest } from "@/lib/jwt";
+import { getAccountFromRequest } from "@/lib/auth/jwt";
 import { BookingStatus, TimeSlotStatus } from "@prisma/client";
 
 interface RouteParams {

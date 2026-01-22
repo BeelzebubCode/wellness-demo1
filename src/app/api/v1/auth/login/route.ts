@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { generateToken, verifyPassword } from '@/lib/jwt';
+import { generateToken, verifyPassword } from '@/lib/auth/jwt';
 
 type LoginResponse = {
   success: boolean;

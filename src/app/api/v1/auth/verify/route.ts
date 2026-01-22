@@ -1,7 +1,7 @@
 // src/app/api/v1/auth/verify/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/jwt';
+import { verifyToken } from '@/lib/auth/jwt';
 
 function extractToken(req: NextRequest): string | null {
   const auth = req.headers.get('authorization');

@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import type { BookingStatus } from "@prisma/client";
-import { getAccountFromRequest } from "@/lib/jwt";
+import { getAccountFromRequest } from "@/lib/auth/jwt";
 
 /* =========================
    GET /api/v1/bookings

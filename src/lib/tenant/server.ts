@@ -1,7 +1,7 @@
 // src/lib/tenant/server.ts
 import type { NextRequest } from "next/server";
-import { getAccountFromRequest } from "@/lib/jwt";
-import type { AccountContext } from "@/lib/jwt";
+import { getAccountFromRequest } from "@/lib/auth/jwt";
+import type { AccountContext } from "@/lib/auth/jwt";
 
 export type TenantContext = {
   account: AccountContext;

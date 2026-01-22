@@ -66,12 +66,18 @@ export function useRoleAuth<TUser extends AuthUser = AuthUser>({
 
   const redirectLogin = useCallback(() => {
     if (!guard) return;
+
+    // กัน loop
     if (pathname === "/login") return;
 
     toastLoginOnce();
 
+    // ✅ normalize redirectTo
+    const to = redirectTo.startsWith("/") ? redirectTo : `/${redirectTo}`;
+
     const next = pathname && pathname !== "/login" ? pathname : "/";
-    router.replace(`${redirectTo}?next=${encodeURIComponent(next)}`);
+
+    router.replace(`${to}?next=${encodeURIComponent(next)}`);
   }, [guard, pathname, router, redirectTo, toastLoginOnce]);
 
   const verify = useCallback(async () => {
@@ -112,7 +118,7 @@ export function useRoleAuth<TUser extends AuthUser = AuthUser>({
 
   useEffect(() => {
     let isMounted = true;
-    
+
     if (pathname === "/login") {
       setIsLoading(false);
       return () => {
