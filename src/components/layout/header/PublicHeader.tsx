@@ -10,6 +10,8 @@ import type { NavItem } from "@/components/layout/sidebar/types";
 import LogoutButton from "@/components/auth/LogoutButton";
 import { BrandLogo } from "@/components/shared";
 import { Menu, X, LogIn, User } from "lucide-react";
+import { TENANTS, normalizeTenant } from "@/config/tenants";
+
 
 type PublicUser = {
   name?: string | null;
@@ -18,13 +20,6 @@ type PublicUser = {
 };
 
 const USER_KEY = "auth_user";
-
-const BRAND = {
-  teal: "#2FA4A9",
-  tealHover: "#278F93",
-  border: "#D1EAEA",
-  deep: "#1F3D3D",
-};
 
 function readUserProfileFromStorage(): PublicUser {
   if (typeof window === "undefined") return {};
@@ -177,10 +172,8 @@ export function PublicHeader({
 
   const shouldShow = headerVisible || cursorTop || mobileOpen;
 
-  // ✅ เมนู Public แบบเดียวกับ booking nav (แก้เมนูที่ไฟล์ public-nav.ts อย่างเดียว)
   const navItems: NavItem[] = useMemo(() => {
     const base = [...PUBLIC_NAV];
-
     return base;
   }, [isLoggedIn]);
 
@@ -188,6 +181,31 @@ export function PublicHeader({
     item.exact
       ? pathname === item.href
       : pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+  const [tenantCode, setTenantCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    const read = () =>
+      typeof document === "undefined"
+        ? null
+        : document.documentElement?.dataset?.tenant ?? null;
+
+    setTenantCode(read());
+
+    const el = document.documentElement;
+    const obs = new MutationObserver(() => setTenantCode(read()));
+    obs.observe(el, { attributes: true, attributeFilter: ["data-tenant"] });
+
+    return () => obs.disconnect();
+  }, []);
+
+  const tenant = useMemo(() => {
+    const code = normalizeTenant(tenantCode);
+    return TENANTS[code] ?? TENANTS.DEFAULT;
+  }, [tenantCode]);
+
+  const headerTitle = tenant.brandName;
+  const headerSubtitle = "ระบบจองคิวให้คำปรึกษา";
 
   return (
     <header
@@ -200,15 +218,20 @@ export function PublicHeader({
       <div className="absolute top-0 left-0 right-0 h-3" />
 
       <div className="relative">
+        {/* glass */}
         <div className="absolute inset-0 bg-white/30 backdrop-blur-xl" />
+
+        {/* ✅ dynamic gradient overlay (อิง vars ของ tenant) */}
         <div
           className="absolute inset-0 opacity-70"
           style={{
             background:
-              "linear-gradient(90deg, rgba(230,245,245,0.45) 0%, rgba(247,250,249,0.20) 55%, rgba(230,245,245,0.45) 100%)",
+              "linear-gradient(90deg, rgba(var(--bg-grad-2),0.45) 0%, rgba(var(--bg-grad-1),0.20) 55%, rgba(var(--bg-grad-2),0.45) 100%)",
           }}
         />
-        <div className="absolute inset-x-0 bottom-0 h-px bg-[#D1EAEA]/60" />
+
+        {/* divider */}
+        <div className="absolute inset-x-0 bottom-0 h-px bg-[rgb(var(--border)/0.60)]" />
 
         <div className="relative">
           <div className="max-w-7xl mx-auto px-4">
@@ -219,7 +242,7 @@ export function PublicHeader({
                   "flex items-center gap-3 select-none",
                   "transition-opacity hover:opacity-95",
                 )}
-                aria-label="NU Wellness Home"
+                aria-label="Wellness Home"
               >
                 <BrandLogo
                   asLink={false}
@@ -231,11 +254,11 @@ export function PublicHeader({
                 />
 
                 <div className="leading-tight">
-                  <div className="font-extrabold text-[15px] tracking-tight text-slate-900">
-                    NU Wellness Center
+                  <div className="font-extrabold text-[15px] tracking-tight text-[rgb(var(--fg))]">
+                    {headerTitle}
                   </div>
-                  <div className="text-[11px] font-semibold text-slate-600">
-                    ระบบจองคิวให้คำปรึกษา
+                  <div className="text-[11px] font-semibold text-[rgb(var(--muted))]">
+                    {headerSubtitle}
                   </div>
                 </div>
               </Link>
@@ -252,14 +275,14 @@ export function PublicHeader({
                       href={item.href}
                       className={cn(
                         "group relative flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full",
-                        "border border-[#D1EAEA]/70",
+                        "border border-[rgb(var(--border)/0.70)]",
                         "transition-all duration-200 ease-out",
                         "hover:-translate-y-[1px] hover:shadow-sm hover:bg-white/60",
                         "active:translate-y-0 active:scale-[0.98]",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2FA4A9]/40",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--ring),0.40)]",
                         active
-                          ? "bg-white/80 text-slate-900 shadow-sm"
-                          : "bg-white/35 text-[#1F3D3D]",
+                          ? "bg-white/80 text-[rgb(var(--fg))] shadow-sm"
+                          : "bg-white/35 text-[rgb(var(--fg))]/80",
                       )}
                     >
                       {Icon && (
@@ -269,7 +292,9 @@ export function PublicHeader({
                             "group-hover:-rotate-3 group-hover:scale-[1.05]",
                           )}
                           style={{
-                            color: active ? BRAND.teal : "rgba(31,61,61,0.65)",
+                            color: active
+                              ? "rgb(var(--primary))"
+                              : "rgba(var(--fg),0.65)",
                           }}
                         />
                       )}
@@ -277,7 +302,7 @@ export function PublicHeader({
                         {item.label}
                       </span>
 
-                      {/* ✅ little shine effect */}
+                      {/* shine */}
                       <span
                         className={cn(
                           "pointer-events-none absolute inset-0 rounded-full opacity-0",
@@ -294,7 +319,7 @@ export function PublicHeader({
               <div className="flex items-center gap-3" suppressHydrationWarning>
                 {isLoggedIn && (
                   <div className="hidden sm:flex items-center gap-3">
-                    <div className="flex items-center gap-2 px-2 py-1 rounded-full border border-[#D1EAEA]/70 bg-white/45">
+                    <div className="flex items-center gap-2 px-2 py-1 rounded-full border border-[rgb(var(--border)/0.70)] bg-white/45">
                       {displayAvatar ? (
                         <img
                           src={displayAvatar}
@@ -302,14 +327,14 @@ export function PublicHeader({
                           className="w-8 h-8 rounded-full ring-2 ring-white/60 object-cover"
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-white/60 border border-[#D1EAEA]/70 flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-full bg-white/60 border border-[rgb(var(--border)/0.70)] flex items-center justify-center">
                           <User
                             className="w-4 h-4"
-                            style={{ color: BRAND.teal }}
+                            style={{ color: "rgb(var(--primary))" }}
                           />
                         </div>
                       )}
-                      <span className="text-sm font-semibold max-w-[140px] truncate text-slate-900">
+                      <span className="text-sm font-semibold max-w-[140px] truncate text-[rgb(var(--fg))]">
                         {displayName}
                       </span>
                     </div>
@@ -321,7 +346,7 @@ export function PublicHeader({
                       className={cn(
                         "inline-flex items-center gap-2 px-4 py-2 rounded-full",
                         "text-xs font-extrabold transition shadow-sm",
-                        "border border-[#D1EAEA]/70 text-[#1F3D3D]",
+                        "border border-[rgb(var(--border)/0.70)] text-[rgb(var(--fg))]",
                         "bg-white/45 hover:bg-white/70",
                       )}
                     />
@@ -336,14 +361,8 @@ export function PublicHeader({
                       "hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-full",
                       "text-xs font-extrabold shadow-sm transition",
                       "active:scale-[0.99]",
+                      "bg-[rgb(var(--primary))] hover:bg-[rgb(var(--primary-600))] text-white",
                     )}
-                    style={{ background: BRAND.teal, color: "white" }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background = BRAND.tealHover)
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = BRAND.teal)
-                    }
                   >
                     <LogIn className="w-4 h-4" />
                     เข้าสู่ระบบ
@@ -356,9 +375,9 @@ export function PublicHeader({
                   className={cn(
                     "md:hidden inline-flex items-center justify-center",
                     "w-10 h-10 rounded-full transition active:scale-95",
-                    "border border-[#D1EAEA]/70 bg-white/45 hover:bg-white/70",
+                    "border border-[rgb(var(--border)/0.70)] bg-white/45 hover:bg-white/70",
                   )}
-                  style={{ color: BRAND.deep }}
+                  style={{ color: "rgb(var(--fg))" }}
                   aria-label="Toggle menu"
                 >
                   {mobileOpen ? (
@@ -371,10 +390,10 @@ export function PublicHeader({
             </div>
           </div>
 
-          {/* ✅ Mobile Drawer: ใช้เมนูชุดเดียวกัน */}
+          {/* ✅ Mobile Drawer */}
           {mobileOpen && (
             <div className="md:hidden px-4 pb-4">
-              <div className="mt-2 rounded-2xl border border-[#D1EAEA]/70 bg-white/45 backdrop-blur-xl p-2">
+              <div className="mt-2 rounded-2xl border border-[rgb(var(--border)/0.70)] bg-white/45 backdrop-blur-xl p-2">
                 <div className="flex flex-col gap-1">
                   {navItems.map((item) => {
                     const active = isActiveNav(item);
@@ -394,9 +413,16 @@ export function PublicHeader({
                         )}
                       >
                         {Icon ? (
-                          <Icon className="w-5 h-5 opacity-80 transition-transform duration-200 group-hover:scale-[1.05]" />
+                          <Icon
+                            className="w-5 h-5 opacity-80 transition-transform duration-200 group-hover:scale-[1.05]"
+                            style={{
+                              color: active
+                                ? "rgb(var(--primary))"
+                                : "rgba(var(--fg),0.70)",
+                            }}
+                          />
                         ) : null}
-                        <span className="text-sm font-semibold text-slate-900">
+                        <span className="text-sm font-semibold text-[rgb(var(--fg))]">
                           {item.label}
                         </span>
                       </Link>

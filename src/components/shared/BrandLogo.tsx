@@ -1,6 +1,7 @@
-// components/shared/BrandLogo.tsx (หรือ path ที่นายใช้)
+// components/shared/BrandLogo.tsx
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/cn";
@@ -17,11 +18,16 @@ type BrandLogoProps = {
 
   imgClassName?: string;
   asLink?: boolean;
-  tenantCode?: TenantCode | string | null;
-  title?: string;
-  logoSrc?: string;
-  alt?: string;
+  tenantCode?: TenantCode | string | null; // optional override
+  title?: string; // optional override
+  logoSrc?: string; // optional override
+  alt?: string; // optional override
 };
+
+function getTenantFromDom(): string | null {
+  if (typeof document === "undefined") return null;
+  return document.documentElement?.dataset?.tenant ?? null; // html[data-tenant="..."]
+}
 
 export function BrandLogo({
   href = "/",
@@ -39,8 +45,39 @@ export function BrandLogo({
   logoSrc,
   alt,
 }: BrandLogoProps) {
-  const code = normalizeTenant(typeof tenantCode === "string" ? tenantCode : tenantCode ?? null);
-  const tenant = TENANTS[code] ?? TENANTS.DEFAULT;
+  // ✅ if tenantCode not provided -> auto read from html[data-tenant]
+  const [domTenant, setDomTenant] = useState<string | null>(() => getTenantFromDom());
+
+  useEffect(() => {
+    // initial sync
+    setDomTenant(getTenantFromDom());
+
+    // watch html[data-tenant] changes
+    const el = document.documentElement;
+
+    const obs = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.type === "attributes" && m.attributeName === "data-tenant") {
+          setDomTenant(getTenantFromDom());
+          break;
+        }
+      }
+    });
+
+    obs.observe(el, { attributes: true, attributeFilter: ["data-tenant"] });
+    return () => obs.disconnect();
+  }, []);
+
+  const resolvedCode = useMemo(() => {
+    const raw =
+      typeof tenantCode === "string"
+        ? tenantCode
+        : tenantCode ?? domTenant ?? null;
+
+    return normalizeTenant(raw);
+  }, [tenantCode, domTenant]);
+
+  const tenant = TENANTS[resolvedCode] ?? TENANTS.DEFAULT;
 
   // ✅ default จาก tenant (override ได้)
   const resolvedTitle = title ?? tenant.brandName;
@@ -69,12 +106,22 @@ export function BrandLogo({
 
       {showText && (
         <div className="leading-tight min-w-0">
-          <div className={cn("font-semibold tracking-tight text-[22px] truncate", textClassName)}>
+          <div
+            className={cn(
+              "font-semibold tracking-tight text-[22px] truncate text-[rgb(var(--fg))]",
+              textClassName,
+            )}
+          >
             {resolvedTitle}
           </div>
 
           {subtitle && (
-            <div className={cn("text-[13px] text-slate-500 truncate", textClassName)}>
+            <div
+              className={cn(
+                "text-[13px] truncate text-[rgb(var(--muted))]",
+                textClassName,
+              )}
+            >
               {subtitle}
             </div>
           )}

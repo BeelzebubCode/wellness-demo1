@@ -24,7 +24,7 @@ export const TENANTS: Record<TenantCode, TenantConfig> = {
     nameTh: 'มหาวิทยาลัยนเรศวร',
     nameEn: 'Naresuan University',
     brandName: 'NU Wellness',
-    logo: '/images/Brand_wellness_center1.png',
+    logo: '/images/logo/NU_logo.png',
   },
 
   CU: {
@@ -32,7 +32,7 @@ export const TENANTS: Record<TenantCode, TenantConfig> = {
     nameTh: 'จุฬาลงกรณ์มหาวิทยาลัย',
     nameEn: 'Chulalongkorn University',
     brandName: 'Chula Wellness',
-    logo: '/images/Brand_wellness_center1.png',
+    logo: '/images/logo/CU_logo.png',
   },
 
   KKU: {
@@ -40,7 +40,7 @@ export const TENANTS: Record<TenantCode, TenantConfig> = {
     nameTh: 'มหาวิทยาลัยขอนแก่น',
     nameEn: 'Khon Kaen University',
     brandName: 'KKU Wellness',
-    logo: '/images/Brand_wellness_center1.png',
+    logo: '/images/logo/KKU_logo.png',
   },
 };
 
