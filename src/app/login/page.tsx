@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import {
   User,
   Lock,
@@ -12,105 +12,19 @@ import {
   Sparkles,
   HeartPulse,
 } from "lucide-react";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useLogin } from "@/features/auth/login/useLogin";
 
 export default function LoginPage() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({ username: "", password: "" });
-  const { setTenant } = useTheme();
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch("/api/v2/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-        credentials: "include",
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        const tenantCode = String(
-          data.tenant?.universityCode || "DEFAULT",
-        ).toUpperCase();
-
-        setTenant(tenantCode || "DEFAULT");
-
-        localStorage.setItem(
-          "auth_user",
-          JSON.stringify({
-            name:
-              data.account?.name || data.account?.username || formData.username,
-            role: data.account?.role || null,
-            homeUniversityId: data.account?.homeUniversityId ?? null,
-            allowedUniversityIds: data.account?.allowedUniversityIds ?? [],
-          }),
-        );
-
-        window.dispatchEvent(new Event("auth-changed"));
-
-        const role = data.account?.role;
-
-        const nextPath =
-          role === "SUPER_ADMIN"
-            ? "/admin/super"
-            : role === "RECTOR"
-              ? "/admin/rector"
-              : role === "HEAD_CONSULTANT"
-                ? "/admin/data-center"
-                : role === "CONSULTANT"
-                  ? "/consultant/my-jobs"
-                  : role === "STUDENT"
-                    ? "/booking"
-                    : "/";
-
-        const subdomainMap: Record<string, string> = {
-          NU: "nu",
-          KKU: "kku",
-          CU: "cu",
-        };
-        const sub = subdomainMap[tenantCode];
-
-        const protocol = window.location.protocol;
-        const hostname = window.location.hostname.toLowerCase();
-        const port = window.location.port;
-
-        const parts = hostname.split(".");
-        const baseDomain =
-          parts.length >= 3 ? parts.slice(1).join(".") : hostname;
-        const baseHost = port ? `${baseDomain}:${port}` : baseDomain;
-
-        const targetHost = sub ? `${sub}.${baseHost}` : baseHost;
-
-        const url = new URL(`${protocol}//${targetHost}${nextPath}`);
-
-        url.searchParams.set("toast", "login");
-        url.searchParams.set("name", data.account?.username || "");
-        url.searchParams.set("toastId", String(Date.now()));
-
-        window.location.assign(url.toString());
-        return;
-      }
-
-      setError(data.error || "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
-    } catch (err) {
-      console.error(err);
-      setError("Connection Error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDemoFill = (username: string, password: string) => {
-    setFormData({ username, password });
-  };
+  const {
+    loading,
+    error,
+    showPassword,
+    formData,
+    setFormData,
+    setShowPassword,
+    demoFill,
+    login,
+  } = useLogin();
 
   return (
     <div className="min-h-screen w-full bg-white relative overflow-hidden pt-8">
@@ -140,7 +54,7 @@ export default function LoginPage() {
                 </div>
               )}
 
-              <form onSubmit={handleLogin} className="space-y-4 max-w-sm">
+              <form onSubmit={login} className="space-y-4 max-w-sm">
                 {/* Username */}
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
@@ -236,9 +150,7 @@ export default function LoginPage() {
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() =>
-                      handleDemoFill("head", "wellness@nu.ac.th_123456!")
-                    }
+                    onClick={() => demoFill("head", "wellness@nu.ac.th_123456!")}
                     className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white
                                hover:bg-slate-50 transition"
                   >
@@ -246,9 +158,7 @@ export default function LoginPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() =>
-                      handleDemoFill("consultant1", "wellness@nu.ac.th_123456!")
-                    }
+                    onClick={() => demoFill("consultant1", "wellness@nu.ac.th_123456!")}
                     className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white
                                hover:bg-slate-50 transition"
                   >
@@ -256,9 +166,7 @@ export default function LoginPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() =>
-                      handleDemoFill("student1", "wellness@nu.ac.th_123456!")
-                    }
+                    onClick={() => demoFill("student1", "wellness@nu.ac.th_123456!")}
                     className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white
                                hover:bg-slate-50 transition"
                   >
@@ -279,17 +187,6 @@ export default function LoginPage() {
               <div className="pointer-events-none absolute bottom-10 left-10 w-28 h-28 rounded-full bg-emerald-200/35" />
               <div className="pointer-events-none absolute bottom-20 right-8 w-36 h-36 rounded-full bg-teal-200/25" />
 
-              <div className="pointer-events-none absolute top-8 left-10 text-teal-400/60 select-none">
-                <svg width="70" height="30" viewBox="0 0 70 30" fill="none">
-                  <path
-                    d="M2 15c8-10 16 10 24 0s16-10 24 0 16 10 18 0"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </div>
-
               <div className="relative w-[78%] max-w-md mx-auto">
                 <div className="relative w-full aspect-[4/3] bg-white rounded-[24px] border border-teal-100 shadow-[0_16px_40px_rgba(2,6,23,0.12)] overflow-hidden">
                   <div className="absolute inset-0 animate-shimmer bg-shimmer" />
@@ -297,59 +194,13 @@ export default function LoginPage() {
                     <img
                       src="/images/login-illustration.png"
                       alt="login illustration"
-                      className="w-[86%] max-h-[86%] object-contain rounded-[15px] drop-shadow-[0_14px_28px_rgba(2,6,23,0.12)] animate-pop-in"
+                      className="w-[86%] max-h-[86%] object-contain rounded-[15px] drop-shadow-[0_14px_28px_rgba(2,6,23,0.12)]"
                     />
                   </div>
                 </div>
               </div>
-
-              <div className="pointer-events-none absolute top-1/2 right-14 w-2 h-2 rounded-full bg-teal-500/60" />
-              <div className="pointer-events-none absolute top-[58%] right-20 w-1.5 h-1.5 rounded-full bg-emerald-500/55" />
-
-              <div className="pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 opacity-40">
-                <svg width="90" height="90" viewBox="0 0 90 90" fill="none">
-                  <circle
-                    cx="45"
-                    cy="45"
-                    r="22"
-                    stroke="#0EA5A4"
-                    strokeWidth="2"
-                    opacity="0.35"
-                  />
-                  <circle
-                    cx="45"
-                    cy="45"
-                    r="32"
-                    stroke="#0EA5A4"
-                    strokeWidth="2"
-                    opacity="0.22"
-                  />
-                  <circle
-                    cx="45"
-                    cy="45"
-                    r="42"
-                    stroke="#0EA5A4"
-                    strokeWidth="2"
-                    opacity="0.14"
-                  />
-                </svg>
-              </div>
             </div>
-
-            {/* Mobile illustration */}
-            <div className="lg:hidden bg-teal-50 border-t border-slate-200 p-4">
-              <div className="relative w-full aspect-[16/9] bg-white rounded-[20px] border border-teal-100 shadow-[0_14px_32px_rgba(2,6,23,0.12)] overflow-hidden">
-                <div className="absolute inset-0 animate-shimmer bg-shimmer" />
-                <div className="relative z-10 flex h-full w-full items-center justify-center">
-                  <img
-                    src="/images/login-illustration.png"
-                    alt="login illustration"
-                    className="w-full h-full object-cover animate-pop-in"
-                  />
-                </div>
-              </div>
-            </div>
-            {/* /mobile */}
+            {/* /RIGHT */}
           </div>
         </div>
       </div>
