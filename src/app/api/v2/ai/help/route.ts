@@ -20,7 +20,7 @@ function buildSystemPrompt(tenantCode?: string) {
 - ถ้าคำถามกว้าง เช่น “wellness คืออะไร” ให้ตอบภาพรวม 2-4 บรรทัด แล้วตามด้วยหัวข้อสั้น ๆ ว่ามีเมนูอะไรบ้าง
 - ถ้าผู้ใช้ถามเรื่องเฉพาะบัญชี เช่น "นัดของฉัน" ให้ตอบว่า:
   1) ต้องเข้าสู่ระบบก่อน
-  2) ไปที่เมนูที่เกี่ยวข้อง (ยกตัวอย่างเส้นทางเมนูที่คุณมี)
+  2) ไปที่เมนูที่เกี่ยวข้อง
 - ถ้าไม่แน่ใจ ให้ถามคำถามสั้น ๆ 1 ข้อเพื่อเก็บ context (เช่น ผู้ใช้เป็น Student/Consultant/Admin? อยู่หน้าไหน? เจอ error อะไร?)
 
 ข้อมูลสภาพแวดล้อม:
@@ -36,18 +36,24 @@ function buildSystemPrompt(tenantCode?: string) {
 - อย่าเดาข้อมูลเฉพาะระบบถ้าไม่รู้ ให้บอกว่าไม่แน่ใจและถามเพิ่ม`;
 }
 
-
 function getTenantCodeBestEffort(req: NextRequest) {
-  // best-effort (ไม่ทำให้พังถ้าไม่มี)
-  // - ถ้าคุณมี cookie tenant_code อยู่แล้วก็จะติดมาเอง
   const cookie = req.cookies.get("tenant_code")?.value;
   if (cookie) return cookie;
 
-  // - ถ้ามี header จาก middleware ก็สามารถใช้ได้
   const header = req.headers.get("x-tenant-code") || req.headers.get("x-tenant");
   if (header) return header;
 
   return undefined;
+}
+
+function coerceUserMessages(input: any): ChatMsg[] {
+  if (Array.isArray(input)) {
+    return input
+      .filter((m) => m && typeof m.role === "string" && typeof m.content === "string")
+      .filter((m) => m.role === "user" || m.role === "assistant" || m.role === "system")
+      .map((m) => ({ role: m.role, content: m.content } as ChatMsg));
+  }
+  return [];
 }
 
 export async function POST(req: NextRequest) {
@@ -58,31 +64,28 @@ export async function POST(req: NextRequest) {
     const system: ChatMsg = { role: "system", content: buildSystemPrompt(tenantCode) };
 
     let userMessages: ChatMsg[] = [];
+
     if (Array.isArray(messages)) {
-      userMessages = messages
-        .filter((m: any) => m && typeof m.role === "string" && typeof m.content === "string")
-        .map((m: any) => ({ role: m.role, content: m.content }));
+      userMessages = coerceUserMessages(messages).filter((m) => m.role !== "system");
     } else if (typeof message === "string" && message.trim()) {
       userMessages = [{ role: "user", content: message.trim() }];
     } else {
       return NextResponse.json({ error: "Missing message/messages" }, { status: 400 });
     }
 
-    const baseURL = process.env.AI_BASE_URL || "http://localhost:11434/v1";
-    const model = process.env.AI_MODEL || "gpt-oss:20b";
-    const apiKey = process.env.AI_API_KEY || "ollama";
+    // ✅ Ollama native base URL (ไม่มี /v1)
+    const baseURL = (process.env.AI_BASE_URL || "http://localhost:11434").replace(/\/+$/, "");
+    const model = process.env.AI_MODEL || "qwen2.5:7b";
 
-    const r = await fetch(`${baseURL}/chat/completions`, {
+    const r = await fetch(`${baseURL}/api/chat`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        // openai-compatible
-        Authorization: `Bearer ${apiKey}`,
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
-        temperature: 0.3,
+        stream: false,
+        // Ollama native: messages = [{role, content}]
         messages: [system, ...userMessages],
+        options: { temperature: 0.3 },
       }),
     });
 
@@ -94,11 +97,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const data = await r.json();
-    const content =
-      data?.choices?.[0]?.message?.content ??
-      data?.choices?.[0]?.text ??
-      "ขอโทษครับ ตอนนี้ตอบไม่ได้ ลองใหม่อีกครั้ง";
+    const data = await r.json().catch(() => ({} as any));
+    const content = data?.message?.content ?? "ขอโทษครับ ตอนนี้ตอบไม่ได้ ลองใหม่อีกครั้ง";
 
     return NextResponse.json({ reply: content });
   } catch (e: any) {
