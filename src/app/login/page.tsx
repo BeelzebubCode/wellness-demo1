@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import React, { useState } from "react";
 import {
   User,
   Lock,
@@ -13,56 +12,14 @@ import {
   Sparkles,
   HeartPulse,
 } from "lucide-react";
-import { useNotificationContext } from "@/components/notification/NotificationProvider";
 import { useTheme } from "@/contexts/ThemeContext";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const pathname = usePathname(); // "/login"
-
-  const toastOnceRef = useRef(false);
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ username: "", password: "" });
-
-  const { push } = useNotificationContext();
   const { setTenant } = useTheme();
-
-  useEffect(() => {
-    const logoutFlag = searchParams.get("logout");
-    if (logoutFlag !== "1") return;
-
-    if (toastOnceRef.current) return;
-    toastOnceRef.current = true;
-
-    push({
-      type: "success",
-      title: "ออกจากระบบสำเร็จ",
-      message: "แล้วพบกันใหม่ 👋",
-      duration: 1500,
-    });
-
-    // ✅ ลบเฉพาะ "logout" ออกจาก query (คงอันอื่นไว้)
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete("logout");
-
-    const nextUrl = params.toString()
-      ? `${pathname}?${params.toString()}`
-      : pathname;
-
-    // ✅ เปลี่ยน URL โดยไม่ navigate (ไม่รี/ไม่ remount)
-    window.history.replaceState({}, "", nextUrl);
-
-    // ✅ เปิดทางให้ logout ครั้งถัดไปโชว์ได้
-    const t = setTimeout(() => {
-      toastOnceRef.current = false;
-    }, 1800);
-
-    return () => clearTimeout(t);
-  }, [searchParams, pathname, push]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,8 +90,10 @@ export default function LoginPage() {
         const targetHost = sub ? `${sub}.${baseHost}` : baseHost;
 
         const url = new URL(`${protocol}//${targetHost}${nextPath}`);
-        url.searchParams.set("login", "1");
+
+        url.searchParams.set("toast", "login");
         url.searchParams.set("name", data.account?.username || "");
+        url.searchParams.set("toastId", String(Date.now()));
 
         window.location.assign(url.toString());
         return;

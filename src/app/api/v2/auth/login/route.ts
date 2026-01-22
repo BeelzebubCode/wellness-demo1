@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     if (!username || !password) {
       return NextResponse.json(
         { success: false, error: "กรุณากรอกชื่อผู้ใช้และรหัสผ่าน" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
     if (!account) {
       return NextResponse.json(
         { success: false, error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     if (!ok) {
       return NextResponse.json(
         { success: false, error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -108,19 +108,25 @@ export async function POST(request: NextRequest) {
 
     const consultantId = account.consultant?.consultant_id ?? null;
 
-    const grantedUniversityIds = account.universityAccesses.map((x) => x.university_id);
+    const grantedUniversityIds = account.universityAccesses.map(
+      (x) => x.university_id,
+    );
 
     // ✅ ทำ allowedUniversityIds ให้เสถียร (sort)
     const allowedUniversityIds = Array.from(
       new Set([
-        ...(account.account_home_university_id ? [account.account_home_university_id] : []),
+        ...(account.account_home_university_id
+          ? [account.account_home_university_id]
+          : []),
         ...grantedUniversityIds,
-      ])
+      ]),
     ).sort((a, b) => a - b);
 
     // ✅ ถ้า login ผ่านโดเมนมหาลัย → ต้องมีสิทธิ์ในมหาลัยนั้น
     if (requestedUni) {
-      const canUseThisDomain = allowedUniversityIds.includes(requestedUni.university_id);
+      const canUseThisDomain = allowedUniversityIds.includes(
+        requestedUni.university_id,
+      );
       if (!canUseThisDomain) {
         return NextResponse.json(
           {
@@ -128,7 +134,7 @@ export async function POST(request: NextRequest) {
             error:
               "บัญชีไม่มีสิทธิ์ในมหาวิทยาลัยของโดเมนนี้ (ตรวจสอบ home_university หรือ universityAccesses)",
           },
-          { status: 403 }
+          { status: 403 },
         );
       }
     }
@@ -143,7 +149,8 @@ export async function POST(request: NextRequest) {
       requestedUni?.university_id ??
       // ถ้าโดเมนกลาง ให้ใช้ entity จริงก่อน
       (account.account_role === "STUDENT" ? studentUniId : null) ??
-      ((account.account_role === "CONSULTANT" || account.account_role === "HEAD_CONSULTANT")
+      (account.account_role === "CONSULTANT" ||
+      account.account_role === "HEAD_CONSULTANT"
         ? consultantUniId
         : null) ??
       homeUniversityId ??
@@ -163,7 +170,9 @@ export async function POST(request: NextRequest) {
       role: account.account_role,
       consultantId: consultantId ?? undefined,
       homeUniversityId: homeUniversityId ?? undefined,
-      allowedUniversityIds: allowedUniversityIds.length ? allowedUniversityIds : undefined,
+      allowedUniversityIds: allowedUniversityIds.length
+        ? allowedUniversityIds
+        : undefined,
     });
 
     let displayName = account.account_username;
@@ -192,12 +201,32 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const cookieDomain = cookieDomainFor(baseDomain);
+    const ROOT_DOMAIN = process.env.ROOT_DOMAIN || baseDomain;
+    const cookieDomain = cookieDomainFor(ROOT_DOMAIN);
 
+    // ✅ 1) auth_token shared ข้าม subdomain ได้
     res.cookies.set({
       name: "auth_token",
       value: token,
       httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7,
+      path: "/",
+      ...(cookieDomain ? { domain: cookieDomain } : {}),
+    });
+
+    // ✅ 2) tenant_code (สำคัญมาก) ให้ shared ด้วยเหมือนกัน
+    // เลือก: ถ้ามี requestedUni ให้ใช้ requestedUni ก่อน ไม่งั้นใช้ activeUni
+    const tenantCode =
+      requestedUni?.university_code?.toUpperCase() ??
+      activeUni?.university_code?.toUpperCase() ??
+      "DEFAULT";
+
+    res.cookies.set({
+      name: "tenant_code",
+      value: tenantCode,
+      httpOnly: false, // ปกติ tenant_code เอาไว้ให้ client อ่านได้ (ถ้านายอยากให้ client อ่าน)
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 7,
@@ -210,7 +239,7 @@ export async function POST(request: NextRequest) {
     console.error("[LOGIN_API_ERROR]", e);
     return NextResponse.json(
       { success: false, error: "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

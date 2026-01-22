@@ -303,7 +303,6 @@ model Consultant {
   profile         ConsultantProfile?
   specializations ConsultantSpecialization[]
   feedbacks       Feedback[]
-  timeSlots       TimeSlot[]
 
   @@index([organization_id])
   @@index([university_id])
@@ -361,19 +360,19 @@ model Organization {
 
 model TimeSlot {
   time_slot_id             Int            @id @default(autoincrement())
-  consultant_id            Int
   university_id            Int
-  time_slot_start_datetime DateTime
-  time_slot_end_datetime   DateTime
+  time_slot_start_datetime DateTime       @db.Timestamptz(3)
+  time_slot_end_datetime   DateTime       @db.Timestamptz(3)
   time_slot_max_capacity   Int            @default(1)
   time_slot_status         TimeSlotStatus @default(AVAILABLE)
 
-  consultant Consultant @relation(fields: [consultant_id], references: [consultant_id])
   university University @relation(fields: [university_id], references: [university_id])
 
-  booking Booking? @relation("BookingToTimeSlot")
+  // ✅ จากเดิม Booking? (1-1) -> Booking[] (1-many)
+  bookings Booking[]
 
-  @@unique([consultant_id, time_slot_start_datetime, time_slot_end_datetime])
+  // ✅ กันเวลาซ้ำ "ระดับมหาลัย" (คิวรวม)
+  @@unique([university_id, time_slot_start_datetime, time_slot_end_datetime])
   @@index([university_id, time_slot_start_datetime])
   @@map("time_slot")
 }
@@ -387,7 +386,7 @@ model Booking {
   university_id       Int
   student_id          Int
   consultant_id       Int?
-  time_slot_id        Int  @unique
+  time_slot_id        Int
   problem_category_id Int
 
   booking_detail_text String?       @db.Text
@@ -399,7 +398,8 @@ model Booking {
   student    Student     @relation(fields: [student_id], references: [student_id])
   consultant Consultant? @relation(fields: [consultant_id], references: [consultant_id])
 
-  timeSlot TimeSlot @relation("BookingToTimeSlot", fields: [time_slot_id], references: [time_slot_id])
+  // ✅ จากเดิม 1-1 -> 1-many
+  timeSlot TimeSlot @relation(fields: [time_slot_id], references: [time_slot_id])
 
   problemCategory ProblemCategory @relation(fields: [problem_category_id], references: [problem_category_id])
 
@@ -410,6 +410,7 @@ model Booking {
   notifications     Notification[]
   pointTransactions StudentPointTransaction[] @relation("BookingPointTx")
 
+  @@index([time_slot_id])
   @@index([university_id])
   @@index([booking_status])
   @@index([student_id])

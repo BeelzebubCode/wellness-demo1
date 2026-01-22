@@ -4,10 +4,41 @@ import prisma from "@/lib/prisma";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
 
 /* ============================================
-   Helpers
+   Helpers (Bangkok timezone safe)
 ============================================ */
+const BKK_TZ = "Asia/Bangkok";
+const BKK_OFFSET = "+07:00";
+
 function createDateTime(dateStr: string, timeStr: string): Date {
-  return new Date(`${dateStr}T${timeStr}:00`);
+  // creates an exact instant based on Bangkok local time
+  return new Date(`${dateStr}T${timeStr}:00.000${BKK_OFFSET}`);
+}
+
+function getDayRangeBangkok(dateStr: string) {
+  // query range for the Bangkok calendar day (converted to UTC instants automatically)
+  const start = new Date(`${dateStr}T00:00:00.000${BKK_OFFSET}`);
+  const end = new Date(`${dateStr}T23:59:59.999${BKK_OFFSET}`);
+  return { start, end };
+}
+
+function fmtDateBkk(d: Date) {
+  // YYYY-MM-DD (Bangkok)
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: BKK_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+}
+
+function fmtTimeBkk(d: Date) {
+  // HH:mm (Bangkok)
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: BKK_TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
 }
 
 function addMinutes(date: Date, minutes: number): Date {
@@ -15,7 +46,8 @@ function addMinutes(date: Date, minutes: number): Date {
 }
 
 function getSlotTemplate(dateStr: string) {
-  const dayOfWeek = new Date(dateStr).getDay();
+  // make sure weekend calc follows Bangkok day boundary
+  const dayOfWeek = new Date(`${dateStr}T00:00:00.000${BKK_OFFSET}`).getDay();
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
   const openTime = "08:00";
@@ -25,19 +57,12 @@ function getSlotTemplate(dateStr: string) {
   return { openTime, closeTime, slotDuration, isWeekend };
 }
 
-/** สร้าง slot ให้ "ทุก consultant ในมหาลัยนั้น" สำหรับวันนั้น */
-async function generateDefaultSlotsForUniversity(dateStr: string, universityId: number): Promise<number> {
+/** สร้าง slot แบบ "คิวรวมของมหาลัย" สำหรับวันนั้น */
+async function generateDefaultSlotsForUniversity(
+  dateStr: string,
+  universityId: number,
+): Promise<number> {
   const { openTime, closeTime, slotDuration } = getSlotTemplate(dateStr);
-
-  const consultants = await prisma.consultant.findMany({
-    where: { university_id: universityId },
-    select: { consultant_id: true },
-  });
-
-  if (consultants.length === 0) {
-    console.log(`[generateDefaultSlotsForUniversity] uni=${universityId} has no consultants`);
-    return 0;
-  }
 
   const slots: { start: Date; end: Date }[] = [];
   let currentTime = createDateTime(dateStr, openTime);
@@ -50,24 +75,22 @@ async function generateDefaultSlotsForUniversity(dateStr: string, universityId: 
   }
 
   console.log(
-    `[generateDefaultSlotsForUniversity] ${dateStr} uni=${universityId}: ${slots.length} slots per consultant, consultants=${consultants.length}`
+    `[generateDefaultSlotsForUniversity] ${dateStr} uni=${universityId}: slots=${slots.length}`,
   );
 
   if (slots.length === 0) return 0;
 
-  // createMany แบบ bulk: consultants x slots
-  const data = consultants.flatMap((c) =>
-    slots.map((s) => ({
-      university_id: universityId,
-      consultant_id: c.consultant_id,
-      time_slot_start_datetime: s.start,
-      time_slot_end_datetime: s.end,
-      time_slot_max_capacity: 1,
-      time_slot_status: "AVAILABLE" as const,
-    }))
-  );
+  const DEFAULT_CAPACITY = 2;
 
-  // ต้องมี unique composite เช่น @@unique([consultant_id, time_slot_start_datetime, time_slot_end_datetime])
+  const data = slots.map((s) => ({
+    university_id: universityId,
+    time_slot_start_datetime: s.start,
+    time_slot_end_datetime: s.end,
+    time_slot_max_capacity: DEFAULT_CAPACITY,
+    time_slot_status: "AVAILABLE" as const,
+  }));
+
+  // @@unique([university_id, time_slot_start_datetime, time_slot_end_datetime])
   const result = await prisma.timeSlot.createMany({
     data,
     skipDuplicates: true,
@@ -77,16 +100,13 @@ async function generateDefaultSlotsForUniversity(dateStr: string, universityId: 
   return result.count;
 }
 
-function toIsoDate(d: Date) {
-  return d.toISOString().split("T")[0];
-}
-
 const ACTIVE_STATUSES = ["PENDING_ASSIGNMENT", "ASSIGNED", "IN_PROGRESS"] as const;
 type UnavailableReason = "PAST_TIME" | "FULL" | "CLOSED" | "UNAVAILABLE";
 
 /* ============================================
    GET /api/v2/time-slots?date=YYYY-MM-DD
    - tenant-safe: คืนเฉพาะ activeUniversityId
+   - คิวรวม (ไม่ผูก consultant)
 ============================================ */
 export async function GET(req: NextRequest) {
   try {
@@ -104,10 +124,6 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const dateStr = searchParams.get("date");
 
-    // optional filter: consultantId (เฉพาะ staff หรือ consultant เอง)
-    const consultantIdStr = searchParams.get("consultantId");
-    const consultantId = consultantIdStr ? Number(consultantIdStr) : null;
-
     if (!dateStr) {
       return NextResponse.json({ error: "Date is required (YYYY-MM-DD)" }, { status: 400 });
     }
@@ -117,105 +133,91 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Invalid date format. Use YYYY-MM-DD" }, { status: 400 });
     }
 
-    const startOfDay = new Date(`${dateStr}T00:00:00`);
-    const endOfDay = new Date(`${dateStr}T23:59:59.999`);
+    const { start: startOfDay, end: endOfDay } = getDayRangeBangkok(dateStr);
     if (isNaN(startOfDay.getTime())) {
       return NextResponse.json({ error: "Invalid date value" }, { status: 400 });
     }
 
-    const whereClause: any = {
-      university_id: activeUniversityId,
-      time_slot_start_datetime: { gte: startOfDay, lte: endOfDay },
-    };
-
-    // role guard เรื่อง consultantId
-    if (account.role === "CONSULTANT") {
-      if (!account.consultantId) {
-        return NextResponse.json({ error: "Consultant profile not found" }, { status: 400 });
-      }
-      whereClause.consultant_id = account.consultantId;
-    } else if (consultantId) {
-      whereClause.consultant_id = consultantId;
-    }
-
-    // ✅ IMPORTANT: ไม่ include bookings เพราะ schema ของคุณไม่มี relation ชื่อนี้
     const timeSlots = await prisma.timeSlot.findMany({
-      where: whereClause,
-      include: {
-        consultant: {
-          select: {
-            consultant_id: true,
-            profile: { select: { consultant_first_name: true, consultant_last_name: true } },
-          },
-        },
+      where: {
+        university_id: activeUniversityId,
+        time_slot_start_datetime: { gte: startOfDay, lte: endOfDay },
       },
       orderBy: { time_slot_start_datetime: "asc" },
     });
 
-    const now = new Date();
+    const slotIds = timeSlots.map((s) => s.time_slot_id);
 
-    // ✅ นับ booking ต่อ slot ด้วย booking.count แทน slot.bookings
-    const formattedSlots = await Promise.all(
-      timeSlots.map(async (slot) => {
-        const activeBookings = await prisma.booking.count({
+    // ✅ ลด N+1: groupBy นับ booking ต่อ slot ทีเดียว
+    const bookingCounts = slotIds.length
+      ? await prisma.booking.groupBy({
+          by: ["time_slot_id"],
           where: {
-            time_slot_id: slot.time_slot_id,
+            time_slot_id: { in: slotIds },
             booking_status: { in: ACTIVE_STATUSES as any },
           },
-        });
+          _count: { _all: true },
+        })
+      : [];
 
-        const maxCap = Number(slot.time_slot_max_capacity ?? 0);
-        const availableCount = Math.max(0, maxCap - activeBookings);
+    const countMap = new Map<number, number>();
+    for (const row of bookingCounts) {
+      countMap.set(row.time_slot_id, row._count._all);
+    }
 
-        const isClosed = slot.time_slot_status === "LOCKED" || slot.time_slot_status === "CANCELLED";
-        const slotStart = slot.time_slot_start_datetime;
+    const formattedSlots = timeSlots.map((slot) => {
+      const activeBookings = countMap.get(slot.time_slot_id) ?? 0;
 
-        const isPastTime = slotStart.toDateString() === now.toDateString() && slotStart <= now;
+      const maxCap = Number(slot.time_slot_max_capacity ?? 0);
+      const availableCount = Math.max(0, maxCap - activeBookings);
 
-        const isAvailable =
-          slot.time_slot_status === "AVAILABLE" &&
-          availableCount > 0 &&
-          !isClosed &&
-          !isPastTime;
+      const isClosed =
+        slot.time_slot_status === "LOCKED" || slot.time_slot_status === "CANCELLED";
 
-        let unavailableReason: UnavailableReason | null = null;
+      const slotStart = slot.time_slot_start_datetime;
+      const slotEnd = slot.time_slot_end_datetime;
 
-        if (!isAvailable) {
-          if (isPastTime) unavailableReason = "PAST_TIME";
-          else if (isClosed) unavailableReason = "CLOSED";
-          else if (availableCount <= 0) unavailableReason = "FULL";
-          else unavailableReason = "UNAVAILABLE";
-        }
+      // ✅ ชัวร์สุด: ถ้า start <= now ถือว่า past (ไม่ต้องเทียบวัน)
+      const isPastTime = slotStart.getTime() <= Date.now();
 
-        const cProfile = slot.consultant?.profile;
+      const isAvailable =
+        slot.time_slot_status === "AVAILABLE" &&
+        availableCount > 0 &&
+        !isClosed &&
+        !isPastTime;
 
-        return {
-          id: slot.time_slot_id,
-          universityId: slot.university_id,
-          consultantId: slot.consultant_id,
-          consultantName: cProfile
-            ? `${cProfile.consultant_first_name} ${cProfile.consultant_last_name}`
-            : null,
+      let unavailableReason: UnavailableReason | null = null;
+      if (!isAvailable) {
+        if (isPastTime) unavailableReason = "PAST_TIME";
+        else if (isClosed) unavailableReason = "CLOSED";
+        else if (availableCount <= 0) unavailableReason = "FULL";
+        else unavailableReason = "UNAVAILABLE";
+      }
 
-          date: toIsoDate(slotStart),
-          startTime: slotStart.toTimeString().slice(0, 5),
-          endTime: slot.time_slot_end_datetime.toTimeString().slice(0, 5),
+      return {
+        id: slot.time_slot_id,
+        universityId: slot.university_id,
 
-          startDateTime: slotStart.toISOString(),
-          endDateTime: slot.time_slot_end_datetime.toISOString(),
+        // ✅ แสดงวัน/เวลาเป็น Bangkok เสมอ (ไม่เพี้ยน)
+        date: fmtDateBkk(slotStart),
+        startTime: fmtTimeBkk(slotStart),
+        endTime: fmtTimeBkk(slotEnd),
 
-          maxCapacity: maxCap,
-          bookedCount: activeBookings,
-          availableCount,
-          status: slot.time_slot_status,
+        // เก็บ ISO ไว้ให้ client ใช้งานต่อได้ (เป็น UTC instant ถูกต้อง)
+        startDateTime: slotStart.toISOString(),
+        endDateTime: slotEnd.toISOString(),
 
-          isAvailable,
-          isClosed,
-          isPastTime,
-          unavailableReason,
-        };
-      })
-    );
+        maxCapacity: maxCap,
+        bookedCount: activeBookings,
+        availableCount,
+        status: slot.time_slot_status,
+
+        isAvailable,
+        isClosed,
+        isPastTime,
+        unavailableReason,
+      };
+    });
 
     return NextResponse.json({
       success: true,
@@ -227,7 +229,7 @@ export async function GET(req: NextRequest) {
     console.error("[GET /v2/time-slots] Error:", error);
     return NextResponse.json(
       { error: error?.message ?? "Failed to fetch time slots" },
-      { status: error?.status ?? 500 }
+      { status: error?.status ?? 500 },
     );
   }
 }
@@ -264,7 +266,7 @@ export async function POST(req: NextRequest) {
     console.error("[POST /v2/time-slots] Error:", error);
     return NextResponse.json(
       { error: error?.message ?? "Failed to create time slots" },
-      { status: error?.status ?? 500 }
+      { status: error?.status ?? 500 },
     );
   }
 }
@@ -283,10 +285,8 @@ export async function DELETE(req: NextRequest) {
     const dateStr = searchParams.get("date");
     if (!dateStr) return NextResponse.json({ error: "Date is required" }, { status: 400 });
 
-    const startOfDay = new Date(`${dateStr}T00:00:00`);
-    const endOfDay = new Date(`${dateStr}T23:59:59.999`);
+    const { start: startOfDay, end: endOfDay } = getDayRangeBangkok(dateStr);
 
-    // ✅ ไม่ใช้ bookings relation -> หา slot ids ของวันนี้ก่อน
     const slotIds = await prisma.timeSlot.findMany({
       where: {
         university_id: activeUniversityId,
@@ -294,6 +294,7 @@ export async function DELETE(req: NextRequest) {
       },
       select: { time_slot_id: true },
     });
+
     const ids = slotIds.map((x) => x.time_slot_id);
     if (ids.length === 0) {
       return NextResponse.json({
@@ -304,12 +305,12 @@ export async function DELETE(req: NextRequest) {
       });
     }
 
-    // หา slot ที่มี booking อยู่ (เอาออกจากการลบ)
     const used = await prisma.booking.findMany({
       where: { time_slot_id: { in: ids } },
       select: { time_slot_id: true },
       distinct: ["time_slot_id"],
     });
+
     const usedSet = new Set(used.map((u) => u.time_slot_id));
     const deletableIds = ids.filter((id) => !usedSet.has(id));
 
@@ -327,7 +328,7 @@ export async function DELETE(req: NextRequest) {
     console.error("[DELETE /v2/time-slots] Error:", error);
     return NextResponse.json(
       { error: error?.message ?? "Failed to delete time slots" },
-      { status: error?.status ?? 500 }
+      { status: error?.status ?? 500 },
     );
   }
 }
@@ -346,12 +347,12 @@ export async function PATCH(req: NextRequest) {
     const action = searchParams.get("action");
 
     if (!dateStr) return NextResponse.json({ error: "Date is required" }, { status: 400 });
-    if (action !== "regenerate") return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    if (action !== "regenerate") {
+      return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    }
 
-    const startOfDay = new Date(`${dateStr}T00:00:00`);
-    const endOfDay = new Date(`${dateStr}T23:59:59.999`);
+    const { start: startOfDay, end: endOfDay } = getDayRangeBangkok(dateStr);
 
-    // ✅ ลบเฉพาะ slot ที่ไม่มี booking (ไม่ใช้ relation)
     const slotIds = await prisma.timeSlot.findMany({
       where: {
         university_id: activeUniversityId,
@@ -359,6 +360,7 @@ export async function PATCH(req: NextRequest) {
       },
       select: { time_slot_id: true },
     });
+
     const ids = slotIds.map((x) => x.time_slot_id);
 
     let deletedCount = 0;
@@ -375,6 +377,7 @@ export async function PATCH(req: NextRequest) {
       const deleted = await prisma.timeSlot.deleteMany({
         where: { time_slot_id: { in: deletableIds } },
       });
+
       deletedCount = deleted.count;
     }
 
@@ -400,7 +403,7 @@ export async function PATCH(req: NextRequest) {
     console.error("[PATCH /v2/time-slots] Error:", error);
     return NextResponse.json(
       { error: error?.message ?? "Failed to regenerate" },
-      { status: error?.status ?? 500 }
+      { status: error?.status ?? 500 },
     );
   }
 }

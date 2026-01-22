@@ -1,48 +1,67 @@
 "use client";
 
-import { useLayoutEffect } from "react";
-import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useNotificationContext } from "@/components/notification/NotificationProvider";
 
-const STORAGE_KEY = "auth_toast_gate_once_v3";
+const STORAGE_KEY = "auth_toast_seen_ids";
+
+function getSeenSet(): Set<string> {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    const arr: string[] = raw ? JSON.parse(raw) : [];
+    return new Set(arr);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveSeenSet(set: Set<string>) {
+  try {
+    // เก็บแค่ล่าสุด 30 อันพอ กัน storage บวม
+    const arr = Array.from(set).slice(-30);
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  } catch {}
+}
 
 export default function AuthToastGate() {
   const { push } = useNotificationContext();
+  const searchParams = useSearchParams();
   const pathname = usePathname();
 
-  useLayoutEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const login = params.get("login");
-    const logout = params.get("logout");
-    const name = params.get("name") || "";
+  useEffect(() => {
+    // ✅ ใช้ param กลางชุดเดียว: toast=login|logout, toastId=xxxx, name=...
+    const toast = searchParams.get("toast"); // "login" | "logout"
+    const toastId = searchParams.get("toastId") || "";
+    const name = searchParams.get("name") || "";
 
-    if (login !== "1" && logout !== "1") return;
+    if (!toast || !toastId) return;
 
-    const key = `${window.location.origin}${pathname}?${params.toString()}`;
+    const seen = getSeenSet();
+    if (seen.has(toastId)) return; // ✅ กันซ้ำแบบชัวร์
 
-    // ✅ กันซ้ำ (StrictMode / re-mount)
-    try {
-      const last = sessionStorage.getItem(STORAGE_KEY);
-      if (last === key) return;
-      sessionStorage.setItem(STORAGE_KEY, key);
-    } catch {}
-
-    params.delete("login");
-    params.delete("logout");
+    // ✅ ลบ param ออกจาก URL ก่อน (กัน refresh แล้วเด้งซ้ำ)
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("toast");
+    params.delete("toastId");
     params.delete("name");
 
     const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
     window.history.replaceState({}, "", nextUrl);
 
-    // ✅ ยิง toast ทันที (เร็วกว่า useEffect)
-    if (logout === "1") {
+    // ✅ mark seen
+    seen.add(toastId);
+    saveSeenSet(seen);
+
+    // ✅ ค่อยยิง toast
+    if (toast === "logout") {
       push({
         type: "success",
         title: "ออกจากระบบสำเร็จ",
         message: "แล้วพบกันใหม่ 👋",
         duration: 1500,
       });
-    } else if (login === "1") {
+    } else if (toast === "login") {
       push({
         type: "success",
         title: "เข้าสู่ระบบสำเร็จ",
@@ -50,18 +69,7 @@ export default function AuthToastGate() {
         duration: 1200,
       });
     }
-
-    // ✅ เคลียร์ key หลัง toast หมดอายุ ให้ครั้งถัดไปทำงานได้
-    const t = window.setTimeout(() => {
-      try {
-        if (sessionStorage.getItem(STORAGE_KEY) === key) {
-          sessionStorage.removeItem(STORAGE_KEY);
-        }
-      } catch {}
-    }, 2200);
-
-    return () => window.clearTimeout(t);
-  }, [pathname, push]);
+  }, [searchParams, pathname, push]);
 
   return null;
 }

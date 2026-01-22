@@ -284,7 +284,7 @@ export function PublicHeader({ userName, userAvatar, onLogin }: PublicHeaderProp
                     </div>
 
                     <LogoutButton
-                      redirectTo="/"
+                      redirectTo="/login"
                       label="ออกจากระบบ"
                       iconOnly={false}
                       className={cn(

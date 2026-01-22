@@ -1,0 +1,6 @@
+// src/app/booking/profile/page.tsx
+import { notFound } from "next/navigation";
+
+export default function Page() {
+  notFound(); 
+}
