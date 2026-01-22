@@ -1,8 +1,7 @@
 // src/features/auth/hooks/useRoleAuth.ts
-
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { authApi } from "../api";
 import type { AuthUser } from "../types";
@@ -14,6 +13,8 @@ type UseRoleAuthOptions = {
   redirectTo?: string; // default "/login"
   allowedRoles: readonly Role[];
   loginToastKey: string;
+  /** ถ้า false จะไม่ redirect/ไม่ toast (เหมาะกับหน้า public) */
+  guard?: boolean;
 };
 
 const SUPPRESS_TOAST_KEY = "suppress_login_toast_once";
@@ -22,6 +23,7 @@ export function useRoleAuth<TUser extends AuthUser = AuthUser>({
   redirectTo = "/login",
   allowedRoles,
   loginToastKey,
+  guard = true,
 }: UseRoleAuthOptions) {
   const router = useRouter();
   const pathname = usePathname();
@@ -30,67 +32,63 @@ export function useRoleAuth<TUser extends AuthUser = AuthUser>({
   const [user, setUser] = useState<TUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // ✅ ทำให้ dependency "เสถียร"
+  // ทำ dependency เสถียร
   const rolesKey = useMemo(() => allowedRoles.join("|"), [allowedRoles]);
   const allowedSet = useMemo(() => new Set<Role>(allowedRoles), [rolesKey]);
 
-  useEffect(() => {
-    let isMounted = true;
+  const toastLoginOnce = useCallback(() => {
+    const COOLDOWN_MS = 3000;
 
-    if (pathname === "/login") {
-      setIsLoading(false);
-      return () => {
-        isMounted = false;
-      };
-    }
+    try {
+      if (sessionStorage.getItem(SUPPRESS_TOAST_KEY) === "1") {
+        sessionStorage.removeItem(SUPPRESS_TOAST_KEY);
+        return;
+      }
+      const last = Number(sessionStorage.getItem(loginToastKey) || "0");
+      const now = Date.now();
+      if (now - last < COOLDOWN_MS) return;
+      sessionStorage.setItem(loginToastKey, String(now));
+    } catch {}
 
-    const toastLoginOnce = () => {
-      const COOLDOWN_MS = 3000;
-      try {
-        if (sessionStorage.getItem(SUPPRESS_TOAST_KEY) === "1") {
-          sessionStorage.removeItem(SUPPRESS_TOAST_KEY);
-          return;
-        }
-        const last = Number(sessionStorage.getItem(loginToastKey) || "0");
-        const now = Date.now();
-        if (now - last < COOLDOWN_MS) return;
-        sessionStorage.setItem(loginToastKey, String(now));
-      } catch {}
+    push({
+      type: "warning",
+      title: "กรุณาเข้าสู่ระบบ",
+      message: "คุณต้องเข้าสู่ระบบก่อนใช้งานหน้านี้",
+      duration: 2200,
+    });
+  }, [push, loginToastKey]);
 
-      push({
-        type: "warning",
-        title: "กรุณาเข้าสู่ระบบ",
-        message: "คุณต้องเข้าสู่ระบบก่อนใช้งานหน้านี้",
-        duration: 2200,
-      });
-    };
+  const clearLoginToastFlag = useCallback(() => {
+    try {
+      sessionStorage.removeItem(loginToastKey);
+    } catch {}
+  }, [loginToastKey]);
 
-    const clearLoginToastFlag = () => {
-      try {
-        sessionStorage.removeItem(loginToastKey);
-      } catch {}
-    };
+  const redirectLogin = useCallback(() => {
+    if (!guard) return;
+    if (pathname === "/login") return;
 
-    const redirectLogin = () => {
-      if (pathname === "/login") return;
-      toastLoginOnce();
-      const next = pathname && pathname !== "/login" ? pathname : "/";
-      router.replace(`${redirectTo}?next=${encodeURIComponent(next)}`);
-    };
+    toastLoginOnce();
 
-    const verify = async () => {
-      try {
-        const data = await authApi.me();
-        if (!isMounted) return;
+    const next = pathname && pathname !== "/login" ? pathname : "/";
+    router.replace(`${redirectTo}?next=${encodeURIComponent(next)}`);
+  }, [guard, pathname, router, redirectTo, toastLoginOnce]);
 
-        if (!data?.valid || !data?.account) {
-          setUser(null);
-          redirectLogin();
-          return;
-        }
+  const verify = useCallback(async () => {
+    setIsLoading(true);
 
-        if (!allowedSet.has(data.account.role)) {
-          setUser(null);
+    try {
+      const data = await authApi.me(); // ✅ ต้อง include cookies ใน authApi.me()
+      if (!data?.valid || !data?.account) {
+        setUser(null);
+        redirectLogin();
+        return;
+      }
+
+      if (!allowedSet.has(data.account.role)) {
+        setUser(null);
+
+        if (guard) {
           push({
             type: "error",
             title: "ไม่มีสิทธิ์เข้าถึง",
@@ -98,31 +96,50 @@ export function useRoleAuth<TUser extends AuthUser = AuthUser>({
             duration: 2400,
           });
           router.replace("/");
-          return;
         }
-
-        clearLoginToastFlag();
-        setUser(data.account as TUser);
-      } catch {
-        if (!isMounted) return;
-        setUser(null);
-        redirectLogin();
-      } finally {
-        if (isMounted) setIsLoading(false);
+        return;
       }
-    };
 
+      clearLoginToastFlag();
+      setUser(data.account as TUser);
+    } catch {
+      setUser(null);
+      redirectLogin();
+    } finally {
+      setIsLoading(false);
+    }
+  }, [allowedSet, clearLoginToastFlag, guard, push, redirectLogin, router]);
+
+  useEffect(() => {
+    let isMounted = true;
+    
+    if (pathname === "/login") {
+      setIsLoading(false);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    // run verify ครั้งแรก
     verify();
+
+    // ✅ refetch เมื่อ auth เปลี่ยน (login/logout)
+    const onAuthChanged = () => {
+      if (!isMounted) return;
+      verify();
+    };
+    window.addEventListener("auth-changed", onAuthChanged);
 
     return () => {
       isMounted = false;
+      window.removeEventListener("auth-changed", onAuthChanged);
     };
-    // ✅ สำคัญ: ใช้ rolesKey แทน allowedRoles
-  }, [router, pathname, redirectTo, push, rolesKey, loginToastKey, allowedSet]);
+  }, [pathname, verify]);
 
   return {
     user,
     isLoading,
     isAuthenticated: !!user,
+    refetch: verify,
   };
 }

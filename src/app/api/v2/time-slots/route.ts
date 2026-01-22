@@ -57,6 +57,18 @@ function getSlotTemplate(dateStr: string) {
   return { openTime, closeTime, slotDuration, isWeekend };
 }
 
+function expectedSlotCount(dateStr: string) {
+  const { openTime, closeTime, slotDuration } = getSlotTemplate(dateStr);
+
+  const start = createDateTime(dateStr, openTime);
+  const end = createDateTime(dateStr, closeTime);
+
+  const minutes = (end.getTime() - start.getTime()) / 60000;
+  if (minutes <= 0) return 0;
+  return Math.floor(minutes / slotDuration);
+}
+
+
 /** สร้าง slot แบบ "คิวรวมของมหาลัย" สำหรับวันนั้น */
 async function generateDefaultSlotsForUniversity(
   dateStr: string,
