@@ -1,101 +1,102 @@
+// src/app/api/v2/platform/ai-kb/documents/upload/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { requireSuperAdmin } from "@/lib/auth/platformGuard";
-import { createDocument } from "@/services/aiKb/documents/createDocument";
-import path from "path";
-import fs from "fs/promises";
+import { uploadDocument } from "@/services/aiKb/documents/uploadDocument";
 
-export const runtime = "nodejs"; // สำคัญ: ต้องใช้ nodejs เพื่อเขียนไฟล์ได้
+export const runtime = "nodejs";
 
-function safeName(name: string) {
-  return name.replace(/[^\w.\-]+/g, "_").slice(0, 180);
+function bad(msg: string, status = 400) {
+  return NextResponse.json(
+    { success: false, error: msg, code: "BAD_REQUEST" },
+    { status },
+  );
 }
 
 export async function POST(req: NextRequest) {
   try {
     const g = await requireSuperAdmin(req);
     if (!g.ok) {
-      return NextResponse.json({ success: false, error: g.error }, { status: g.status });
+      return NextResponse.json(
+        { success: false, error: g.error, code: "UNAUTHORIZED" },
+        { status: g.status },
+      );
     }
 
     const form = await req.formData();
 
-    // fields
-    const key = String(form.get("key") || "").trim();
-    const title = String(form.get("title") || "").trim();
-    const category = (form.get("category") ? String(form.get("category")).trim() : "") || null;
-    const urlHint = (form.get("urlHint") ? String(form.get("urlHint")).trim() : "") || null;
+    // scope
+    const scope = String(form.get("scope") ?? "GLOBAL").toUpperCase();
+    if (scope !== "GLOBAL" && scope !== "TENANT") {
+      return bad("scope ไม่ถูกต้อง (GLOBAL|TENANT)");
+    }
 
+    // universityId (บังคับเฉพาะ TENANT)
     const universityIdRaw = form.get("universityId");
     const universityId =
-      universityIdRaw === null || universityIdRaw === undefined || String(universityIdRaw) === "" || String(universityIdRaw) === "null"
+      universityIdRaw === null ||
+      universityIdRaw === "" ||
+      universityIdRaw === "null"
         ? null
         : Number(universityIdRaw);
 
-    if (!key || !title) {
-      return NextResponse.json({ success: false, error: "กรุณากรอก key และ title" }, { status: 400 });
-    }
-    if (universityId !== null && !Number.isFinite(universityId)) {
-      return NextResponse.json({ success: false, error: "universityId ไม่ถูกต้อง" }, { status: 400 });
+    if (scope === "TENANT" && !Number.isFinite(universityId)) {
+      return bad("TENANT ต้องระบุ universityId");
     }
 
+    // file
     const file = form.get("file");
     if (!(file instanceof File)) {
-      return NextResponse.json({ success: false, error: "กรุณาแนบไฟล์ (field: file)" }, { status: 400 });
+      return bad("ต้องส่งไฟล์ด้วย field ชื่อ file");
     }
 
-    const filename = safeName(file.name || "upload");
-    const ext = path.extname(filename).toLowerCase();
-
-    // รองรับ .md .markdown .json .txt
-    const isMd = ext === ".md" || ext === ".markdown" || ext === ".txt";
-    const isJson = ext === ".json";
-    if (!isMd && !isJson) {
-      return NextResponse.json(
-        { success: false, error: "รองรับเฉพาะไฟล์ .md / .markdown / .txt / .json" },
-        { status: 400 },
-      );
+    if (file.size > 10 * 1024 * 1024) {
+      return bad("ไฟล์ใหญ่เกินไป (สูงสุด 10MB)");
     }
 
-    const bytes = Buffer.from(await file.arrayBuffer());
-
-    // save file to disk
-    const baseDir = path.join(process.cwd(), "uploads", "ai-kb");
-    await fs.mkdir(baseDir, { recursive: true });
-
-    const savedName = `${Date.now()}_${filename}`;
-    const savedPath = path.join(baseDir, savedName);
-    await fs.writeFile(savedPath, bytes);
-
-    // parse content
-    let contentType: "MARKDOWN" | "JSON" = isJson ? "JSON" : "MARKDOWN";
-    let sourceMd: string | null = null;
-    let sourceJson: any | null = null;
-
-    if (contentType === "MARKDOWN") {
-      sourceMd = bytes.toString("utf-8");
-    } else {
-      try {
-        sourceJson = JSON.parse(bytes.toString("utf-8"));
-      } catch {
-        return NextResponse.json({ success: false, error: "ไฟล์ JSON ไม่ถูกต้อง (parse ไม่ได้)" }, { status: 400 });
-      }
-    }
-
-    // ใช้ urlHint เก็บ path ของไฟล์ก็ได้ (ถ้านายต้องการ)
-    const created = await createDocument({
-      universityId,
-      key,
-      title,
-      category,
-      urlHint: urlHint ?? `/uploads/ai-kb/${savedName}`,
-      contentType,
-      sourceMd,
-      sourceJson,
+    // ✅ อัปโหลดอย่างเดียว ไม่ต้องกรอกอะไร
+    const created = await uploadDocument({
+      universityId: scope === "GLOBAL" ? null : universityId,
+      file,
     });
 
     return NextResponse.json({ success: true, data: created }, { status: 200 });
   } catch (e: any) {
-    console.error("[AI_KB_UPLOAD]", e);
-    return NextResponse.json({ success: false, error: e?.message || "Internal Server Error" }, { status: 500 });
+    console.error("[AI_KB_DOCS_UPLOAD]", e);
+
+    // ✅ dev-friendly (ชั่วคราว)
+    const msg = String(e?.message || e);
+
+    // Prisma table missing / migrate not ready
+    if (
+      msg.includes("P2021") ||
+      msg.includes("does not exist") ||
+      msg.includes("relation")
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "DB ยังไม่พร้อม (ยังไม่ได้ migrate ตาราง AI KB)",
+          code: "AI_KB_NOT_READY",
+        },
+        { status: 503 },
+      );
+    }
+
+    // JSON parse fail
+    if (msg.includes("Unexpected token") || msg.includes("JSON")) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "ไฟล์ JSON ไม่ถูกต้อง (parse ไม่ได้)",
+          code: "BAD_JSON",
+        },
+        { status: 400 },
+      );
+    }
+
+    return NextResponse.json(
+      { success: false, error: msg, code: "INTERNAL_ERROR" },
+      { status: 500 },
+    );
   }
 }

@@ -26,14 +26,14 @@ export function useAiKbDocuments(args: UseAiKbDocumentsArgs = {}) {
     setIsLoading(true);
     setError(null);
     try {
-      const r = await aiKbApi.listDocuments({
-        q,
-        scope,
-        active,
-        universityId,
-      });
-      setDocs(r.data);
-      setTotal(r.total);
+      const r: any = await aiKbApi.listDocuments({ q, scope, active, universityId });
+
+      // ✅ รองรับทั้ง {docs,total} และ {data,total}
+      const list = Array.isArray(r?.docs) ? r.docs : Array.isArray(r?.data) ? r.data : [];
+      const count = Number.isFinite(r?.total) ? r.total : list.length;
+
+      setDocs(list);
+      setTotal(count);
     } catch (e) {
       setError(e);
     } finally {
@@ -45,12 +45,5 @@ export function useAiKbDocuments(args: UseAiKbDocumentsArgs = {}) {
     refetch();
   }, [refetch]);
 
-  return {
-    docs,
-    total,
-    isLoading,
-    error,
-    refetch,
-    setDocs, // เผื่อ optimistic
-  };
+  return { docs, total, isLoading, error, refetch, setDocs };
 }

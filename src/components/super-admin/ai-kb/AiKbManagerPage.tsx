@@ -14,7 +14,7 @@ import type { AiKbDoc } from "@/features/ai-kb/types";
 import { useAiKbDocuments } from "@/features/ai-kb/hooks/useAiKbDocuments";
 import { useAiKbMutations } from "@/features/ai-kb/hooks/useAiKbMutations";
 
-import AiKbCreateModal from "./AiKbCreateModal";
+import AiKbUploadModal from "./AiKbUploadModal";
 import AiKbViewModal from "./AiKbViewModal";
 import AiKbDeleteModal from "./AikbDeleteModal";
 
@@ -26,11 +26,12 @@ function scopeLabel(universityId: number | null | undefined) {
 }
 
 function uniLabel(d: AiKbDoc) {
-  // ถ้า backend ส่ง code/name มาด้วยก็ใช้ได้ (optional)
   const anyDoc = d as any;
   if (d.universityId == null) return "ทุกมหาลัย (Global)";
   if (anyDoc.universityCode || anyDoc.universityName) {
-    const code = anyDoc.universityCode ? String(anyDoc.universityCode) : `#${d.universityId}`;
+    const code = anyDoc.universityCode
+      ? String(anyDoc.universityCode)
+      : `#${d.universityId}`;
     const name = anyDoc.universityName ? String(anyDoc.universityName) : "";
     return name ? `${code} • ${name}` : code;
   }
@@ -47,12 +48,11 @@ export default function AiKbManagerPage() {
   const [universityId, setUniversityId] = useState<string>("ALL");
 
   // modal state
-  const [openCreate, setOpenCreate] = useState(false);
+  const [openUpload, setOpenUpload] = useState(false);
   const [openView, setOpenView] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<AiKbDoc | null>(null);
 
-  // ✅ hook: list docs
   const { docs, total, isLoading, error, refetch } = useAiKbDocuments({
     q,
     scope,
@@ -60,7 +60,6 @@ export default function AiKbManagerPage() {
     universityId: universityId === "ALL" ? undefined : Number(universityId),
   });
 
-  // ✅ hook: mutations
   const mut = useAiKbMutations({
     onMutated: async () => {
       await refetch();
@@ -68,7 +67,6 @@ export default function AiKbManagerPage() {
   });
 
   const universityOptions = useMemo(() => {
-    // derive options จาก docs ที่มี (ยังไม่ต้องมี endpoint universities)
     const map = new Map<number, string>();
     for (const d of docs) {
       if (d.universityId == null) continue;
@@ -119,13 +117,13 @@ export default function AiKbManagerPage() {
             AI Knowledge Base (Super Admin)
           </h1>
           <p className="text-sm text-slate-600">
-            จัดการเอกสารให้ AI ใช้อ้างอิง (ต่อ API แล้ว)
+            จัดการเอกสารให้ AI ใช้อ้างอิง (อัปโหลดไฟล์)
           </p>
         </div>
 
-        <Button onClick={() => setOpenCreate(true)} className="gap-2">
+        <Button onClick={() => setOpenUpload(true)} className="gap-2">
           <Plus className="h-4 w-4" />
-          เพิ่มเอกสาร
+          อัปโหลดเอกสาร
         </Button>
       </div>
 
@@ -185,7 +183,10 @@ export default function AiKbManagerPage() {
           </div>
         ) : docs.length === 0 ? (
           <div className="p-6">
-            <EmptyState title="ยังไม่มีเอกสาร" description="ลองเพิ่มเอกสาร หรือปรับ filter" />
+            <EmptyState
+              title="ยังไม่มีเอกสาร"
+              description="ลองอัปโหลดเอกสาร หรือปรับ filter"
+            />
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
@@ -214,9 +215,12 @@ export default function AiKbManagerPage() {
                     <Badge variant={d.isActive ? "success" : "secondary"}>
                       {d.isActive ? "ACTIVE" : "INACTIVE"}
                     </Badge>
-
-                    {d.category ? <Badge variant="outline">{d.category}</Badge> : null}
-                    <Badge variant="outline">{scopeLabel(d.universityId)}</Badge>
+                    {d.category ? (
+                      <Badge variant="outline">{d.category}</Badge>
+                    ) : null}
+                    <Badge variant="outline">
+                      {scopeLabel(d.universityId)}
+                    </Badge>
                   </div>
 
                   <div className="mt-1 flex flex-col gap-1 text-sm text-slate-600">
@@ -233,13 +237,18 @@ export default function AiKbManagerPage() {
                       ) : null}
                     </div>
                     <div className="truncate">
-                      <span className="text-slate-500">scope:</span> {uniLabel(d)}
+                      <span className="text-slate-500">scope:</span>{" "}
+                      {uniLabel(d)}
                     </div>
                   </div>
                 </div>
 
                 <div className="flex shrink-0 flex-wrap gap-2">
-                  <Button variant="ghost" className="gap-2" onClick={() => openViewDoc(d)}>
+                  <Button
+                    variant="ghost"
+                    className="gap-2"
+                    onClick={() => openViewDoc(d)}
+                  >
                     <Eye className="h-4 w-4" />
                     ดู
                   </Button>
@@ -252,7 +261,11 @@ export default function AiKbManagerPage() {
                     {d.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
                   </Button>
 
-                  <Button variant="danger" className="gap-2" onClick={() => openDeleteDoc(d)}>
+                  <Button
+                    variant="danger"
+                    className="gap-2"
+                    onClick={() => openDeleteDoc(d)}
+                  >
                     <Trash2 className="h-4 w-4" />
                     ลบ
                   </Button>
@@ -264,16 +277,17 @@ export default function AiKbManagerPage() {
       </Card>
 
       {/* Modals */}
-      <AiKbCreateModal
-        open={openCreate}
-        onOpenChange={setOpenCreate}
-        onCreate={async (input) => {
+      <AiKbUploadModal
+        open={openUpload}
+        onOpenChange={setOpenUpload}
+        isUploading={mut.loading.uploadDocument}
+        onUpload={async (input) => {
           try {
-            await mut.createDocument(input);
-            notify.success("สร้างเอกสารสำเร็จ");
-            setOpenCreate(false);
+            await mut.uploadDocument(input);
+            notify.success("อัปโหลดเอกสารสำเร็จ");
+            setOpenUpload(false);
           } catch (e: any) {
-            notify.error(e?.message ?? "สร้างเอกสารไม่สำเร็จ");
+            notify.error(e?.message ?? "อัปโหลดเอกสารไม่สำเร็จ");
           }
         }}
       />

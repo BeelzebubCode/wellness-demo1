@@ -1,95 +1,92 @@
+// src/features/ai-kb/hooks/useAiKbMutations.ts
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { aiKbApi } from "../api";
-import type { AiKbDoc, AiKbVersion } from "../types";
 
-type LoadingState = {
-  createDocument: boolean;
-  deleteDocument: boolean;
-  toggleActive: boolean;
-  createVersion: boolean;
-  publishVersion: boolean;
-};
+type MutateKey =
+  | "uploadDocument"
+  | "deleteDocument"
+  | "toggleActive"
+  | "createVersion"
+  | "publishVersion";
 
-const initialLoading: LoadingState = {
-  createDocument: false,
+type MutateState = Record<MutateKey, boolean>;
+
+const initialState: MutateState = {
+  uploadDocument: false,
   deleteDocument: false,
   toggleActive: false,
   createVersion: false,
   publishVersion: false,
 };
 
-export function useAiKbMutations(opts?: { onMutated?: () => void | Promise<void> }) {
-  const [loading, setLoading] = useState<LoadingState>(initialLoading);
+export type UploadDocumentInput = {
+  scope: "GLOBAL" | "TENANT";
+  universityId: number | null;
+  category?: string | null;
+  urlHint?: string | null;
+  file: File;
+  publish?: boolean; // default true
+};
 
-  const run = useCallback(
-    async <K extends keyof LoadingState, T>(key: K, fn: () => Promise<T>): Promise<T> => {
-      setLoading((p) => ({ ...p, [key]: true }));
+export function useAiKbMutations(opts?: { onMutated?: () => Promise<void> | void }) {
+  const [loading, setLoading] = useState<MutateState>(initialState);
+
+  const setBusy = useCallback((k: MutateKey, v: boolean) => {
+    setLoading((s) => ({ ...s, [k]: v }));
+  }, []);
+
+  const wrap = useCallback(
+    async <T,>(k: MutateKey, fn: () => Promise<T>) => {
+      setBusy(k, true);
       try {
-        const result = await fn();
+        const out = await fn();
         await opts?.onMutated?.();
-        return result;
+        return out;
       } finally {
-        setLoading((p) => ({ ...p, [key]: false }));
+        setBusy(k, false);
       }
     },
-    [opts],
+    [opts, setBusy],
   );
 
-  const createDocument = useCallback(
-    (input: {
-      universityId: number | null;
-      key: string;
-      title: string;
-      category?: string | null;
-      urlHint?: string | null;
-      contentType: "MARKDOWN" | "JSON";
-      markdown?: string;
-      json?: any;
-    }): Promise<{ doc: AiKbDoc }> => {
-      return run("createDocument", () => aiKbApi.createDocument(input));
-    },
-    [run],
+  const uploadDocument = useCallback(
+    (input: UploadDocumentInput) =>
+      wrap("uploadDocument", () => aiKbApi.uploadDocument(input)),
+    [wrap],
   );
 
   const deleteDocument = useCallback(
-    (id: number): Promise<{ deleted: true }> => {
-      return run("deleteDocument", () => aiKbApi.deleteDocument(id));
-    },
-    [run],
+    (id: number) => wrap("deleteDocument", () => aiKbApi.deleteDocument(id)),
+    [wrap],
   );
 
   const toggleActive = useCallback(
-    (id: number): Promise<{ doc: AiKbDoc }> => {
-      return run("toggleActive", () => aiKbApi.toggleActive(id));
-    },
-    [run],
+    (id: number) => wrap("toggleActive", () => aiKbApi.toggleActive(id)),
+    [wrap],
   );
 
   const createVersion = useCallback(
-    (
-      docId: number,
-      input: { contentType: "MARKDOWN" | "JSON"; markdown?: string; json?: any },
-    ): Promise<{ version: AiKbVersion }> => {
-      return run("createVersion", () => aiKbApi.createVersion(docId, input));
-    },
-    [run],
+    (docId: number, input: { contentType: "MARKDOWN" | "JSON"; markdown?: string; json?: any }) =>
+      wrap("createVersion", () => aiKbApi.createVersion(docId, input)),
+    [wrap],
   );
 
   const publishVersion = useCallback(
-    (versionId: number): Promise<{ published: true }> => {
-      return run("publishVersion", () => aiKbApi.publishVersion(versionId));
-    },
-    [run],
+    (versionId: number) => wrap("publishVersion", () => aiKbApi.publishVersion(versionId)),
+    [wrap],
   );
 
-  return {
-    loading, // ✅ มี loading.deleteDocument แล้ว
-    createDocument,
-    deleteDocument,
-    toggleActive,
-    createVersion,
-    publishVersion,
-  };
+  return useMemo(
+    () => ({
+      loading,
+      uploadDocument,
+      deleteDocument,
+      toggleActive,
+      createVersion,
+      publishVersion,
+    }),
+    [loading, uploadDocument, deleteDocument, toggleActive, createVersion, publishVersion],
+  );
 }

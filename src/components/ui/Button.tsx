@@ -42,7 +42,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const variantStyles = {
       primary:
         'bg-primary-500 text-white hover:bg-primary-600 shadow-lg shadow-primary-500/30 hover:shadow-primary-500/40',
-      secondary: 'bg-secondary-600 text-white hover:bg-secondary-700 shadow-md',
+      secondary: 'bg-slate-200 text-slate-900 hover:bg-slate-300',
       outline:
         'border-2 border-gray-300 bg-white text-gray-700 hover:border-primary-500 hover:text-primary-600 hover:bg-primary-50',
       ghost: 'bg-transparent text-gray-600 hover:bg-gray-100',

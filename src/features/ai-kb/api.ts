@@ -34,6 +34,7 @@ export const aiKbApi = {
         params.universityId === null ? "null" : String(params.universityId),
       );
     }
+
     const res = await fetch(
       `/api/v2/platform/ai-kb/documents?${sp.toString()}`,
       {
@@ -41,7 +42,9 @@ export const aiKbApi = {
         credentials: "include",
       },
     );
-    return assertOk<{ data: AiKbDoc[]; total: number }>(res);
+
+    // ✅ เปลี่ยนจาก {data,total} -> {docs,total}
+    return assertOk<{ docs: AiKbDoc[]; total: number }>(res);
   },
 
   // CREATE doc + initial version
@@ -87,7 +90,7 @@ export const aiKbApi = {
     const res = await fetch(
       `/api/v2/platform/ai-kb/documents/${id}/toggle-active`,
       {
-        method: "POST",
+        method: "PATCH",
         credentials: "include",
       },
     );
@@ -137,18 +140,12 @@ export const aiKbApi = {
 
   // Upload File Document
   async uploadDocument(input: {
+    scope: "GLOBAL" | "TENANT";
     universityId: number | null;
-    key: string;
-    title: string;
-    category?: string | null;
-    urlHint?: string | null;
     file: File;
   }) {
     const fd = new FormData();
-    fd.set("key", input.key);
-    fd.set("title", input.title);
-    if (input.category != null) fd.set("category", input.category);
-    if (input.urlHint != null) fd.set("urlHint", input.urlHint);
+    fd.set("scope", input.scope);
     fd.set(
       "universityId",
       input.universityId === null ? "null" : String(input.universityId),
@@ -160,6 +157,7 @@ export const aiKbApi = {
       credentials: "include",
       body: fd,
     });
-    return assertOk<{ doc: any }>(res);
+
+    return assertOk<{ doc: AiKbDoc; version: AiKbVersion }>(res);
   },
 };
