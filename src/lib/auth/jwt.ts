@@ -67,3 +67,39 @@ export function extractToken(req: NextRequest): string | null {
   if (bearer?.startsWith("Bearer ")) return bearer.slice(7).trim();
   return req.cookies.get("auth_token")?.value ?? null;
 }
+
+export type AccountFromRequest = {
+  accountId: number;
+  username: string;
+  role: Role;
+  consultantId?: number;
+  studentId?: number;
+
+  homeUniversityId?: number;
+  activeUniversityId?: number;
+  allowedUniversityIds?: number[];
+
+  tv?: number;
+};
+
+export async function getAccountFromRequest(
+  req: NextRequest
+): Promise<AccountFromRequest | null> {
+  const token = extractToken(req);
+  if (!token) return null;
+
+  const payload = await verifyToken(token);
+  if (!payload) return null;
+
+  return {
+    accountId: payload.accountId,
+    username: payload.username,
+    role: payload.role,
+    consultantId: payload.consultantId,
+    studentId: payload.studentId,
+    homeUniversityId: payload.homeUniversityId,
+    activeUniversityId: payload.activeUniversityId,
+    allowedUniversityIds: payload.allowedUniversityIds,
+    tv: payload.tv,
+  };
+}

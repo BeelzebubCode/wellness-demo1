@@ -1,15 +1,16 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { Modal, Button } from '@/components/ui';
-import type { Booking } from '@/types';
+import { useEffect, useState } from "react";
+import { Modal, Button } from "@/components/ui";
+import type { Booking } from "@/types";
 
 export interface AssignPayload {
-  assigneeId: string;
+  consultantId: number;
+  note?: string;
 }
 
 export interface AssigneeOption {
-  id: string | number;
+  id: string | number; // consultant_id
   name: string;
 }
 
@@ -24,37 +25,46 @@ export function AssignBookingModal({
   onClose: () => void;
   onConfirm: (payload: AssignPayload) => void;
 }) {
-  const [assigneeId, setAssigneeId] = useState<string>('');
+  const [consultantId, setConsultantId] = useState<string>("");
 
   useEffect(() => {
-    if (booking) setAssigneeId('');
+    if (booking) setConsultantId("");
   }, [booking]);
 
   if (!booking) return null;
 
   return (
-    <Modal isOpen={!!booking} onClose={onClose} title="แจกงานให้ผู้ให้คำปรึกษา" size="sm">
+    <Modal
+      isOpen={!!booking}
+      onClose={onClose}
+      title="แจกงานให้ผู้ให้คำปรึกษา"
+      size="sm"
+    >
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (!assigneeId) return;
-          onConfirm({ assigneeId });
+          const idNum = Number(consultantId);
+          if (!Number.isFinite(idNum)) return;
+          onConfirm({ consultantId: idNum });
         }}
         className="space-y-4"
       >
         <p className="text-xs text-gray-500">
-          คิวของ{' '}
+          คิวของ{" "}
           <span className="font-semibold text-gray-800">
-            {booking.userName ?? 'ไม่ทราบชื่อ'}
+            {booking.userName ?? "ไม่ทราบชื่อ"}
           </span>
         </p>
 
         <div>
-          <label className="block text-xs text-gray-600 mb-1">เลือกผู้ให้คำปรึกษา</label>
+          <label className="block text-xs text-gray-600 mb-1">
+            เลือกผู้ให้คำปรึกษา
+          </label>
+
           <select
             className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white"
-            value={assigneeId}
-            onChange={(e) => setAssigneeId(e.target.value)}
+            value={consultantId}
+            onChange={(e) => setConsultantId(e.target.value)}
             required
           >
             <option value="">— เลือกคนที่รับเคสนี้ —</option>
@@ -74,7 +84,7 @@ export function AssignBookingModal({
             type="submit"
             size="sm"
             className="bg-emerald-500 hover:bg-emerald-600"
-            disabled={!assigneeId}
+            disabled={!consultantId}
           >
             ยืนยันการแจกงาน
           </Button>

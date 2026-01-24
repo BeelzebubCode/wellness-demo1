@@ -64,35 +64,15 @@ export default function AdminBookingsPage() {
   const fetchAssignees = async () => {
     try {
       const res = await fetch("/api/v1/consultants");
-      if (!res.ok) throw new Error("Failed to fetch consultants");
       const data = await res.json();
 
-      // รองรับหลายรูปแบบ response (กันพัง)
-      const rows = (data.consultants ?? data.data ?? data.items ?? []) as any[];
+      const rows = (data.consultants ?? []) as any[];
 
       const mapped: AssigneeOption[] = rows
         .map((c) => {
-          // พยายามอ่าน id/name แบบยืดหยุ่น
-          const id =
-            c.id ??
-            c.consultantId ??
-            c.consultant_id ??
-            c.consultant?.id ??
-            c.consultant?.consultant_id;
-
-          const name =
-            c.name ??
-            c.fullName ??
-            c.displayName ??
-            c.profileName ??
-            c.consultant_name ??
-            (c.profile
-              ? `${c.profile.consultant_first_name ?? ""} ${
-                  c.profile.consultant_last_name ?? ""
-                }`.trim()
-              : null);
-
-          if (!id || !name) return null;
+          const id = c.id;       // ✅ consultant_id
+          const name = c.name;   // ✅ ชื่อเต็มจาก profile
+          if (typeof id !== "number" || !name) return null;
           return { id, name };
         })
         .filter(Boolean) as AssigneeOption[];
@@ -100,7 +80,7 @@ export default function AdminBookingsPage() {
       setAssignees(mapped);
     } catch (err) {
       console.error(err);
-      setAssignees([]); // ไม่ให้หน้าแตก
+      setAssignees([]);
     }
   };
 
@@ -151,16 +131,21 @@ export default function AdminBookingsPage() {
     }
   };
 
-  const handleAssign = async (payload: AssignPayload) => {
+  const handleAssign = async (payload: { consultantId: number; note?: string }) => {
     if (!assignTarget) return;
 
     try {
       setIsRefreshing(true);
-      await fetch(`/api/admin/bookings/${assignTarget.id}/assign`, {
+
+      const res = await fetch(`/api/v2/bookings/${assignTarget.id}/assign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(payload),
       });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error ?? "มอบหมายงานไม่สำเร็จ");
 
       setAssignTarget(null);
       await fetchBookings({ silent: true });

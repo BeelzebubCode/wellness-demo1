@@ -3,14 +3,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
 import { getMyBookings } from "@/services/booking/handlers/getMyBookings";
 
+const ALLOWED = ["STUDENT", "CONSULTANT", "HEAD_CONSULTANT"] as const;
+type AllowedRole = (typeof ALLOWED)[number];
+
 export async function GET(req: NextRequest) {
   try {
     const { account, activeUniversityId } = await requireTenant(req);
-    assertRole(account.role, ["STUDENT"]);
+
+    // ✅ กัน role อื่นออก และยังคุม runtime เหมือนเดิม
+    assertRole(account.role, ALLOWED);
+
+    // ✅ TS ไม่รู้ว่า assertRole narrow ให้แล้ว → ใช้ cast หลัง assert
+    const role = account.role as AllowedRole;
 
     const bookings = await getMyBookings({
       accountId: account.accountId,
       activeUniversityId,
+      role,
     });
 
     return NextResponse.json({

@@ -8,121 +8,114 @@ import { PR_MOCK } from "@/features/pr/mock";
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen w-full relative overflow-hidden bg-tenant">
+    <div className="min-h-screen w-full relative overflow-hidden">
       {/* ✅ dynamic background (ตาม tenant) */}
       <AuthLikeBackground />
 
       <main className="relative z-10">
-        <div className="pt-24 md:pt-28" />
 
         {/* =========================
-            HERO
-        ========================= */}
+            HERO (no card)
+          ========================= */}
         <section className="bg-transparent">
           <div className="max-w-7xl mx-auto px-6">
-            <div
-              className="
-                rounded-[32px]
-                bg-white/65 backdrop-blur-sm
-                shadow-[0_18px_55px_rgba(2,6,23,0.08)]
-                overflow-hidden
-              "
-              style={{ borderColor: "rgb(var(--border))" }}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 p-8 md:p-12 items-center">
-                {/* Left */}
-                <div>
-                  {/* pill */}
-                  <div
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 py-12 md:py-16 items-center">
+              {/* Left */}
+              <div>
+                {/* pill */}
+                <div
+                  className="
+            inline-flex items-center gap-2 px-4 py-1.5 rounded-full
+            bg-white/70 backdrop-blur border
+            text-sm font-semibold shadow-sm
+          "
+                  style={{
+                    borderColor: "rgb(var(--border))",
+                    color: "rgb(var(--fg))",
+                  }}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full"
+                    style={{ background: "rgb(var(--primary))" }}
+                  />
+                  Wellness Center
+                </div>
+
+                {/* title */}
+                <h1
+                  className="text-4xl md:text-5xl font-semibold leading-tight mt-5"
+                  style={{ color: "rgb(var(--fg))" }}
+                >
+                  ดูแลใจคุณ <br />
+                  <span
+                    className="italic font-serif"
+                    style={{ color: "rgb(var(--primary))" }}
+                  >
+                    อย่างอ่อนโยน
+                  </span>
+                </h1>
+
+                <p
+                  className="mt-6 max-w-md leading-relaxed"
+                  style={{ color: "rgb(var(--muted))" }}
+                >
+                  ระบบจองคิวให้คำปรึกษาสุขภาพจิตสำหรับนิสิต
+                  ดูแลคุณด้วยความเข้าใจ ความเป็นส่วนตัว และความใส่ใจ
+                </p>
+
+                {/* CTA */}
+                <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                  <Link
+                    href="/booking"
                     className="
-                      inline-flex items-center gap-2 px-4 py-1.5 rounded-full
-                      bg-white/70 border
-                      text-sm font-semibold shadow-sm
-                    "
+              px-7 py-3 rounded-full
+              text-white text-sm font-semibold
+              shadow-md transition
+              inline-flex items-center justify-center gap-2
+              btn-tenant
+            "
+                  >
+                    <CalendarDays className="w-4 h-4" />
+                    จองคิวปรึกษา
+                  </Link>
+
+                  <Link
+                    href="/booking/my-appointments"
+                    className="
+              px-7 py-3 rounded-full
+              bg-white/70 backdrop-blur
+              text-sm font-semibold
+              transition
+              inline-flex items-center justify-center gap-2
+              hover:bg-white/80
+              ring-tenant
+            "
                     style={{
-                      borderColor: "rgb(var(--border))",
+                      border: "1px solid rgb(var(--border))",
                       color: "rgb(var(--fg))",
                     }}
                   >
-                    <span
-                      className="w-2 h-2 rounded-full"
-                      style={{ background: "rgb(var(--primary))" }}
-                    />
-                    Wellness Center
-                  </div>
-
-                  {/* title */}
-                  <h1
-                    className="text-4xl md:text-5xl font-semibold leading-tight mt-5"
-                    style={{ color: "rgb(var(--fg))" }}
-                  >
-                    ดูแลใจคุณ <br />
-                    <span className="italic font-serif" style={{ color: "rgb(var(--primary))" }}>
-                      อย่างอ่อนโยน
-                    </span>
-                  </h1>
-
-                  <p className="mt-6 max-w-md leading-relaxed" style={{ color: "rgb(var(--muted))" }}>
-                    ระบบจองคิวให้คำปรึกษาสุขภาพจิตสำหรับนิสิต
-                    ดูแลคุณด้วยความเข้าใจ ความเป็นส่วนตัว และความใส่ใจ
-                  </p>
-
-                  {/* CTA */}
-                  <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                    {/* ปุ่มหลัก */}
-                    <Link
-                      href="/booking"
-                      className="
-                        px-7 py-3 rounded-full
-                        text-white text-sm font-semibold
-                        shadow-md transition
-                        inline-flex items-center justify-center gap-2
-                        btn-tenant
-                      "
-                    >
-                      <CalendarDays className="w-4 h-4" />
-                      จองคิวปรึกษา
-                    </Link>
-
-                    {/* ปุ่มรอง */}
-                    <Link
-                      href="/booking/my-appointments"
-                      className="
-                        px-7 py-3 rounded-full
-                        bg-white/70 backdrop-blur
-                        text-sm font-semibold
-                        transition
-                        inline-flex items-center justify-center gap-2
-                        hover:bg-white/80
-                        ring-tenant
-                      "
-                      style={{
-                        border: "1px solid rgb(var(--border))",
-                        color: "rgb(var(--fg))",
-                      }}
-                    >
-                      <ClipboardList className="w-4 h-4" />
-                      ตารางนัดของฉัน
-                    </Link>
-                  </div>
+                    <ClipboardList className="w-4 h-4" />
+                    ตารางนัดของฉัน
+                  </Link>
                 </div>
+              </div>
 
-                {/* Right Image */}
-                <div className="relative">
-                  <div
-                    className="
-                      rounded-3xl overflow-hidden
-                      bg-white border
-                      shadow-[0_16px_45px_rgba(2,6,23,0.10)]
-                    "
-                    style={{ borderColor: "rgb(var(--border))" }}
-                  >
-                    <img
-                      src="/images/login-illustration.png"
-                      alt="Wellness Center"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+              {/* Right Image */}
+              <div className="relative">
+                <div
+                  className="
+            rounded-3xl overflow-hidden
+            bg-white/80 backdrop-blur border
+            shadow-[0_16px_45px_rgba(2,6,23,0.10)]
+          "
+                  style={{ borderColor: "rgb(var(--border))" }}
+                >
+                  <img
+                    src="/images/login-illustration.png"
+                    alt="Wellness Center"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               </div>
             </div>

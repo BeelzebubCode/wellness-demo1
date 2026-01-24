@@ -1,19 +1,35 @@
 // src/app/api/v1/consultants/route.ts
-// ✅ Fixed: Uses Consultant model from schema
-
-import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+import { requireTenant } from "@/lib/tenant/server"; // ✅ ใช้ tenant guard
 
 // GET /api/v1/consultants
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const organizationId = searchParams.get('organizationId');
 
-    const where: Record<string, unknown> = {};
+    const organizationId = searchParams.get("organizationId");
+    const universityIdQ = searchParams.get("universityId");
 
-    if (organizationId) {
-      where.organization_id = parseInt(organizationId);
+    // ✅ ดึง activeUniversityId จาก tenant (ปลอดภัยสุด)
+    const { activeUniversityId } = await requireTenant(req);
+
+    const where: Record<string, unknown> = {
+      university_id: activeUniversityId, // ✅ ล็อกตามมหาลัยที่กำลังใช้งาน
+    };
+
+    // ✅ เผื่ออยาก filter เพิ่ม
+    if (organizationId) where.organization_id = parseInt(organizationId);
+
+    // ✅ ถ้ามีคนส่ง universityId มา ให้ “ยอม” เฉพาะกรณีตรงกับ tenant เท่านั้น
+    if (universityIdQ) {
+      const uniId = parseInt(universityIdQ);
+      if (Number.isFinite(uniId) && uniId !== activeUniversityId) {
+        return NextResponse.json(
+          { success: false, error: "universityId does not match active tenant" },
+          { status: 403 }
+        );
+      }
     }
 
     const consultants = await prisma.consultant.findMany({
@@ -31,35 +47,31 @@ export async function GET(req: NextRequest) {
           },
         },
       },
-      orderBy: { consultant_created_at: 'desc' },
+      orderBy: { consultant_created_at: "desc" },
     });
 
     const formattedConsultants = consultants.map((c) => ({
       id: c.consultant_id,
       accountId: c.account_id,
+      universityId: c.university_id, // ✅ ช่วย debug
       username: c.account.account_username,
       role: c.account.account_role,
       lineId: c.account.account_line_id,
-      
-      // Profile
+
       name: c.profile
         ? `${c.profile.consultant_first_name} ${c.profile.consultant_last_name}`
         : null,
-      firstName: c.profile?.consultant_first_name,
-      lastName: c.profile?.consultant_last_name,
-      nickname: c.profile?.consultant_nickname,
-      gender: c.profile?.consultant_gender,
-      phone: c.profile?.consultant_phone_number,
-      email: c.profile?.consultant_email,
+      firstName: c.profile?.consultant_first_name ?? null,
+      lastName: c.profile?.consultant_last_name ?? null,
+      nickname: c.profile?.consultant_nickname ?? null,
+      gender: c.profile?.consultant_gender ?? null,
+      phone: c.profile?.consultant_phone_number ?? null,
+      email: c.profile?.consultant_email ?? null,
 
-      // Organization
-      organization: c.organization.organization_name,
+      organization: c.organization?.organization_name ?? null,
       organizationId: c.organization_id,
 
-      // Specializations
       specializations: c.specializations.map((s) => s.consultant_specialization_topic),
-
-      // Languages
       languages: c.languages.map((l) => ({
         code: l.consultant_language_code,
         level: l.consultant_language_fluency_level,
@@ -68,27 +80,24 @@ export async function GET(req: NextRequest) {
       createdAt: c.consultant_created_at.toISOString(),
     }));
 
-    return NextResponse.json({
-      success: true,
-      consultants: formattedConsultants,
-    });
+    return NextResponse.json({ success: true, consultants: formattedConsultants });
   } catch (error) {
-    console.error('Error fetching consultants:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch consultants' },
-      { status: 500 }
-    );
+    console.error("Error fetching consultants:", error);
+    return NextResponse.json({ success: false, error: "Failed to fetch consultants" }, { status: 500 });
   }
 }
 
 // POST /api/v1/consultants
 export async function POST(req: NextRequest) {
   try {
+    // ✅ ดึง tenant ก่อน (เอา university_id ที่ active)
+    const { activeUniversityId } = await requireTenant(req);
+
     const body = await req.json();
     const {
       username,
       password,
-      role = 'CONSULTANT',
+      role = "CONSULTANT",
       organizationId,
       firstName,
       lastName,
@@ -100,64 +109,65 @@ export async function POST(req: NextRequest) {
       languages = [],
     } = body;
 
-    // Validation
+    // ===== Validate =====
     if (!username || !password) {
       return NextResponse.json(
-        { error: 'Username และ Password จำเป็น' },
+        { success: false, error: "Username และ Password จำเป็น" },
         { status: 400 }
       );
     }
 
-    if (!organizationId) {
+    const orgId = Number(organizationId);
+    if (!Number.isFinite(orgId) || orgId <= 0) {
       return NextResponse.json(
-        { error: 'Organization จำเป็น' },
+        { success: false, error: "Organization ไม่ถูกต้อง" },
         { status: 400 }
       );
     }
 
     if (!firstName || !lastName) {
       return NextResponse.json(
-        { error: 'ชื่อและนามสกุลจำเป็น' },
+        { success: false, error: "ชื่อและนามสกุลจำเป็น" },
         { status: 400 }
       );
     }
 
-    // Check if username exists
+    // กัน username ซ้ำ
     const existingAccount = await prisma.account.findUnique({
       where: { account_username: username },
     });
-
     if (existingAccount) {
       return NextResponse.json(
-        { error: 'Username นี้ถูกใช้งานแล้ว' },
+        { success: false, error: "Username นี้ถูกใช้งานแล้ว" },
         { status: 400 }
       );
     }
 
-    // Hash password (ควรใช้ bcrypt)
-    const bcrypt = await import('bcryptjs');
+    const bcrypt = await import("bcryptjs");
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create account, consultant, profile in transaction
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Create account
+      // 1) create account
       const account = await tx.account.create({
         data: {
           account_username: username,
           account_password: hashedPassword,
           account_role: role,
+          // ถ้าสคีมาคุณมี home university -> ใส่ได้เลย (ถ้าไม่มี ให้ลบออก)
+          // account_home_university_id: activeUniversityId,
         },
       });
 
-      // 2. Create consultant
+      // 2) create consultant (✅ ต้องใส่ university_id)
       const consultant = await tx.consultant.create({
         data: {
           account_id: account.account_id,
-          organization_id: organizationId,
+          university_id: activeUniversityId, // ✅ FIX: required field
+          organization_id: orgId,
         },
       });
 
-      // 3. Create profile
+      // 3) profile
       await tx.consultantProfile.create({
         data: {
           consultant_id: consultant.consultant_id,
@@ -170,41 +180,47 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // 4. Create specializations
-      if (specializations.length > 0) {
+      // 4) specializations
+      if (Array.isArray(specializations) && specializations.length > 0) {
         await tx.consultantSpecialization.createMany({
-          data: specializations.map((topic: string) => ({
-            consultant_id: consultant.consultant_id,
-            consultant_specialization_topic: topic,
-          })),
+          data: specializations
+            .filter(Boolean)
+            .map((topic: string) => ({
+              consultant_id: consultant.consultant_id,
+              consultant_specialization_topic: String(topic),
+            })),
         });
       }
 
-      // 5. Create languages
-      if (languages.length > 0) {
+      // 5) languages
+      if (Array.isArray(languages) && languages.length > 0) {
         await tx.consultantLanguage.createMany({
-          data: languages.map((lang: { code: string; level?: string }) => ({
-            consultant_id: consultant.consultant_id,
-            consultant_language_code: lang.code,
-            consultant_language_fluency_level: lang.level,
-          })),
+          data: languages
+            .filter((l: any) => l?.code)
+            .map((lang: { code: string; level?: string }) => ({
+              consultant_id: consultant.consultant_id,
+              consultant_language_code: String(lang.code),
+              consultant_language_fluency_level: lang.level ?? null,
+            })),
         });
       }
 
-      return consultant;
+      return { consultant, account };
     });
 
     return NextResponse.json({
       success: true,
       consultant: {
-        id: result.consultant_id,
+        id: result.consultant.consultant_id,
+        accountId: result.account.account_id,
+        universityId: activeUniversityId,
         name: `${firstName} ${lastName}`,
       },
     });
   } catch (error) {
-    console.error('Error creating consultant:', error);
+    console.error("Error creating consultant:", error);
     return NextResponse.json(
-      { error: 'Failed to create consultant' },
+      { success: false, error: "Failed to create consultant" },
       { status: 500 }
     );
   }

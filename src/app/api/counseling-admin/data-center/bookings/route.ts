@@ -1,6 +1,7 @@
 // src/app/api/admin/data-center/bookings/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { requireTenant } from "@/lib/tenant/server";
 
 const TZ = "Asia/Bangkok";
 
@@ -33,7 +34,13 @@ export async function GET(req: NextRequest) {
   const problemCategoryId = searchParams.get("problemCategoryId");
 
   try {
+    // ✅ ดึง tenant/มหาลัยที่ active ของ user
+    const { activeUniversityId } = await requireTenant(req);
+
     const where: any = {};
+
+    // ✅ ล็อกให้เห็นเฉพาะ booking ของมหาลัยตัวเอง
+    where.university_id = activeUniversityId;
 
     if (status && status !== "ALL") {
       where.booking_status = status;
@@ -53,7 +60,6 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    // ✅ แก้จาก bookingSlots.some → timeSlot.time_slot_start_datetime
     if (startDate || endDate) {
       where.timeSlot = {
         time_slot_start_datetime: {
@@ -61,7 +67,6 @@ export async function GET(req: NextRequest) {
           ...(endDate && { lte: new Date(`${endDate}T23:59:59.999Z`) }),
         },
       };
-      // ถ้าอยากตีตามเวลาไทยจริง ๆ แบบเป๊ะ ๆ ค่อยทำ TZ conversion ทีหลัง
     }
 
     const [items, total] = await Promise.all([
@@ -74,7 +79,7 @@ export async function GET(req: NextRequest) {
           student: { include: { profile: true } },
           consultant: { include: { profile: true } },
           problemCategory: true,
-          timeSlot: true, // ✅ เปลี่ยนเป็น timeSlot
+          timeSlot: true,
         },
       }),
       prisma.booking.count({ where }),
@@ -105,8 +110,12 @@ export async function GET(req: NextRequest) {
       data,
       meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("[GET /data-center/bookings] Error:", error);
-    return NextResponse.json({ error: "Failed to fetch bookings" }, { status: 500 });
+    const status = error?.status ?? 500;
+    return NextResponse.json(
+      { error: error?.message ?? "Failed to fetch bookings" },
+      { status }
+    );
   }
 }

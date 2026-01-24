@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import type { BookingStatus } from "@prisma/client";
 import { getAccountFromRequest } from "@/lib/auth/jwt";
+import { requireTenant } from "@/lib/tenant/server";
 
 /* =========================
    GET /api/v1/bookings
@@ -17,7 +18,12 @@ export async function GET(request: NextRequest) {
     const consultantId = searchParams.get("consultantId");
     const date = searchParams.get("date"); // yyyy-mm-dd
 
-    const where: any = {};
+    // ✅ tenant → active university
+    const { activeUniversityId } = await requireTenant(request);
+
+    const where: any = {
+      university_id: activeUniversityId, // 🔒 ล็อกมหาลัย
+    };
 
     if (status) where.booking_status = status;
     if (consultantId) where.consultant_id = Number(consultantId);
@@ -34,7 +40,10 @@ export async function GET(request: NextRequest) {
 
     if (studentUsername) {
       const student = await prisma.student.findFirst({
-        where: { account: { account_username: studentUsername } },
+        where: {
+          university_id: activeUniversityId, // ✅ กันข้ามมหาลัย
+          account: { account_username: studentUsername },
+        },
         select: { student_id: true },
       });
 
@@ -54,7 +63,7 @@ export async function GET(request: NextRequest) {
         },
         consultant: { include: { profile: true } },
         problemCategory: true,
-        timeSlot: true, // ✅ เปลี่ยนจาก bookingSlots
+        timeSlot: true,
         outcome: true,
         cancellation: true,
       },
@@ -116,9 +125,13 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ success: true, bookings: formatted });
-  } catch (err) {
+  } catch (err: any) {
     console.error(err);
-    return NextResponse.json({ error: "Failed to fetch bookings" }, { status: 500 });
+    const status = err?.status ?? 500;
+    return NextResponse.json(
+      { error: err?.message ?? "Failed to fetch bookings" },
+      { status }
+    );
   }
 }
 
@@ -153,14 +166,8 @@ export async function POST(request: NextRequest) {
 
     const studentId = account.studentId;
 
-    // ✅ status ที่ “นับคิว”
-    const ACTIVE_STATUSES: BookingStatus[] = [
-      "PENDING_ASSIGNMENT",
-      "ASSIGNED",
-      "IN_PROGRESS",
-    ];
+    const ACTIVE_STATUSES: BookingStatus[] = ["PENDING_ASSIGNMENT", "ASSIGNED", "IN_PROGRESS"];
 
-    // 🔍 กัน 1 คนมีได้ 1 booking active
     const existing = await prisma.booking.findFirst({
       where: { student_id: studentId, booking_status: { in: ACTIVE_STATUSES } },
       select: { booking_id: true },
@@ -171,13 +178,13 @@ export async function POST(request: NextRequest) {
     }
 
     const booking = await prisma.$transaction(async (tx) => {
-      // 1) อ่าน slot เพื่อดู capacity + status
       const timeSlot = await tx.timeSlot.findUnique({
         where: { time_slot_id: timeSlotId },
         select: {
           time_slot_id: true,
           time_slot_max_capacity: true,
           time_slot_status: true,
+          university_id: true, // ✅ เพิ่มอันนี้
         },
       });
 
@@ -186,13 +193,11 @@ export async function POST(request: NextRequest) {
       const maxCapacity = Number(timeSlot.time_slot_max_capacity ?? 0);
       if (!maxCapacity || maxCapacity <= 0) throw new Error("ช่วงเวลานี้ไม่ได้เปิดรับจอง");
 
-      // ถ้า admin ล็อก/ยกเลิก slot เอาไว้
       const slotStatus = String(timeSlot.time_slot_status || "").toUpperCase();
       if (slotStatus === "LOCKED" || slotStatus === "CANCELLED") {
         throw new Error("ช่วงเวลานี้ไม่สามารถจองได้");
       }
 
-      // 2) นับจำนวน booking active ใน slot นี้ (schema ใหม่: Booking.time_slot_id)
       const bookedCount = await tx.booking.count({
         where: {
           time_slot_id: timeSlotId,
@@ -208,25 +213,23 @@ export async function POST(request: NextRequest) {
         throw new Error("ช่วงเวลานี้เต็มแล้ว");
       }
 
-      // 3) กัน unique (student_id, time_slot_id) ที่คุณตั้งไว้ใน DB
       const dup = await tx.booking.findFirst({
         where: { student_id: studentId, time_slot_id: timeSlotId },
         select: { booking_id: true },
       });
       if (dup) throw new Error("คุณได้จองช่วงเวลานี้ไปแล้ว");
 
-      // 4) create booking (ผูก time_slot_id ตรง ๆ)
       const b = await tx.booking.create({
         data: {
+          university_id: timeSlot.university_id,
           student_id: studentId,
-          time_slot_id: timeSlotId, // ✅ สำคัญมาก
+          time_slot_id: timeSlotId,
           problem_category_id: problemCategoryId,
           booking_detail_text: detailText,
           booking_status: "PENDING_ASSIGNMENT",
         },
       });
 
-      // 5) อัปเดตสถานะ time slot หลังจอง
       const newBookedCount = bookedCount + 1;
       await tx.timeSlot.update({
         where: { time_slot_id: timeSlotId },
@@ -243,11 +246,8 @@ export async function POST(request: NextRequest) {
     console.error(err);
 
     const message =
-      err?.message && typeof err.message === "string"
-        ? err.message
-        : "Failed to create booking";
+      err?.message && typeof err.message === "string" ? err.message : "Failed to create booking";
 
-    // ถ้าเป็น error จาก logic (throw new Error) ให้ส่ง 400 จะเหมาะกว่า
     const statusCode =
       message.includes("เต็มแล้ว") ||
       message.includes("จอง") ||

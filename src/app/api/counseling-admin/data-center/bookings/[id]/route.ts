@@ -1,6 +1,7 @@
 // src/app/api/admin/data-center/bookings/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { requireTenant } from "@/lib/tenant/server";
 
 const TZ = "Asia/Bangkok";
 
@@ -28,13 +29,16 @@ function formatDateTime(d?: Date | null) {
   }).format(d);
 }
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const bookingId = Number(params.id);
   if (isNaN(bookingId)) {
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
 
   try {
+    // ✅ ล็อก tenant
+    const { activeUniversityId } = await requireTenant(req);
+
     const booking = await prisma.booking.findUnique({
       where: { booking_id: bookingId },
       include: {
@@ -46,7 +50,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         },
         consultant: { include: { profile: true, organization: true } },
         problemCategory: true,
-        timeSlot: true, // ✅ เปลี่ยนจาก bookingSlots เป็น timeSlot
+        timeSlot: true,
         outcome: true,
         cancellation: { include: { cancelledBy: true } },
       },
@@ -54,6 +58,11 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
     if (!booking) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    // ✅ กันข้ามมหาลัย (สำคัญ)
+    if (booking.university_id !== activeUniversityId) {
+      return NextResponse.json({ error: "Forbidden: university" }, { status: 403 });
     }
 
     const start = booking.timeSlot?.time_slot_start_datetime ?? null;
@@ -105,8 +114,12 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
           }
         : null,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("[GET /data-center/bookings/:id] Error:", error);
-    return NextResponse.json({ error: "Failed to fetch booking" }, { status: 500 });
+    const status = error?.status ?? 500;
+    return NextResponse.json(
+      { error: error?.message ?? "Failed to fetch booking" },
+      { status }
+    );
   }
 }
