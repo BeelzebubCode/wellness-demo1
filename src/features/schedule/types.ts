@@ -1,28 +1,10 @@
 // src/features/schedule/types.ts
+import type { TimeSlotCore, DayStatus, SlotStatus } from "@/shared/types/timeSlot";
 
-export type DayStatus = "OPEN" | "CLOSED";
+export type { DayStatus, SlotStatus };
 
-export type SlotStatus = "AVAILABLE" | "LOCKED" | "CANCELLED";
-
-export interface TimeSlot {
-  id: number;             
-  date: string;               // "YYYY-MM-DD"
-  startTime: string;          // "HH:mm"
-  endTime: string;            // "HH:mm"
-  startDateTime?: string;
-  endDateTime?: string;
-
-  maxCapacity: number;
-  bookedCount: number;
-  availableCount: number;
-
-  status: SlotStatus;
-  isAvailable: boolean;
-  isClosed: boolean;
-  isPastTime: boolean;
-
-  unavailableReason?: "PAST_TIME" | "FULL" | "CLOSED" | "UNAVAILABLE" | null;
-}
+// schedule ใช้เท่าที่มีใน core เลย
+export type TimeSlot = TimeSlotCore;
 
 export interface CreateSlotDTO {
   date: string;
@@ -37,8 +19,8 @@ export interface AutoGenerateSlotDTO {
 }
 
 export interface UpdateSlotDTO {
-  startTime?: string;
-  endTime?: string;
-  capacity?: number;     // map -> time_slot_max_capacity
-  isAvailable?: boolean; // map -> AVAILABLE / LOCKED
+  // v2 PATCH /time-slots/:id ตอนนี้รองรับแค่นี้
+  capacity?: number;
+  isAvailable?: boolean;
+  status?: SlotStatus; // ✅ เพิ่มได้ (เพราะ backend รองรับ)
 }

@@ -1,12 +1,7 @@
 // src/features/schedule/api.ts
-import type {
-  TimeSlot,
-  CreateSlotDTO,
-  AutoGenerateSlotDTO,
-  UpdateSlotDTO,
-} from "./types";
+import type { TimeSlot, AutoGenerateSlotDTO, UpdateSlotDTO, CreateSlotDTO } from "./types";
 
-const API_BASE = "/api/v1/time-slots";
+const API_BASE = "/api/v2/time-slots";
 
 export type SlotsResponse = {
   success: boolean;
@@ -16,130 +11,178 @@ export type SlotsResponse = {
   error?: string;
 };
 
+type V2GetSlotsResponse = {
+  success: boolean;
+  date?: string;
+  universityId?: number;
+  slots?: any[];
+  error?: string;
+  message?: string;
+};
+
+async function safeJson<T = any>(res: Response): Promise<T | null> {
+  const text = await res.text().catch(() => "");
+  if (!text) return null;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+}
+
+function pickError(res: Response, body: any) {
+  return body?.error || body?.message || `HTTP ${res.status}`;
+}
+
+/**
+ * ✅ normalize กัน server เปลี่ยน shape แล้ว UI พังเงียบ ๆ
+ * สำคัญ: TimeSlotCore.universityId เป็น number (required) ห้ามปล่อย undefined
+ */
+function normalizeSlot(s: any): TimeSlot {
+  const id = Number(s?.id);
+  const universityId = Number(s?.universityId);
+
+  return {
+    id: Number.isFinite(id) ? id : 0,
+    universityId: Number.isFinite(universityId) ? universityId : 0,
+
+    date: String(s?.date ?? ""),
+    startTime: String(s?.startTime ?? ""),
+    endTime: String(s?.endTime ?? ""),
+
+    startDateTime: s?.startDateTime ? String(s.startDateTime) : undefined,
+    endDateTime: s?.endDateTime ? String(s.endDateTime) : undefined,
+
+    maxCapacity: Number(s?.maxCapacity ?? 0),
+    bookedCount: Number(s?.bookedCount ?? 0),
+    availableCount: Number(s?.availableCount ?? 0),
+
+    status: (s?.status ?? "AVAILABLE") as any,
+    isAvailable: Boolean(s?.isAvailable),
+    isClosed: Boolean(s?.isClosed),
+    isPastTime: Boolean(s?.isPastTime),
+
+    unavailableReason: (s?.unavailableReason ?? null) as any,
+  };
+}
+
 export const scheduleApi = {
-  async getSlots(date: string, showAll = true): Promise<SlotsResponse> {
+  async getSlots(date: string): Promise<SlotsResponse> {
     const params = new URLSearchParams({ date });
-    if (showAll) params.set("all", "true");
 
     const res = await fetch(`${API_BASE}?${params.toString()}`, {
+      method: "GET",
+      credentials: "include",
       cache: "no-store",
+      headers: { Accept: "application/json" },
     });
 
-    const json = await res.json();
-    if (!res.ok) {
-      return { success: false, slots: [], error: json?.error ?? "Failed" };
+    const json = await safeJson<V2GetSlotsResponse>(res);
+
+    if (!res.ok || json?.success === false) {
+      return { success: false, slots: [], error: pickError(res, json) };
     }
 
-    return {
-      success: !!json.success,
-      date: json.date,
-      dayStatus: json.dayStatus,
-      slots: json.slots ?? [],
-      error: json.error,
-    };
+    const slots = Array.isArray(json?.slots) ? json!.slots.map(normalizeSlot) : [];
+    return { success: true, date: json?.date, slots };
   },
 
-  // ✅ create slot: POST แล้ว refetch (เพราะ backend ไม่คืน slots)
-  async createSlot(data: CreateSlotDTO): Promise<SlotsResponse> {
-    const res = await fetch(API_BASE, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        date: data.date,
-        slots: [
-          {
-            startTime: data.startTime,
-            endTime: data.endTime,
-            maxCapacity: data.maxCapacity ?? 1,
-          },
-        ],
-      }),
-    });
-
-    const json = await res.json();
-    if (!res.ok || !json?.success) {
-      return {
-        success: false,
-        slots: [],
-        error: json?.error ?? "Create failed",
-      };
-    }
-
-    return this.getSlots(data.date, true);
+  /**
+   * v2: ยังไม่รองรับ create รายตัว
+   * ✅ แต่ให้ signature รับ data เพื่อให้ hook/UI type ตรงกัน
+   */
+  async createSlot(_data: CreateSlotDTO): Promise<SlotsResponse> {
+    return { success: false, slots: [], error: "v2 ยังไม่รองรับการสร้าง slot รายตัว" };
   },
 
-  // ✅ auto-generate: backend ใช้ generateDefault=true
   async autoGenerateSlots(data: AutoGenerateSlotDTO): Promise<SlotsResponse> {
     const res = await fetch(API_BASE, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
         date: data.date,
         generateDefault: true,
-        maxCapacity: data.maxCapacity ?? 1,
+        // maxCapacity: data.maxCapacity ?? 2,
       }),
     });
 
-    const json = await res.json();
-    if (!res.ok || !json?.success) {
-      return {
-        success: false,
-        slots: [],
-        error: json?.error ?? "Auto-generate failed",
-      };
+    const json = await safeJson<any>(res);
+    if (!res.ok || json?.success === false) {
+      return { success: false, slots: [], error: pickError(res, json) };
     }
 
-    return this.getSlots(data.date, true);
+    return this.getSlots(data.date);
   },
 
   async deleteSlots(date: string): Promise<SlotsResponse> {
-    const res = await fetch(`${API_BASE}?date=${date}`, { method: "DELETE" });
-    const json = await res.json();
+    const res = await fetch(`${API_BASE}?date=${encodeURIComponent(date)}`, {
+      method: "DELETE",
+      credentials: "include",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
 
-    if (!res.ok || !json?.success) {
-      return {
-        success: false,
-        slots: [],
-        error: json?.error ?? "Delete failed",
-      };
+    const json = await safeJson<any>(res);
+    if (!res.ok || json?.success === false) {
+      return { success: false, slots: [], error: pickError(res, json) };
     }
 
-    return this.getSlots(date, true);
+    return this.getSlots(date);
   },
 
-  // ✅ schema: time_slot_id เป็น Int => slotId ต้องเป็น number
-  async updateSlot(
-    slotId: number,
-    updates: UpdateSlotDTO
-  ): Promise<{ success: boolean; error?: string }> {
+  async regenerate(date: string): Promise<SlotsResponse> {
+    const params = new URLSearchParams({ date, action: "regenerate" });
+
+    const res = await fetch(`${API_BASE}?${params.toString()}`, {
+      method: "PATCH",
+      credentials: "include",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+
+    const json = await safeJson<any>(res);
+    if (!res.ok || json?.success === false) {
+      return { success: false, slots: [], error: pickError(res, json) };
+    }
+
+    return this.getSlots(date);
+  },
+
+  async updateSlot(slotId: number, updates: UpdateSlotDTO): Promise<{ success: boolean; error?: string }> {
     const res = await fetch(`${API_BASE}/${slotId}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify(updates),
     });
 
-    const json = await res.json();
-    if (!res.ok || !json?.success) {
-      return { success: false, error: json?.error ?? "Update failed" };
+    const json = await safeJson<any>(res);
+    if (!res.ok || json?.success === false) {
+      return { success: false, error: pickError(res, json) };
     }
     return { success: true };
   },
 
-  async deleteSlot(
-    slotId: number
-  ): Promise<{ success: boolean; error?: string }> {
-    const res = await fetch(`${API_BASE}/${slotId}`, { method: "DELETE" });
-    const json = await res.json();
+  async deleteSlot(slotId: number): Promise<{ success: boolean; error?: string }> {
+    const res = await fetch(`${API_BASE}/${slotId}`, {
+      method: "DELETE",
+      credentials: "include",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
 
-    if (!res.ok || !json?.success) {
-      return { success: false, error: json?.error ?? "Delete slot failed" };
+    const json = await safeJson<any>(res);
+    if (!res.ok || json?.success === false) {
+      return { success: false, error: pickError(res, json) };
     }
     return { success: true };
   },
 
-  // ✅ helper สำหรับ lock/unlock (optional)
   async setSlotStatus(slotId: number, status: "AVAILABLE" | "LOCKED") {
-    return this.updateSlot(slotId, { status } as any);
+    return this.updateSlot(slotId, { status });
   },
 
   async setSlotAvailability(slotId: number, isAvailable: boolean) {

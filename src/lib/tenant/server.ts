@@ -57,49 +57,90 @@ async function resolveRequestedUniversity(req: NextRequest) {
     : null;
 }
 
+const LOCK_HOME_ONLY_ROLES = new Set([
+  "RECTOR",
+  "HEAD_CONSULTANT",
+  "ADMIN", // ✅ แนะนำให้เป็นแบบนี้ในระบบมหาลัย (ถ้าไม่อยาก lock ADMIN ก็ลบออกได้)
+]);
+
 export async function requireTenant(request: NextRequest): Promise<TenantContext> {
   const account = await getAccountFromRequest(request);
   if (!account) throw err("UNAUTHORIZED", 401);
 
   const role = String(account.role || "").toUpperCase();
 
-  const allowed = account.allowedUniversityIds ?? [];
-  if (!allowed.length) throw err("NO_ALLOWED_UNIVERSITIES", 403);
+  const allowed = Array.isArray(account.allowedUniversityIds)
+    ? account.allowedUniversityIds
+    : [];
 
-  // 1) requested tenant from domain/cookie (optional)
+  const home =
+    typeof account.homeUniversityId === "number" ? account.homeUniversityId : null;
+
+  // requested tenant from domain/cookie (optional) — เอาไว้ debug/ส่งต่อเท่านั้น
   const requested = await resolveRequestedUniversity(request);
   const requestedUniversityId = requested?.universityId ?? null;
   const tenantCode = requested?.universityCode ?? "DEFAULT";
 
-  // baseline
-  let active =
-    account.activeUniversityId ??
-    account.homeUniversityId ??
-    allowed[0] ??
-    null;
+  // =========================
+  // 1) SUPER_ADMIN: เห็นทุกมอ + สลับได้
+  // =========================
+  if (role === "SUPER_ADMIN") {
+    if (!allowed.length) throw err("NO_ALLOWED_UNIVERSITIES", 403);
 
-  // 2) if request is on subdomain/cookie tenant -> must respect it (if allowed)
-  if (
-    requestedUniversityId !== null &&
-    allowed.includes(requestedUniversityId)
-  ) {
-    active = requestedUniversityId;
-  }
+    let active =
+      account.activeUniversityId ??
+      home ??
+      allowed[0] ??
+      null;
 
-  // 3) header switching allowed for STAFF only
-  const isStaff =
-    role === "HEAD_CONSULTANT" ||
-    role === "ADMIN" ||
-    role === "SUPER_ADMIN" ||
-    role === "RECTOR";
+    // respect subdomain/cookie ถ้าอยู่ใน allowed
+    if (requestedUniversityId !== null && allowed.includes(requestedUniversityId)) {
+      active = requestedUniversityId;
+    }
 
-  if (isStaff) {
+    // ✅ header switching (เฉพาะ SUPER_ADMIN)
     const headerUni = request.headers.get("x-university-id");
     const headerUniId = headerUni ? Number(headerUni) : NaN;
     if (Number.isFinite(headerUniId) && headerUniId > 0) {
       if (!allowed.includes(headerUniId)) throw err("UNIVERSITY_NOT_ALLOWED", 403);
       active = headerUniId;
     }
+
+    if (!active || !Number.isFinite(active)) throw err("NO_UNIVERSITY_CONTEXT", 400);
+    if (!allowed.includes(active)) throw err("UNIVERSITY_NOT_ALLOWED", 403);
+
+    return { account, activeUniversityId: active, tenantCode };
+  }
+
+  // =========================
+  // 2) RECTOR / HEAD_CONSULTANT / (ADMIN): เห็นแต่มอตัวเองเท่านั้น (LOCK HOME)
+  // =========================
+  if (LOCK_HOME_ONLY_ROLES.has(role)) {
+    if (!home) throw err("NO_HOME_UNIVERSITY", 403);
+
+    // optional safety: home ต้องอยู่ใน allowed ด้วย (กัน data ผิด)
+    if (allowed.length && !allowed.includes(home)) {
+      throw err("UNIVERSITY_NOT_ALLOWED", 403);
+    }
+
+    // ✅ ไม่รับ subdomain/cookie/header switching สำหรับ role กลุ่มนี้
+    return { account, activeUniversityId: home, tenantCode };
+  }
+
+  // =========================
+  // 3) roles อื่น (STUDENT/CONSULTANT ฯลฯ): ใช้ allowed ตามปกติ
+  // =========================
+  if (!allowed.length) throw err("NO_ALLOWED_UNIVERSITIES", 403);
+
+  let active =
+    account.activeUniversityId ??
+    home ??
+    allowed[0] ??
+    null;
+
+  // respect subdomain/cookie ถ้าอยู่ใน allowed
+  if (requestedUniversityId !== null && allowed.includes(requestedUniversityId)) {
+    active = requestedUniversityId;
   }
 
   if (!active || !Number.isFinite(active)) throw err("NO_UNIVERSITY_CONTEXT", 400);

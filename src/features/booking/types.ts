@@ -1,37 +1,25 @@
 // src/features/booking/types.ts
+import type { TimeSlotCore } from "@/shared/types/timeSlot";
 
-export type BookingStatus = 
-  | 'PENDING_ASSIGNMENT' 
-  | 'ASSIGNED' 
-  | 'IN_PROGRESS' 
-  | 'COMPLETED' 
-  | 'CANCELLED';
+export type BookingStatus =
+  | "PENDING_ASSIGNMENT"
+  | "ASSIGNED"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "CANCELLED";
 
-export interface TimeSlot {
-  id: number;
-  startTime: string;
-  endTime: string;
-  isAvailable: boolean;
-
-  universityId?: number;
+// ✅ booking ต้องการ slot + consultant info บางกรณี
+export type BookingTimeSlot = Omit<
+  TimeSlotCore,
+  // booking บางหน้ามันไม่จำเป็นต้องรู้ครบ แต่การมีไว้ไม่เสียหาย
+  never
+> & {
   consultantId?: number;
   consultantName?: string | null;
-
-  date?: string;
-  startDateTime?: string;
-  endDateTime?: string;
-
-  maxCapacity?: number;
-  bookedCount?: number;
-  availableCount?: number;
-  status?: string;
-  isClosed?: boolean;
-  isPastTime?: boolean;
-  unavailableReason?: 'PAST_TIME' | 'FULL' | 'CLOSED' | 'UNAVAILABLE' | null;
-}
+};
 
 export interface Booking {
-  id: number;     
+  id: number;
   studentId: number;
   studentName: string;
   problemType: string;
@@ -42,7 +30,7 @@ export interface Booking {
   date?: string;
   startTime?: string;
   endTime?: string;
-  hasFeedback?: boolean; 
+  hasFeedback?: boolean;
 }
 
 export interface MyBooking {
@@ -59,7 +47,6 @@ export interface MyBooking {
 
   hasFeedback?: boolean;
 }
-
 
 export interface BookingDetail extends Booking {
   student: {
@@ -79,7 +66,10 @@ export interface BookingDetail extends Booking {
     phone?: string;
     organization?: string;
   };
-  timeSlots: TimeSlot[];
+
+  // ✅ เปลี่ยนตรงนี้
+  timeSlots: BookingTimeSlot[];
+
   outcome?: {
     note: string;
     nextStep?: string;
@@ -89,9 +79,9 @@ export interface BookingDetail extends Booking {
 }
 
 export interface CreateBookingDTO {
-  studentCode: string;          // ✅ บังคับ
+  studentCode: string;
   timeSlotId: number;
-  problemCategoryId: number;    // ✅ API ต้องใช้
+  problemCategoryId: number;
   detailText?: string;
 }
 

@@ -1,3 +1,5 @@
+// src/lib/auth/guard.ts
+
 import { NextResponse } from "next/server";
 import type { AccountContext } from "./context";
 

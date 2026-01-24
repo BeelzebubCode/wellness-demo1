@@ -2,26 +2,14 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { scheduleApi } from "../api";
-import type {
-  AutoGenerateSlotDTO,
-  CreateSlotDTO,
-  UpdateSlotDTO,
-} from "../types";
-
-type SlotsResponse = {
-  success: boolean;
-  slots: any[];
-  date?: string;
-  dayStatus?: "OPEN" | "CLOSED";
-  error?: string;
-};
+import { scheduleApi, type SlotsResponse } from "../api";
+import type { AutoGenerateSlotDTO, CreateSlotDTO, UpdateSlotDTO } from "../types";
 
 export function useSlotEditor() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const createSlot = useCallback(async (data: CreateSlotDTO) => {
+  const createSlot = useCallback(async (data: CreateSlotDTO): Promise<SlotsResponse> => {
     setIsSubmitting(true);
     setError(null);
 
@@ -32,14 +20,13 @@ export function useSlotEditor() {
     } catch (e) {
       console.error("createSlot error:", e);
       setError("เกิดข้อผิดพลาดในการเชื่อมต่อ");
-      const fallback: SlotsResponse = { success: false, slots: [], error: "network" };
-      return fallback;
+      return { success: false, slots: [], error: "network" };
     } finally {
       setIsSubmitting(false);
     }
   }, []);
 
-  const autoGenerate = useCallback(async (data: AutoGenerateSlotDTO) => {
+  const autoGenerate = useCallback(async (data: AutoGenerateSlotDTO): Promise<SlotsResponse> => {
     setIsSubmitting(true);
     setError(null);
 
@@ -50,14 +37,13 @@ export function useSlotEditor() {
     } catch (e) {
       console.error("autoGenerate error:", e);
       setError("เกิดข้อผิดพลาดในการเชื่อมต่อ");
-      const fallback: SlotsResponse = { success: false, slots: [], error: "network" };
-      return fallback;
+      return { success: false, slots: [], error: "network" };
     } finally {
       setIsSubmitting(false);
     }
   }, []);
 
-  const deleteSlots = useCallback(async (date: string) => {
+  const deleteSlots = useCallback(async (date: string): Promise<SlotsResponse> => {
     setIsSubmitting(true);
     setError(null);
 
@@ -68,35 +54,29 @@ export function useSlotEditor() {
     } catch (e) {
       console.error("deleteSlots error:", e);
       setError("เกิดข้อผิดพลาดในการเชื่อมต่อ");
-      const fallback: SlotsResponse = { success: false, slots: [], error: "network" };
-      return fallback;
+      return { success: false, slots: [], error: "network" };
     } finally {
       setIsSubmitting(false);
     }
   }, []);
 
-  // ✅ schema: time_slot_id เป็น Int => slotId เป็น number
-  const updateSlot = useCallback(
-    async (slotId: number, updates: UpdateSlotDTO) => {
-      setIsSubmitting(true);
-      setError(null);
+  const updateSlot = useCallback(async (slotId: number, updates: UpdateSlotDTO) => {
+    setIsSubmitting(true);
+    setError(null);
 
-      try {
-        const res = await scheduleApi.updateSlot(slotId, updates);
-        if (!res.success) setError(res.error ?? "อัปเดตไม่สำเร็จ");
-        return res;
-      } catch (e) {
-        console.error("updateSlot error:", e);
-        setError("เกิดข้อผิดพลาดในการเชื่อมต่อ");
-        return { success: false, error: "network" };
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    []
-  );
+    try {
+      const res = await scheduleApi.updateSlot(slotId, updates);
+      if (!res.success) setError(res.error ?? "อัปเดตไม่สำเร็จ");
+      return res;
+    } catch (e) {
+      console.error("updateSlot error:", e);
+      setError("เกิดข้อผิดพลาดในการเชื่อมต่อ");
+      return { success: false, error: "network" as const };
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, []);
 
-  // ✅ schema: time_slot_id เป็น Int => slotId เป็น number
   const deleteSlot = useCallback(async (slotId: number) => {
     setIsSubmitting(true);
     setError(null);
@@ -108,7 +88,7 @@ export function useSlotEditor() {
     } catch (e) {
       console.error("deleteSlot error:", e);
       setError("เกิดข้อผิดพลาดในการเชื่อมต่อ");
-      return { success: false, error: "network" };
+      return { success: false, error: "network" as const };
     } finally {
       setIsSubmitting(false);
     }

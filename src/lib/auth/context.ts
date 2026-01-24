@@ -1,3 +1,5 @@
+// src/lib/auth/context.ts
+
 import type { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { extractToken, verifyToken, JWTPayload } from "./jwt";
