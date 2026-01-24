@@ -30,7 +30,9 @@ export type UploadDocumentInput = {
   publish?: boolean; // default true
 };
 
-export function useAiKbMutations(opts?: { onMutated?: () => Promise<void> | void }) {
+export function useAiKbMutations(opts?: {
+  onMutated?: () => Promise<void> | void;
+}) {
   const [loading, setLoading] = useState<MutateState>(initialState);
 
   const setBusy = useCallback((k: MutateKey, v: boolean) => {
@@ -38,7 +40,7 @@ export function useAiKbMutations(opts?: { onMutated?: () => Promise<void> | void
   }, []);
 
   const wrap = useCallback(
-    async <T,>(k: MutateKey, fn: () => Promise<T>) => {
+    async <T>(k: MutateKey, fn: () => Promise<T>) => {
       setBusy(k, true);
       try {
         const out = await fn();
@@ -53,7 +55,13 @@ export function useAiKbMutations(opts?: { onMutated?: () => Promise<void> | void
 
   const uploadDocument = useCallback(
     (input: UploadDocumentInput) =>
-      wrap("uploadDocument", () => aiKbApi.uploadDocument(input)),
+      wrap("uploadDocument", () =>
+        aiKbApi.uploadDocument({
+          scope: input.scope,
+          universityId: input.universityId,
+          file: input.file,
+        }),
+      ),
     [wrap],
   );
 
@@ -68,13 +76,20 @@ export function useAiKbMutations(opts?: { onMutated?: () => Promise<void> | void
   );
 
   const createVersion = useCallback(
-    (docId: number, input: { contentType: "MARKDOWN" | "JSON"; markdown?: string; json?: any }) =>
-      wrap("createVersion", () => aiKbApi.createVersion(docId, input)),
+    (
+      docId: number,
+      input: {
+        contentType: "MARKDOWN" | "JSON";
+        markdown?: string;
+        json?: any;
+      },
+    ) => wrap("createVersion", () => aiKbApi.createVersion(docId, input)),
     [wrap],
   );
 
   const publishVersion = useCallback(
-    (versionId: number) => wrap("publishVersion", () => aiKbApi.publishVersion(versionId)),
+    (versionId: number) =>
+      wrap("publishVersion", () => aiKbApi.publishVersion(versionId)),
     [wrap],
   );
 
@@ -87,6 +102,13 @@ export function useAiKbMutations(opts?: { onMutated?: () => Promise<void> | void
       createVersion,
       publishVersion,
     }),
-    [loading, uploadDocument, deleteDocument, toggleActive, createVersion, publishVersion],
+    [
+      loading,
+      uploadDocument,
+      deleteDocument,
+      toggleActive,
+      createVersion,
+      publishVersion,
+    ],
   );
 }

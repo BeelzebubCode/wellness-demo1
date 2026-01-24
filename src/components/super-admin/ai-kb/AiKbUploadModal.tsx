@@ -4,8 +4,8 @@ import { useMemo, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { useUniversities } from "@/features/ai-kb/hooks/useUniversities";
 
 type UploadScope = "GLOBAL" | "TENANT";
 
@@ -24,7 +24,9 @@ export default function AiKbUploadModal(props: {
   const { open, onOpenChange, isUploading = false, onUpload } = props;
 
   const [scope, setScope] = useState<UploadScope>("GLOBAL");
-  const [universityId, setUniversityId] = useState<string>(""); // only when TENANT
+  const { items: universities, loading: uniLoading } = useUniversities();
+  const [universityId, setUniversityId] = useState<string>(""); // value เป็น string id
+
   const [file, setFile] = useState<File | null>(null);
 
   const canSubmit = useMemo(() => {
@@ -73,10 +75,21 @@ export default function AiKbUploadModal(props: {
 
             {scope === "TENANT" ? (
               <div className="md:col-span-8">
-                <Input
+                <Select
                   value={universityId}
-                  onChange={(e) => setUniversityId(e.target.value)}
-                  placeholder="universityId (เช่น 1)"
+                  onValueChange={(v) => setUniversityId(v)}
+                  options={[
+                    {
+                      value: "",
+                      label: uniLoading
+                        ? "กำลังโหลดรายชื่อมหาลัย..."
+                        : "เลือกมหาลัย",
+                    },
+                    ...universities.map((u) => ({
+                      value: String(u.id),
+                      label: u.label,
+                    })),
+                  ]}
                 />
               </div>
             ) : (
@@ -89,7 +102,9 @@ export default function AiKbUploadModal(props: {
 
         <Card className="p-3">
           <div className="text-sm font-medium text-slate-900">ไฟล์เอกสาร</div>
-          <div className="mt-1 text-xs text-slate-500">รองรับ .md / .markdown / .txt / .json</div>
+          <div className="mt-1 text-xs text-slate-500">
+            รองรับ .md / .markdown / .txt / .json
+          </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <input
@@ -106,7 +121,11 @@ export default function AiKbUploadModal(props: {
           </div>
 
           <div className="mt-4 flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isUploading}>
+            <Button
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              disabled={isUploading}
+            >
               ยกเลิก
             </Button>
             <Button onClick={submit} disabled={!canSubmit || isUploading}>

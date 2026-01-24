@@ -15,10 +15,10 @@ export async function POST(req: NextRequest, ctx: { params: { versionId: string 
   const versionId = parseId(ctx.params);
   if (!versionId) return NextResponse.json({ success: false, error: "versionId ไม่ถูกต้อง" }, { status: 400 });
 
-  const result = await publishVersion(versionId);
-  if (!result.ok) {
-    return NextResponse.json({ success: false, error: result.error }, { status: result.status });
-  }
+  const r = await publishVersion(versionId);
+  if (!r.ok) return NextResponse.json({ success: false, error: r.error }, { status: r.status });
 
-  return NextResponse.json({ success: true, document: result.document, version: result.version });
+  // ส่งกลับแบบ frontend อยากได้
+  return NextResponse.json({ success: true, data: { document: r.document, version: r.version } });
 }
+

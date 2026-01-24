@@ -31,9 +31,22 @@ export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
       { status: 404 },
     );
 
+  const versions = (data.versions ?? []).map((v: any) => ({
+    id: v.ai_kb_document_version_id,
+    documentId: v.ai_kb_document_id,
+    versionNo: v.ai_kb_version_no,
+    contentType: v.ai_kb_content_type,
+    status: v.ai_kb_version_status,
+    indexStatus: v.ai_kb_index_status,
+    sourceMd: v.ai_kb_source_md ?? null,
+    sourceJson: v.ai_kb_source_json ?? null,
+    sourcePath: v.ai_kb_source_path ?? null,
+    updatedAt: v.ai_kb_version_updated_at,
+  }));
+
   return NextResponse.json({
     success: true,
-    data: { versions: data.versions ?? [] },
+    data: { versions },
   });
 }
 
@@ -55,8 +68,23 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
   const body = await req.json().catch(() => null);
 
   const contentType = String(body?.contentType || "").toUpperCase();
-  const sourceMd = body?.sourceMd == null ? null : String(body.sourceMd);
-  const sourceJson = body?.sourceJson == null ? null : body.sourceJson;
+
+  // ✅ รองรับทั้ง sourceMd และ markdown
+  const sourceMd =
+    body?.sourceMd != null
+      ? String(body.sourceMd)
+      : body?.markdown != null
+        ? String(body.markdown)
+        : null;
+
+  // ✅ รองรับทั้ง sourceJson และ json
+  const sourceJson =
+    body?.sourceJson != null
+      ? body.sourceJson
+      : body?.json != null
+        ? body.json
+        : null;
+
   const sourcePath = body?.sourcePath == null ? null : String(body.sourcePath);
 
   if (contentType !== "MARKDOWN" && contentType !== "JSON") {

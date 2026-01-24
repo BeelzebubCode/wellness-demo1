@@ -160,4 +160,24 @@ export const aiKbApi = {
 
     return assertOk<{ doc: AiKbDoc; version: AiKbVersion }>(res);
   },
+
+  async listUniversities(params?: { q?: string }) {
+    const sp = new URLSearchParams();
+    if (params?.q) sp.set("q", params.q);
+
+    const res = await fetch(`/api/v2/platform/universities?${sp.toString()}`, {
+      method: "GET",
+      credentials: "include",
+    });
+
+    return assertOk<{
+      universities: {
+        id: number;
+        code: string;
+        nameTh: string;
+        nameEn?: string | null;
+        isActive: boolean;
+      }[];
+    }>(res);
+  },
 };
