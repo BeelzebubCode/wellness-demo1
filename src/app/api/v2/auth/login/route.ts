@@ -73,6 +73,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    /* =========================================================
+      ✅ Cookie domain computed once (ใช้ทั้งกรณี super และปกติ)
+    ========================================================= */
+    const rootDomain = normalizeRootDomain(process.env.ROOT_DOMAIN || baseDomain);
+    const cookieDomain = cookieDomainFor(rootDomain);
+
     // 1) tenant from subdomain (optional)
     const requestedUni = subdomain
       ? await prisma.university.findUnique({
@@ -141,6 +147,90 @@ export async function POST(request: NextRequest) {
         data: { account_last_login_at: new Date() },
       })
       .catch(() => {});
+
+    /* =========================================================
+      ✅ SUPER_ADMIN: platform-level (ไม่ต้องผูกมหาลัย)
+      - login ได้ที่ wellness.local (ไม่มี subdomain)
+      - activeUniversityId = null
+      - allowedUniversityIds = []
+      - tenant_code = PLATFORM
+    ========================================================= */
+    if (account.account_role === "SUPER_ADMIN") {
+      const token = await generateToken({
+        accountId: account.account_id,
+        username: account.account_username,
+        role: account.account_role,
+        homeUniversityId: account.account_home_university_id ?? undefined,
+        activeUniversityId: undefined,
+        allowedUniversityIds: [],
+      });
+
+      const res = NextResponse.json({
+        success: true,
+        token,
+        tenant: {
+          universityId: null,
+          universityCode: "PLATFORM",
+          suggestedSubdomain: null,
+        },
+        tenants: [],
+        account: {
+          id: account.account_id,
+          username: account.account_username,
+          name: account.account_username,
+          role: account.account_role,
+          consultantId: null,
+          studentId: null,
+          homeUniversityId: account.account_home_university_id ?? null,
+          allowedUniversityIds: [],
+          activeUniversityId: null,
+        },
+      });
+
+      // debug header
+      if (process.env.NODE_ENV !== "production") {
+        res.headers.set(
+          "x-auth-debug",
+          JSON.stringify({
+            hostHeader,
+            baseDomain,
+            rootDomain,
+            cookieDomain: cookieDomain ?? null,
+            superAdmin: true,
+          })
+        );
+      }
+
+      // auth_token (httpOnly)
+      res.cookies.set({
+        name: "auth_token",
+        value: token,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 7,
+        path: "/",
+        ...(cookieDomain ? { domain: cookieDomain } : {}),
+      });
+
+      // tenant_code (readable by client)
+      res.cookies.set({
+        name: "tenant_code",
+        value: "PLATFORM",
+        httpOnly: false,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 7,
+        path: "/",
+        ...(cookieDomain ? { domain: cookieDomain } : {}),
+      });
+
+      return res;
+    }
+
+    /* =========================================================
+      ✅ Normal flow (ต้องมีสิทธิ์ผูกมหาลัย)
+    ========================================================= */
 
     // 3) resolve memberships
     const consultantId = account.consultant?.consultant_id ?? null;
@@ -274,13 +364,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    /* =========================================================
-      ✅ Cookie domain: ใช้ baseDomain จาก host เป็นหลัก (กัน ENV ตั้งผิด)
-    ========================================================= */
-    const rootDomain = normalizeRootDomain(process.env.ROOT_DOMAIN || baseDomain);
-    const cookieDomain = cookieDomainFor(rootDomain);
-
-    // ✅ debug header (เฉพาะ dev) ดูว่า domain ถูกคำนวณเป็นอะไร
+    // debug header
     if (process.env.NODE_ENV !== "production") {
       res.headers.set(
         "x-auth-debug",
