@@ -1,6 +1,9 @@
+// components/super-admin/ai-kb/AiKbManagerPage.tsx
+
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -15,7 +18,6 @@ import { useAiKbDocuments } from "@/features/ai-kb/hooks/useAiKbDocuments";
 import { useAiKbMutations } from "@/features/ai-kb/hooks/useAiKbMutations";
 
 import AiKbUploadModal from "./AiKbUploadModal";
-import AiKbViewModal from "./AiKbViewModal";
 import AiKbDeleteModal from "./AikbDeleteModal";
 
 type ScopeFilter = "ALL" | "GLOBAL" | "TENANT";
@@ -39,6 +41,7 @@ function uniLabel(d: AiKbDoc) {
 }
 
 export default function AiKbManagerPage() {
+  const router = useRouter();
   const notify = useNotification();
 
   // filters
@@ -49,9 +52,8 @@ export default function AiKbManagerPage() {
 
   // modal state
   const [openUpload, setOpenUpload] = useState(false);
-  const [openView, setOpenView] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
-  const [selectedDoc, setSelectedDoc] = useState<AiKbDoc | null>(null);
+  const [deleteDoc, setDeleteDoc] = useState<AiKbDoc | null>(null);
 
   const { docs, total, isLoading, error, refetch } = useAiKbDocuments({
     q,
@@ -78,13 +80,8 @@ export default function AiKbManagerPage() {
     return [{ value: "ALL", label: "มหาลัย: ทั้งหมด" }, ...items];
   }, [docs]);
 
-  function openViewDoc(d: AiKbDoc) {
-    setSelectedDoc(d);
-    setOpenView(true);
-  }
-
   function openDeleteDoc(d: AiKbDoc) {
-    setSelectedDoc(d);
+    setDeleteDoc(d);
     setOpenDelete(true);
   }
 
@@ -98,12 +95,12 @@ export default function AiKbManagerPage() {
   }
 
   async function deleteSelected() {
-    if (!selectedDoc) return;
+    if (!deleteDoc) return;
     try {
-      await mut.deleteDocument(selectedDoc.id);
-      notify.success(`ลบเอกสารแล้ว: ${selectedDoc.key}`);
+      await mut.deleteDocument(deleteDoc.id);
+      notify.success(`ลบเอกสารแล้ว: ${deleteDoc.key}`);
       setOpenDelete(false);
-      setSelectedDoc(null);
+      setDeleteDoc(null);
     } catch (e: any) {
       notify.error(e?.message ?? "ลบเอกสารไม่สำเร็จ");
     }
@@ -244,10 +241,11 @@ export default function AiKbManagerPage() {
                 </div>
 
                 <div className="flex shrink-0 flex-wrap gap-2">
+                  {/* ✅ ดู = ไปหน้าใหม่ */}
                   <Button
                     variant="ghost"
                     className="gap-2"
-                    onClick={() => openViewDoc(d)}
+                    onClick={() => router.push(`/super-admin/ai-kb/${d.id}`)}
                   >
                     <Eye className="h-4 w-4" />
                     ดู
@@ -292,35 +290,17 @@ export default function AiKbManagerPage() {
         }}
       />
 
-      <AiKbViewModal
-        open={openView}
-        onOpenChange={setOpenView}
-        doc={selectedDoc}
-        onCreateVersion={async (docId, input) => {
-          try {
-            await mut.createVersion(docId, input);
-            notify.success("สร้างเวอร์ชันใหม่แล้ว");
-          } catch (e: any) {
-            notify.error(e?.message ?? "สร้างเวอร์ชันไม่สำเร็จ");
-          }
-        }}
-        onPublish={async (versionId) => {
-          try {
-            await mut.publishVersion(versionId);
-            notify.success("Publish แล้ว");
-          } catch (e: any) {
-            notify.error(e?.message ?? "Publish ไม่สำเร็จ");
-          }
-        }}
-      />
-
       <AiKbDeleteModal
         open={openDelete}
-        onOpenChange={setOpenDelete}
-        doc={selectedDoc}
+        onOpenChange={(v) => {
+          setOpenDelete(v);
+          if (!v) setDeleteDoc(null);
+        }}
+        doc={deleteDoc}
         onConfirm={deleteSelected}
         isDeleting={mut.loading.deleteDocument}
       />
     </div>
   );
 }
+

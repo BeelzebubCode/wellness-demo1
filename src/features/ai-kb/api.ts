@@ -73,7 +73,7 @@ export const aiKbApi = {
       method: "GET",
       credentials: "include",
     });
-    return assertOk<{ doc: AiKbDoc }>(res);
+    return assertOk<{ doc: AiKbDoc; versions?: AiKbVersion[] }>(res);
   },
 
   // DELETE doc
@@ -135,7 +135,7 @@ export const aiKbApi = {
         credentials: "include",
       },
     );
-    return assertOk<{ published: true }>(res);
+    return assertOk<{ document: AiKbDoc; version: AiKbVersion }>(res);
   },
 
   // Upload File Document

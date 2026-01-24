@@ -11,16 +11,30 @@ function parseId(params: { id: string }) {
 
 export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
   const g = await requireSuperAdmin(req);
-  if (!g.ok) return NextResponse.json({ success: false, error: g.error }, { status: g.status });
+  if (!g.ok)
+    return NextResponse.json({ success: false, error: g.error }, { status: g.status });
 
   const id = parseId(ctx.params);
-  if (!id) return NextResponse.json({ success: false, error: "id ไม่ถูกต้อง" }, { status: 400 });
+  if (!id)
+    return NextResponse.json({ success: false, error: "id ไม่ถูกต้อง" }, { status: 400 });
 
   const data = await getDocument(id);
-  if (!data) return NextResponse.json({ success: false, error: "NOT_FOUND" }, { status: 404 });
+  if (!data)
+    return NextResponse.json({ success: false, error: "NOT_FOUND" }, { status: 404 });
 
-  return NextResponse.json({ success: true, document: data.document, versions: data.versions });
+  // ✅ ให้เข้ามาตรฐาน assertOk()
+  return NextResponse.json(
+    {
+      success: true,
+      data: {
+        doc: data.document,     // ✅ เปลี่ยนชื่อ document -> doc
+        versions: data.versions // ถ้านายอยากส่ง versions มาด้วยก็ได้
+      },
+    },
+    { status: 200 },
+  );
 }
+
 
 export async function DELETE(req: NextRequest, ctx: { params: { id: string } }) {
   const g = await requireSuperAdmin(req);
@@ -34,5 +48,5 @@ export async function DELETE(req: NextRequest, ctx: { params: { id: string } }) 
     return NextResponse.json({ success: false, error: result.error }, { status: result.status });
   }
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, data: { deleted: true } });
 }
