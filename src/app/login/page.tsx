@@ -189,6 +189,16 @@ const defaultTenantVars = {
                   >
                     Student
                   </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      demoFill("superAdmin", "wellness@nu.ac.th_123456!")
+                    }
+                    className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white
+                               hover:bg-slate-50 transition"
+                  >
+                    Super Admin
+                  </button>
                 </div>
 
                 <p className="mt-8 text-xs text-slate-400">

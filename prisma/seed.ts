@@ -653,6 +653,25 @@ async function main() {
   });
 
   /* =========================================================
+  5.1) Super Admin Account
+========================================================= */
+  console.log("🛡️ Creating super admin account...");
+
+  const superAccount = await prisma.account.create({
+    data: {
+      account_username: "superAdmin",
+      account_password: PASSWORD_HASH,
+      account_role: AccountRole.SUPER_ADMIN,
+
+      // ✅ แนะนำให้เป็น null เพราะ super เป็น platform-level
+      account_home_university_id: null,
+
+      // ถ้าอยากมี line id ก็ใส่ได้ (ต้องไม่ซ้ำ)
+      // account_line_id: "U_SUPER_ADMIN_MOCK",
+    },
+  });
+
+  /* =========================================================
     6) Consultants (6 consultants: 2 per university)
   ========================================================= */
   console.log("💼 Creating consultants...");
