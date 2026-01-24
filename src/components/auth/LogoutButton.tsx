@@ -1,21 +1,17 @@
-// components/auth/LogoutButton.tsx
 "use client";
 
 import { useState } from "react";
 import { LogOut } from "lucide-react";
 import { logout } from "@/features/auth/logout";
-import { Button, Modal, ModalFooter } from "@/components/ui";
+import { Modal } from "@/components/ui";
 import { useNotificationContext } from "@/components/notification/NotificationProvider";
-import { clearTenantTheme, setTenantTheme } from "@/lib/tenant/client"; // ✅ เพิ่ม
+import { clearTenantTheme } from "@/lib/tenant/client";
 
 type Props = {
-  redirectTo?: string; // default "/login"
+  redirectTo?: string;
   label?: string;
   className?: string;
   iconOnly?: boolean;
-  confirmTitle?: string;
-  confirmDescription?: string;
-  buttonVariant?: "ghost" | "primary" | "danger";
 };
 
 function getCentralOriginFromHost() {
@@ -33,19 +29,11 @@ function getCentralOriginFromHost() {
   return `${protocol}//${baseDomain}${port ? `:${port}` : ""}`;
 }
 
-function newToastId() {
-  const c: any = globalThis.crypto;
-  return c?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
 export default function LogoutButton({
   redirectTo = "/login",
   label = "ออก",
   className,
   iconOnly = false,
-  confirmTitle = "ยืนยันออกจากระบบ",
-  confirmDescription = "ต้องการออกจากระบบใช่ไหม?",
-  buttonVariant = "danger",
 }: Props) {
   const { push } = useNotificationContext();
   const [isOpen, setIsOpen] = useState(false);
@@ -56,39 +44,23 @@ export default function LogoutButton({
     setLoading(true);
 
     try {
-      await logout(); // server clears cookies
+      await logout();
 
-      // ✅ ล้าง state ฝั่ง client ให้ theme/tenant ไม่ค้าง
-      try {
-        localStorage.removeItem("token");
-        localStorage.removeItem("auth_user");
-
-        // tenant + theme ที่ทำให้สีค้าง
-        // ✅ ล้าง tenant + รีเซ็ต data-tenant เป็น DEFAULT
-        clearTenantTheme();
-
-        // (optional) กันเหนียวถ้านายอยากให้มัน save DEFAULT กลับเข้าไปด้วย
-        // setTenantTheme("DEFAULT"); // ✅ รีเซ็ต data-tenant + localStorage ให้เป็น DEFAULT
-      } catch { }
+      localStorage.removeItem("token");
+      localStorage.removeItem("auth_user");
+      clearTenantTheme();
 
       window.dispatchEvent(new Event("auth-changed"));
       setIsOpen(false);
 
-      // ✅ ไปโดเมนกลาง (wellness.local)
       const central = getCentralOriginFromHost();
-      const url = new URL(`${central}${redirectTo}`);
-
-      url.searchParams.set("toast", "logout");
-      url.searchParams.set("toastId", newToastId());
-      url.searchParams.set("tenant", "DEFAULT");
-
-      window.location.assign(url.toString());
+      window.location.assign(`${central}${redirectTo}`);
     } catch (err) {
       console.error(err);
       push({
         type: "error",
         title: "ออกจากระบบไม่สำเร็จ",
-        message: "ลองใหม่อีกครั้ง หรือเช็กการเชื่อมต่อ",
+        message: "กรุณาลองใหม่อีกครั้ง",
         duration: 2000,
       });
     } finally {
@@ -98,6 +70,7 @@ export default function LogoutButton({
 
   return (
     <>
+      {/* Trigger */}
       <button
         type="button"
         onClick={() => setIsOpen(true)}
@@ -105,25 +78,54 @@ export default function LogoutButton({
         title="ออกจากระบบ"
       >
         <LogOut className="w-6 h-6" />
-        {!iconOnly && <span className="hidden lg:inline text-base font-semibold">{label}</span>}
+        {!iconOnly && (
+          <span className="hidden lg:inline text-base font-semibold">
+            {label}
+          </span>
+        )}
       </button>
 
-      <Modal
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-        title={confirmTitle}
-        description={confirmDescription}
-        size="sm"
-      >
-        <ModalFooter className="mt-2 grid grid-cols-2 gap-3">
-          <Button className="w-full" variant="ghost" onClick={() => setIsOpen(false)} disabled={loading}>
-            ยกเลิก
-          </Button>
+      {/* Modal */}
+      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} size="md">
+        <div className="flex flex-col items-center text-center px-6 py-8">
+          {/* Illustration */}
+          <div className="mb-6">
+            <img
+              src="/images/logout-illustration.jpg"
+              alt="Logout"
+              className="w-40 h-auto"
+            />
+          </div>
 
-          <Button className="w-full" variant={buttonVariant} onClick={onConfirm} disabled={loading}>
-            {loading ? "กำลังออก..." : "ออกจากระบบ"}
-          </Button>
-        </ModalFooter>
+          {/* Title */}
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            ยืนยันออกจากระบบหรือไม่?
+          </h2>
+
+          {/* Description */}
+          <p className="text-sm text-gray-500 max-w-sm mb-6">
+            คุณสามารถเข้าสู่ระบบใหม่ได้ทุกเมื่อ
+          </p>
+
+          {/* Actions */}
+          <div className="flex gap-4">
+            <button
+              onClick={() => setIsOpen(false)}
+              disabled={loading}
+              className="px-6 py-2 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+            >
+              ยกเลิก
+            </button>
+
+            <button
+              onClick={onConfirm}
+              disabled={loading}
+              className="px-6 py-2 rounded-full bg-black text-white hover:bg-gray-800 disabled:opacity-50"
+            >
+              {loading ? "กำลังออก..." : "ออกจากระบบ"}
+            </button>
+          </div>
+        </div>
       </Modal>
     </>
   );
