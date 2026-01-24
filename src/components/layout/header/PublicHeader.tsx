@@ -318,40 +318,51 @@ export function PublicHeader({
 
               <div className="flex items-center gap-3" suppressHydrationWarning>
                 {isLoggedIn && (
-                  <div className="hidden sm:flex items-center gap-3">
-                    <div className="flex items-center gap-2 px-2 py-1 rounded-full border border-[rgb(var(--border)/0.70)] bg-white/45">
+                  <div className="hidden sm:flex items-center gap-2">
+                    {/* Avatar + Name : สเกลเดียวกับเมนูซ้าย */}
+                    <div
+                      className="flex items-center gap-1.5 px-2 py-1 rounded-full
+                                border border-[rgb(var(--border)/0.70)] bg-white/45"
+                    >
                       {displayAvatar ? (
                         <img
                           src={displayAvatar}
                           alt={displayName}
-                          className="w-8 h-8 rounded-full ring-2 ring-white/60 object-cover"
+                          className="w-6 h-6 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-white/60 border border-[rgb(var(--border)/0.70)] flex items-center justify-center">
+                        <div
+                          className="w-6 h-6 rounded-full bg-white/60
+                                    border border-[rgb(var(--border)/0.70)]
+                                    flex items-center justify-center"
+                        >
                           <User
-                            className="w-4 h-4"
+                            className="w-3.5 h-3.5"
                             style={{ color: "rgb(var(--primary))" }}
                           />
                         </div>
                       )}
-                      <span className="text-sm font-semibold max-w-[140px] truncate text-[rgb(var(--fg))]">
+                      <span className="text-xs font-semibold max-w-[110px] truncate text-[rgb(var(--fg))]">
                         {displayName}
                       </span>
                     </div>
 
+                    {/* Logout : เล็กเท่าเมนูซ้าย */}
                     <LogoutButton
                       redirectTo="/login"
                       label="ออกจากระบบ"
                       iconOnly={false}
                       className={cn(
-                        "inline-flex items-center gap-2 px-4 py-2 rounded-full",
-                        "text-xs font-extrabold transition shadow-sm",
-                        "border border-[rgb(var(--border)/0.70)] text-[rgb(var(--fg))]",
+                        "inline-flex items-center gap-1.5 px-3 py-2 rounded-full",
+                        "text-xs font-semibold transition",
+                        "border border-[rgb(var(--border)/0.70)]",
                         "bg-white/45 hover:bg-white/70",
+                        "text-[rgb(var(--fg))]",
                       )}
                     />
                   </div>
                 )}
+
 
                 {!isLoggedIn && onLogin && (
                   <button

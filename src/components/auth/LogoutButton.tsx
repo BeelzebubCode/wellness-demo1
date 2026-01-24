@@ -77,9 +77,9 @@ export default function LogoutButton({
         className={className}
         title="ออกจากระบบ"
       >
-        <LogOut className="w-6 h-6" />
+        <LogOut className="w-4 h-4" />
         {!iconOnly && (
-          <span className="hidden lg:inline text-base font-semibold">
+          <span className="hidden lg:inline text-xs font-semibold">
             {label}
           </span>
         )}
@@ -109,18 +109,40 @@ export default function LogoutButton({
 
           {/* Actions */}
           <div className="flex gap-4">
+            {/* Cancel */}
             <button
+              type="button"
               onClick={() => setIsOpen(false)}
               disabled={loading}
-              className="px-6 py-2 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+              className="
+                px-6 py-2 rounded-full
+                border border-gray-300
+                text-gray-700 bg-white
+                text-sm font-semibold
+                hover:bg-gray-100
+                transition
+                disabled:opacity-50
+              "
             >
               ยกเลิก
             </button>
 
+            {/* Logout */}
             <button
+              type="button"
               onClick={onConfirm}
               disabled={loading}
-              className="px-6 py-2 rounded-full bg-black text-white hover:bg-gray-800 disabled:opacity-50"
+              className="
+                px-6 py-2 rounded-full
+                border border-gray-300
+                text-gray-700 bg-white
+                text-sm font-semibold
+                transition
+                hover:bg-red-50
+                hover:text-red-600
+                hover:border-red-300
+                disabled:opacity-50
+              "
             >
               {loading ? "กำลังออก..." : "ออกจากระบบ"}
             </button>
