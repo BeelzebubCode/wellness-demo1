@@ -6,7 +6,7 @@ function extractKeywords(q: string) {
   const words = cleaned
     .split(/\s+/)
     .map((x) => x.trim())
-    .filter((x) => x.length >= 2); // ไทยสั้นๆก็สำคัญ เช่น "จอง", "คิว"
+    .filter((x) => x.length >= 2);
   return Array.from(new Set(words)).slice(0, 8);
 }
 
@@ -24,7 +24,6 @@ export type KbHit = {
   title: string;
   publishedVersionId: number | null;
 
-  // อันนี้ช่วย debug ว่าดึงจากไหน
   source: "chunk" | "version_fallback";
   chunkId?: number;
   versionId?: number;
@@ -37,13 +36,27 @@ export async function getKbContext(params: {
   universityId?: number | null; // undefined = ไม่กรอง, null=global, number=tenant
   role?: string | null;
   take?: number;
+  allowedDocKeys?: string[];
 }): Promise<KbHit[]> {
-  const { q, universityId, role, take = 6 } = params;
-  const kw = q.trim();
+  const { q, universityId, role, take = 6, allowedDocKeys } = params;
+
+  const kw = (q ?? "").trim();
   if (!kw) return [];
 
   const keywords = extractKeywords(kw);
   if (keywords.length === 0) return [];
+
+  const docKeyFilter =
+    Array.isArray(allowedDocKeys) && allowedDocKeys.length > 0
+      ? { ai_kb_document_key: { in: allowedDocKeys } }
+      : {};
+
+  const uniFilter =
+    universityId === undefined
+      ? {}
+      : { OR: [{ university_id: null }, { university_id: universityId }] };
+
+  const roleFilter = role ? { roles: { some: { ai_actor_role: role } } } : {};
 
   // 1) ค้นจาก CHUNK ก่อน
   const rawChunks = await prisma.aiKbChunk.findMany({
@@ -54,12 +67,10 @@ export async function getKbContext(params: {
       document: {
         ai_kb_document_is_active: true,
         ai_kb_published_version_id: { not: null },
-        ...(universityId === undefined
-          ? {}
-          : { OR: [{ university_id: null }, { university_id: universityId }] }),
-        ...(role ? { roles: { some: { ai_actor_role: role } } } : {}),
+        ...docKeyFilter,
+        ...uniFilter,
+        ...roleFilter,
       },
-      // ✅ ให้ชัวร์ว่าเป็นเวอร์ชันที่ publish
       version: { ai_kb_version_status: "PUBLISHED" },
     },
     take: Math.min(take * 5, 60),
@@ -83,7 +94,10 @@ export async function getKbContext(params: {
   const scored = rawChunks
     .map((c) => {
       const t = (c.ai_kb_chunk_content_text ?? "").toLowerCase();
-      const score = keywords.reduce((acc, k) => (t.includes(k) ? acc + 1 : acc), 0);
+      const score = keywords.reduce(
+        (acc, k) => (t.includes(k) ? acc + 1 : acc),
+        0,
+      );
       return { c, score };
     })
     .sort((a, b) => b.score - a.score)
@@ -98,7 +112,7 @@ export async function getKbContext(params: {
       key: c.document.ai_kb_document_key,
       title: c.document.ai_kb_document_title,
       publishedVersionId: c.document.ai_kb_published_version_id,
-      text: c.ai_kb_chunk_content_text,
+      text: c.ai_kb_chunk_content_text ?? "",
     }));
   }
 
@@ -108,10 +122,9 @@ export async function getKbContext(params: {
       ai_kb_version_status: "PUBLISHED",
       document: {
         ai_kb_document_is_active: true,
-        ...(universityId === undefined
-          ? {}
-          : { OR: [{ university_id: null }, { university_id: universityId }] }),
-        ...(role ? { roles: { some: { ai_actor_role: role } } } : {}),
+        ...docKeyFilter,
+        ...uniFilter,
+        ...roleFilter,
       },
     },
     take: 10,

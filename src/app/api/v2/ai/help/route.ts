@@ -1,14 +1,9 @@
 // src/app/api/v2/ai/help/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { runHelp } from "@/services/aiHelp/runHelp";
-import prisma from "@/lib/prisma";
 
 export const runtime = "nodejs";
-
 type ChatMsg = { role: "system" | "user" | "assistant"; content: string };
-
-// 🔧 IMPORTANT: ต้องให้ตรงกับ ai_kb_document_key ใน DB ของนายจริงๆ
-const POLICY_DOC_KEY = "CHAT_NO_PROFANITY_TH";
 
 function buildSystemPrompt(tenantCode?: string) {
   return `คุณคือผู้ช่วย "ศูนย์ช่วยเหลือการใช้งานระบบ NU Wellness"
@@ -31,71 +26,78 @@ function getTenantCodeBestEffort(req: NextRequest) {
 function coerceUserMessages(input: any): ChatMsg[] {
   if (!Array.isArray(input)) return [];
   return input
-    .filter((m) => m && typeof m.role === "string" && typeof m.content === "string")
-    .filter((m) => m.role === "user" || m.role === "assistant" || m.role === "system")
-    .map((m) => ({ role: m.role, content: m.content } as ChatMsg));
+    .filter(
+      (m) => m && typeof m.role === "string" && typeof m.content === "string",
+    )
+    .filter(
+      (m) => m.role === "user" || m.role === "assistant" || m.role === "system",
+    )
+    .map((m) => ({ role: m.role, content: m.content }) as ChatMsg);
 }
 
 function lastUserText(msgs: ChatMsg[]) {
-  for (let i = msgs.length - 1; i >= 0; i--) if (msgs[i]?.role === "user") return msgs[i].content || "";
+  for (let i = msgs.length - 1; i >= 0; i--)
+    if (msgs[i]?.role === "user") return msgs[i].content || "";
   return "";
 }
 
-// โหลด policy banned words จาก DB (published JSON)
-async function loadBannedWords() {
-  const doc = await prisma.aiKbDocument.findFirst({
-    where: {
-      ai_kb_document_key: POLICY_DOC_KEY,
-      ai_kb_document_is_active: true,
-      ai_kb_published_version_id: { not: null },
-    },
-    select: { ai_kb_published_version_id: true },
-  });
-  if (!doc?.ai_kb_published_version_id) return [];
-
-  const ver = await prisma.aiKbDocumentVersion.findUnique({
-    where: { ai_kb_document_version_id: doc.ai_kb_published_version_id },
-    select: { ai_kb_content_type: true, ai_kb_source_json: true },
-  });
-  if (!ver || ver.ai_kb_content_type !== "JSON") return [];
-
-  const rules = Array.isArray((ver.ai_kb_source_json as any)?.rules)
-    ? (ver.ai_kb_source_json as any).rules
-    : [];
-
-  const bannedRule = rules.find((r: any) => r?.type === "banned_words");
-  const banned = Array.isArray(bannedRule?.banned_words) ? bannedRule.banned_words : [];
-  return banned.map((x: any) => String(x));
+async function fetchWithTimeout(url: string, init: RequestInit, ms: number) {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(t);
+  }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, message } = await req.json().catch(() => ({} as any));
+    const body = await req.json().catch(() => ({}) as any);
+    const { messages, message } = body ?? {};
 
     let userMessages: ChatMsg[] = [];
-    if (Array.isArray(messages)) userMessages = coerceUserMessages(messages).filter((m) => m.role !== "system");
-    else if (typeof message === "string" && message.trim()) userMessages = [{ role: "user", content: message.trim() }];
-    else return NextResponse.json({ error: "Missing message/messages" }, { status: 400 });
+    if (Array.isArray(messages))
+      userMessages = coerceUserMessages(messages).filter(
+        (m) => m.role !== "system",
+      );
+    else if (typeof message === "string" && message.trim())
+      userMessages = [{ role: "user", content: message.trim() }];
+    else {
+      // ✅ FIX: ไม่ส่ง 400
+      return NextResponse.json(
+        { reply: "พิมพ์คำถามสั้น ๆ ให้ผมหน่อยครับ 🙂" },
+        { status: 200 },
+      );
+    }
 
     const tenantCode = getTenantCodeBestEffort(req);
-    const systemBase: ChatMsg = { role: "system", content: buildSystemPrompt(tenantCode) };
+    const systemBase: ChatMsg = {
+      role: "system",
+      content: buildSystemPrompt(tenantCode),
+    };
+    const question = lastUserText(userMessages);
 
-    const question = lastUserText(userMessages).trim();
-    if (!question) return NextResponse.json({ reply: "พิมพ์คำถามสั้น ๆ ให้ผมหน่อยครับ 🙂" }, { status: 400 });
-
-    const bannedWords = await loadBannedWords();
-
-    // ✅ runHelp จะคืน kbText + usedDocs
     const help = await runHelp({
       question,
-      tenantCode,
       role: null,
       universityId: null,
-      bannedWords,
+      // allowedDocKeys: ["BOOKING_HOWTO_TH"], // ถ้าอยากบังคับเฉพาะบางเอกสารค่อยเปิดใช้
     });
 
     if (help.blocked) {
-      return NextResponse.json({ reply: help.reply, blocked: true, debug: { usedDocs: help.usedDocs } });
+      return NextResponse.json(
+        { reply: help.reply, blocked: true, debug: help.meta },
+        { status: 200 },
+      );
+    }
+
+    // ถ้า runHelp ตอบเป็น reply (กรณี question ว่าง) ก็คืนเลย
+    if (help.reply && !help.kbText) {
+      return NextResponse.json(
+        { reply: help.reply, debug: help.meta },
+        { status: 200 },
+      );
     }
 
     const kbMsg: ChatMsg | null = help.kbText
@@ -108,37 +110,71 @@ export async function POST(req: NextRequest) {
         }
       : null;
 
-    const baseURL = (process.env.AI_BASE_URL || "http://localhost:11434").replace(/\/+$/, "");
+    const baseURL = (
+      process.env.AI_BASE_URL || "http://localhost:11434"
+    ).replace(/\/+$/, "");
     const model = process.env.AI_MODEL || "qwen2.5:7b";
 
-    const r = await fetch(`${baseURL}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        stream: false,
-        messages: [systemBase, ...(kbMsg ? [kbMsg] : []), ...userMessages],
-        options: { temperature: 0.2 },
-      }),
-    });
+    let r: Response;
+    try {
+      r = await fetchWithTimeout(
+        `${baseURL}/api/chat`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model,
+            stream: false,
+            messages: [systemBase, ...(kbMsg ? [kbMsg] : []), ...userMessages],
+            options: { temperature: 0.2 },
+          }),
+        },
+        20000,
+      );
+    } catch (err: any) {
+      const isAbort = String(err?.name) === "AbortError";
+      return NextResponse.json(
+        {
+          reply: isAbort
+            ? "ตอนนี้ระบบตอบช้ากว่าปกติ ลองใหม่อีกครั้งนะครับ 🙏"
+            : "เชื่อมต่อ AI ไม่สำเร็จ ลองใหม่อีกครั้งนะครับ",
+          debug: { ...help.meta, timeout: isAbort },
+        },
+        { status: 200 },
+      );
+    }
 
     if (!r.ok) {
       const text = await r.text().catch(() => "");
-      return NextResponse.json({ error: "AI provider error", status: r.status, detail: text.slice(0, 2000) }, { status: 500 });
+      return NextResponse.json(
+        {
+          reply: "ขอโทษครับ ตอนนี้ตอบไม่ได้ ลองใหม่อีกครั้ง",
+          debug: {
+            ...help.meta,
+            providerStatus: r.status,
+            detail: text.slice(0, 300),
+          },
+        },
+        { status: 200 },
+      );
     }
 
-    const data = await r.json().catch(() => ({} as any));
-    const content = (data?.message?.content ?? "").trim() || "ขอโทษครับ ตอนนี้ตอบไม่ได้ ลองใหม่อีกครั้ง";
+    const data = await r.json().catch(() => ({}) as any);
+    const content =
+      (data?.message?.content ?? "").trim() ||
+      "ขอโทษครับ ตอนนี้ตอบไม่ได้ ลองใหม่อีกครั้ง";
 
-    return NextResponse.json({
-      reply: content,
-      debug: {
-        usedDocs: help.usedDocs,     // ✅ สำคัญ: ดูเลยว่าดึง doc ไหน
-        kbLen: help.kbText?.length ?? 0,
-        bannedWordsLoaded: bannedWords.length,
-      },
-    });
+    return NextResponse.json(
+      { reply: content, debug: help.meta },
+      { status: 200 },
+    );
   } catch (e: any) {
-    return NextResponse.json({ error: "Internal error", detail: String(e?.message ?? e).slice(0, 2000) }, { status: 500 });
+    return NextResponse.json(
+      {
+        reply: "ระบบมีปัญหาเล็กน้อย ลองใหม่อีกครั้งนะครับ",
+        detail: String(e?.message ?? e).slice(0, 300),
+      },
+      { status: 200 },
+    );
   }
 }
