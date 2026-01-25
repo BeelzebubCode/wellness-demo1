@@ -51,7 +51,7 @@ export async function GET(
           include: {
             problemCategory: true,
             consultant: { include: { profile: true } },
-            bookingSlots: { include: { timeSlot: true } },
+            timeSlot: true, // ✅ relation จริงใน Booking
           },
         },
       },
@@ -91,7 +91,7 @@ export async function GET(
       })),
 
       bookings: bookings.map((b) => {
-        const slot = b.bookingSlots[0]?.timeSlot;
+        const slot = b.timeSlot;
         return {
           id: b.booking_id,
           date: formatDate(slot?.time_slot_start_datetime ?? null) ?? "-",

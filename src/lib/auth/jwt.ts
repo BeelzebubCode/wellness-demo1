@@ -2,17 +2,13 @@
 import { SignJWT, jwtVerify } from "jose";
 import type { NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
+import type { AccountRole } from "@prisma/client";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "change-this-secret"
 );
 
-export type Role =
-  | "STUDENT"
-  | "CONSULTANT"
-  | "HEAD_CONSULTANT"
-  | "SUPER_ADMIN"
-  | "RECTOR";
+export type Role = AccountRole; // ✅ role เดียวกับ Prisma
 
 export type JWTPayload = {
   ver: 1;

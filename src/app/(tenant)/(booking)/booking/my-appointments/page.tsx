@@ -27,7 +27,7 @@ export default function MyAppointmentsPage() {
 
   /* ---------------- DATA ---------------- */
   const { activeBooking, pastBookings, isLoading, refetch } = useMyAppointments();
-  const { cancelBooking, isLoading: isCancelling } = useBooking();
+  const { cancelBooking, isCancelling } = useBooking();
 
   /* ---------------- ACTION ---------------- */
   const handleConfirmCancel = async () => {
@@ -165,10 +165,9 @@ export default function MyAppointmentsPage() {
             rows={3}
             className={`
               w-full p-3 rounded-xl text-sm transition border
-              ${
-                cancelError && hasSubmitted
-                  ? "border-red-400 bg-red-50 focus:ring-red-300"
-                  : "border-gray-300 focus:border-primary-500 focus:ring-primary-300"
+              ${cancelError && hasSubmitted
+                ? "border-red-400 bg-red-50 focus:ring-red-300"
+                : "border-gray-300 focus:border-primary-500 focus:ring-primary-300"
               }
               focus:outline-none focus:ring-2
             `}

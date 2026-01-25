@@ -1,6 +1,7 @@
 // ==========================================
 // 📌 Booking Page (NO LINE | DEV LOGIN MODE)
 // ==========================================
+//src\app\(tenant)\(booking)\booking\page.tsx
 
 'use client';
 
@@ -15,7 +16,7 @@ import { useMyAppointments } from '@/features/booking/hooks/useMyAppointments';
 import { useBooking } from '@/features/booking/hooks/useBooking';
 import { Button, Card, LoadingSpinner } from '@/components/ui';
 import { addDays } from '@/lib/date';
-import type { TimeSlot } from '@/features/booking/types';
+import type { BookingTimeSlot as TimeSlot } from '@/features/booking/types';
 import type { BookingFormData } from '@/components/booking/BookingForm';
 import Link from 'next/link';
 import {
@@ -32,7 +33,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'; // ✅ เพิ�
    🔐 MOCK LOGIN (DEV MODE)
    ================================================== */
 const MOCK_USER = {
-  username: 'student1',    
+  username: 'student1',
   displayName: 'Student 1',
 };
 
@@ -83,7 +84,7 @@ export default function BookingPage() {
 
   const {
     createBooking,
-    isLoading: isBookingLoading,
+    isCreating: isBookingLoading,
     error: bookingError,
     clearError,
   } = useBooking();
@@ -183,9 +184,9 @@ export default function BookingPage() {
     if (slotsSectionRef.current) {
       // setTimeout เล็กน้อยเพื่อให้ DOM render เสร็จก่อนค่อยเลื่อน (เผื่อไว้)
       setTimeout(() => {
-        slotsSectionRef.current?.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
+        slotsSectionRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
         });
       }, 100);
     }
@@ -205,7 +206,7 @@ export default function BookingPage() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <main className="flex-1 mx-auto w-full max-w-5xl px-4 pt-4 pb-24 space-y-4">
-        
+
         {/* Rules */}
         <Card className="rounded-2xl bg-primary-50 border border-primary-100">
           <div className="flex gap-3">
@@ -250,7 +251,7 @@ export default function BookingPage() {
 
           <div className="md:col-span-3 space-y-4">
             {/* ✅ 4. ติด Ref ตรงนี้ + เพิ่ม scroll-mt-20 เว้นระยะหัว */}
-            <Card 
+            <Card
               ref={slotsSectionRef}
               className="rounded-2xl bg-white shadow-sm scroll-mt-20 transition-all"
             >

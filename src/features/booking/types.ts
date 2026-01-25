@@ -92,3 +92,6 @@ export interface ProblemCategory {
   nameEn?: string;
   description?: string;
 }
+
+export type TimeSlot = BookingTimeSlot;
+

@@ -3,7 +3,7 @@
 'use client';
 
 import { cn } from '@/lib/cn';
-import type { TimeSlot } from '@/features/booking/types';
+import type { BookingTimeSlot as TimeSlot } from "@/features/booking/types";
 import { CheckCircle, XCircle, AlertTriangle, Clock } from 'lucide-react';
 
 export interface TimeSlotCardProps {

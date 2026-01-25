@@ -1,14 +1,14 @@
+// src/components/booking/MyBookingHistory.tsx
 "use client";
 
 import { useState } from "react";
 import { Card } from "@/components/ui";
 import { ClipboardList } from "lucide-react";
 
-// ✅ เปลี่ยนจาก "@/components/booking" เป็น path ตรงไฟล์จริง
 import { MyAppointmentCard } from "@/components/booking/MyAppointmentCard";
 import { BookingFeedbackModal } from "@/components/booking/BookingFeedbackModal";
 
-import type { Booking } from "@/features/booking/types";
+import type { Booking, MyBooking } from "@/features/booking/types";
 
 interface MyBookingHistoryProps {
   bookings: Booking[];
@@ -38,10 +38,26 @@ export function MyBookingHistory({ bookings, onRefresh }: MyBookingHistoryProps)
           {bookings.map((booking) => {
             const isExpanded = expandedId === booking.id;
 
+            // ✅ แปลง Booking -> MyBooking (กัน undefined -> null)
+            const myBooking: MyBooking = {
+              id: booking.id,
+              status: booking.status,
+              problemType: booking.problemType ?? null,
+
+              createdAt: booking.createdAt ?? null,
+              updatedAt: booking.updatedAt ?? null,
+
+              date: booking.date ?? null,
+              startTime: booking.startTime ?? null,
+              endTime: booking.endTime ?? null,
+
+              hasFeedback: booking.hasFeedback,
+            };
+
             return (
               <MyAppointmentCard
                 key={booking.id}
-                booking={booking}
+                booking={myBooking} // ✅ ส่ง type ที่ถูกต้อง
                 isCompact
                 isExpanded={isExpanded}
                 onToggle={() => setExpandedId(isExpanded ? null : booking.id)}

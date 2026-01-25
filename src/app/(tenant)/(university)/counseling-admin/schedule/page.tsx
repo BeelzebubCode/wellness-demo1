@@ -36,7 +36,7 @@ export default function AdminSchedulePage() {
   const fetchDailyData = useCallback(async (dateISO: string) => {
     setIsLoading(true);
     try {
-      const res = await scheduleApi.getSlots(dateISO, true);
+      const res = await scheduleApi.getSlots(dateISO);
       if (res.success) {
         setSlots(res.slots ?? []);
       } else {

@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { requireTenant } from "@/lib/tenant/server";
 
 // GET /api/v1/students
 export async function GET(req: NextRequest) {
@@ -108,6 +109,9 @@ export async function GET(req: NextRequest) {
 // POST /api/v1/students - Register student via LINE
 export async function POST(req: NextRequest) {
   try {
+
+    const { activeUniversityId } = await requireTenant(req);
+
     const body = await req.json();
     const {
       lineUserId,
@@ -175,6 +179,7 @@ export async function POST(req: NextRequest) {
       const student = await tx.student.create({
         data: {
           account_id: account.account_id,
+          university_id: activeUniversityId,
           student_status_id: defaultStatus.student_status_id,
           student_code: studentCode,
         },

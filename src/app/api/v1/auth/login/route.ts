@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { generateToken, verifyPassword } from '@/lib/auth/jwt';
+import type { AccountRole } from "@prisma/client";
 
 type LoginResponse = {
   success: boolean;
@@ -9,7 +10,7 @@ type LoginResponse = {
     id: number;
     username: string;
     name: string;
-    role: 'ADMIN' | 'HEAD_CONSULTANT' | 'CONSULTANT' | 'STUDENT';
+    role: AccountRole; // ✅ ไม่ชน RECTOR อีก
     consultantId?: number | null;
   };
   error?: string;
