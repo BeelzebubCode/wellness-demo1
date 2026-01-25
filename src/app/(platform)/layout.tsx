@@ -1,3 +1,5 @@
+// src/app/(platform)/layout.tsx
+
 "use client";
 
 import { useState } from "react";

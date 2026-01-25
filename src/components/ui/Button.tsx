@@ -3,14 +3,14 @@ import { cn } from '@/lib/cn';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success';
-  size?: 'sm' | 'md' | 'lg';
+  // ✅ 1. เพิ่ม 'icon' เข้าไปใน Type นี้
+  size?: 'sm' | 'md' | 'lg' | 'icon'; 
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
 
-  // ✅ เพิ่ม
-  fullWidth?: boolean;                // ให้กว้างเต็ม (w-full)
-  minWidth?: string | number;         // บังคับความกว้างขั้นต่ำ เช่น 120 หรือ "10rem"
+  fullWidth?: boolean;
+  minWidth?: string | number;
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -31,7 +31,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles = `
-      inline-flex items-center justify-center gap-3
+      inline-flex items-center justify-center gap-2
       font-semibold rounded-xl
       transition-all duration-200
       focus:outline-none focus:ring-4 focus:ring-offset-2
@@ -54,6 +54,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       sm: 'h-10 px-4 text-sm',
       md: 'h-12 lg:h-14 px-6 text-base lg:text-lg',
       lg: 'h-14 lg:h-16 px-8 text-lg lg:text-xl',
+      // ✅ 2. เพิ่ม Style สำหรับ icon (บังคับความกว้าง=สูง และตัด padding)
+      icon: 'h-10 w-10 p-0 text-base shrink-0', 
     };
 
     return (
@@ -62,7 +64,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(
           baseStyles,
           variantStyles[variant],
-          sizeStyles[size],
+          sizeStyles[size as keyof typeof sizeStyles], // Cast เพื่อแก้ Type Error ชั่วคราวถ้ามี
           fullWidth && 'w-full',
           className
         )}
@@ -75,7 +77,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {isLoading ? (
           <>
-            <svg className="animate-spin h-6 w-6" fill="none" viewBox="0 0 24 24">
+            <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path
                 className="opacity-75"
@@ -83,13 +85,14 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
               />
             </svg>
-            <span>กำลังโหลด...</span>
+            {/* ✅ 3. ซ่อน Text ถ้าเป็นปุ่ม Icon */}
+            {size !== 'icon' && <span>กำลังโหลด...</span>}
           </>
         ) : (
           <>
-            {leftIcon && <span className="text-xl lg:text-2xl">{leftIcon}</span>}
+            {leftIcon && <span className={size === 'icon' ? '' : 'text-xl lg:text-2xl'}>{leftIcon}</span>}
             {children}
-            {rightIcon && <span className="text-xl lg:text-2xl">{rightIcon}</span>}
+            {rightIcon && <span className={size === 'icon' ? '' : 'text-xl lg:text-2xl'}>{rightIcon}</span>}
           </>
         )}
       </button>

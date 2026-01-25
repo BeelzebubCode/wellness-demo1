@@ -44,10 +44,5 @@ export async function PATCH(req: NextRequest, ctx: { params: { id: string } }) {
       { status: 404 },
     );
 
-  // ✅ สำคัญ: ต้องห่อใน data
-  return NextResponse.json({
-    success: true,
-    data: { doc: mapDoc(updated) },
-  });
+  return NextResponse.json({ success: true, data: { doc: mapDoc(updated) } });
 }
-

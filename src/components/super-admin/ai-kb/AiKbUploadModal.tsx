@@ -1,17 +1,18 @@
+// components/super-admin/ai-kb/AiKbUploadModal.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Modal } from "@/components/ui/Modal";
-import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { useUniversities } from "@/features/ai-kb/hooks/useUniversities";
+import { FileDropzone } from "@/components/ui/FileDropzone";
 
 type UploadScope = "GLOBAL" | "TENANT";
 
 export type AiKbUploadInput = {
   scope: UploadScope;
-  universityId: number | null; // GLOBAL => null
+  universityId: number | null;
   file: File;
 };
 
@@ -25,9 +26,16 @@ export default function AiKbUploadModal(props: {
 
   const [scope, setScope] = useState<UploadScope>("GLOBAL");
   const { items: universities, loading: uniLoading } = useUniversities();
-  const [universityId, setUniversityId] = useState<string>(""); // value เป็น string id
-
+  const [universityId, setUniversityId] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      setScope("GLOBAL");
+      setUniversityId("");
+      setFile(null);
+    }
+  }, [open]);
 
   const canSubmit = useMemo(() => {
     if (!file) return false;
@@ -35,104 +43,71 @@ export default function AiKbUploadModal(props: {
     return true;
   }, [file, scope, universityId]);
 
-  function reset() {
-    setScope("GLOBAL");
-    setUniversityId("");
-    setFile(null);
-  }
-
   async function submit() {
     if (!file) return;
     const uniId = scope === "GLOBAL" ? null : Number(universityId);
     await onUpload({ scope, universityId: uniId, file });
-    reset();
   }
 
   return (
     <Modal
       open={open}
-      onOpenChange={(v) => {
-        if (!v) reset();
-        onOpenChange(v);
-      }}
-      title="อัปโหลดเอกสาร AI KB"
-      description="เลือกไฟล์แล้วอัปโหลดได้เลย (ระบบจะใช้ชื่อไฟล์เป็นชื่อเอกสาร)"
-      size="full"
+      onOpenChange={onOpenChange}
+      title="เพิ่มเอกสารใหม่ (AI KB)"
+      description="อัปโหลดเอกสารเพื่อสร้าง Knowledge Base ใหม่"
     >
-      <div className="space-y-3">
-        <Card className="p-3">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
-            <div className="md:col-span-4">
-              <Select
-                value={scope}
-                onValueChange={(v) => setScope(v as any)}
-                options={[
-                  { value: "GLOBAL", label: "Scope: Global" },
-                  { value: "TENANT", label: "Scope: Tenant" },
-                ]}
-              />
-            </div>
+      <div className="space-y-5 p-1">
+        {/* 1. ส่วนตั้งค่า */}
+        <div className="grid grid-cols-1 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-700">Scope การใช้งาน</label>
+            <Select
+              value={scope}
+              onValueChange={(v) => {
+                setScope(v as any);
+                setUniversityId("");
+              }}
+              options={[
+                { value: "GLOBAL", label: "Global (ใช้ได้ทุกมหาลัย)" },
+                { value: "TENANT", label: "Tenant (เฉพาะมหาลัย)" },
+              ]}
+            />
+          </div>
 
-            {scope === "TENANT" ? (
-              <div className="md:col-span-8">
+          {scope === "TENANT" && (
+             <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2">
+                <label className="text-xs font-semibold text-slate-700">เลือกมหาวิทยาลัย</label>
                 <Select
                   value={universityId}
                   onValueChange={(v) => setUniversityId(v)}
                   options={[
-                    {
-                      value: "",
-                      label: uniLoading
-                        ? "กำลังโหลดรายชื่อมหาลัย..."
-                        : "เลือกมหาลัย",
-                    },
-                    ...universities.map((u) => ({
-                      value: String(u.id),
-                      label: u.label,
-                    })),
+                    { value: "", label: uniLoading ? "กำลังโหลด..." : "-- กรุณาเลือก --" },
+                    ...universities.map((u) => ({ value: String(u.id), label: u.label })),
                   ]}
                 />
-              </div>
-            ) : (
-              <div className="md:col-span-8 text-sm text-slate-600 flex items-center">
-                Global: ใช้ได้ทุกมหาลัย
-              </div>
-            )}
-          </div>
-        </Card>
+             </div>
+          )}
+        </div>
 
-        <Card className="p-3">
-          <div className="text-sm font-medium text-slate-900">ไฟล์เอกสาร</div>
-          <div className="mt-1 text-xs text-slate-500">
-            รองรับ .md / .markdown / .txt / .json
-          </div>
+        {/* 2. เส้นคั่น */}
+        <div className="h-px bg-slate-100 my-2" />
 
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <input
-              type="file"
-              accept=".md,.markdown,.txt,.json"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            />
+        {/* 3. ส่วนไฟล์ */}
+        <FileDropzone 
+          label="ไฟล์เอกสารต้นฉบับ"
+          value={file}
+          onChange={setFile}
+        />
 
-            {file ? (
-              <div className="text-sm text-slate-700">
-                เลือกแล้ว: <span className="font-mono">{file.name}</span>
-              </div>
-            ) : null}
-          </div>
-
-          <div className="mt-4 flex justify-end gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => onOpenChange(false)}
-              disabled={isUploading}
-            >
-              ยกเลิก
-            </Button>
-            <Button onClick={submit} disabled={!canSubmit || isUploading}>
-              {isUploading ? "กำลังอัปโหลด..." : "อัปโหลด"}
-            </Button>
-          </div>
-        </Card>
+        {/* 4. ปุ่ม Action */}
+        <div className="flex justify-end gap-3 pt-2">
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isUploading}>
+            ยกเลิก
+          </Button>
+          <Button onClick={submit} disabled={!canSubmit || isUploading} isLoading={isUploading}>
+            อัปโหลดเอกสาร
+          </Button>
+        </div>
       </div>
     </Modal>
   );

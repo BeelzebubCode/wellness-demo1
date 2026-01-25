@@ -9,7 +9,8 @@ type MutateKey =
   | "deleteDocument"
   | "toggleActive"
   | "createVersion"
-  | "publishVersion";
+  | "publishVersion"
+  | "uploadVersion";
 
 type MutateState = Record<MutateKey, boolean>;
 
@@ -19,6 +20,7 @@ const initialState: MutateState = {
   toggleActive: false,
   createVersion: false,
   publishVersion: false,
+  uploadVersion: false,
 };
 
 export type UploadDocumentInput = {
@@ -28,6 +30,12 @@ export type UploadDocumentInput = {
   urlHint?: string | null;
   file: File;
   publish?: boolean; // default true
+};
+
+export type UploadVersionInput = {
+  docId: number;
+  file: File;
+  contentType?: "MARKDOWN" | "JSON";
 };
 
 export function useAiKbMutations(opts?: {
@@ -40,7 +48,7 @@ export function useAiKbMutations(opts?: {
   }, []);
 
   const wrap = useCallback(
-    async <T>(k: MutateKey, fn: () => Promise<T>) => {
+    async <T,>(k: MutateKey, fn: () => Promise<T>) => {
       setBusy(k, true);
       try {
         const out = await fn();
@@ -60,6 +68,17 @@ export function useAiKbMutations(opts?: {
           scope: input.scope,
           universityId: input.universityId,
           file: input.file,
+        }),
+      ),
+    [wrap],
+  );
+
+  const uploadVersion = useCallback(
+    (input: UploadVersionInput) =>
+      wrap("uploadVersion", () =>
+        aiKbApi.uploadVersion(input.docId, {
+          file: input.file,
+          contentType: input.contentType,
         }),
       ),
     [wrap],
@@ -97,6 +116,7 @@ export function useAiKbMutations(opts?: {
     () => ({
       loading,
       uploadDocument,
+      uploadVersion, // ✅ add
       deleteDocument,
       toggleActive,
       createVersion,
@@ -105,6 +125,7 @@ export function useAiKbMutations(opts?: {
     [
       loading,
       uploadDocument,
+      uploadVersion, // ✅ add
       deleteDocument,
       toggleActive,
       createVersion,

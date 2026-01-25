@@ -1,3 +1,5 @@
+// components/super-admin/ai-kb/AikbDeleteModal.tsx
+
 "use client";
 
 import { Modal } from "@/components/ui/Modal";

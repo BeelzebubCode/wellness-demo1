@@ -161,6 +161,27 @@ export const aiKbApi = {
     return assertOk<{ doc: AiKbDoc; version: AiKbVersion }>(res);
   },
 
+  // UPLOAD version for doc
+  async uploadVersion(
+    docId: number,
+    input: { file: File; contentType?: "MARKDOWN" | "JSON" },
+  ) {
+    const fd = new FormData();
+    fd.set("file", input.file);
+    if (input.contentType) fd.set("contentType", input.contentType);
+
+    const res = await fetch(
+      `/api/v2/platform/ai-kb/documents/${docId}/versions/upload`,
+      {
+        method: "POST",
+        credentials: "include",
+        body: fd,
+      },
+    );
+
+    return assertOk<{ version: AiKbVersion }>(res);
+  },
+
   async listUniversities(params?: { q?: string }) {
     const sp = new URLSearchParams();
     if (params?.q) sp.set("q", params.q);

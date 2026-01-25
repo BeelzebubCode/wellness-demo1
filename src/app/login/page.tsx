@@ -163,7 +163,7 @@ const defaultTenantVars = {
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => demoFill("head", "wellness@nu.ac.th_123456!")}
+                    onClick={() => demoFill("head_nu", "wellness@nu.ac.th_123456!")}
                     className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white
                                hover:bg-slate-50 transition"
                   >
@@ -172,7 +172,7 @@ const defaultTenantVars = {
                   <button
                     type="button"
                     onClick={() =>
-                      demoFill("consultant1", "wellness@nu.ac.th_123456!")
+                      demoFill("consultant_nu_1", "wellness@nu.ac.th_123456!")
                     }
                     className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white
                                hover:bg-slate-50 transition"

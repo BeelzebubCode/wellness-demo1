@@ -1,3 +1,5 @@
+// components/super-admin/ai-kb/AiKbViewModal.tsx
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
