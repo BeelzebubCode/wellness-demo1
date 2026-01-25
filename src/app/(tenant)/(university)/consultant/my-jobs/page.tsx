@@ -14,6 +14,9 @@ import {
   Loader2,
   ChevronDown,
   Info,
+  X,
+  Send,
+  AlertTriangle,
 } from "lucide-react";
 
 // ====================================================================
@@ -104,9 +107,22 @@ type Job = {
   id: number;
   timeRange: string;
   status: BookingStatusUI;
-  userName: string; // สำหรับ consultant = ชื่อนิสิต
-  category: string; // problemType
-  detail: string; // ถ้ายังไม่มี detail ก็ "-"
+  userName: string;
+  category: string;
+
+  // ✅ ให้ preview เป็นรายละเอียดปัญหา
+  detail: string;
+
+  // ✅ เอาไปโชว์ใน slide-down
+  bookingDetailText?: string | null;
+
+  raw?: {
+    date?: string | null;
+    startTime?: string | null;
+    endTime?: string | null;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+  };
 };
 
 type MyBookingApiRow = {
@@ -119,6 +135,14 @@ type MyBookingApiRow = {
   startTime: string | null; // "HH:mm"
   endTime: string | null; // "HH:mm"
   studentName?: string | null;
+  // ✅ เพิ่ม
+  bookingDetailText?: string | null;
+};
+
+type OutcomeDraft = {
+  consultantNote: string;
+  nextStep: string;
+  riskLevel: number | null; // 1-5 (หรือแล้วแต่คุณกำหนด)
 };
 
 export default function ConsultantMyJobsPage() {
@@ -130,6 +154,27 @@ export default function ConsultantMyJobsPage() {
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [jobs, setJobs] = useState<Job[]>([]);
+
+  // ✅ expand/collapse
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  // ✅ confirm รับเคส
+  const [confirmAccept, setConfirmAccept] = useState<{
+    open: boolean;
+    job: Job | null;
+  }>({ open: false, job: null });
+
+  // ✅ modal ส่งงาน + ฟอร์ม
+  const [outcomeModal, setOutcomeModal] = useState<{
+    open: boolean;
+    job: Job | null;
+  }>({ open: false, job: null });
+
+  const [outcomeDraft, setOutcomeDraft] = useState<OutcomeDraft>({
+    consultantNote: "",
+    nextStep: "",
+    riskLevel: 2,
+  });
 
   // Stats State
   const [stats, setStats] = useState({
@@ -149,21 +194,19 @@ export default function ConsultantMyJobsPage() {
     if (!v) return;
     const [y, m, d] = v.split("-").map(Number);
     setSelectedDate(new Date(y, m - 1, d)); // ✅ local time
+    setExpandedId(null); // เปลี่ยนวันแล้วพับทุกการ์ด
   };
 
   const [refreshKey, setRefreshKey] = useState(0);
   const triggerRefresh = () => setRefreshKey((x) => x + 1);
 
-
   // ✅ map status จาก Prisma -> UI (ยึด DB ล้วน ๆ)
   const mapStatus = (s: string): BookingStatusUI => {
     const db = String(s || "").toUpperCase();
-
     if (db === "IN_PROGRESS") return "IN_PROGRESS";
     if (db === "COMPLETED") return "COMPLETED";
     if (db === "CANCELLED") return "CANCELLED";
-
-    // ASSIGNED / PENDING_ASSIGNMENT ให้แสดงเป็นรอดำเนินการ
+    // ASSIGNED / PENDING_ASSIGNMENT => PENDING
     return "PENDING";
   };
 
@@ -185,7 +228,6 @@ export default function ConsultantMyJobsPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? "อัปเดตสถานะไม่สำเร็จ");
 
-      // ✅ เอาค่าสถานะจริงจาก DB ที่ API ตอบกลับมา
       const dbStatus = String(data?.booking?.booking_status || "").toUpperCase();
       return mapStatus(dbStatus);
     } catch (err) {
@@ -197,39 +239,80 @@ export default function ConsultantMyJobsPage() {
     }
   }
 
-  // --- action เมื่อกดปุ่ม "จัดการเคส" ---
-  const handleManageCase = async (job: Job) => {
+  // --- action เมื่อกดปุ่มใน job ---
+  const handleAction = async (job: Job) => {
     if (actionLoadingId) return;
 
-    // รับเคส
+    // 1) รอรับเคส -> เปิด confirm modal
     if (job.status === "PENDING") {
-      const next = await updateBookingStatus(job.id, "IN_PROGRESS");
-      if (!next) return;
-
-      setJobs((prev) =>
-        prev.map((j) => (j.id === job.id ? { ...j, status: next } : j))
-      );
-
-      // ✅ อัปเดต stats แบบเบา ๆ
-      setStats((s) => ({
-        ...s,
-        pending: Math.max(0, s.pending - 1),
-        inProgress: s.inProgress + 1,
-      }));
-
+      setConfirmAccept({ open: true, job });
       return;
     }
 
-    // ปิดเคส
+    // 2) กำลังคุย -> เปิด modal ส่งงาน (กรอก outcome)
     if (job.status === "IN_PROGRESS") {
-      const ok = window.confirm("ยืนยันปิดเคสนี้?");
-      if (!ok) return;
+      setOutcomeDraft({
+        consultantNote: "",
+        nextStep: "",
+        riskLevel: 2,
+      });
+      setOutcomeModal({ open: true, job });
+      return;
+    }
 
-      const next = await updateBookingStatus(job.id, "COMPLETED");
-      if (!next) return;
+    alert("เคสนี้ปิดแล้ว/ยกเลิกแล้ว");
+  };
 
+  // --- ยืนยันรับเคสจริง ---
+  const confirmAcceptJob = async () => {
+    const job = confirmAccept.job;
+    if (!job) return;
+
+    const next = await updateBookingStatus(job.id, "IN_PROGRESS");
+    if (!next) return;
+
+    setJobs((prev) => prev.map((j) => (j.id === job.id ? { ...j, status: next } : j)));
+
+    setStats((s) => ({
+      ...s,
+      pending: Math.max(0, s.pending - 1),
+      inProgress: s.inProgress + 1,
+    }));
+
+    setConfirmAccept({ open: false, job: null });
+  };
+
+  // --- ส่งงานจริง: save outcome -> update status COMPLETED ---
+  const submitOutcomeAndComplete = async () => {
+    const job = outcomeModal.job;
+    if (!job) return;
+
+    // validate เบา ๆ
+    if (!outcomeDraft.consultantNote.trim()) {
+      alert("กรุณากรอกสรุป/รายละเอียดการให้คำปรึกษา");
+      return;
+    }
+
+    setActionLoadingId(job.id);
+    try {
+      const res = await fetch(`/api/v2/bookings/${job.id}/complete`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        cache: "no-store",
+        body: JSON.stringify({
+          consultantNote: outcomeDraft.consultantNote,
+          nextStep: outcomeDraft.nextStep?.trim() ? outcomeDraft.nextStep.trim() : null,
+          riskLevel: outcomeDraft.riskLevel, // 1-5 หรือ null
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error ?? "ส่งงานไม่สำเร็จ");
+
+      // ✅ status ฝั่ง UI ให้เป็น COMPLETED ทันที
       setJobs((prev) =>
-        prev.map((j) => (j.id === job.id ? { ...j, status: next } : j))
+        prev.map((j) => (j.id === job.id ? { ...j, status: "COMPLETED" } : j))
       );
 
       setStats((s) => ({
@@ -238,10 +321,14 @@ export default function ConsultantMyJobsPage() {
         completed: s.completed + 1,
       }));
 
-      return;
+      setOutcomeModal({ open: false, job: null });
+      setExpandedId(job.id);
+    } catch (err: any) {
+      console.error(err);
+      alert(err?.message ?? "ส่งงานไม่สำเร็จ");
+    } finally {
+      setActionLoadingId(null);
     }
-
-    alert("เคสนี้ปิดแล้ว/ยกเลิกแล้ว");
   };
 
   // --- Fetch งานจริง ---
@@ -273,14 +360,30 @@ export default function ConsultantMyJobsPage() {
             : dayRows.filter((r) => mapStatus(r.status) === statusFilter);
 
         // ✅ map เป็น UI jobs
-        const mapped: Job[] = filteredRows.map((r) => ({
-          id: r.id,
-          timeRange: `${r.startTime ?? "--:--"} - ${r.endTime ?? "--:--"}`,
-          status: mapStatus(r.status), // ✅ เปลี่ยน
-          userName: r.studentName ?? "ไม่ระบุชื่อ",
-          category: r.problemType ?? "-",
-          detail: "-", // ถ้ายังไม่ส่ง booking_detail_text ใน DTO ก็เป็น '-'
-        }));
+        const mapped: Job[] = filteredRows.map((r) => {
+          const detailFull = (r.bookingDetailText ?? "").trim();
+          const preview =
+            detailFull.length > 70 ? detailFull.slice(0, 70) + "..." : detailFull;
+
+          return {
+            id: r.id,
+            timeRange: `${r.startTime ?? "--:--"} - ${r.endTime ?? "--:--"}`,
+            status: mapStatus(r.status),
+            userName: r.studentName ?? "ไม่ระบุชื่อ",
+            category: r.problemType ?? "-",
+
+            detail: preview || "-",                 // ✅ preview ใต้ชื่อ
+            bookingDetailText: r.bookingDetailText ?? null, // ✅ ตัวเต็ม
+
+            raw: {
+              date: r.date,
+              startTime: r.startTime,
+              endTime: r.endTime,
+              createdAt: r.createdAt,
+              updatedAt: r.updatedAt,
+            },
+          };
+        });
 
         // ✅ stats ของวันนั้น (นับจาก dayRows ก่อน filter)
         const statuses = dayRows.map((r) => mapStatus(r.status));
@@ -344,7 +447,7 @@ export default function ConsultantMyJobsPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 pb-20 relative overflow-hidden selection:bg-teal-200 selection:text-teal-900">
-      {/* Decorative Globs (แบบเดิม) */}
+      {/* Decorative Globs */}
       <div className="fixed top-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full bg-teal-100/30 blur-[100px] pointer-events-none z-0 mix-blend-multiply" />
       <div className="fixed bottom-[-10%] left-[-5%] w-[400px] h-[400px] rounded-full bg-blue-100/30 blur-[80px] pointer-events-none z-0 mix-blend-multiply" />
 
@@ -353,14 +456,12 @@ export default function ConsultantMyJobsPage() {
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 pb-4 border-b border-slate-200/60">
           {/* Title Section */}
           <div className="flex items-center gap-3">
-            {/* Icon */}
             <div className="w-11 h-11 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100 shrink-0">
               <div className="w-6 h-6 bg-teal-50 rounded-lg flex items-center justify-center text-teal-600">
                 <ClipboardList className="w-4 h-4" />
               </div>
             </div>
 
-            {/* Text */}
             <div className="flex flex-col space-y-[4px]">
               <p className="text-xl font-extrabold text-slate-800 tracking-tight leading-none">
                 งานของฉัน
@@ -411,30 +512,10 @@ export default function ConsultantMyJobsPage() {
 
         {/* ================= 2. STATS WIDGETS ================= */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatWidget
-            title="นัดหมายวันนี้"
-            value={stats.today}
-            icon={CalendarClock}
-            theme="teal"
-          />
-          <StatWidget
-            title="รอดำเนินการ"
-            value={stats.pending}
-            icon={Clock3}
-            theme="amber"
-          />
-          <StatWidget
-            title="กำลังดำเนินการ"
-            value={stats.inProgress}
-            icon={PlayCircle}
-            theme="indigo"
-          />
-          <StatWidget
-            title="ปิดเคสแล้ว"
-            value={stats.completed}
-            icon={CheckCircle2}
-            theme="emerald"
-          />
+          <StatWidget title="นัดหมายวันนี้" value={stats.today} icon={CalendarClock} theme="teal" />
+          <StatWidget title="รอดำเนินการ" value={stats.pending} icon={Clock3} theme="amber" />
+          <StatWidget title="กำลังดำเนินการ" value={stats.inProgress} icon={PlayCircle} theme="indigo" />
+          <StatWidget title="ปิดเคสแล้ว" value={stats.completed} icon={CheckCircle2} theme="emerald" />
         </div>
 
         {/* ================= 3. CONTENT GRID ================= */}
@@ -481,8 +562,12 @@ export default function ConsultantMyJobsPage() {
                       <JobItem
                         key={job.id}
                         job={job}
+                        expanded={expandedId === job.id}
+                        onToggle={() =>
+                          setExpandedId((cur) => (cur === job.id ? null : job.id))
+                        }
                         getStatusBadge={getStatusBadge}
-                        onManage={() => handleManageCase(job)}
+                        onAction={() => handleAction(job)}
                         isActing={actionLoadingId === job.id}
                       />
                     ))}
@@ -507,24 +592,16 @@ export default function ConsultantMyJobsPage() {
                 </div>
 
                 <ul className="space-y-3">
-                  <InstructionItem
-                    text={
-                      <span>
-                        งานที่ได้รับมอบหมายจากแอดมินจะแสดงในหน้านี้อัตโนมัติ
-                      </span>
-                    }
-                  />
+                  <InstructionItem text={<span>งานที่ได้รับมอบหมายจากแอดมินจะแสดงในหน้านี้อัตโนมัติ</span>} />
                   <InstructionItem
                     text={
                       <span>
                         เมื่อเริ่มการให้คำปรึกษา ให้กด{" "}
                         <span className="text-indigo-600 font-bold bg-indigo-50 px-1 rounded">
-                          "จัดการเคส"
+                          "รับเคส"
                         </span>{" "}
                         เพื่อเปลี่ยนสถานะเป็น{" "}
-                        <span className="text-indigo-600 font-bold">
-                          กำลังดำเนินการ
-                        </span>
+                        <span className="text-indigo-600 font-bold">กำลังดำเนินการ</span>
                       </span>
                     }
                   />
@@ -533,13 +610,9 @@ export default function ConsultantMyJobsPage() {
                       <span>
                         หลังให้คำปรึกษาเสร็จสิ้น ให้กด{" "}
                         <span className="text-emerald-600 font-bold bg-emerald-50 px-1 rounded">
-                          "จัดการเคส"
+                          "ส่งงาน"
                         </span>{" "}
-                        อีกครั้งเพื่อ{" "}
-                        <span className="text-emerald-600 font-bold">
-                          ปิดเคส
-                        </span>{" "}
-                        และเก็บในสถิติ
+                        เพื่อกรอกผลการให้คำปรึกษา แล้วระบบจะปิดเคสให้อัตโนมัติ
                       </span>
                     }
                   />
@@ -550,9 +623,7 @@ export default function ConsultantMyJobsPage() {
             {/* Widget 2: Summary */}
             <Card>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-slate-800 text-sm">
-                  สรุปงานวันนี้
-                </h3>
+                <h3 className="font-bold text-slate-800 text-sm">สรุปงานวันนี้</h3>
                 <span className="text-[10px] font-bold tracking-wider text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full uppercase">
                   Update
                 </span>
@@ -561,26 +632,43 @@ export default function ConsultantMyJobsPage() {
               <div className="space-y-2.5">
                 <SummaryRow label="จำนวนเคสทั้งหมด" value={stats.today} isTotal />
                 <div className="border-t border-slate-100 border-dashed my-1"></div>
-                <SummaryRow
-                  label="รอดำเนินการ"
-                  value={stats.pending}
-                  color="bg-amber-100 text-amber-700"
-                />
-                <SummaryRow
-                  label="กำลังดำเนินการ"
-                  value={stats.inProgress}
-                  color="bg-indigo-100 text-indigo-700"
-                />
-                <SummaryRow
-                  label="เสร็จสิ้น"
-                  value={stats.completed}
-                  color="bg-emerald-100 text-emerald-700"
-                />
+                <SummaryRow label="รอดำเนินการ" value={stats.pending} color="bg-amber-100 text-amber-700" />
+                <SummaryRow label="กำลังดำเนินการ" value={stats.inProgress} color="bg-indigo-100 text-indigo-700" />
+                <SummaryRow label="เสร็จสิ้น" value={stats.completed} color="bg-emerald-100 text-emerald-700" />
               </div>
             </Card>
           </div>
         </div>
       </main>
+
+      {/* ================= MODALS ================= */}
+
+      {/* Confirm รับเคส */}
+      <ConfirmModal
+        open={confirmAccept.open}
+        title="ยืนยันการรับเคส"
+        description={
+          confirmAccept.job
+            ? `ต้องการรับเคสของ “${confirmAccept.job.userName}” ใช่ไหม?`
+            : ""
+        }
+        confirmText="ยืนยันรับเคส"
+        cancelText="ยกเลิก"
+        loading={!!confirmAccept.job && actionLoadingId === confirmAccept.job.id}
+        onClose={() => setConfirmAccept({ open: false, job: null })}
+        onConfirm={confirmAcceptJob}
+      />
+
+      {/* ส่งงาน: กรอก Outcome */}
+      <OutcomeModal
+        open={outcomeModal.open}
+        job={outcomeModal.job}
+        draft={outcomeDraft}
+        setDraft={setOutcomeDraft}
+        loading={!!outcomeModal.job && actionLoadingId === outcomeModal.job.id}
+        onClose={() => setOutcomeModal({ open: false, job: null })}
+        onSubmit={submitOutcomeAndComplete}
+      />
     </div>
   );
 }
@@ -616,88 +704,172 @@ const StatWidget = ({ title, value, icon: Icon, theme }: any) => {
 
 const JobItem = ({
   job,
+  expanded,
+  onToggle,
   getStatusBadge,
-  onManage,
+  onAction,
   isActing,
 }: {
-  job: any;
+  job: Job;
+  expanded: boolean;
+  onToggle: () => void;
   getStatusBadge: (s: any) => React.ReactNode;
-  onManage: () => void;
+  onAction: () => void;
   isActing: boolean;
 }) => {
-  const manageLabel =
+  // ✅ เปลี่ยน label ตามที่ขอ
+  const actionLabel =
     job.status === "PENDING"
       ? "รับเคส"
       : job.status === "IN_PROGRESS"
-        ? "ปิดเคส"
+        ? "ส่งงาน"
         : "ดูรายละเอียด";
 
   const isDisabled = job.status === "COMPLETED" || job.status === "CANCELLED";
 
   return (
-    <div className="group relative p-4 bg-white rounded-xl border border-slate-100 shadow-sm hover:border-teal-200 transition-all duration-300">
-      <div className="flex flex-col md:flex-row md:items-center gap-4">
-        {/* Time Box */}
-        <div className="flex-shrink-0 flex md:flex-col items-center justify-center gap-2 md:gap-0 px-3 py-2 bg-slate-50 rounded-lg border border-slate-100 min-w-[90px] text-center">
-          <span className="text-slate-400 text-[9px] font-bold uppercase tracking-widest">
-            เวลา
-          </span>
-          <span className="text-slate-800 font-bold text-xs whitespace-nowrap">
-            {job.timeRange}
-          </span>
-        </div>
-
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="bg-slate-100 text-slate-600 text-[9px] px-1.5 py-0.5 rounded font-bold border border-slate-200 uppercase tracking-wide">
-              {job.category}
+    <div
+      className={`group relative bg-white rounded-xl border shadow-sm transition-all duration-300 overflow-hidden
+    ${expanded ? "border-teal-200 ring-2 ring-teal-100" : "border-slate-100 hover:border-teal-200"}
+      `}
+      tabIndex={0}
+      onClick={onToggle}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") onToggle();
+      }}
+    >
+      <div className="p-4">
+        <div className="flex flex-col md:flex-row md:items-center gap-4">
+          {/* Time Box */}
+          <div className="flex-shrink-0 flex md:flex-col items-center justify-center gap-2 md:gap-0 px-3 py-2 bg-slate-50 rounded-lg border border-slate-100 min-w-[90px] text-center">
+            <span className="text-slate-400 text-[9px] font-bold uppercase tracking-widest">
+              เวลา
+            </span>
+            <span className="text-slate-800 font-bold text-xs whitespace-nowrap">
+              {job.timeRange}
             </span>
           </div>
-          <h4 className="font-bold text-slate-800 text-sm truncate group-hover:text-teal-700 transition-colors">
-            {job.userName}
-          </h4>
-          <p className="text-xs text-slate-500 font-medium mt-0.5 truncate pr-4 opacity-80">
-            {job.detail}
-          </p>
+
+          {/* Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="bg-slate-100 text-slate-600 text-[9px] px-1.5 py-0.5 rounded font-bold border border-slate-200 uppercase tracking-wide">
+                {job.category}
+              </span>
+            </div>
+            <h4 className="font-bold text-slate-800 text-sm truncate group-hover:text-teal-700 transition-colors">
+              {job.userName}
+            </h4>
+            <p className="text-xs text-teal-600 font-semibold mt-0.5 flex items-center gap-1 opacity-90">
+              {expanded ? "ซ่อนรายละเอียด" : "ดูรายละเอียด"}
+              <ChevronDown
+                className={`w-3.5 h-3.5 transition-transform duration-300 ${expanded ? "rotate-180" : "rotate-0"
+                  }`}
+              />
+            </p>
+          </div>
+
+          {/* Action Area */}
+          <div className="flex items-center justify-between md:flex-col md:items-end gap-2 mt-2 md:mt-0 pl-4 md:border-l md:border-slate-100">
+            <div className="scale-95 origin-right">{getStatusBadge(job.status)}</div>
+
+            {!isDisabled ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={(e: any) => {
+                  e.stopPropagation(); // ✅ กันกดปุ่มแล้วไป toggle card
+                  onAction();
+                }}
+                disabled={isActing}
+                className="w-full md:w-auto h-7 text-[10px] font-bold"
+              >
+                {isActing ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                    กำลังอัปเดต
+                  </>
+                ) : job.status === "IN_PROGRESS" ? (
+                  <>
+                    <Send className="w-3.5 h-3.5 mr-1" />
+                    {actionLabel}
+                  </>
+                ) : (
+                  actionLabel
+                )}
+              </Button>
+            ) : (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 rounded-full hover:bg-slate-100 text-slate-400"
+                disabled
+                onClick={(e: any) => e.stopPropagation()}
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
         </div>
+      </div>
 
-        {/* Action Area */}
-        <div className="flex items-center justify-between md:flex-col md:items-end gap-2 mt-2 md:mt-0 pl-4 md:border-l md:border-slate-100">
-          <div className="scale-95 origin-right">{getStatusBadge(job.status)}</div>
+      {/* ✅ Slide-down details */}
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+          }`}
+      >
+        <div className="overflow-hidden border-t border-slate-100 bg-slate-50/60">
+          <div className="p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-700">รายละเอียดงาน</p>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Booking ID: <span className="font-semibold">{job.id}</span>
+                </p>
+              </div>
 
-          {!isDisabled ? (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onManage}
-              disabled={isActing}
-              className="w-full md:w-auto h-7 text-[10px] font-bold"
-            >
-              {isActing ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-                  กำลังอัปเดต
-                </>
-              ) : (
-                manageLabel
-              )}
-            </Button>
-          ) : (
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-7 w-7 rounded-full hover:bg-slate-100 text-slate-400"
-              disabled
-            >
-              <MoreHorizontal className="w-4 h-4" />
-            </Button>
-          )}
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${job.status === "PENDING"
+                  ? "bg-amber-50 text-amber-700 border-amber-100"
+                  : job.status === "IN_PROGRESS"
+                    ? "bg-indigo-50 text-indigo-700 border-indigo-100"
+                    : job.status === "COMPLETED"
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                      : "bg-rose-50 text-rose-700 border-rose-100"
+                  }`}
+              >
+                {job.status}
+              </span>
+            </div>
+
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <InfoRow label="วันที่" value={job.raw?.date ?? "-"} />
+              <InfoRow label="เวลา" value={job.timeRange} />
+            </div>
+
+            <div className="mt-3 rounded-xl border border-slate-100 bg-white/70 p-3">
+              <p className="text-[10px] font-bold text-slate-500">รายละเอียดปัญหา</p>
+              <p className="mt-1 text-[12px] text-slate-700 leading-relaxed whitespace-pre-wrap">
+                {job.bookingDetailText?.trim() ? job.bookingDetailText : "-"}
+              </p>
+            </div>
+
+            <div className="mt-3 text-[11px] text-slate-500">
+              * ตรง “รายละเอียดงาน” ตอนนี้ยังเป็น placeholder ถ้าต้องการให้โชว์ “รายละเอียดที่นิสิตกรอก” ให้เพิ่ม field จาก API (เช่น booking_detail_text) แล้ว map มาใส่ได้เลย
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 };
+
+const InfoRow = ({ label, value }: { label: string; value: string }) => (
+  <div className="flex items-center justify-between gap-3 bg-white/70 border border-slate-100 rounded-lg px-3 py-2">
+    <span className="text-[10px] font-bold text-slate-500">{label}</span>
+    <span className="text-[11px] font-semibold text-slate-700 truncate">{value}</span>
+  </div>
+);
 
 const InstructionItem = ({ text }: { text: React.ReactNode }) => (
   <li className="flex gap-3 text-xs text-slate-600 leading-relaxed items-start group">
@@ -734,3 +906,214 @@ const SummaryRow = ({
     )}
   </div>
 );
+
+// ====================================================================
+// MODALS
+// ====================================================================
+
+function ModalShell({
+  open,
+  title,
+  children,
+  onClose,
+}: {
+  open: boolean;
+  title: string;
+  children: React.ReactNode;
+  onClose: () => void;
+}) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/30 backdrop-blur-[2px]"
+        onClick={onClose}
+      />
+      <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-xl border border-slate-100 overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div className="min-w-0">
+            <p className="text-sm font-extrabold text-slate-800 truncate">
+              {title}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="h-9 w-9 rounded-full hover:bg-slate-50 flex items-center justify-center text-slate-500"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="p-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function ConfirmModal({
+  open,
+  title,
+  description,
+  confirmText,
+  cancelText,
+  loading,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  title: string;
+  description: string;
+  confirmText: string;
+  cancelText: string;
+  loading: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <ModalShell open={open} title={title} onClose={onClose}>
+      <div className="flex items-start gap-3">
+        <div className="p-2 rounded-xl bg-amber-50 text-amber-700 border border-amber-100">
+          <AlertTriangle className="w-5 h-5" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-slate-800">{title}</p>
+          <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+            {description}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 flex items-center justify-end gap-2">
+        <Button variant="ghost" onClick={onClose} disabled={loading}>
+          {cancelText}
+        </Button>
+        <Button onClick={onConfirm} disabled={loading}>
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              กำลังดำเนินการ
+            </>
+          ) : (
+            confirmText
+          )}
+        </Button>
+      </div>
+    </ModalShell>
+  );
+}
+
+function OutcomeModal({
+  open,
+  job,
+  draft,
+  setDraft,
+  loading,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean;
+  job: Job | null;
+  draft: OutcomeDraft;
+  setDraft: React.Dispatch<React.SetStateAction<OutcomeDraft>>;
+  loading: boolean;
+  onClose: () => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <ModalShell
+      open={open}
+      title={job ? `ส่งงาน: ${job.userName}` : "ส่งงาน"}
+      onClose={onClose}
+    >
+      <div className="space-y-4">
+        <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-slate-700 truncate">
+                {job?.category ?? "-"}
+              </p>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                เวลา {job?.timeRange ?? "-"} • Booking ID {job?.id ?? "-"}
+              </p>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+              IN_PROGRESS
+            </span>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs font-bold text-slate-700">
+            สรุป/รายละเอียดการให้คำปรึกษา <span className="text-rose-600">*</span>
+          </label>
+          <textarea
+            value={draft.consultantNote}
+            onChange={(e) =>
+              setDraft((d) => ({ ...d, consultantNote: e.target.value }))
+            }
+            rows={5}
+            placeholder="พิมพ์สรุปประเด็น, แนวทางที่ให้คำแนะนำ, ข้อสังเกต ฯลฯ"
+            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-100 focus:border-teal-500"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-bold text-slate-700">
+            ขั้นตอนถัดไป (Next step)
+          </label>
+          <input
+            value={draft.nextStep}
+            onChange={(e) =>
+              setDraft((d) => ({ ...d, nextStep: e.target.value }))
+            }
+            placeholder='เช่น "นัดติดตามผล 2 สัปดาห์"'
+            className="mt-2 w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-teal-100 focus:border-teal-500"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-bold text-slate-700">
+            ระดับความเสี่ยง (Risk level)
+          </label>
+          <select
+            value={draft.riskLevel ?? ""}
+            onChange={(e) =>
+              setDraft((d) => ({
+                ...d,
+                riskLevel: e.target.value ? Number(e.target.value) : null,
+              }))
+            }
+            className="mt-2 w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-teal-100 focus:border-teal-500"
+          >
+            <option value="1">1 - ต่ำ</option>
+            <option value="2">2 - ค่อนข้างต่ำ</option>
+            <option value="3">3 - กลาง</option>
+            <option value="4">4 - สูง</option>
+            <option value="5">5 - สูงมาก</option>
+          </select>
+          <p className="text-[11px] text-slate-500 mt-1">
+            * ปรับช่วงคะแนนได้ตาม policy ของศูนย์
+          </p>
+        </div>
+
+        <div className="pt-2 flex items-center justify-end gap-2">
+          <Button variant="ghost" onClick={onClose} disabled={loading}>
+            ยกเลิก
+          </Button>
+          <Button onClick={onSubmit} disabled={loading}>
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                กำลังส่งงาน
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4 mr-2" />
+                ส่งงาน
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}

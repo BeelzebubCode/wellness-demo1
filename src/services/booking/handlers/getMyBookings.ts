@@ -12,6 +12,9 @@ export type MyBookingDTO = {
   startTime: string | null;
   endTime: string | null;
 
+  // ✅ รายละเอียดปัญหาที่นิสิตกรอก
+  bookingDetailText: string | null;
+
   // ✅ สำหรับฝั่ง consultant
   studentName?: string | null;
 };
@@ -105,6 +108,7 @@ export async function getMyBookings(params: {
       problemType: b.problemCategory?.problem_category_name_th ?? null,
       createdAt: b.booking_created_at ? b.booking_created_at.toISOString() : null,
       updatedAt: b.booking_updated_at ? b.booking_updated_at.toISOString() : null,
+
       date: slot?.time_slot_start_datetime
         ? slot.time_slot_start_datetime.toISOString().slice(0, 10)
         : null,
@@ -114,6 +118,9 @@ export async function getMyBookings(params: {
       endTime: slot?.time_slot_end_datetime
         ? slot.time_slot_end_datetime.toTimeString().slice(0, 5)
         : null,
+
+      // ✅ ดึงจาก booking table ตรง ๆ
+      bookingDetailText: b.booking_detail_text ?? null,
 
       // ✅ student ไม่ต้องเห็นชื่อนิสิต
       studentName: role === "STUDENT" ? undefined : fullName,
