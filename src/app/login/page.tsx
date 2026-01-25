@@ -27,21 +27,51 @@ export default function LoginPage() {
   } = useLogin();
 
   // ✅ Force DEFAULT tenant colors (Sage Wellness from tenants.css :root)
-const defaultTenantVars = {
-  ["--primary" as any]: "150 167 141", // #96A78D
-  ["--primary-600" as any]: "132 150 124", // deeper sage
-  ["--accent" as any]: "182 206 180", // #B6CEB4
-  ["--bg-grad-1" as any]: "240 240 240", // #F0F0F0
-  ["--bg-grad-2" as any]: "217 233 207", // #D9E9CF
-  ["--ring" as any]: "150 167 141",
-} as React.CSSProperties;
+  const defaultTenantVars = {
+    ["--primary" as any]: "150 167 141", // #96A78D
+    ["--primary-600" as any]: "132 150 124", // deeper sage
+    ["--accent" as any]: "182 206 180", // #B6CEB4
+    ["--bg-grad-1" as any]: "240 240 240", // #F0F0F0
+    ["--bg-grad-2" as any]: "217 233 207", // #D9E9CF
+    ["--ring" as any]: "150 167 141",
+  } as React.CSSProperties;
+
+  // ✅ demo accounts (stable list)
+  const DEMO_ACCOUNTS = [
+    { label: "Head Consultant (NU)", username: "head_nu", password: "wellness@nu.ac.th_123456!" },
+    { label: "Head Consultant (KKU)", username: "head_kku", password: "wellness@nu.ac.th_123456!" },
+    { label: "Head Consultant (CU)", username: "head_cu", password: "wellness@nu.ac.th_123456!" },
+
+    { label: "Rector (NU)", username: "rector_nu", password: "wellness@nu.ac.th_123456!" },
+    { label: "Rector (KKU)", username: "rector_kku", password: "wellness@nu.ac.th_123456!" },
+    { label: "Rector (CU)", username: "rector_cu", password: "wellness@nu.ac.th_123456!" },
+
+    { label: "Consultant (NU #1)", username: "consultant_nu_1", password: "wellness@nu.ac.th_123456!" },
+    { label: "Consultant (NU #2)", username: "consultant_nu_2", password: "wellness@nu.ac.th_123456!" },
+    { label: "Consultant (KKU #1)", username: "consultant_kku_1", password: "wellness@nu.ac.th_123456!" },
+    { label: "Consultant (KKU #2)", username: "consultant_kku_2", password: "wellness@nu.ac.th_123456!" },
+    { label: "Consultant (CU #1)", username: "consultant_cu_1", password: "wellness@nu.ac.th_123456!" },
+    { label: "Consultant (CU #2)", username: "consultant_cu_2", password: "wellness@nu.ac.th_123456!" },
+
+    { label: "Student (student1)", username: "student1", password: "wellness@nu.ac.th_123456!" },
+    { label: "Student (student10)", username: "student10", password: "wellness@nu.ac.th_123456!" },
+
+    { label: "Super Admin", username: "superAdmin", password: "wellness@nu.ac.th_123456!" },
+  ] as const;
+
+  // ✅ FIX: demoKey + demoSelected (ของเดิมนายยังไม่ได้ประกาศ)
+  const [demoKey, setDemoKey] = React.useState<string>(DEMO_ACCOUNTS[0].username);
+
+  const demoSelected = React.useMemo(() => {
+    return DEMO_ACCOUNTS.find((x) => x.username === demoKey) ?? DEMO_ACCOUNTS[0];
+  }, [demoKey]);
 
   return (
     <div
       style={defaultTenantVars}
       className="min-h-screen w-full bg-white relative overflow-hidden pt-8"
     >
-      {/* background blobs (เปลี่ยนสีให้ผูกกับ DEFAULT vars) */}
+      {/* background blobs */}
       <div className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-[rgb(var(--primary)/0.12)] blur-3xl" />
       <div className="pointer-events-none absolute -bottom-28 -right-20 h-72 w-72 rounded-full bg-[rgb(var(--accent)/0.12)] blur-3xl" />
       <div className="pointer-events-none absolute top-10 right-10 h-28 w-28 rounded-full bg-[rgb(var(--primary)/0.16)]" />
@@ -153,51 +183,70 @@ const defaultTenantVars = {
                 </div>
               </form>
 
+              {/* ✅ Demo dropdown */}
               <div className="mt-10 max-w-sm">
                 <div className="flex items-center gap-2 text-xs text-slate-500">
                   <Sparkles className="w-4 h-4 text-amber-500" />
                   <span className="font-semibold">Demo</span>
-                  <span className="text-slate-400">— กดเพื่อกรอกอัตโนมัติ</span>
+                  <span className="text-slate-400">— เลือกบัญชีแล้วกด Fill</span>
                 </div>
 
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-3 flex items-center gap-2">
+                  <select
+                    value={demoKey}
+                    onChange={(e) => setDemoKey(e.target.value)}
+                    disabled={loading}
+                    className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700
+                               focus:outline-none focus:ring-2 focus:ring-[rgba(var(--ring),0.20)] focus:border-[rgb(var(--ring))]
+                               disabled:opacity-70"
+                  >
+                    <optgroup label="Rector">
+                      <option value="rector_nu">Rector (NU)</option>
+                      <option value="rector_kku">Rector (KKU)</option>
+                      <option value="rector_cu">Rector (CU)</option>
+                    </optgroup>
+
+                    <optgroup label="Head Consultant">
+                      <option value="head_nu">Head Consultant (NU)</option>
+                      <option value="head_kku">Head Consultant (KKU)</option>
+                      <option value="head_cu">Head Consultant (CU)</option>
+                    </optgroup>
+
+                    <optgroup label="Consultant">
+                      <option value="consultant_nu_1">Consultant (NU #1)</option>
+                      <option value="consultant_nu_2">Consultant (NU #2)</option>
+                      <option value="consultant_kku_1">Consultant (KKU #1)</option>
+                      <option value="consultant_kku_2">Consultant (KKU #2)</option>
+                      <option value="consultant_cu_1">Consultant (CU #1)</option>
+                      <option value="consultant_cu_2">Consultant (CU #2)</option>
+                    </optgroup>
+
+                    <optgroup label="Student">
+                      <option value="student1">Student (student1)</option>
+                      <option value="student10">Student (student10)</option>
+                    </optgroup>
+
+                    <optgroup label="Platform">
+                      <option value="superAdmin">Super Admin</option>
+                    </optgroup>
+                  </select>
+
                   <button
                     type="button"
-                    onClick={() => demoFill("head_nu", "wellness@nu.ac.th_123456!")}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white
-                               hover:bg-slate-50 transition"
+                    disabled={loading}
+                    onClick={() => demoFill(demoSelected.username, demoSelected.password)}
+                    className="h-10 px-4 rounded-md font-semibold text-white
+                               bg-[rgb(var(--primary))] hover:bg-[rgb(var(--primary-600))]
+                               shadow-sm shadow-[rgba(var(--primary),0.20)]
+                               transition disabled:opacity-70 disabled:cursor-not-allowed
+                               inline-flex items-center gap-2 shrink-0"
                   >
-                    Head Consultant
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      demoFill("consultant_nu_1", "wellness@nu.ac.th_123456!")
-                    }
-                    className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white
-                               hover:bg-slate-50 transition"
-                  >
-                    Consultant
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      demoFill("student1", "wellness@nu.ac.th_123456!")
-                    }
-                    className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white
-                               hover:bg-slate-50 transition"
-                  >
-                    Student
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      demoFill("superAdmin", "wellness@nu.ac.th_123456!")
-                    }
-                    className="px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white
-                               hover:bg-slate-50 transition"
-                  >
-                    Super Admin
+                    {loading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4" />
+                    )}
+                    Fill
                   </button>
                 </div>
 

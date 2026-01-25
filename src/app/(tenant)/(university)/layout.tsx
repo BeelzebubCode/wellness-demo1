@@ -17,7 +17,7 @@ export default function UniversityLayout({
     redirectTo: "/login",
     allowedRoles: ["STUDENT", "CONSULTANT", "HEAD_CONSULTANT", "RECTOR", "SUPER_ADMIN"] as const,
     loginToastKey: "toast_login_required_university",
-    guard: !isLoginPage, // ✅ หน้า login ไม่ต้องกัน
+    guard: !isLoginPage,
   });
 
   // ✅ หน้า login ก็ปล่อยผ่าน (กัน loop)

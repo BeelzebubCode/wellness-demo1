@@ -259,66 +259,66 @@ const DEPARTMENTS: Array<{
   th: string;
   en: string;
 }> = [
-    // ENG
-    {
-      facultyCode: "ENG",
-      code: "CPE",
-      th: "วิศวกรรมคอมพิวเตอร์",
-      en: "Computer Engineering",
-    },
-    {
-      facultyCode: "ENG",
-      code: "EE",
-      th: "วิศวกรรมไฟฟ้า",
-      en: "Electrical Engineering",
-    },
-    {
-      facultyCode: "ENG",
-      code: "ME",
-      th: "วิศวกรรมเครื่องกล",
-      en: "Mechanical Engineering",
-    },
+  // ENG
+  {
+    facultyCode: "ENG",
+    code: "CPE",
+    th: "วิศวกรรมคอมพิวเตอร์",
+    en: "Computer Engineering",
+  },
+  {
+    facultyCode: "ENG",
+    code: "EE",
+    th: "วิศวกรรมไฟฟ้า",
+    en: "Electrical Engineering",
+  },
+  {
+    facultyCode: "ENG",
+    code: "ME",
+    th: "วิศวกรรมเครื่องกล",
+    en: "Mechanical Engineering",
+  },
 
-    // SCI
-    {
-      facultyCode: "SCI",
-      code: "CS",
-      th: "วิทยาการคอมพิวเตอร์",
-      en: "Computer Science",
-    },
-    { facultyCode: "SCI", code: "MATH", th: "คณิตศาสตร์", en: "Mathematics" },
-    { facultyCode: "SCI", code: "STAT", th: "สถิติ", en: "Statistics" },
+  // SCI
+  {
+    facultyCode: "SCI",
+    code: "CS",
+    th: "วิทยาการคอมพิวเตอร์",
+    en: "Computer Science",
+  },
+  { facultyCode: "SCI", code: "MATH", th: "คณิตศาสตร์", en: "Mathematics" },
+  { facultyCode: "SCI", code: "STAT", th: "สถิติ", en: "Statistics" },
 
-    // ICT
-    {
-      facultyCode: "ICT",
-      code: "IT",
-      th: "เทคโนโลยีสารสนเทศ",
-      en: "Information Technology",
-    },
-    {
-      facultyCode: "ICT",
-      code: "SE",
-      th: "วิศวกรรมซอฟต์แวร์",
-      en: "Software Engineering",
-    },
-    { facultyCode: "ICT", code: "DS", th: "วิทยาการข้อมูล", en: "Data Science" },
+  // ICT
+  {
+    facultyCode: "ICT",
+    code: "IT",
+    th: "เทคโนโลยีสารสนเทศ",
+    en: "Information Technology",
+  },
+  {
+    facultyCode: "ICT",
+    code: "SE",
+    th: "วิศวกรรมซอฟต์แวร์",
+    en: "Software Engineering",
+  },
+  { facultyCode: "ICT", code: "DS", th: "วิทยาการข้อมูล", en: "Data Science" },
 
-    // MED / NUR / PHA
-    {
-      facultyCode: "MED",
-      code: "MEDGEN",
-      th: "แพทยศาสตร์",
-      en: "Doctor of Medicine",
-    },
-    { facultyCode: "NUR", code: "NURGEN", th: "พยาบาลศาสตร์", en: "Nursing" },
-    { facultyCode: "PHA", code: "PHARM", th: "เภสัชศาสตร์", en: "Pharmacy" },
+  // MED / NUR / PHA
+  {
+    facultyCode: "MED",
+    code: "MEDGEN",
+    th: "แพทยศาสตร์",
+    en: "Doctor of Medicine",
+  },
+  { facultyCode: "NUR", code: "NURGEN", th: "พยาบาลศาสตร์", en: "Nursing" },
+  { facultyCode: "PHA", code: "PHARM", th: "เภสัชศาสตร์", en: "Pharmacy" },
 
-    // LAW / BUS
-    { facultyCode: "LAW", code: "LAWGEN", th: "นิติศาสตร์", en: "Law" },
-    { facultyCode: "BUS", code: "ACC", th: "การบัญชี", en: "Accounting" },
-    { facultyCode: "BUS", code: "MKT", th: "การตลาด", en: "Marketing" },
-  ];
+  // LAW / BUS
+  { facultyCode: "LAW", code: "LAWGEN", th: "นิติศาสตร์", en: "Law" },
+  { facultyCode: "BUS", code: "ACC", th: "การบัญชี", en: "Accounting" },
+  { facultyCode: "BUS", code: "MKT", th: "การตลาด", en: "Marketing" },
+];
 
 /* =========================================================
   Main
@@ -647,7 +647,7 @@ async function main() {
   const headsByUni: Record<string, { account: any; consultant: any }> = {};
 
   const targetHeadUnis = universities.filter((u) =>
-    ["NU", "KKU", "CU"].includes(u.university_code)
+    ["NU", "KKU", "CU"].includes(u.university_code),
   );
 
   for (const uni of targetHeadUnis) {
@@ -752,9 +752,43 @@ async function main() {
     if (headAcc?.account_home_university_id && headAcc?.account_id) {
       headAccountIdByUniversityId.set(
         headAcc.account_home_university_id,
-        headAcc.account_id
+        headAcc.account_id,
       );
     }
+  }
+
+/* =========================================================
+  5.05) Rector Accounts (NU/KKU/CU) - RERUN SAFE
+========================================================= */
+  console.log("🏛️ Upserting rector accounts (NU/KKU/CU)...");
+
+  const rectorsByUni: Record<string, { account: any }> = {};
+
+  const rectorTargets = universities.filter((u) =>
+    ["NU", "KKU", "CU"].includes(u.university_code),
+  );
+
+  for (const uni of rectorTargets) {
+    const username = `rector_${uni.university_code.toLowerCase()}`; // rector_nu/rector_kku/rector_cu
+
+    const rectorAccount = await prisma.account.upsert({
+      where: { account_username: username },
+      create: {
+        account_username: username,
+        account_password: PASSWORD_HASH,
+        account_role: AccountRole.RECTOR,
+        account_home_university_id: uni.university_id,
+      },
+      update: {
+        account_password: PASSWORD_HASH, // รันซ้ำแล้ว reset pass ได้
+        account_role: AccountRole.RECTOR,
+        account_home_university_id: uni.university_id,
+      },
+    });
+
+    rectorsByUni[uni.university_code] = { account: rectorAccount };
+
+    console.log(`✅ Upserted ${username} for ${uni.university_code}`);
   }
 
   /* =========================================================
@@ -859,7 +893,12 @@ async function main() {
       // languages/specs — createMany skipDuplicates
       const langCount = randomInt(1, 2);
       const pickedLangCodes = Array.from(
-        new Set(Array.from({ length: langCount }, () => randomItem(languagePool).code))
+        new Set(
+          Array.from(
+            { length: langCount },
+            () => randomItem(languagePool).code,
+          ),
+        ),
       );
 
       await prisma.consultantLanguage.createMany({
@@ -876,7 +915,11 @@ async function main() {
 
       const specCount = randomInt(1, 2);
       const pickedSpecs = Array.from(
-        new Set(Array.from({ length: specCount }, () => randomItem(specializationPool)))
+        new Set(
+          Array.from({ length: specCount }, () =>
+            randomItem(specializationPool),
+          ),
+        ),
       );
 
       await prisma.consultantSpecialization.createMany({
@@ -935,13 +978,17 @@ async function main() {
         account_id: acc.account_id,
         university_id: uni.university_id,
         student_status_id:
-          i % 10 === 0 ? statusInactive.student_status_id : statusActive.student_status_id,
+          i % 10 === 0
+            ? statusInactive.student_status_id
+            : statusActive.student_status_id,
         student_code: `660${1000 + i}`, // ระวัง @@unique([university_id, student_code]) -> stable อยู่แล้ว
       },
       update: {
         university_id: uni.university_id,
         student_status_id:
-          i % 10 === 0 ? statusInactive.student_status_id : statusActive.student_status_id,
+          i % 10 === 0
+            ? statusInactive.student_status_id
+            : statusActive.student_status_id,
         student_code: `660${1000 + i}`,
       },
     });
@@ -956,7 +1003,7 @@ async function main() {
         student_nickname: randomItem(nicknames),
         student_gender: gender,
         student_birthday: new Date(
-          `200${randomInt(2, 6)}-${randomInt(1, 12)}-${randomInt(1, 28)}`
+          `200${randomInt(2, 6)}-${randomInt(1, 12)}-${randomInt(1, 28)}`,
         ),
         student_phone_number: `08${randomInt(10000000, 99999999)}`,
         student_email: `${username}@${uni.university_code.toLowerCase()}.ac.th`,
@@ -969,10 +1016,14 @@ async function main() {
     });
 
     // academic upsert
-    const uniDeptList = deptList.filter((d) => d.university_id === uni.university_id);
+    const uniDeptList = deptList.filter(
+      (d) => d.university_id === uni.university_id,
+    );
     const dep = uniDeptList[(i - 1) % uniDeptList.length];
     const advisor = advisors.find(
-      (a) => a.university_id === uni.university_id && a.department_id === dep.department_id
+      (a) =>
+        a.university_id === uni.university_id &&
+        a.department_id === dep.department_id,
     );
 
     await prisma.studentAcademic.upsert({
@@ -982,7 +1033,9 @@ async function main() {
         faculty_id: dep.faculty_id,
         department_id: dep.department_id,
         advisor_id: advisor?.advisor_id ?? null,
-        student_program: randomBool(0.2) ? "International Program" : "Regular Program",
+        student_program: randomBool(0.2)
+          ? "International Program"
+          : "Regular Program",
         student_degree: "Bachelor",
         student_degree_name: "Bachelor Degree",
         student_admit_academic_year: 2566,
@@ -1340,7 +1393,9 @@ async function main() {
               : null,
 
             // ✅ คนตอบ = head ของมหาลัยนั้น
-            feedback_comment_replied_by_id: randomBool(0.3) ? headAccountId : null,
+            feedback_comment_replied_by_id: randomBool(0.3)
+              ? headAccountId
+              : null,
             feedback_comment_replied_at: randomBool(0.3) ? new Date() : null,
           },
         });
