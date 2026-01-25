@@ -52,8 +52,14 @@ export default function AiKbManagerPage() {
 
   const { docs, total, isLoading, error, refetch } = useAiKbDocuments({
     q,
-    scope,
-    active,
+    scope:
+      scope === "ALL" || scope === "GLOBAL" || scope === "TENANT"
+        ? scope
+        : undefined,
+    active:
+      active === "ALL" || active === "ACTIVE" || active === "INACTIVE"
+        ? active
+        : undefined,
     universityId: uniParsed,
   });
 
@@ -120,27 +126,33 @@ export default function AiKbManagerPage() {
         />
         <Select
           value={scope}
-          onValueChange={setScope}
+          onValueChange={(v) => setScope(v as any)}
+          className="h-9 px-3 text-sm"
           options={[
             { value: "ALL", label: "Scope ทั้งหมด" },
-            { value: "GLOBAL", label: "Global" },
-            { value: "TENANT", label: "Tenant" },
+            { value: "GLOBAL", label: "Global Only" },
+            { value: "TENANT", label: "Tenant Only" },
           ]}
         />
+
         <Select
           value={active}
-          onValueChange={setActive}
+          onValueChange={(v) => setActive(v as any)}
+          className="h-9 px-3 text-sm"
           options={[
             { value: "ALL", label: "ทุกสถานะ" },
             { value: "ACTIVE", label: "Active" },
             { value: "INACTIVE", label: "Inactive" },
           ]}
         />
+
         <Select
           value={universityId}
           onValueChange={setUniversityId}
+          className="h-9 px-3 text-sm"
           options={universityOptions}
         />
+
       </div>
 
       {/* List */}
