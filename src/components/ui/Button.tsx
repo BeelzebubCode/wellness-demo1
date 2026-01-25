@@ -9,7 +9,7 @@ import { cn } from "@/lib/cn";
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   asChild?: boolean; // ✅ เพิ่ม
   variant?: "primary" | "secondary" | "outline" | "ghost" | "danger" | "success";
-  size?: "sm" | "md" | "lg" | "icon";
+  size?: "xs" | "sm" | "md" | "lg" | "icon";
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
@@ -60,6 +60,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     };
 
     const sizeStyles = {
+      xs: "h-7 px-3 text-xs rounded-lg", // ⭐ ใหม่
       sm: "h-10 px-4 text-sm",
       md: "h-12 lg:h-14 px-6 text-base lg:text-lg",
       lg: "h-14 lg:h-16 px-8 text-lg lg:text-xl",
