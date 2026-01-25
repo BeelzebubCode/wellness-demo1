@@ -14,26 +14,41 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
+
     const q = searchParams.get("q") || "";
-    const scope = (searchParams.get("scope") || "ALL").toUpperCase();
-    const active = (searchParams.get("active") || "ALL").toUpperCase();
+
+    // ✅ validate scope/active กันค่าหลุด
+    const scopeRaw = (searchParams.get("scope") || "ALL").toUpperCase();
+    const activeRaw = (searchParams.get("active") || "ALL").toUpperCase();
+
+    const scope = (["ALL", "GLOBAL", "TENANT"] as const).includes(scopeRaw as any)
+      ? (scopeRaw as "ALL" | "GLOBAL" | "TENANT")
+      : "ALL";
+
+    const active = (["ALL", "ACTIVE", "INACTIVE"] as const).includes(activeRaw as any)
+      ? (activeRaw as "ALL" | "ACTIVE" | "INACTIVE")
+      : "ALL";
 
     const universityIdRaw = searchParams.get("universityId");
     const take = Math.min(Math.max(Number(searchParams.get("take") || 20), 1), 100);
     const skip = Math.max(Number(searchParams.get("skip") || 0), 0);
 
-    const universityId =
-      universityIdRaw === null || universityIdRaw === undefined || universityIdRaw === "ALL"
-        ? undefined
-        : universityIdRaw === "null"
-          ? null
-          : Number(universityIdRaw);
+    // ✅ parse universityId แบบกัน NaN
+    let universityId: number | null | undefined;
+    if (universityIdRaw == null || universityIdRaw === "" || universityIdRaw === "ALL") {
+      universityId = undefined;
+    } else if (universityIdRaw === "null") {
+      universityId = null; // Global
+    } else {
+      const n = Number(universityIdRaw);
+      universityId = Number.isFinite(n) ? n : undefined;
+    }
 
     const result = await listDocuments({
       q,
-      scope: scope as any,
-      active: active as any,
-      universityId: universityId as any,
+      scope,
+      active,
+      universityId,
       take,
       skip,
     });
