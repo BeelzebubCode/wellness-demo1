@@ -1,140 +1,157 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
-import type { MutableRefObject } from "react";
-import type { ChatMessage } from "@/features/ai/api";
-import { sendHelpChat } from "@/features/ai/api";
+import { useCallback, useMemo, useState } from "react";
 
-const MAX_HISTORY = 12;
+type Mode = "help" | "booking_agent";
+type Role = "user" | "assistant";
 
-const INITIAL_MESSAGES: ChatMessage[] = [
-  {
-    role: "assistant",
-    content:
-      "สวัสดีครับ 🙂 ผมเป็นผู้ช่วยการใช้งานระบบ NU Wellness\nพิมพ์คำถามได้เลย เช่น “จองคิวยังไง” หรือ “เปลี่ยนมหาลัยยังไง”",
-  },
-];
+type ChatMsg = { role: Role; content: string };
 
-/* ================================
-   แปลง error ให้เป็นภาษาคน
-================================ */
-function friendlyErrorMessage(err: unknown): string {
-  const msg = (err instanceof Error ? err.message : String(err ?? "")).toLowerCase();
+type AgentIntent = "BOOK" | "CANCEL";
 
-  if (
-    msg.includes("fetch failed") ||
-    msg.includes("failed to fetch") ||
-    msg.includes("network")
-  ) {
-    return "ไม่สามารถเชื่อมต่อระบบได้ กรุณาตรวจสอบอินเทอร์เน็ต แล้วลองใหม่อีกครั้ง";
-  }
+type AgentState = {
+  intent: AgentIntent;
+  confirmToken: string | null;
+  // จะเก็บ plan/suggested/candidates เพิ่มก็ได้
+  plan?: any;
+  suggested?: any;
+  candidates?: any[];
+};
 
-  if (msg.includes("401") || msg.includes("unauthorized")) {
-    return "คุณยังไม่ได้เข้าสู่ระบบ หรือเซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่";
-  }
-
-  if (msg.includes("403") || msg.includes("forbidden")) {
-    return "บัญชีของคุณไม่มีสิทธิ์ใช้งาน AI ช่วยเหลือ";
-  }
-
-  if (msg.includes("429") || msg.includes("rate")) {
-    return "มีผู้ใช้งานพร้อมกันจำนวนมาก กรุณารอสักครู่แล้วลองใหม่";
-  }
-
-  if (msg.includes("500") || msg.includes("internal")) {
-    return "ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้ง";
-  }
-
-  return "เกิดข้อผิดพลาดระหว่างส่งข้อความ กรุณาลองใหม่อีกครั้ง";
+function detectIntent(text: string): AgentIntent {
+  const t = (text || "").toLowerCase();
+  const cancelKw = ["ยกเลิก", "cancel", "เลื่อน", "ไม่ไป", "ติดธุระ", "ถอนนัด"];
+  if (cancelKw.some((k) => t.includes(k))) return "CANCEL";
+  return "BOOK";
 }
 
-export function useAiChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
-  const [input, setInput] = useState("");
-  const [isLoading, setLoading] = useState(false);
+function endpointFor(mode: Mode, intent: AgentIntent) {
+  if (mode === "help") return { plan: "/api/v2/ai/help", confirm: "" };
+
+  // booking_agent
+  if (intent === "CANCEL") {
+    return {
+      plan: "/api/v2/ai/agent/booking/cancel/plan",
+      confirm: "/api/v2/ai/agent/booking/cancel/confirm",
+    };
+  }
+
+  return {
+    plan: "/api/v2/ai/agent/booking/plan",
+    confirm: "/api/v2/ai/agent/booking/confirm",
+  };
+}
+
+export function useAiChat(input: { mode: Mode }) {
+  const mode = input.mode;
+
+  const [messages, setMessages] = useState<ChatMsg[]>([]);
+  const [text, setText] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const historyRef =
-    useRef<ChatMessage[]>(INITIAL_MESSAGES) as MutableRefObject<ChatMessage[]>;
+  const [agent, setAgent] = useState<AgentState | null>(null);
 
-  // ✅ เก็บ prompt ล่าสุดไว้ retry
-  const lastPromptRef = useRef<string>("");
-
-  const canSend = useMemo(
-    () => input.trim().length > 0 && !isLoading,
-    [input, isLoading]
-  );
-
-  const send = useCallback(async () => {
-    if (!canSend) return;
-
-    const text = input.trim();
-    lastPromptRef.current = text;
-
-    setInput("");
-    setError(null);
-    setLoading(true);
-
-    // เพิ่ม user message ก่อน
-    setMessages((prev) => {
-      const next = [...prev, { role: "user", content: text }].slice(-MAX_HISTORY);
-      historyRef.current = next;
-      return next;
-    });
-
-    try {
-      const { reply } = await sendHelpChat(historyRef.current);
-
-      setMessages((prev) => {
-        const next = [
-          ...prev,
-          { role: "assistant", content: String(reply ?? "") },
-        ].slice(-MAX_HISTORY);
-
-        historyRef.current = next;
-        return next;
-      });
-    } catch (err) {
-      setError(friendlyErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [canSend, input]);
-
-  // ✅ retry ส่งข้อความเดิม (เหมือน ChatGPT)
-  const retry = useCallback(async () => {
-    if (!lastPromptRef.current || isLoading) return;
-
-    setInput(lastPromptRef.current);
-    await send();
-  }, [send, isLoading]);
+  const canSend = useMemo(() => !isLoading && text.trim().length > 0, [isLoading, text]);
 
   const reset = useCallback(() => {
-    const initial: ChatMessage[] = [
-      {
-        role: "assistant",
-        content:
-          "เริ่มใหม่ได้เลยครับ 🙂\nถามเรื่องการใช้งานเว็บ เช่น “จองคิวยังไง” หรือ “ดูประวัติการจองอยู่ตรงไหน”",
-      },
-    ];
-
-    historyRef.current = initial;
-    lastPromptRef.current = "";
-    setMessages(initial);
-    setInput("");
+    setMessages([]);
+    setText("");
     setError(null);
-    setLoading(false);
+    setAgent(null);
   }, []);
+
+  const send = useCallback(async () => {
+    const userText = text.trim();
+    if (!userText || isLoading) return;
+
+    setError(null);
+    setIsLoading(true);
+
+    // ✅ ถ้าพิมพ์ใหม่ ให้เคลียร์ confirm เก่า (กันกดผิด action/แผนเก่า)
+    setAgent(null);
+
+    const nextMessages: ChatMsg[] = [...messages, { role: "user", content: userText }];
+    setMessages(nextMessages);
+    setText("");
+
+    try {
+      const intent: AgentIntent = mode === "booking_agent" ? detectIntent(userText) : "BOOK";
+      const ep = endpointFor(mode, intent);
+
+      const res = await fetch(ep.plan, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: nextMessages.map((m) => ({ role: m.role, content: m.content })) }),
+      });
+
+      const data = await res.json().catch(() => ({} as any));
+
+      // server ของนายตอบ {reply: "..."} เป็นหลัก
+      const replyText = String(data?.reply ?? data?.message ?? "").trim() || "…";
+      setMessages((prev) => [...prev, { role: "assistant", content: replyText }]);
+
+      if (mode === "booking_agent") {
+        const confirmToken = typeof data?.confirmToken === "string" ? data.confirmToken : null;
+
+        setAgent({
+          intent,
+          confirmToken,
+          plan: data?.plan,
+          suggested: data?.suggested,
+          candidates: data?.candidates,
+        });
+      }
+    } catch (e: any) {
+      setError(e?.message ?? "network");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [text, isLoading, messages, mode]);
+
+  const confirmAgentAction = useCallback(async () => {
+    if (mode !== "booking_agent") return;
+    if (!agent?.confirmToken) return;
+    if (isLoading) return;
+
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const ep = endpointFor(mode, agent.intent);
+
+      const res = await fetch(ep.confirm, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmToken: agent.confirmToken }),
+      });
+
+      const data = await res.json().catch(() => ({} as any));
+      const replyText =
+        String(data?.reply ?? "").trim() ||
+        (data?.success ? "✅ สำเร็จ" : "❌ ไม่สำเร็จ");
+
+      setMessages((prev) => [...prev, { role: "assistant", content: replyText }]);
+
+      // ✅ confirm แล้วเคลียร์ token กันกดซ้ำ
+      setAgent(null);
+    } catch (e: any) {
+      setError(e?.message ?? "network");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [mode, agent, isLoading]);
 
   return {
     messages,
-    input,
-    setInput,
+    input: text,
+    setInput: setText,
     send,
-    retry,        // ✅ ใหม่
     reset,
     isLoading,
     error,
     canSend,
+    agent,
+    confirmAgentAction,
   };
 }

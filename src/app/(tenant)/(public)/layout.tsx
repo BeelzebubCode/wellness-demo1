@@ -7,15 +7,17 @@ import { PublicHeader, PublicFooter } from "@/components/layout";
 import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
 import { roleDefaultPath } from "@/features/auth/login/login-utils";
 
+// ✅ เพิ่ม
+import { AiChatModal } from "@/components/ai/AiChatModal";
+import { FloatingAiButton } from "@/components/ai/FloatingAiButton";
+
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // ✅ ป้องกัน hydration mismatch
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  // ✅ render footer หลัง mount เท่านั้น
   const showFooter = mounted && pathname === "/";
 
   const { user, isLoading, isAuthenticated } = useRoleAuth({
@@ -27,7 +29,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   });
 
   useEffect(() => {
-    if (!mounted) return;          // ✅ กัน redirect ก่อน hydrate เสร็จ
+    if (!mounted) return;
     if (isLoading) return;
     if (!isAuthenticated) return;
     if (!user) return;
@@ -39,12 +41,16 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   }, [mounted, isLoading, isAuthenticated, user, router, pathname]);
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <PublicHeader onLogin={() => router.push("/login")} />
+    <>
+      <div className="min-h-screen flex flex-col">
+        <PublicHeader onLogin={() => router.push("/login")} />
+        <main className="flex-1 pt-16">{children}</main>
+        {showFooter && <PublicFooter />}
+      </div>
 
-      <main className="flex-1 pt-16">{children}</main>
-
-      {showFooter && <PublicFooter />}
-    </div>
+      {/* ✅ โผล่หน้า public ด้วย แต่จะโชว์จริงเฉพาะ STUDENT */}
+      <AiChatModal />
+      <FloatingAiButton />
+    </>
   );
 }
