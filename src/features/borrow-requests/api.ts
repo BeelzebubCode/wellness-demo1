@@ -1,0 +1,120 @@
+import type {
+  BorrowRequest,
+  BorrowRequestDetail,
+  CreateBorrowRequestInput,
+  PlatformListParams,
+  AssignBorrowRequestInput,
+  RejectBorrowRequestInput,
+  UpdateBorrowRequestInput,
+} from "./types";
+
+async function safeJson(res: Response) {
+  const txt = await res.text();
+  try {
+    return txt ? JSON.parse(txt) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers || {}),
+    },
+    credentials: "include",
+  });
+
+  const data = await safeJson(res);
+
+  if (!res.ok) {
+    const msg =
+      (data && (data.error || data.message)) ||
+      `Request failed (${res.status})`;
+    throw new Error(msg);
+  }
+
+  return data as T;
+}
+
+function qs(obj: Record<string, any>) {
+  const p = new URLSearchParams();
+  Object.entries(obj).forEach(([k, v]) => {
+    if (v === undefined || v === null || v === "" || v === "ALL") return;
+    p.set(k, String(v));
+  });
+  const s = p.toString();
+  return s ? `?${s}` : "";
+}
+
+// --------------------
+// HEAD (counseling-admin)
+// --------------------
+export const borrowRequestsApi = {
+  listMy: () =>
+    apiFetch<{ ok: true; data: BorrowRequest[] }>("/api/v2/borrow-requests"),
+
+  create: (input: CreateBorrowRequestInput) =>
+    apiFetch<{ ok: true; data: BorrowRequest }>("/api/v2/borrow-requests", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+
+  get: (id: number) =>
+    apiFetch<{ ok: true; data: BorrowRequestDetail }>(
+      `/api/v2/borrow-requests/${id}`,
+    ),
+
+  update: (id: number, input: UpdateBorrowRequestInput) =>
+    apiFetch<{ ok: true; data: BorrowRequest }>(
+      `/api/v2/borrow-requests/${id}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+    ),
+
+  submit: (id: number) =>
+    apiFetch<{ ok: true; data: BorrowRequest }>(
+      `/api/v2/borrow-requests/${id}/submit`,
+      { method: "POST" },
+    ),
+
+  cancel: (id: number) =>
+    apiFetch<{ ok: true; data: BorrowRequest }>(
+      `/api/v2/borrow-requests/${id}`,
+      { method: "PATCH", body: JSON.stringify({ status: "CANCELLED" }) },
+    ),
+};
+
+// --------------------
+// SUPER_ADMIN (platform)
+// --------------------
+export const platformBorrowRequestsApi = {
+  list: (params: PlatformListParams) =>
+    apiFetch<{ ok: true; data: BorrowRequest[] }>(
+      `/api/v2/platform/borrow-requests${qs(params)}`,
+    ),
+
+  get: (id: number) =>
+    apiFetch<{ ok: true; data: BorrowRequestDetail }>(
+      `/api/v2/platform/borrow-requests/${id}`,
+    ),
+
+  approve: (id: number) =>
+    apiFetch<{ ok: true; data: BorrowRequest }>(
+      `/api/v2/platform/borrow-requests/${id}/approve`,
+      { method: "POST" },
+    ),
+
+  reject: (id: number, input: RejectBorrowRequestInput) =>
+    apiFetch<{ ok: true; data: BorrowRequest }>(
+      `/api/v2/platform/borrow-requests/${id}/reject`,
+      { method: "POST", body: JSON.stringify(input) },
+    ),
+
+  assign: (id: number, input: AssignBorrowRequestInput) =>
+    apiFetch<{ ok: true; data: BorrowRequestDetail }>(
+      `/api/v2/platform/borrow-requests/${id}/assign`,
+      { method: "POST", body: JSON.stringify(input) },
+    ),
+};

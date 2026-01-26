@@ -11,7 +11,7 @@ import {
   AssignBookingModal,
   type ReschedulePayload,
   type AssignPayload,
-} from "@/components/admin/bookings";
+} from "@/components/counseling-admin/bookings";
 
 import type { AdminBookingRow } from "@/features/counseling-admin-bookings/type";
 import { useAdminBookings } from "@/features/counseling-admin-bookings/hooks/useAdminBookings";

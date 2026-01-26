@@ -7,7 +7,6 @@ import {
   StudentAddressType,
   TimeSlotStatus,
   PointTxnType,
-  UniversityAccessRole,
   RegionCode,
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -210,12 +209,11 @@ async function clearDatabase() {
 
   for (const table of tables) {
     try {
-      // Find primary key column name
       const result = await prisma.$queryRawUnsafe<
         Array<{ column_name: string }>
       >(
-        `SELECT column_name FROM information_schema.columns 
-         WHERE table_name = '${table}' 
+        `SELECT column_name FROM information_schema.columns
+         WHERE table_name = '${table}'
          AND column_default LIKE 'nextval%'
          LIMIT 1`,
       );
@@ -227,8 +225,8 @@ async function clearDatabase() {
           `ALTER SEQUENCE ${sequenceName} RESTART WITH 1`,
         );
       }
-    } catch (error) {
-      // Ignore errors for tables without sequences
+    } catch {
+      // ignore
     }
   }
 
@@ -260,57 +258,22 @@ const DEPARTMENTS: Array<{
   en: string;
 }> = [
   // ENG
-  {
-    facultyCode: "ENG",
-    code: "CPE",
-    th: "วิศวกรรมคอมพิวเตอร์",
-    en: "Computer Engineering",
-  },
-  {
-    facultyCode: "ENG",
-    code: "EE",
-    th: "วิศวกรรมไฟฟ้า",
-    en: "Electrical Engineering",
-  },
-  {
-    facultyCode: "ENG",
-    code: "ME",
-    th: "วิศวกรรมเครื่องกล",
-    en: "Mechanical Engineering",
-  },
+  { facultyCode: "ENG", code: "CPE", th: "วิศวกรรมคอมพิวเตอร์", en: "Computer Engineering" },
+  { facultyCode: "ENG", code: "EE", th: "วิศวกรรมไฟฟ้า", en: "Electrical Engineering" },
+  { facultyCode: "ENG", code: "ME", th: "วิศวกรรมเครื่องกล", en: "Mechanical Engineering" },
 
   // SCI
-  {
-    facultyCode: "SCI",
-    code: "CS",
-    th: "วิทยาการคอมพิวเตอร์",
-    en: "Computer Science",
-  },
+  { facultyCode: "SCI", code: "CS", th: "วิทยาการคอมพิวเตอร์", en: "Computer Science" },
   { facultyCode: "SCI", code: "MATH", th: "คณิตศาสตร์", en: "Mathematics" },
   { facultyCode: "SCI", code: "STAT", th: "สถิติ", en: "Statistics" },
 
   // ICT
-  {
-    facultyCode: "ICT",
-    code: "IT",
-    th: "เทคโนโลยีสารสนเทศ",
-    en: "Information Technology",
-  },
-  {
-    facultyCode: "ICT",
-    code: "SE",
-    th: "วิศวกรรมซอฟต์แวร์",
-    en: "Software Engineering",
-  },
+  { facultyCode: "ICT", code: "IT", th: "เทคโนโลยีสารสนเทศ", en: "Information Technology" },
+  { facultyCode: "ICT", code: "SE", th: "วิศวกรรมซอฟต์แวร์", en: "Software Engineering" },
   { facultyCode: "ICT", code: "DS", th: "วิทยาการข้อมูล", en: "Data Science" },
 
   // MED / NUR / PHA
-  {
-    facultyCode: "MED",
-    code: "MEDGEN",
-    th: "แพทยศาสตร์",
-    en: "Doctor of Medicine",
-  },
+  { facultyCode: "MED", code: "MEDGEN", th: "แพทยศาสตร์", en: "Doctor of Medicine" },
   { facultyCode: "NUR", code: "NURGEN", th: "พยาบาลศาสตร์", en: "Nursing" },
   { facultyCode: "PHA", code: "PHARM", th: "เภสัชศาสตร์", en: "Pharmacy" },
 
@@ -326,7 +289,6 @@ const DEPARTMENTS: Array<{
 async function main() {
   console.log("🚀 Starting database seeding...\n");
 
-  // Always clear database
   await clearDatabase();
 
   /* =========================================================
@@ -341,17 +303,26 @@ async function main() {
   console.log("📍 Creating regions and provinces...");
 
   const regionNorth = await prisma.region.create({
-    data: { region_code: RegionCode.NORTH, region_name_th: "ภาคเหนือ" },
+    data: {
+      region_code: RegionCode.NORTH,
+      region_name_th: "ภาคเหนือ",
+      region_name_en: "North",
+    },
   });
 
   const regionCentral = await prisma.region.create({
-    data: { region_code: RegionCode.CENTRAL, region_name_th: "ภาคกลาง" },
+    data: {
+      region_code: RegionCode.CENTRAL,
+      region_name_th: "ภาคกลาง",
+      region_name_en: "Central",
+    },
   });
 
   const regionNE = await prisma.region.create({
     data: {
       region_code: RegionCode.NORTHEAST,
       region_name_th: "ภาคตะวันออกเฉียงเหนือ",
+      region_name_en: "Northeast",
     },
   });
 
@@ -422,60 +393,26 @@ async function main() {
   console.log("📋 Creating static data...");
 
   const statusActive = await prisma.studentStatus.create({
-    data: {
-      student_status_code: "ACTIVE",
-      student_status_detail: "กำลังศึกษา",
-    },
+    data: { student_status_code: "ACTIVE", student_status_detail: "กำลังศึกษา" },
   });
 
   const statusInactive = await prisma.studentStatus.create({
-    data: {
-      student_status_code: "INACTIVE",
-      student_status_detail: "พ้นสภาพ/พักการศึกษา",
-    },
+    data: { student_status_code: "INACTIVE", student_status_detail: "พ้นสภาพ/พักการศึกษา" },
   });
 
   const org = await prisma.organization.create({
-    data: {
-      organization_name: "Counseling Center",
-      organization_type: "Internal",
-    },
+    data: { organization_name: "Counseling Center", organization_type: "Internal" },
   });
 
   const categoriesData = [
-    {
-      code: "ACAD",
-      th: "ปัญหาการเรียน",
-      en: "Academic",
-      desc: "เช่น เกรด/การปรับตัวด้านการเรียน",
-    },
-    {
-      code: "STRESS",
-      th: "ความเครียด",
-      en: "Stress",
-      desc: "เช่น ความเครียดจากการเรียน/งาน/ชีวิต",
-    },
-    {
-      code: "REL",
-      th: "ความสัมพันธ์",
-      en: "Relationship",
-      desc: "เช่น เพื่อน แฟน ครอบครัว",
-    },
-    {
-      code: "ADJ",
-      th: "การปรับตัว",
-      en: "Adjustment",
-      desc: "เช่น ปรับตัวเข้ามหาลัย/ย้ายที่อยู่",
-    },
-    {
-      code: "FIN",
-      th: "ปัญหาการเงิน",
-      en: "Finance",
-      desc: "เช่น ค่าใช้จ่าย/หนี้สิน",
-    },
+    { code: "ACAD", th: "ปัญหาการเรียน", en: "Academic", desc: "เช่น เกรด/การปรับตัวด้านการเรียน" },
+    { code: "STRESS", th: "ความเครียด", en: "Stress", desc: "เช่น ความเครียดจากการเรียน/งาน/ชีวิต" },
+    { code: "REL", th: "ความสัมพันธ์", en: "Relationship", desc: "เช่น เพื่อน แฟน ครอบครัว" },
+    { code: "ADJ", th: "การปรับตัว", en: "Adjustment", desc: "เช่น ปรับตัวเข้ามหาลัย/ย้ายที่อยู่" },
+    { code: "FIN", th: "ปัญหาการเงิน", en: "Finance", desc: "เช่น ค่าใช้จ่าย/หนี้สิน" },
   ];
 
-  const problemCategories = [];
+  const problemCategories: any[] = [];
   for (const c of categoriesData) {
     problemCategories.push(
       await prisma.problemCategory.create({
@@ -490,23 +427,13 @@ async function main() {
   }
 
   const criteriaData = [
-    {
-      th: "ความพึงพอใจโดยรวม",
-      en: "Overall satisfaction",
-      w: "1.00",
-      order: 1,
-    },
+    { th: "ความพึงพอใจโดยรวม", en: "Overall satisfaction", w: "1.00", order: 1 },
     { th: "ความชัดเจนในการให้คำแนะนำ", en: "Clarity", w: "1.00", order: 2 },
     { th: "การรับฟังและเข้าใจปัญหา", en: "Listening", w: "1.00", order: 3 },
-    {
-      th: "ความเป็นส่วนตัวและความไว้วางใจ",
-      en: "Privacy & trust",
-      w: "1.00",
-      order: 4,
-    },
+    { th: "ความเป็นส่วนตัวและความไว้วางใจ", en: "Privacy & trust", w: "1.00", order: 4 },
   ];
 
-  const criteria = [];
+  const criteria: any[] = [];
   for (const c of criteriaData) {
     criteria.push(
       await prisma.evaluationCriterion.create({
@@ -534,8 +461,7 @@ async function main() {
     data: {
       notification_template_code: "BOOKING_ASSIGNED",
       notification_template_title: "มีการมอบหมายผู้ให้คำปรึกษา",
-      notification_template_body:
-        "ระบบได้มอบหมายผู้ให้คำปรึกษาให้กับการจองของคุณแล้ว",
+      notification_template_body: "ระบบได้มอบหมายผู้ให้คำปรึกษาให้กับการจองของคุณแล้ว",
       notification_template_format: "TEXT",
     },
   });
@@ -546,7 +472,7 @@ async function main() {
     { code: "NO_SHOW_PENALTY", name: "ไม่มาตามนัด (หักแต้ม)", points: -10 },
   ];
 
-  const pointRules = [];
+  const pointRules: any[] = [];
   for (const r of pointRulesData) {
     pointRules.push(
       await prisma.pointRule.create({
@@ -584,9 +510,7 @@ async function main() {
 
   for (const uni of universities) {
     for (const d of DEPARTMENTS) {
-      const fac = facultyByUniAndCode.get(
-        `${uni.university_id}:${d.facultyCode}`,
-      );
+      const fac = facultyByUniAndCode.get(`${uni.university_id}:${d.facultyCode}`);
       if (!fac) continue;
 
       const created = await prisma.department.create({
@@ -610,9 +534,7 @@ async function main() {
   const advisors: any[] = [];
   for (const uni of universities) {
     for (const d of DEPARTMENTS) {
-      const fac = facultyByUniAndCode.get(
-        `${uni.university_id}:${d.facultyCode}`,
-      );
+      const fac = facultyByUniAndCode.get(`${uni.university_id}:${d.facultyCode}`);
       const dep = deptByUniAndCode.get(`${uni.university_id}:${d.code}`);
       if (!fac || !dep) continue;
 
@@ -621,11 +543,7 @@ async function main() {
           university_id: uni.university_id,
           faculty_id: fac.faculty_id,
           department_id: dep.department_id,
-          advisor_academic_rank: randomItem([
-            "Asst. Prof.",
-            "Assoc. Prof.",
-            "Lecturer",
-          ]),
+          advisor_academic_rank: randomItem(["Asst. Prof.", "Assoc. Prof.", "Lecturer"]),
           advisor_prefix: randomItem(["ดร.", "ผศ.ดร.", "อ."]) as any,
           advisor_first_name: randomItem(firstNames),
           advisor_last_name: randomItem(lastNames),
@@ -640,20 +558,16 @@ async function main() {
 
   /* =========================================================
    5) Head Accounts (NU / KKU / CU) - RERUN SAFE
-   - สร้าง head แยก 3 user เพราะ Consultant.account_id unique
 ========================================================= */
   console.log("👑 Upserting head accounts (NU/KKU/CU)...");
 
   const headsByUni: Record<string, { account: any; consultant: any }> = {};
 
-  const targetHeadUnis = universities.filter((u) =>
-    ["NU", "KKU", "CU"].includes(u.university_code),
-  );
+  const targetHeadUnis = universities.filter((u) => ["NU", "KKU", "CU"].includes(u.university_code));
 
   for (const uni of targetHeadUnis) {
-    const username = `head_${uni.university_code.toLowerCase()}`; // head_nu/head_kku/head_cu
+    const username = `head_${uni.university_code.toLowerCase()}`;
 
-    // ✅ account: upsert by unique username
     const headAccount = await prisma.account.upsert({
       where: { account_username: username },
       create: {
@@ -663,15 +577,14 @@ async function main() {
         account_home_university_id: uni.university_id,
       },
       update: {
-        account_password: PASSWORD_HASH, // ถ้าอยากให้รันซ้ำแล้ว reset pass ด้วย
+        account_password: PASSWORD_HASH,
         account_role: AccountRole.HEAD_CONSULTANT,
         account_home_university_id: uni.university_id,
       },
     });
 
-    // ✅ consultant: upsert by unique account_id
     const headConsultant = await prisma.consultant.upsert({
-      where: { account_id: headAccount.account_id }, // account_id unique
+      where: { account_id: headAccount.account_id },
       create: {
         account_id: headAccount.account_id,
         university_id: uni.university_id,
@@ -683,7 +596,6 @@ async function main() {
       },
     });
 
-    // ✅ profile: upsert by unique consultant_id (เป็น PK)
     await prisma.consultantProfile.upsert({
       where: { consultant_id: headConsultant.consultant_id },
       create: {
@@ -692,7 +604,7 @@ async function main() {
         consultant_last_name: uni.university_code,
         consultant_nickname: "Boss",
         consultant_email: `${username}@${uni.university_code.toLowerCase()}.ac.th`,
-        consultant_gender: randomItem(["MALE", "FEMALE"]),
+        consultant_gender: randomItem(["MALE", "FEMALE"]) as any,
         consultant_phone_number: `08${randomInt(10000000, 99999999)}`,
       },
       update: {
@@ -703,7 +615,6 @@ async function main() {
       },
     });
 
-    // ✅ languages/specs: createMany + skipDuplicates (เพราะมี @@unique)
     await prisma.consultantLanguage.createMany({
       data: [
         {
@@ -722,54 +633,35 @@ async function main() {
 
     await prisma.consultantSpecialization.createMany({
       data: [
-        {
-          consultant_id: headConsultant.consultant_id,
-          consultant_specialization_topic: "Academic Counseling",
-        },
-        {
-          consultant_id: headConsultant.consultant_id,
-          consultant_specialization_topic: "Stress Management",
-        },
+        { consultant_id: headConsultant.consultant_id, consultant_specialization_topic: "Academic Counseling" },
+        { consultant_id: headConsultant.consultant_id, consultant_specialization_topic: "Stress Management" },
       ],
       skipDuplicates: true,
     });
 
-    headsByUni[uni.university_code] = {
-      account: headAccount,
-      consultant: headConsultant,
-    };
-
+    headsByUni[uni.university_code] = { account: headAccount, consultant: headConsultant };
     console.log(`✅ Upserted ${username} for ${uni.university_code}`);
   }
 
-  // =========================================================
-  // MAP: university_id -> head account_id (ใช้ตอน booking/feedback)
-  // =========================================================
+  // MAP: university_id -> head account_id
   const headAccountIdByUniversityId = new Map<number, number>();
-
   for (const uniCode of Object.keys(headsByUni)) {
     const headAcc = headsByUni[uniCode]?.account;
     if (headAcc?.account_home_university_id && headAcc?.account_id) {
-      headAccountIdByUniversityId.set(
-        headAcc.account_home_university_id,
-        headAcc.account_id,
-      );
+      headAccountIdByUniversityId.set(headAcc.account_home_university_id, headAcc.account_id);
     }
   }
 
-/* =========================================================
+  /* =========================================================
   5.05) Rector Accounts (NU/KKU/CU) - RERUN SAFE
 ========================================================= */
   console.log("🏛️ Upserting rector accounts (NU/KKU/CU)...");
 
   const rectorsByUni: Record<string, { account: any }> = {};
-
-  const rectorTargets = universities.filter((u) =>
-    ["NU", "KKU", "CU"].includes(u.university_code),
-  );
+  const rectorTargets = universities.filter((u) => ["NU", "KKU", "CU"].includes(u.university_code));
 
   for (const uni of rectorTargets) {
-    const username = `rector_${uni.university_code.toLowerCase()}`; // rector_nu/rector_kku/rector_cu
+    const username = `rector_${uni.university_code.toLowerCase()}`;
 
     const rectorAccount = await prisma.account.upsert({
       where: { account_username: username },
@@ -780,33 +672,33 @@ async function main() {
         account_home_university_id: uni.university_id,
       },
       update: {
-        account_password: PASSWORD_HASH, // รันซ้ำแล้ว reset pass ได้
+        account_password: PASSWORD_HASH,
         account_role: AccountRole.RECTOR,
         account_home_university_id: uni.university_id,
       },
     });
 
     rectorsByUni[uni.university_code] = { account: rectorAccount };
-
     console.log(`✅ Upserted ${username} for ${uni.university_code}`);
   }
 
   /* =========================================================
-  5.1) Super Admin Account
+  5.1) Super Admin Account (RERUN SAFE)
 ========================================================= */
-  console.log("🛡️ Creating super admin account...");
+  console.log("🛡️ Upserting super admin account...");
 
-  const superAccount = await prisma.account.create({
-    data: {
+  const superAccount = await prisma.account.upsert({
+    where: { account_username: "superAdmin" },
+    create: {
       account_username: "superAdmin",
       account_password: PASSWORD_HASH,
       account_role: AccountRole.SUPER_ADMIN,
-
-      // ✅ แนะนำให้เป็น null เพราะ super เป็น platform-level
       account_home_university_id: null,
-
-      // ถ้าอยากมี line id ก็ใส่ได้ (ต้องไม่ซ้ำ)
-      // account_line_id: "U_SUPER_ADMIN_MOCK",
+    },
+    update: {
+      account_password: PASSWORD_HASH,
+      account_role: AccountRole.SUPER_ADMIN,
+      account_home_university_id: null,
     },
   });
 
@@ -834,9 +726,8 @@ async function main() {
   for (const uni of universities) {
     for (let i = 0; i < 2; i++) {
       const uniCode = uni.university_code.toLowerCase();
-      const username = `consultant_${uniCode}_${i + 1}`; // ✅ stable มาก รันซ้ำไม่พัง
+      const username = `consultant_${uniCode}_${i + 1}`;
 
-      // account upsert
       const acc = await prisma.account.upsert({
         where: { account_username: username },
         create: {
@@ -852,7 +743,6 @@ async function main() {
         },
       });
 
-      // consultant upsert by account_id unique
       const consultant = await prisma.consultant.upsert({
         where: { account_id: acc.account_id },
         create: {
@@ -866,10 +756,6 @@ async function main() {
         },
       });
 
-      // profile upsert
-      // ถ้ารันซ้ำ: จะคงชื่อเดิมที่เคย random ไว้ไหม?
-      // -> ถ้าอยาก "คงเดิม" ให้เลือก update แบบไม่แตะชื่อ
-      // -> ถ้าอยาก "รีสุ่มทุกครั้ง" ก็ใช้ random ใน update ได้
       const fname = randomItem(firstNames);
       const lname = randomItem(lastNames);
 
@@ -881,24 +767,17 @@ async function main() {
           consultant_last_name: lname,
           consultant_nickname: randomItem(nicknames),
           consultant_email: `${username}@${uni.university_code.toLowerCase()}.ac.th`,
-          consultant_gender: randomItem(["MALE", "FEMALE"]),
+          consultant_gender: randomItem(["MALE", "FEMALE"]) as any,
           consultant_phone_number: `08${randomInt(10000000, 99999999)}`,
         },
         update: {
-          // ✅ แนะนำ: update เฉพาะ field ที่อยากให้ refresh
           consultant_email: `${username}@${uni.university_code.toLowerCase()}.ac.th`,
         },
       });
 
-      // languages/specs — createMany skipDuplicates
       const langCount = randomInt(1, 2);
       const pickedLangCodes = Array.from(
-        new Set(
-          Array.from(
-            { length: langCount },
-            () => randomItem(languagePool).code,
-          ),
-        ),
+        new Set(Array.from({ length: langCount }, () => randomItem(languagePool).code)),
       );
 
       await prisma.consultantLanguage.createMany({
@@ -915,11 +794,7 @@ async function main() {
 
       const specCount = randomInt(1, 2);
       const pickedSpecs = Array.from(
-        new Set(
-          Array.from({ length: specCount }, () =>
-            randomItem(specializationPool),
-          ),
-        ),
+        new Set(Array.from({ length: specCount }, () => randomItem(specializationPool))),
       );
 
       await prisma.consultantSpecialization.createMany({
@@ -950,10 +825,8 @@ async function main() {
     const gender = randomItem(Object.values(StudentGender));
     const lineId = `U_MOCK_${1000000000 + i}`;
 
-    // Distribute students: NU(8), KKU(6), CU(6)
     const uni = i <= 8 ? uniNU : i <= 14 ? uniKKU : uniCU;
 
-    // account upsert
     const acc = await prisma.account.upsert({
       where: { account_username: username },
       create: {
@@ -971,29 +844,21 @@ async function main() {
       },
     });
 
-    // student upsert by account_id unique
     const student = await prisma.student.upsert({
       where: { account_id: acc.account_id },
       create: {
         account_id: acc.account_id,
         university_id: uni.university_id,
-        student_status_id:
-          i % 10 === 0
-            ? statusInactive.student_status_id
-            : statusActive.student_status_id,
-        student_code: `660${1000 + i}`, // ระวัง @@unique([university_id, student_code]) -> stable อยู่แล้ว
+        student_status_id: i % 10 === 0 ? statusInactive.student_status_id : statusActive.student_status_id,
+        student_code: `660${1000 + i}`,
       },
       update: {
         university_id: uni.university_id,
-        student_status_id:
-          i % 10 === 0
-            ? statusInactive.student_status_id
-            : statusActive.student_status_id,
+        student_status_id: i % 10 === 0 ? statusInactive.student_status_id : statusActive.student_status_id,
         student_code: `660${1000 + i}`,
       },
     });
 
-    // profile upsert
     await prisma.studentProfile.upsert({
       where: { student_id: student.student_id },
       create: {
@@ -1010,20 +875,14 @@ async function main() {
         student_prefix: randomItem(["นาย", "นางสาว", "นาง"]) as any,
       },
       update: {
-        // แนะนำ update แค่ email/phone พอ (กันข้อมูลเปลี่ยนทุกครั้ง)
         student_email: `${username}@${uni.university_code.toLowerCase()}.ac.th`,
       },
     });
 
-    // academic upsert
-    const uniDeptList = deptList.filter(
-      (d) => d.university_id === uni.university_id,
-    );
+    const uniDeptList = deptList.filter((d) => d.university_id === uni.university_id);
     const dep = uniDeptList[(i - 1) % uniDeptList.length];
     const advisor = advisors.find(
-      (a) =>
-        a.university_id === uni.university_id &&
-        a.department_id === dep.department_id,
+      (a) => a.university_id === uni.university_id && a.department_id === dep.department_id,
     );
 
     await prisma.studentAcademic.upsert({
@@ -1033,9 +892,7 @@ async function main() {
         faculty_id: dep.faculty_id,
         department_id: dep.department_id,
         advisor_id: advisor?.advisor_id ?? null,
-        student_program: randomBool(0.2)
-          ? "International Program"
-          : "Regular Program",
+        student_program: randomBool(0.2) ? "International Program" : "Regular Program",
         student_degree: "Bachelor",
         student_degree_name: "Bachelor Degree",
         student_admit_academic_year: 2566,
@@ -1047,7 +904,6 @@ async function main() {
       },
     });
 
-    // address upsert (ต้องใช้ composite unique)
     const addressDetail = `เลขที่ ${randomInt(1, 99)}/${randomInt(1, 99)}`;
     const postal = `${randomInt(10000, 99999)}`;
     const provCurrent = provinces[(i - 1) % provinces.length];
@@ -1098,62 +954,71 @@ async function main() {
       },
     });
 
-    // wallet upsert
     await prisma.studentPointWallet.upsert({
       where: { student_id: student.student_id },
       create: { student_id: student.student_id, student_point_balance: 0 },
-      update: {}, // ไม่ต้องทำอะไร
+      update: {},
     });
 
     students.push(student);
   }
 
   /* =========================================================
-  8) TimeSlots - University Pool (คิวรวม)
-  - จ-ศ 08:00-20:00
-  - ส-อา 08:00-16:00
-  - slotDuration = 60 นาที
+  8) TimeSlots - University Pool (เพิ่มย้อนหลัง 3 เดือน)
 ========================================================= */
-  console.log("⏰ Creating time slots (university pool)...");
+  console.log("⏰ Creating time slots (university pool, with past 3 months)...");
 
   const today = startOfDay(new Date());
-  const timeSlots: Map<number, any[]> = new Map(); // university_id -> slots[]
+  const timeSlots: Map<number, any[]> = new Map();
 
-  const DAY_COUNT = 14;
+  const PAST_DAYS = 90;
+  const FUTURE_DAYS = 14;
+
   const SLOT_DURATION_MINUTES = 60;
-  const DEFAULT_CAPACITY = 2;
+  const DEFAULT_CAPACITY = 4;
 
   function isWeekend(date: Date) {
-    const day = date.getDay(); // 0=Sun,6=Sat
+    const day = date.getDay();
     return day === 0 || day === 6;
   }
 
   function buildSlotsForDate(date: Date) {
-    // จ-ศ 08-20, ส-อา 08-16
     const openHour = 8;
     const closeHour = isWeekend(date) ? 16 : 20;
 
     const slots: Array<{ start: Date; end: Date }> = [];
 
-    // ทำ slot ชั่วโมงต่อชั่วโมง: [08-09], [09-10] ... จนถึง closeHour
     for (let hour = openHour; hour < closeHour; hour++) {
-      const start = new Date(date);
-      start.setHours(hour, 0, 0, 0);
+      for (let minute = 0; minute < 60; minute += SLOT_DURATION_MINUTES) {
+        const start = new Date(date);
+        start.setHours(hour, minute, 0, 0);
 
-      const end = new Date(start);
-      end.setMinutes(end.getMinutes() + SLOT_DURATION_MINUTES);
+        const end = new Date(start);
+        end.setMinutes(end.getMinutes() + SLOT_DURATION_MINUTES);
 
-      slots.push({ start, end });
+        if (
+          end.getHours() > closeHour ||
+          (end.getHours() === closeHour && end.getMinutes() > 0)
+        ) {
+          continue;
+        }
+        slots.push({ start, end });
+      }
     }
-
     return slots;
   }
 
   for (const uni of universities) {
     const data: any[] = [];
 
-    for (let day = 0; day < DAY_COUNT; day++) {
-      const d = new Date(today);
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - PAST_DAYS);
+    startDate.setHours(0, 0, 0, 0);
+
+    const TOTAL_DAYS = PAST_DAYS + FUTURE_DAYS;
+
+    for (let day = 0; day <= TOTAL_DAYS; day++) {
+      const d = new Date(startDate);
       d.setDate(d.getDate() + day);
       d.setHours(0, 0, 0, 0);
 
@@ -1170,17 +1035,15 @@ async function main() {
       }
     }
 
-    // bulk insert (กันซ้ำด้วย unique [university_id, start, end])
     await prisma.timeSlot.createMany({
       data,
       skipDuplicates: true,
     });
 
-    // ดึงกลับมาเก็บไว้ใช้ตอนทำ booking
     const slots = await prisma.timeSlot.findMany({
       where: {
         university_id: uni.university_id,
-        time_slot_start_datetime: { gte: today },
+        time_slot_start_datetime: { gte: startDate },
       },
       orderBy: { time_slot_start_datetime: "asc" },
     });
@@ -1189,29 +1052,24 @@ async function main() {
   }
 
   /* =========================================================
-    9) Bookings - Capacity aware (student10..student20)
-  ========================================================= */
+  9) Bookings - Status-aware time slots (past/now/future)
+========================================================= */
   console.log("📅 Creating bookings...");
 
-  const bookingStudents = students.slice(9); // student10..student20
-  const ruleCompleted = pointRules.find(
-    (r) => r.point_rule_code === "BOOKING_COMPLETED",
-  )!;
-  const ruleFeedback = pointRules.find(
-    (r) => r.point_rule_code === "FEEDBACK_SUBMITTED",
-  )!;
-  const ruleNoShow = pointRules.find(
-    (r) => r.point_rule_code === "NO_SHOW_PENALTY",
-  )!;
+  // ✅ ถ้าอยากให้ทุกคนมี booking -> เปลี่ยนเป็น: const bookingStudents = students;
+  const bookingStudents = students; // student10..student20
+
+  const ruleCompleted = pointRules.find((r) => r.point_rule_code === "BOOKING_COMPLETED")!;
+  const ruleFeedback = pointRules.find((r) => r.point_rule_code === "FEEDBACK_SUBMITTED")!;
+  const ruleNoShow = pointRules.find((r) => r.point_rule_code === "NO_SHOW_PENALTY")!;
 
   const bookingPlan: { status: BookingStatus; count: number }[] = [
-    { status: BookingStatus.COMPLETED, count: 12 },
-    { status: BookingStatus.IN_PROGRESS, count: 6 },
-    { status: BookingStatus.PENDING_ASSIGNMENT, count: 10 },
-    { status: BookingStatus.CANCELLED, count: 6 },
+    { status: BookingStatus.COMPLETED, count: 1200 },
+    { status: BookingStatus.IN_PROGRESS, count: 0 },
+    { status: BookingStatus.PENDING_ASSIGNMENT, count: 0 },
+    { status: BookingStatus.CANCELLED, count: 100 },
   ];
 
-  // track "active booking count" per slot id (ใช้เพื่อเลือก slot ที่ยังไม่เต็ม)
   const activeCountBySlotId = new Map<number, number>();
 
   function isActiveStatus(s: BookingStatus) {
@@ -1222,14 +1080,44 @@ async function main() {
     );
   }
 
-  function pickAvailableSlotForUniversity(uniId: number) {
+  const now = new Date();
+  const today0 = startOfDay(now);
+
+  const pastFrom = new Date(today0);
+  pastFrom.setDate(pastFrom.getDate() - 90);
+
+  const inProgressTo = new Date(today0);
+  inProgressTo.setDate(inProgressTo.getDate() + 7);
+
+  const futureTo = new Date(today0);
+  futureTo.setDate(futureTo.getDate() + 14);
+
+  function pickSlotByStatus(uniId: number, status: BookingStatus) {
     const slots = timeSlots.get(uniId) || [];
-    // หา slot ที่ยังเหลือ capacity
+    const needCapacity = isActiveStatus(status);
+
     const candidates = slots.filter((s) => {
-      const maxCap = Number(s.time_slot_max_capacity ?? 0);
-      const used = activeCountBySlotId.get(s.time_slot_id) ?? 0;
-      return maxCap > used && s.time_slot_status === TimeSlotStatus.AVAILABLE;
+      if (s.time_slot_status !== TimeSlotStatus.AVAILABLE) return false;
+
+      const start = new Date(s.time_slot_start_datetime);
+
+      if (status === BookingStatus.COMPLETED || status === BookingStatus.CANCELLED) {
+        if (!(start >= pastFrom && start < today0)) return false;
+      } else if (status === BookingStatus.IN_PROGRESS) {
+        if (!(start >= today0 && start < inProgressTo)) return false;
+      } else {
+        if (!(start >= today0 && start < futureTo)) return false;
+      }
+
+      if (needCapacity) {
+        const maxCap = Number(s.time_slot_max_capacity ?? 0);
+        const used = activeCountBySlotId.get(s.time_slot_id) ?? 0;
+        return maxCap > used;
+      }
+
+      return true;
     });
+
     if (candidates.length === 0) return null;
     return randomItem(candidates);
   }
@@ -1239,30 +1127,26 @@ async function main() {
       const student = randomItem(bookingStudents);
       const category = randomItem(problemCategories);
 
-      const slot = pickAvailableSlotForUniversity(student.university_id);
+      const slot = pickSlotByStatus(student.university_id, plan.status);
       if (!slot) {
-        console.log(
-          `⚠️  No available slots (capacity full) for university ${student.university_id}`,
-        );
+        console.log(`⚠️  No suitable slot for status=${plan.status} uni=${student.university_id}`);
         continue;
       }
 
-      // consultantId: ถ้า pending ให้ null (ยังไม่แจกงาน)
       let consultantId: number | null = null;
       if (plan.status !== BookingStatus.PENDING_ASSIGNMENT) {
-        const uniConsultants = consultants.filter(
-          (c) => c.university_id === student.university_id,
-        );
-        consultantId = uniConsultants.length
-          ? randomItem(uniConsultants).consultant_id
-          : null;
+        const uniConsultants = consultants.filter((c) => c.university_id === student.university_id);
+        if (uniConsultants.length === 0) {
+          console.log(
+            `⚠️  No consultants for uni=${student.university_id} (skip booking status=${plan.status})`,
+          );
+          continue;
+        }
+        consultantId = randomItem(uniConsultants).consultant_id;
       }
 
-      // ถ้าจะสร้าง CANCELLED จริง ๆ ให้สร้าง cancellation record + update booking_status ตอนท้าย
       const initialStatus =
-        plan.status === BookingStatus.CANCELLED
-          ? BookingStatus.PENDING_ASSIGNMENT
-          : plan.status;
+        plan.status === BookingStatus.CANCELLED ? BookingStatus.PENDING_ASSIGNMENT : plan.status;
 
       const booking = await prisma.booking.create({
         data: {
@@ -1276,7 +1160,6 @@ async function main() {
         },
       });
 
-      // update active count map (นับเฉพาะ active statuses)
       if (isActiveStatus(initialStatus)) {
         activeCountBySlotId.set(
           slot.time_slot_id,
@@ -1284,7 +1167,7 @@ async function main() {
         );
       }
 
-      // Handle CANCELLED bookings
+      // ===================== CANCELLED =====================
       if (plan.status === BookingStatus.CANCELLED) {
         await prisma.bookingCancellation.create({
           data: {
@@ -1295,20 +1178,16 @@ async function main() {
           },
         });
 
-        // เปลี่ยน booking เป็น CANCELLED
         await prisma.booking.update({
           where: { booking_id: booking.booking_id },
           data: { booking_status: BookingStatus.CANCELLED },
         });
 
-        // CANCELLED ไม่ถือว่า active -> ถ้าเมื่อกี้นับ active ไว้ต้องลดออก
-        // (ตอนนี้ initialStatus เป็น PENDING_ASSIGNMENT ดังนั้นเคยเพิ่มไว้ ต้องลดออก)
         activeCountBySlotId.set(
           slot.time_slot_id,
           Math.max(0, (activeCountBySlotId.get(slot.time_slot_id) ?? 1) - 1),
         );
 
-        // Penalty points
         await prisma.studentPointTransaction.create({
           data: {
             student_id: booking.student_id,
@@ -1322,17 +1201,13 @@ async function main() {
 
         await prisma.studentPointWallet.update({
           where: { student_id: booking.student_id },
-          data: {
-            student_point_balance: { increment: ruleNoShow.point_rule_points },
-          },
+          data: { student_point_balance: { increment: ruleNoShow.point_rule_points } },
         });
       }
 
-      // Assignment (ถ้ามี consultantId)
+      // ===================== ASSIGNMENT =====================
       if (consultantId) {
-        const assignedBy = consultants.find(
-          (c) => c.university_id === student.university_id,
-        );
+        const assignedBy = consultants.find((c) => c.university_id === student.university_id);
         if (assignedBy) {
           await prisma.bookingAssignment.create({
             data: {
@@ -1345,15 +1220,13 @@ async function main() {
         }
       }
 
-      // Handle COMPLETED bookings
+      // ===================== COMPLETED =====================
       if (plan.status === BookingStatus.COMPLETED) {
         await prisma.bookingOutcome.create({
           data: {
             booking_id: booking.booking_id,
             booking_outcome_consultant_note: `สรุปผล: ${category.problem_category_name_th} - นักศึกษาได้รับคำแนะนำและมีแนวทางในการแก้ไขปัญหา`,
-            booking_outcome_next_step: randomBool()
-              ? "นัดติดตามผลใน 2 สัปดาห์"
-              : null,
+            booking_outcome_next_step: randomBool() ? "นัดติดตามผลใน 2 สัปดาห์" : null,
             booking_outcome_risk_level: randomInt(1, 3),
           },
         });
@@ -1362,7 +1235,7 @@ async function main() {
           data: {
             booking_id: booking.booking_id,
             student_id: booking.student_id,
-            consultant_id: consultantId!, // completed ต้องมี consultant
+            consultant_id: consultantId!,
             feedback_is_anonymous: randomBool(0.7),
           },
         });
@@ -1377,8 +1250,7 @@ async function main() {
           });
         }
 
-        const headAccountId =
-          headAccountIdByUniversityId.get(booking.university_id) ?? null;
+        const headAccountId = headAccountIdByUniversityId.get(booking.university_id) ?? null;
 
         await prisma.feedbackComment.create({
           data: {
@@ -1391,16 +1263,11 @@ async function main() {
             feedback_comment_admin_reply: randomBool(0.3)
               ? "ขอบคุณสำหรับความคิดเห็น เรายินดีที่ได้ช่วยเหลือ"
               : null,
-
-            // ✅ คนตอบ = head ของมหาลัยนั้น
-            feedback_comment_replied_by_id: randomBool(0.3)
-              ? headAccountId
-              : null,
+            feedback_comment_replied_by_id: randomBool(0.3) ? headAccountId : null,
             feedback_comment_replied_at: randomBool(0.3) ? new Date() : null,
           },
         });
 
-        // Reward points
         await prisma.studentPointTransaction.create({
           data: {
             student_id: booking.student_id,
@@ -1423,15 +1290,20 @@ async function main() {
           },
         });
 
-        const totalPoints =
-          ruleCompleted.point_rule_points + ruleFeedback.point_rule_points;
+        const totalPoints = ruleCompleted.point_rule_points + ruleFeedback.point_rule_points;
+
         await prisma.studentPointWallet.update({
           where: { student_id: booking.student_id },
           data: { student_point_balance: { increment: totalPoints } },
         });
+
+        await prisma.booking.update({
+          where: { booking_id: booking.booking_id },
+          data: { booking_status: BookingStatus.COMPLETED },
+        });
       }
 
-      // Notifications (เหมือนเดิม)
+      // ===================== NOTIFICATIONS =====================
       const studentAcc = await prisma.student.findUnique({
         where: { student_id: booking.student_id },
         select: { account_id: true },
@@ -1446,10 +1318,7 @@ async function main() {
               : tplAssigned.notification_template_id,
             booking_id: booking.booking_id,
             notification_channel: "LINE",
-            notification_data: {
-              bookingId: booking.booking_id,
-              status: plan.status,
-            } as any,
+            notification_data: { bookingId: booking.booking_id, status: plan.status } as any,
             notification_status: randomBool(0.8) ? "SENT" : "PENDING",
             notification_sent_at: randomBool(0.8) ? new Date() : null,
           },
@@ -1465,31 +1334,29 @@ async function main() {
   console.log("📊 Summary:");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log(`🏫 Universities: ${universities.length} (NU, KKU, CU)`);
-  console.log(`👑 Head Admin: 1 (username: head)`);
+  console.log(`👑 Head Consultants: 3 (head_nu, head_kku, head_cu)`);
+  console.log(`🏛️ Rectors: 3 (rector_nu, rector_kku, rector_cu)`);
+  console.log(`🛡️ Super Admin: 1 (superAdmin)`);
   console.log(`💼 Consultants: ${consultants.length} (2 per university)`);
   console.log(`🎓 Students: ${students.length} (8 NU, 6 KKU, 6 CU)`);
   console.log(`⏰ Time Slots: ${Array.from(timeSlots.values()).flat().length}`);
-  console.log(
-    `📅 Bookings: ${bookingPlan.reduce((sum, p) => sum + p.count, 0)}`,
-  );
-  console.log(
-    `   - Completed: ${bookingPlan.find((p) => p.status === BookingStatus.COMPLETED)?.count || 0}`,
-  );
-  console.log(
-    `   - In Progress: ${bookingPlan.find((p) => p.status === BookingStatus.IN_PROGRESS)?.count || 0}`,
-  );
-  console.log(
-    `   - Pending: ${bookingPlan.find((p) => p.status === BookingStatus.PENDING_ASSIGNMENT)?.count || 0}`,
-  );
-  console.log(
-    `   - Cancelled: ${bookingPlan.find((p) => p.status === BookingStatus.CANCELLED)?.count || 0}`,
-  );
+  console.log(`📅 Bookings: ${bookingPlan.reduce((sum, p) => sum + p.count, 0)}`);
+  console.log(`   - Completed: ${bookingPlan.find((p) => p.status === BookingStatus.COMPLETED)?.count || 0}`);
+  console.log(`   - In Progress: ${bookingPlan.find((p) => p.status === BookingStatus.IN_PROGRESS)?.count || 0}`);
+  console.log(`   - Pending: ${bookingPlan.find((p) => p.status === BookingStatus.PENDING_ASSIGNMENT)?.count || 0}`);
+  console.log(`   - Cancelled: ${bookingPlan.find((p) => p.status === BookingStatus.CANCELLED)?.count || 0}`);
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log("\n🔑 Login Credentials:");
-  console.log(`   Username: head / consultant1-6 / student1-20`);
+  console.log("   Head: head_nu / head_kku / head_cu");
+  console.log("   Rector: rector_nu / rector_kku / rector_cu");
+  console.log("   Super: superAdmin");
+  console.log("   Consultant: consultant_nu_1, consultant_nu_2, consultant_kku_1, consultant_kku_2, consultant_cu_1, consultant_cu_2");
+  console.log("   Student: student1 - student20");
   console.log(`   Password: ${PLAIN_PASSWORD}`);
-  console.log("\n💡 Note: Bookings created only for student10-20");
-  console.log("   Students 1-9 have no bookings (clean slate for testing)\n");
+  console.log("\n💡 Note: Bookings created only for student10-20 (students 1-9 clean slate)\n");
+
+  // silence unused warning (ถ้าเปิด noUnusedLocals)
+  void superAccount;
 }
 
 main()

@@ -8,7 +8,14 @@ import { cn } from "@/lib/cn";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   asChild?: boolean; // ✅ เพิ่ม
-  variant?: "primary" | "secondary" | "outline" | "ghost" | "danger" | "success";
+  variant?:
+    | "primary"
+    | "secondary"
+    | "outline"
+    | "ghost"
+    | "danger"
+    | "destructive"
+    | "success";
   size?: "xs" | "sm" | "md" | "lg" | "icon";
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
@@ -35,7 +42,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       type,
       ...props
     },
-    ref
+    ref,
   ) => {
     const Comp: any = asChild ? Slot : "button";
 
@@ -56,6 +63,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         "border-2 border-gray-300 bg-white text-gray-700 hover:border-primary-500 hover:text-primary-600 hover:bg-primary-50",
       ghost: "bg-transparent text-gray-600 hover:bg-gray-100",
       danger: "bg-red-500 text-white hover:bg-red-600 shadow-md",
+      destructive: "bg-red-500 text-white hover:bg-red-600 shadow-md", // ✅ เพิ่มบรรทัดนี้
       success: "bg-green-500 text-white hover:bg-green-600 shadow-md",
     };
 
@@ -75,12 +83,15 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           variantStyles[variant],
           sizeStyles[size],
           fullWidth && "w-full",
-          className
+          className,
         )}
         style={{
           ...style,
           ...(minWidth != null
-            ? { minWidth: typeof minWidth === "number" ? `${minWidth}px` : minWidth }
+            ? {
+                minWidth:
+                  typeof minWidth === "number" ? `${minWidth}px` : minWidth,
+              }
             : {}),
         }}
         // ✅ ถ้าเป็น <button> ให้มี type default เป็น button กัน submit ฟอร์ม
@@ -91,8 +102,19 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {isLoading ? (
           <>
-            <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <svg
+              className="animate-spin h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
               <path
                 className="opacity-75"
                 fill="currentColor"
@@ -103,14 +125,22 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           </>
         ) : (
           <>
-            {leftIcon && <span className={size === "icon" ? "" : "text-xl lg:text-2xl"}>{leftIcon}</span>}
+            {leftIcon && (
+              <span className={size === "icon" ? "" : "text-xl lg:text-2xl"}>
+                {leftIcon}
+              </span>
+            )}
             {children}
-            {rightIcon && <span className={size === "icon" ? "" : "text-xl lg:text-2xl"}>{rightIcon}</span>}
+            {rightIcon && (
+              <span className={size === "icon" ? "" : "text-xl lg:text-2xl"}>
+                {rightIcon}
+              </span>
+            )}
           </>
         )}
       </Comp>
     );
-  }
+  },
 );
 
 Button.displayName = "Button";

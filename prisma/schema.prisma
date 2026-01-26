@@ -23,6 +23,7 @@ model Region {
   region_id      Int        @id @default(autoincrement())
   region_code    RegionCode @unique
   region_name_th String     @db.VarChar(50)
+  region_name_en String?    @db.VarChar(50)
   provinces      Province[]
 
   @@map("region")
@@ -71,12 +72,13 @@ model University {
   aiKbChunks       AiKbChunk[]       @relation("UniversityAiKbChunks")
   aiFeedbackEvents AiFeedbackEvent[] @relation("UniversityAiFeedbackEvents")
 
+  borrowRequestsFrom                      BorrowRequest[]
+  borrowAssignmentsAsConsultantUniversity BorrowAssignment[]
 
   @@index([province_id])
   @@index([university_is_active])
   @@map("university")
 }
-
 
 model AccountUniversityAccess {
   account_university_access_id Int                  @id @default(autoincrement())
@@ -121,7 +123,14 @@ model Account {
   feedbackCommentReplies FeedbackComment[]     @relation("FeedbackCommentRepliedBy")
   notifications          Notification[]
   student                Student?
-  aiFeedbackEvents AiFeedbackEvent[]
+  aiFeedbackEvents       AiFeedbackEvent[]
+
+  borrowRequestsRequested BorrowRequest[] @relation("BorrowRequestedBy")
+  borrowRequestsSubmitted BorrowRequest[] @relation("BorrowSubmittedBy")
+  borrowRequestsApproved  BorrowRequest[] @relation("BorrowApprovedBy")
+  borrowRequestsRejected  BorrowRequest[] @relation("BorrowRejectedBy")
+
+  borrowAssignmentsMade BorrowAssignment[] @relation("BorrowAssignedBy")
 
   @@index([account_role])
   @@index([account_home_university_id])
@@ -309,10 +318,11 @@ model Consultant {
   university   University   @relation(fields: [university_id], references: [university_id])
   organization Organization @relation(fields: [organization_id], references: [organization_id])
 
-  languages       ConsultantLanguage[]
-  profile         ConsultantProfile?
-  specializations ConsultantSpecialization[]
-  feedbacks       Feedback[]
+  languages         ConsultantLanguage[]
+  profile           ConsultantProfile?
+  specializations   ConsultantSpecialization[]
+  feedbacks         Feedback[]
+  borrowAssignments BorrowAssignment[]
 
   @@index([organization_id])
   @@index([university_id])
@@ -638,10 +648,10 @@ model AiKbDocument {
   /// NULL = เอกสารกลาง, มีค่า = เอกสารเฉพาะมหาลัย
   university_id Int?
 
-  ai_kb_document_key       String  @db.VarChar(120)
-  ai_kb_document_title     String  @db.VarChar(200)
-  ai_kb_document_category  String? @db.VarChar(50)
-  ai_kb_document_url_hint  String? @db.VarChar(200)
+  ai_kb_document_key      String  @db.VarChar(120)
+  ai_kb_document_title    String  @db.VarChar(200)
+  ai_kb_document_category String? @db.VarChar(50)
+  ai_kb_document_url_hint String? @db.VarChar(200)
 
   ai_kb_document_is_active Boolean @default(true)
 
@@ -652,15 +662,15 @@ model AiKbDocument {
   ai_kb_document_updated_at DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
   // relations
-  university University? @relation("UniversityAiKbDocuments", fields: [university_id], references: [university_id])
-  versions          AiKbDocumentVersion[]
-  chunks            AiKbChunk[]
-  roles             AiKbDocumentRole[]
+  university University?           @relation("UniversityAiKbDocuments", fields: [university_id], references: [university_id])
+  versions   AiKbDocumentVersion[]
+  chunks     AiKbChunk[]
+  roles      AiKbDocumentRole[]
 
   /// publishedVersion relation ทำเป็น optional + no action เพื่อเลี่ยง cycle ตอน migrate
-  publishedVersion  AiKbDocumentVersion? @relation("PublishedVersion", fields: [ai_kb_published_version_id], references: [ai_kb_document_version_id], onDelete: NoAction, onUpdate: NoAction)
-  resolvedFeedbackEvents AiFeedbackEvent[] @relation("ResolvedDocument")
-  
+  publishedVersion       AiKbDocumentVersion? @relation("PublishedVersion", fields: [ai_kb_published_version_id], references: [ai_kb_document_version_id], onDelete: NoAction, onUpdate: NoAction)
+  resolvedFeedbackEvents AiFeedbackEvent[]    @relation("ResolvedDocument")
+
   @@unique([university_id, ai_kb_document_key])
   @@index([university_id, ai_kb_document_is_active])
   @@index([ai_kb_document_category])
@@ -681,20 +691,20 @@ model AiKbDocumentVersion {
   ai_kb_document_version_id Int @id @default(autoincrement())
   ai_kb_document_id         Int
 
-  ai_kb_version_no      Int
-  ai_kb_content_type    KbContentType
-  ai_kb_version_status  KbVersionStatus @default(DRAFT)
+  ai_kb_version_no     Int
+  ai_kb_content_type   KbContentType
+  ai_kb_version_status KbVersionStatus @default(DRAFT)
 
   /// แนะนำเก็บเป็น path เพื่ออัปโหลด/แก้ไขง่าย
-  ai_kb_source_path   String? @db.Text
-  ai_kb_source_md     String? @db.Text
-  ai_kb_source_json   Json?
+  ai_kb_source_path String? @db.Text
+  ai_kb_source_md   String? @db.Text
+  ai_kb_source_json Json?
 
   /// ข้อความที่ normalize เพื่อทำ chunk หรือ search
   ai_kb_normalized_text String? @db.Text
 
   ai_kb_index_status KbIndexStatus @default(PENDING)
-  ai_kb_index_error  String? @db.Text
+  ai_kb_index_error  String?       @db.Text
 
   ai_kb_version_created_at DateTime @default(now()) @db.Timestamptz(6)
   ai_kb_version_updated_at DateTime @default(now()) @updatedAt @db.Timestamptz(6)
@@ -730,10 +740,9 @@ model AiKbChunk {
   ai_kb_chunk_created_at DateTime @default(now()) @db.Timestamptz(6)
 
   // relations
-  document AiKbDocument @relation(fields: [ai_kb_document_id], references: [ai_kb_document_id], onDelete: Cascade)
-  version  AiKbDocumentVersion @relation(fields: [ai_kb_document_version_id], references: [ai_kb_document_version_id], onDelete: Cascade)
-  university University? @relation("UniversityAiKbChunks", fields: [university_id], references: [university_id])
-
+  document   AiKbDocument        @relation(fields: [ai_kb_document_id], references: [ai_kb_document_id], onDelete: Cascade)
+  version    AiKbDocumentVersion @relation(fields: [ai_kb_document_version_id], references: [ai_kb_document_version_id], onDelete: Cascade)
+  university University?         @relation("UniversityAiKbChunks", fields: [university_id], references: [university_id])
 
   @@unique([ai_kb_document_version_id, ai_kb_chunk_index])
   @@index([university_id])
@@ -747,8 +756,8 @@ model AiFeedbackEvent {
   account_id    Int?
   ai_user_role  String? @db.VarChar(30)
 
-  ai_feedback_type       AiFeedbackType
-  ai_user_question_text  String @db.Text
+  ai_feedback_type      AiFeedbackType
+  ai_user_question_text String         @db.Text
 
   ai_assistant_reply_excerpt String? @db.VarChar(500)
   ai_top_document_keys       Json?
@@ -762,9 +771,9 @@ model AiFeedbackEvent {
   ai_created_at DateTime @default(now()) @db.Timestamptz(6)
 
   // relations
- university University? @relation("UniversityAiFeedbackEvents", fields: [university_id], references: [university_id])
+  university University? @relation("UniversityAiFeedbackEvents", fields: [university_id], references: [university_id])
 
-  account    Account?    @relation(fields: [account_id], references: [account_id])
+  account          Account?      @relation(fields: [account_id], references: [account_id])
   resolvedDocument AiKbDocument? @relation("ResolvedDocument", fields: [ai_resolved_document_id], references: [ai_kb_document_id])
 
   @@index([university_id])
@@ -773,6 +782,85 @@ model AiFeedbackEvent {
   @@map("ai_feedback_event")
 }
 
+model BorrowRequest {
+  borrow_request_id Int @id @default(autoincrement())
+
+  // มหาลัยต้นทาง (ผู้ขอ)
+  from_university_id      Int
+  requested_by_account_id Int
+
+  borrow_request_title  String  @db.VarChar(200)
+  borrow_request_reason String  @db.Text
+  borrow_request_detail String? @db.Text
+
+  borrow_needed_from DateTime? @db.Timestamptz(3)
+  borrow_needed_to   DateTime? @db.Timestamptz(3)
+
+  borrow_needed_count   Int                 @default(1)
+  borrow_request_status BorrowRequestStatus @default(DRAFT)
+
+  // submit / approve / reject
+  borrow_submitted_at            DateTime? @db.Timestamptz(3)
+  borrow_submitted_by_account_id Int?
+  borrow_submit_note             String?   @db.Text
+
+  borrow_approved_at            DateTime? @db.Timestamptz(3)
+  borrow_approved_by_account_id Int?
+
+  borrow_rejected_at            DateTime? @db.Timestamptz(3)
+  borrow_rejected_by_account_id Int?
+  borrow_reject_reason          String?   @db.Text
+
+  // audit
+  borrow_request_created_at DateTime @default(now()) @db.Timestamptz(3)
+  borrow_request_updated_at DateTime @default(now()) @updatedAt @db.Timestamptz(3)
+
+  // relations (สำคัญมาก)
+  fromUniversity University @relation(fields: [from_university_id], references: [university_id])
+  requestedBy    Account    @relation("BorrowRequestedBy", fields: [requested_by_account_id], references: [account_id])
+
+  submittedBy Account? @relation("BorrowSubmittedBy", fields: [borrow_submitted_by_account_id], references: [account_id])
+  approvedBy  Account? @relation("BorrowApprovedBy", fields: [borrow_approved_by_account_id], references: [account_id])
+  rejectedBy  Account? @relation("BorrowRejectedBy", fields: [borrow_rejected_by_account_id], references: [account_id])
+
+  assignments BorrowAssignment[] // ✅ 1 -> many
+
+  @@index([from_university_id])
+  @@index([requested_by_account_id])
+  @@index([borrow_request_status])
+  @@index([borrow_request_created_at])
+  @@map("borrow_request")
+}
+
+model BorrowAssignment {
+  borrow_assignment_id Int @id @default(autoincrement())
+
+  borrow_request_id Int
+
+  consultant_id            Int
+  consultant_university_id Int
+
+  borrow_assign_start_at DateTime @db.Timestamptz(3)
+  borrow_assign_end_at   DateTime @db.Timestamptz(3)
+
+  borrow_assigned_by_account_id Int
+  borrow_assignment_note        String?  @db.Text
+  borrow_assigned_at            DateTime @default(now()) @db.Timestamptz(3)
+
+  // relations
+  borrowRequest        BorrowRequest @relation(fields: [borrow_request_id], references: [borrow_request_id], onDelete: Cascade)
+  consultant           Consultant    @relation(fields: [consultant_id], references: [consultant_id])
+  consultantUniversity University    @relation(fields: [consultant_university_id], references: [university_id])
+  assignedBy           Account       @relation("BorrowAssignedBy", fields: [borrow_assigned_by_account_id], references: [account_id])
+
+  // ✅ กันคนเดิมซ้ำใน request เดียวกัน
+  @@unique([borrow_request_id, consultant_id])
+  @@index([borrow_request_id])
+  @@index([consultant_id])
+  @@index([consultant_university_id])
+  @@index([borrow_assigned_by_account_id])
+  @@map("borrow_assignment")
+}
 
 // ==========================================
 // ENUMS
@@ -867,4 +955,14 @@ enum AiFeedbackStatus {
   OPEN
   RESOLVED
   IGNORED
+}
+
+enum BorrowRequestStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  ASSIGNED
+  COMPLETED
+  CANCELLED
 }

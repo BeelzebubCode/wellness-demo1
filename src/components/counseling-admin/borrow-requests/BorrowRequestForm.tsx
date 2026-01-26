@@ -1,0 +1,77 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import type { CreateBorrowRequestInput } from "@/features/borrow-requests/types";
+
+export function BorrowRequestForm({
+  onSubmit,
+  loading,
+}: {
+  loading?: boolean;
+  onSubmit: (input: CreateBorrowRequestInput) => Promise<void> | void;
+}) {
+  const [title, setTitle] = useState("");
+  const [reason, setReason] = useState("");
+  const [detail, setDetail] = useState("");
+  const [neededCount, setNeededCount] = useState(1);
+
+  const can = useMemo(
+    () => title.trim().length > 0 && reason.trim().length > 0 && neededCount >= 1,
+    [title, reason, neededCount],
+  );
+
+  return (
+    <Card className="p-4 flex flex-col gap-3">
+      <div className="font-semibold text-slate-800">สร้างคำขอยืมผู้ให้คำปรึกษา</div>
+
+      <div className="grid gap-2">
+        <label className="text-sm text-slate-600">หัวข้อ</label>
+        <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+      </div>
+
+      <div className="grid gap-2">
+        <label className="text-sm text-slate-600">เหตุผล</label>
+        <Input value={reason} onChange={(e) => setReason(e.target.value)} />
+      </div>
+
+      <div className="grid gap-2">
+        <label className="text-sm text-slate-600">รายละเอียด (optional)</label>
+        <textarea
+          className="w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:ring-2 focus:ring-primary-200"
+          rows={4}
+          value={detail}
+          onChange={(e) => setDetail(e.target.value)}
+        />
+      </div>
+
+      <div className="grid gap-2 max-w-[160px]">
+        <label className="text-sm text-slate-600">ต้องการกี่คน</label>
+        <Input
+          type="number"
+          min={1}
+          value={neededCount}
+          onChange={(e) => setNeededCount(Math.max(1, Number(e.target.value || 1)))}
+        />
+      </div>
+
+      <div className="flex justify-end">
+        <Button
+          disabled={!can || loading}
+          onClick={() =>
+            onSubmit({
+              title: title.trim(),
+              reason: reason.trim(),
+              detail: detail.trim() ? detail.trim() : null,
+              neededCount,
+            })
+          }
+        >
+          สร้างคำขอ
+        </Button>
+      </div>
+    </Card>
+  );
+}

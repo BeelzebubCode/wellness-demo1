@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { CalendarDays } from "lucide-react";
 import { toISODateString } from "@/lib/date";
 
-import { ScheduleCalendar, SlotEditor } from "@/components/admin/schedule";
+import { ScheduleCalendar, SlotEditor } from "@/components/counseling-admin/schedule";
 
 import type { TimeSlot } from "@/features/schedule/types";
 import { scheduleApi } from "@/features/schedule/api";

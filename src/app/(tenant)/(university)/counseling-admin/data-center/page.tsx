@@ -3,12 +3,12 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import CategoryTabs from '@/components/admin/data-center/CategoryTabs';
-import FilterBar from '@/components/admin/data-center/FilterBar';
-import StudentsTable from '@/components/admin/data-center/tables/StudentsTable';
-import ConsultantsTable from '@/components/admin/data-center/tables/ConsultantsTable';
-import CategoriesTable from '@/components/admin/data-center/tables/CategoriesTable';
-import BookingsTable from '@/components/admin/data-center/tables/BookingsTable';
+import CategoryTabs from '@/components/counseling-admin/data-center/CategoryTabs';
+import FilterBar from '@/components/counseling-admin/data-center/FilterBar';
+import StudentsTable from '@/components/counseling-admin/data-center/tables/StudentsTable';
+import ConsultantsTable from '@/components/counseling-admin/data-center/tables/ConsultantsTable';
+import CategoriesTable from '@/components/counseling-admin/data-center/tables/CategoriesTable';
+import BookingsTable from '@/components/counseling-admin/data-center/tables/BookingsTable';
 import type { DataCenterCategory, DataCenterFilter } from '@/features/data-center/types';
 
 export default function DataCenterPage() {

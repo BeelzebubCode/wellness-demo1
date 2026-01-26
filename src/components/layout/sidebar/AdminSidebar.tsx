@@ -1,7 +1,7 @@
 // components/layout/sidebar/AdminSidebar.tsx
 "use client";
 
-import { ADMIN_NAV } from "@/lib/constants/admin-nav";
+import { HEAD_CONSULTANT_NAV } from "@/lib/constants/head-consultant-nav";
 import { BaseSidebar } from "./BaseSidebar";
 import type { SidebarConfig } from "./types";
 
@@ -12,7 +12,7 @@ const ADMIN_CONFIG: SidebarConfig = {
     href: "/admin",
     // variant ไม่ใส่ก็ได้ เดี๋ยว BaseSidebar auto ให้ตามธีม
   },
-  items: ADMIN_NAV,
+  items: HEAD_CONSULTANT_NAV,
   theme: "light",
 };
 
