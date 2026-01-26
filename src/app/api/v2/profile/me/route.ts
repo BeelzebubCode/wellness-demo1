@@ -2,193 +2,332 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireTenant } from "@/lib/tenant/server";
-import type { ProfileMeDTO, ProfileType } from "@/shared/types/profile";
 
-// helper
-function joinName(first?: string | null, last?: string | null) {
-  const f = (first ?? "").trim();
-  const l = (last ?? "").trim();
-  const full = `${f} ${l}`.trim();
-  return full || null;
+type ProfileType =
+  | "STUDENT"
+  | "CONSULTANT"
+  | "HEAD_CONSULTANT"
+  | "RECTOR"
+  | "SUPER_ADMIN";
+
+export type ProfileMeDTO = {
+  role: ProfileType;
+  displayName: string;
+  profile: {
+    type: ProfileType;
+    id?: number | null;
+
+    // common
+    prefix?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    nickname?: string | null;
+    email?: string | null;
+    phone?: string | null;
+
+    universityId?: number | null;
+    universityName?: string | null;
+
+    // consultant
+    organizationName?: string | null;
+    languages?: { code: string; fluencyLevel?: string | null }[];
+    specializations?: string[];
+
+    // student extras
+    gender?: string | null;
+    birthday?: string | null; // ISO
+    bloodGroup?: string | null;
+    nationality?: string | null;
+    religion?: string | null;
+
+    // academic
+    program?: string | null;
+    degree?: string | null;
+    degreeName?: string | null;
+    admitAcademicYear?: number | null;
+
+    facultyName?: string | null;
+    facultyNameEn?: string | null;
+
+    departmentName?: string | null;
+    departmentNameEn?: string | null;
+
+    advisorName?: string | null;
+
+    // addresses
+    addresses?: {
+      type: "CURRENT" | "PERMANENT";
+      detail: string | null;
+      subDistrict: string | null;
+      district: string | null;
+      provinceName: string | null;
+      postalCode: string | null;
+    }[];
+  };
+};
+
+function pickIncludes(req: NextRequest) {
+  const include = (new URL(req.url).searchParams.get("include") || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const set = new Set(include);
+  return {
+    // consultant flags
+    languages: set.has("languages"),
+    specializations: set.has("specializations"),
+    organization: set.has("organization"),
+    university: set.has("university"),
+
+    // ✅ student flags
+    academic: set.has("academic"),
+    addresses: set.has("addresses"),
+  };
 }
 
-function normalizeRole(role: any): ProfileType {
-  const r = String(role || "").toUpperCase();
-  if (
-    r === "STUDENT" ||
-    r === "CONSULTANT" ||
-    r === "HEAD_CONSULTANT" ||
-    r === "RECTOR" ||
-    r === "SUPER_ADMIN"
-  ) {
-    return r as ProfileType;
-  }
-  // fallback เผื่อ role แปลกๆ
-  return "STUDENT";
+function formatDisplayName(
+  prefix?: string | null,
+  first?: string | null,
+  last?: string | null
+) {
+  const p = prefix?.trim() ? `${prefix.trim()} ` : "";
+  const f = first?.trim() ?? "";
+  const l = last?.trim() ? ` ${last.trim()}` : "";
+  const name = `${p}${f}${l}`.trim();
+  return name || "ผู้ใช้งาน";
 }
 
 export async function GET(req: NextRequest) {
   try {
     const { account, activeUniversityId } = await requireTenant(req);
+    const role = String(account.role || "").toUpperCase() as ProfileType;
+    const inc = pickIncludes(req);
 
-    const role = normalizeRole(account.role);
-
-    // base dto (fallback)
-    let dto: ProfileMeDTO = {
-      role,
-      displayName: account.username ?? "ผู้ใช้งาน",
-      profile: {
-        type: role,
-        universityId: activeUniversityId ?? null,
-      },
-    };
-
-    // ==============================
-    // STUDENT -> table student + student_profile
-    // ==============================
-    if (role === "STUDENT") {
-      const s = await prisma.student.findFirst({
-        where: {
-          account_id: account.accountId,
-          university_id: activeUniversityId,
-        },
-        select: {
-          student_id: true,
-          profile: {
-            select: {
-              student_prefix: true,
-              student_first_name: true,
-              student_last_name: true,
-              student_nickname: true,
-              student_email: true,
-              student_phone_number: true,
-            },
-          },
-        },
-      });
-
-      if (s) {
-        const p = s.profile;
-        const displayName =
-          joinName(p?.student_first_name, p?.student_last_name) ??
-          account.username ??
-          "นิสิต";
-
-        dto = {
-          role,
-          displayName,
-          profile: {
-            type: "STUDENT",
-            id: s.student_id,
-            prefix: p?.student_prefix ?? null,
-            firstName: p?.student_first_name ?? null,
-            lastName: p?.student_last_name ?? null,
-            nickname: p?.student_nickname ?? null,
-            email: p?.student_email ?? null,
-            phone: p?.student_phone_number ?? null,
-            universityId: activeUniversityId ?? null,
-          },
-        };
-      }
-
-      return NextResponse.json({ success: true, data: dto });
-    }
-
-    // ==============================
-    // CONSULTANT / HEAD_CONSULTANT -> table consultant + consultant_profile + organization
-    // ==============================
+    // =========================
+    // CONSULTANT / HEAD_CONSULTANT
+    // =========================
     if (role === "CONSULTANT" || role === "HEAD_CONSULTANT") {
-      const c = await prisma.consultant.findFirst({
+      const consultant = await prisma.consultant.findFirst({
         where: {
           account_id: account.accountId,
           university_id: activeUniversityId,
         },
-        select: {
-          consultant_id: true,
-          organization: {
-            select: {
-              // ✅ จาก error ของคุณ: organization_name_th ไม่มี -> ใช้ organization_name
-              organization_name: true,
-            },
-          },
-          profile: {
-            select: {
-              consultant_prefix: true,
-              consultant_first_name: true,
-              consultant_last_name: true,
-              consultant_nickname: true,
-              consultant_email: true,
-              consultant_phone_number: true,
-            },
-          },
+        include: {
+          profile: true,
+          organization: inc.organization,
+          university: inc.university,
+          languages: inc.languages,
+          specializations: inc.specializations,
         },
       });
 
-      if (c) {
-        const p = c.profile;
-
-        const displayName =
-          joinName(p?.consultant_first_name, p?.consultant_last_name) ??
-          account.username ??
-          "ผู้ให้คำปรึกษา";
-
-        dto = {
-          role,
-          displayName,
-          profile: {
-            type: "CONSULTANT", // ✅ โปรไฟล์ชนิด consultant (UI ใช้ง่าย)
-            id: c.consultant_id,
-            prefix: p?.consultant_prefix ?? null,
-            firstName: p?.consultant_first_name ?? null,
-            lastName: p?.consultant_last_name ?? null,
-            nickname: p?.consultant_nickname ?? null,
-            email: p?.consultant_email ?? null,
-            phone: p?.consultant_phone_number ?? null,
-            universityId: activeUniversityId ?? null,
-            organizationName: c.organization?.organization_name ?? null,
-          },
-        };
+      if (!consultant || !consultant.profile) {
+        return NextResponse.json(
+          { error: "CONSULTANT_PROFILE_NOT_FOUND" },
+          { status: 404 }
+        );
       }
 
-      return NextResponse.json({ success: true, data: dto });
-    }
+      const p = consultant.profile;
 
-    // ==============================
-    // RECTO R / SUPER_ADMIN (ยังไม่มี profile table ใน schema ที่ส่งมา)
-    // -> ส่งขั้นต่ำก่อน (เอา username เป็นชื่อ)
-    // ==============================
-    if (role === "RECTOR" || role === "SUPER_ADMIN") {
-      dto = {
+      const dto: ProfileMeDTO = {
         role,
-        displayName: account.username ?? (role === "RECTOR" ? "ผู้บริหาร" : "ผู้ดูแลระบบ"),
+        displayName: formatDisplayName(
+          p.consultant_prefix,
+          p.consultant_first_name,
+          p.consultant_last_name
+        ),
         profile: {
           type: role,
-          universityId: activeUniversityId ?? null,
+          id: consultant.consultant_id,
+
+          prefix: p.consultant_prefix,
+          firstName: p.consultant_first_name,
+          lastName: p.consultant_last_name,
+          nickname: p.consultant_nickname,
+          email: p.consultant_email,
+          phone: p.consultant_phone_number,
+
+          universityId: consultant.university_id,
+          universityName: inc.university
+            ? consultant.university?.university_name_th ?? null
+            : undefined,
+
+          organizationName: inc.organization
+            ? consultant.organization?.organization_name ?? null
+            : undefined,
+
+          languages: inc.languages
+            ? consultant.languages
+                .slice()
+                .sort((a, b) =>
+                  a.consultant_language_code.localeCompare(
+                    b.consultant_language_code
+                  )
+                )
+                .map((l) => ({
+                  code: l.consultant_language_code,
+                  fluencyLevel: l.consultant_language_fluency_level,
+                }))
+            : undefined,
+
+          specializations: inc.specializations
+            ? consultant.specializations
+                .slice()
+                .sort((a, b) =>
+                  a.consultant_specialization_topic.localeCompare(
+                    b.consultant_specialization_topic
+                  )
+                )
+                .map((s) => s.consultant_specialization_topic)
+            : undefined,
         },
       };
 
-      return NextResponse.json({ success: true, data: dto });
+      return NextResponse.json({ data: dto });
     }
 
-    // fallback
-    return NextResponse.json({ success: true, data: dto });
+    // =========================
+    // STUDENT
+    // =========================
+    if (role === "STUDENT") {
+      // ✅ INCLUDE relations ตลอด เพื่อให้ TS เห็น faculty/department/advisor/province ชัวร์
+      const student = await prisma.student.findFirst({
+        where: {
+          account_id: account.accountId,
+          university_id: activeUniversityId,
+        },
+        include: {
+          profile: true,
+          university: inc.university,
+
+          academic: {
+            include: {
+              faculty: true,
+              department: true,
+              advisor: true,
+            },
+          },
+
+          addresses: {
+            include: { province: true },
+            orderBy: { student_address_type: "asc" },
+          },
+        },
+      });
+
+      if (!student || !student.profile) {
+        return NextResponse.json(
+          { error: "STUDENT_PROFILE_NOT_FOUND" },
+          { status: 404 }
+        );
+      }
+
+      const p = student.profile;
+      const a = student.academic ?? null;
+
+      const dto: ProfileMeDTO = {
+        role,
+        displayName: formatDisplayName(
+          p.student_prefix,
+          p.student_first_name,
+          p.student_last_name
+        ),
+        profile: {
+          type: role,
+          id: student.student_id,
+
+          // common
+          prefix: p.student_prefix ?? null,
+          firstName: p.student_first_name ?? null,
+          lastName: p.student_last_name ?? null,
+          nickname: p.student_nickname ?? null,
+          email: p.student_email ?? null,
+          phone: p.student_phone_number ?? null,
+
+          universityId: student.university_id,
+          universityName: inc.university
+            ? student.university?.university_name_th ?? null
+            : undefined,
+
+          // =========================
+          // ✅ student extras
+          // =========================
+          gender: p.student_gender ? String(p.student_gender) : null,
+          birthday: p.student_birthday ? p.student_birthday.toISOString() : null,
+          bloodGroup: p.student_blood_group ?? null,
+          nationality: p.student_nationality ?? null,
+          religion: p.student_religion ?? null,
+
+          // academic
+          program: inc.academic ? a?.student_program ?? null : undefined,
+          degree: inc.academic ? a?.student_degree ?? null : undefined,
+          degreeName: inc.academic ? a?.student_degree_name ?? null : undefined,
+          admitAcademicYear: inc.academic
+            ? a?.student_admit_academic_year ?? null
+            : undefined,
+
+          facultyName: inc.academic ? a?.faculty?.faculty_name_th ?? null : undefined,
+          facultyNameEn: inc.academic ? a?.faculty?.faculty_name_en ?? null : undefined,
+
+          departmentName: inc.academic
+            ? a?.department?.department_name_th ?? null
+            : undefined,
+          departmentNameEn: inc.academic
+            ? a?.department?.department_name_en ?? null
+            : undefined,
+
+          advisorName: inc.academic
+            ? a?.advisor
+              ? formatDisplayName(
+                  a.advisor.advisor_prefix,
+                  a.advisor.advisor_first_name,
+                  a.advisor.advisor_last_name
+                )
+              : null
+            : undefined,
+
+          // addresses
+          addresses: inc.addresses
+            ? (student.addresses ?? []).map((x) => ({
+                type: x.student_address_type as "CURRENT" | "PERMANENT",
+                detail: x.student_address_detail ?? null,
+                subDistrict: x.student_address_sub_district ?? null,
+                district: x.student_address_district ?? null,
+                provinceName:
+                  x.province?.province_name_th ??
+                  // เผื่อ schema ใช้ชื่อ province_name
+                  (x.province as any)?.province_name ??
+                  null,
+                postalCode: x.student_address_postal_code ?? null,
+              }))
+            : undefined,
+        },
+      };
+
+      return NextResponse.json({ data: dto });
+    }
+
+    // =========================
+    // STAFF (RECTOR / SUPER_ADMIN)
+    // =========================
+    const dto: ProfileMeDTO = {
+      role,
+      displayName: account.username,
+      profile: {
+        type: role,
+        id: account.accountId,
+        firstName: account.username,
+        universityId: activeUniversityId,
+      },
+    };
+
+    return NextResponse.json({ data: dto });
   } catch (e: any) {
-    console.error("[GET /api/v2/profile/me]", {
-      message: e?.message,
-      code: e?.code,
-      meta: e?.meta,
-      stack: e?.stack,
-      status: e?.status,
-    });
-
-    const status = e?.status ?? 500;
-    const message =
-      status === 401
-        ? "Unauthorized"
-        : status === 403
-        ? "Permission denied"
-        : e?.message ?? "Failed to load profile";
-
-    return NextResponse.json({ success: false, error: message }, { status });
+    const status = Number(e?.status) || 500;
+    const message = e?.message || "INTERNAL_SERVER_ERROR";
+    console.error("[PROFILE_ME_V2]", e);
+    return NextResponse.json({ error: message }, { status });
   }
 }

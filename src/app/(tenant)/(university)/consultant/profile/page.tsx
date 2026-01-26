@@ -1,38 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import AuthLikeBackground from "@/components/layout/background/AuthLikeBackground";
 import {
   ProfileHeroCard,
-  ProfileDetailsCard,
+  ProfileSection,
+  ProfileGrid,
 } from "@/components/profile/ProfileComponents";
-import { Mail, Globe, Clock, Building2, User2 } from "lucide-react";
-
-type ProfileType =
-  | "STUDENT"
-  | "CONSULTANT"
-  | "HEAD_CONSULTANT"
-  | "RECTOR"
-  | "SUPER_ADMIN";
-
-type ProfileMeDTO = {
-  role: ProfileType;
-  displayName: string;
-  profile: {
-    type: ProfileType;
-    id?: number | null;
-
-    prefix?: string | null;
-    firstName?: string | null;
-    lastName?: string | null;
-    nickname?: string | null;
-    email?: string | null;
-    phone?: string | null;
-
-    universityId?: number | null;
-    organizationName?: string | null;
-  };
-};
+import {
+  Mail,
+  Globe,
+  Clock,
+  Building2,
+  User2,
+  GraduationCap,
+  BadgeCheck,
+  Sparkles,
+  Phone,
+} from "lucide-react";
+import { useMyProfile } from "@/features/profile/hooks/useMyProfile";
+import type { ProfileType } from "@/features/profile/types";
 
 function roleLabelTH(role: ProfileType) {
   switch (role) {
@@ -51,61 +38,34 @@ function roleLabelTH(role: ProfileType) {
 }
 
 export default function ConsultantProfilePage() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [me, setMe] = useState<ProfileMeDTO | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-
-    async function load() {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const res = await fetch("/api/v2/profile/me", {
-          method: "GET",
-          credentials: "include",
-          cache: "no-store",
-          headers: { "Cache-Control": "no-cache" },
-        });
-
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(json?.error ?? "โหลดโปรไฟล์ไม่สำเร็จ");
-        if (!json?.data) throw new Error("รูปแบบข้อมูลไม่ถูกต้อง (data หาย)");
-
-        if (!alive) return;
-        setMe(json.data as ProfileMeDTO);
-      } catch (e: any) {
-        if (!alive) return;
-        setError(e?.message ?? "โหลดโปรไฟล์ไม่สำเร็จ");
-        setMe(null);
-      } finally {
-        if (alive) setLoading(false);
-      }
-    }
-
-    load();
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const { loading, error, me, refetch } = useMyProfile({
+    organization: true,
+    university: true,
+    languages: true,
+    specializations: true,
+  });
 
   const ui = useMemo(() => {
-    const role = me?.role ?? "CONSULTANT";
+    const role = (me?.role ?? "CONSULTANT") as ProfileType;
     const p = me?.profile;
 
-    // ชื่อที่โชว์บน hero
     const name = me?.displayName ?? "ผู้ใช้งาน";
     const roleLabel = roleLabelTH(role);
 
-    // details
     const nickname = p?.nickname ?? "-";
     const email = p?.email ?? "-";
-    const organization = p?.organizationName ?? "-";
+    const phone = p?.phone ?? "-";
 
-    // ถ้ายังไม่ได้ทำ field language/timezone ใน backend ก็ fix ค่านี้ก่อน
-    const language = "ภาษาไทย";
+    const organization = p?.organizationName ?? "-";
+    const university = p?.universityName ?? "-";
+
+    const languages =
+      (p?.languages ?? []).map((l) =>
+        `${l.code}${l.fluencyLevel ? ` (${l.fluencyLevel})` : ""}`
+      );
+
+    const specializations = p?.specializations ?? [];
+
     const timezone = "Asia/Bangkok";
 
     return {
@@ -113,8 +73,11 @@ export default function ConsultantProfilePage() {
       roleLabel,
       nickname,
       email,
+      phone,
       organization,
-      language,
+      university,
+      languages,
+      specializations,
       timezone,
     };
   }, [me]);
@@ -124,27 +87,8 @@ export default function ConsultantProfilePage() {
       <AuthLikeBackground />
 
       <div className="max-w-5xl mx-auto space-y-4 pt-8 md:pt-2">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
-            โปรไฟล์
-          </h1>
-          <p className="text-sm text-slate-600 mt-1">
-            จัดการข้อมูลส่วนตัวและการตั้งค่าบัญชีของคุณ
-          </p>
-        </div>
 
-        {/* Loading / Error */}
-        {loading ? (
-          <div className="rounded-2xl border border-slate-200 bg-white/70 backdrop-blur p-5 text-sm text-slate-600">
-            กำลังโหลดโปรไฟล์...
-          </div>
-        ) : error ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50/70 backdrop-blur p-5 text-sm text-rose-700">
-            {error}
-          </div>
-        ) : null}
-
-        {/* HERO */}
+        {/* 1) OVERVIEW */}
         <ProfileHeroCard
           name={ui.name}
           roleLabel={ui.roleLabel}
@@ -152,18 +96,42 @@ export default function ConsultantProfilePage() {
           onEdit={() => alert("TODO: เปิดหน้า/โมดัลแก้ไขโปรไฟล์")}
         />
 
-        {/* DETAILS */}
-        <ProfileDetailsCard
-          title="ข้อมูลส่วนตัว"
-          items={[
-            { label: "ชื่อที่แสดง", value: ui.name, icon: <User2 className="w-4 h-4" /> },
-            { label: "ชื่อเล่น", value: ui.nickname },
-            { label: "อีเมล", value: ui.email, icon: <Mail className="w-4 h-4" /> },
-            { label: "ภาษา", value: ui.language, icon: <Globe className="w-4 h-4" /> },
-            { label: "เขตเวลา", value: ui.timezone, icon: <Clock className="w-4 h-4" /> },
-            { label: "องค์กร", value: ui.organization, icon: <Building2 className="w-4 h-4" /> },
-          ]}
-        />
+        {/* 2) PERSONAL INFO */}
+        <ProfileSection
+          title="ข้อมูลติดต่อ"
+          subtitle="ข้อมูลที่ใช้สำหรับการติดต่อและยืนยันตัวตน"
+          badge="Personal"
+        >
+          <ProfileGrid
+            items={[
+              { label: "ชื่อที่แสดง", value: ui.name, icon: <User2 className="w-4 h-4" /> },
+              { label: "ชื่อเล่น", value: ui.nickname, icon: <Sparkles className="w-4 h-4" /> },
+              { label: "อีเมล", value: ui.email, icon: <Mail className="w-4 h-4" /> },
+              { label: "เบอร์โทร", value: ui.phone, icon: <Phone className="w-4 h-4" /> },
+            ]}
+          />
+        </ProfileSection>
+
+        {/* 3) PROFESSIONAL */}
+        <ProfileSection
+          title="ข้อมูลวิชาชีพ"
+          subtitle="ใช้สำหรับจับคู่ผู้รับบริการ และแสดงผลในระบบจองคิว"
+          badge="Professional"
+        >
+          <ProfileGrid
+            items={[
+              { label: "ภาษา", value: ui.languages, icon: <Globe className="w-4 h-4" /> },
+              {
+                label: "ความเชี่ยวชาญ",
+                value: ui.specializations,
+                icon: <BadgeCheck className="w-4 h-4" />,
+              },
+              { label: "เขตเวลา", value: ui.timezone, icon: <Clock className="w-4 h-4" /> },
+              { label: "องค์กร", value: ui.organization, icon: <Building2 className="w-4 h-4" /> },
+              { label: "มหาวิทยาลัย", value: ui.university, icon: <GraduationCap className="w-4 h-4" /> },
+            ]}
+          />
+        </ProfileSection>
       </div>
     </div>
   );

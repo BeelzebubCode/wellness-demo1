@@ -54,10 +54,10 @@ const Button = ({
 
   const variants: any = {
     primary:
-      "bg-gradient-to-r from-teal-600 to-teal-500 text-white shadow-md shadow-teal-500/20 hover:shadow-teal-500/30 hover:-translate-y-0.5",
+      "btn-tenant shadow-md hover:-translate-y-0.5 active:translate-y-0",
     outline:
-      "border border-slate-200 bg-white/50 text-slate-600 hover:border-teal-500 hover:text-teal-600 hover:bg-white",
-    ghost: "hover:bg-slate-100 text-slate-500",
+      "border border-slate-200 bg-white/60 text-slate-700 hover:border-primary hover:text-primary hover:bg-white",
+    ghost: "hover:bg-slate-100 text-slate-600",
     danger:
       "bg-rose-600 text-white shadow-md shadow-rose-500/20 hover:shadow-rose-500/30 hover:-translate-y-0.5",
   };
@@ -446,18 +446,14 @@ export default function ConsultantMyJobsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 pb-20 relative overflow-hidden selection:bg-teal-200 selection:text-teal-900">
-      {/* Decorative Globs */}
-      <div className="fixed top-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full bg-teal-100/30 blur-[100px] pointer-events-none z-0 mix-blend-multiply" />
-      <div className="fixed bottom-[-10%] left-[-5%] w-[400px] h-[400px] rounded-full bg-blue-100/30 blur-[80px] pointer-events-none z-0 mix-blend-multiply" />
-
+    <div className="min-h-screen bg-tenant font-sans text-slate-900 pb-20 relative overflow-hidden selection:bg-[rgba(var(--ring),0.25)] selection:text-slate-900">
       <main className="max-w-[1280px] mx-auto px-4 md:px-6 py-8 space-y-6">
         {/* ================= 1. HEADER & CONTROLS ================= */}
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 pb-4 border-b border-slate-200/60">
           {/* Title Section */}
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100 shrink-0">
-              <div className="w-6 h-6 bg-teal-50 rounded-lg flex items-center justify-center text-teal-600">
+              <div className="w-6 h-6 icon-tenant rounded-lg flex items-center justify-center">
                 <ClipboardList className="w-4 h-4" />
               </div>
             </div>
@@ -475,19 +471,19 @@ export default function ConsultantMyJobsPage() {
           {/* Controls */}
           <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
             <div className="relative group">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-teal-500 transition-colors pointer-events-none">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-primary transition-colors pointer-events-none">
                 <CalendarDays className="w-4 h-4" />
               </div>
               <input
                 type="date"
                 value={selectedDateStr}
                 onChange={handleChangeDate}
-                className="pl-8 pr-3 h-9 w-full sm:w-[180px] bg-white border border-slate-200 hover:border-teal-400 rounded-lg text-sm font-semibold text-slate-700 shadow-sm"
+                className="pl-8 pr-3 h-9 w-full sm:w-[180px] bg-white border border-slate-200 hover:border-primary rounded-lg text-sm font-semibold text-slate-700 shadow-sm focus-tenant"
               />
             </div>
 
             <div className="relative group">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-teal-500 transition-colors pointer-events-none">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-primary transition-colors pointer-events-none">
                 <Filter className="w-4 h-4" />
               </div>
               <select
@@ -495,7 +491,7 @@ export default function ConsultantMyJobsPage() {
                 onChange={(e) =>
                   setStatusFilter(e.target.value as "ALL" | BookingStatusUI)
                 }
-                className="pl-10 pr-8 h-9 w-full sm:w-[160px] bg-white border border-slate-200 hover:border-teal-400 rounded-lg text-sm font-semibold text-slate-700 shadow-sm focus:ring-2 focus:ring-teal-100 focus:border-teal-500 outline-none appearance-none cursor-pointer"
+                className="pl-10 pr-8 h-9 w-full sm:w-[160px] bg-white border border-slate-200 hover:border-primary rounded-lg text-sm font-semibold text-slate-700 shadow-sm focus-tenant outline-none appearance-none cursor-pointer"
               >
                 <option value="ALL">ทุกสถานะ</option>
                 <option value="PENDING">รอคิว</option>
@@ -512,10 +508,10 @@ export default function ConsultantMyJobsPage() {
 
         {/* ================= 2. STATS WIDGETS ================= */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatWidget title="นัดหมายวันนี้" value={stats.today} icon={CalendarClock} theme="teal" />
-          <StatWidget title="รอดำเนินการ" value={stats.pending} icon={Clock3} theme="amber" />
-          <StatWidget title="กำลังดำเนินการ" value={stats.inProgress} icon={PlayCircle} theme="indigo" />
-          <StatWidget title="ปิดเคสแล้ว" value={stats.completed} icon={CheckCircle2} theme="emerald" />
+          <StatWidget title="นัดหมายวันนี้" value={stats.today} icon={CalendarClock} theme="tenant" />
+          <StatWidget title="รอดำเนินการ" value={stats.pending} icon={Clock3} theme="tenant" />
+          <StatWidget title="กำลังดำเนินการ" value={stats.inProgress} icon={PlayCircle} theme="tenant" />
+          <StatWidget title="ปิดเคสแล้ว" value={stats.completed} icon={CheckCircle2} theme="tenant" />
         </div>
 
         {/* ================= 3. CONTENT GRID ================= */}
@@ -526,13 +522,13 @@ export default function ConsultantMyJobsPage() {
               {/* Header inside Card */}
               <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between bg-white/60 backdrop-blur-md">
                 <div className="flex items-center gap-2">
-                  <span className="w-1 h-4 bg-teal-500 rounded-full"></span>
+                  <span className="w-1 h-4 bg-primary rounded-full"></span>
                   <p className="text-sm font-bold text-slate-800 leading-none">
                     รายการนัดหมาย
                   </p>
                 </div>
 
-                <div className="px-2.5 py-0.5 bg-white rounded-md text-slate-500 text-[12px] font-semibold border border-slate-100 shadow-sm leading-none">
+                <div className="px-2.5 py-0.5 bg-white rounded-md text-slate-600 text-[12px] font-semibold border border-slate-200 shadow-sm leading-none">
                   {formatThaiDate(selectedDate)}
                 </div>
               </div>
@@ -541,7 +537,7 @@ export default function ConsultantMyJobsPage() {
               <div className="p-4 flex-1 bg-slate-50/50">
                 {isLoading ? (
                   <div className="h-full flex flex-col items-center justify-center text-slate-400 py-10">
-                    <Loader2 className="w-8 h-8 animate-spin text-teal-500 mb-2" />
+                    <Loader2 className="w-8 h-8 animate-spin text-primary mb-2" />
                     <span className="text-xs font-medium">กำลังโหลด...</span>
                   </div>
                 ) : jobs.length === 0 ? (
@@ -580,10 +576,10 @@ export default function ConsultantMyJobsPage() {
           {/* Right Column: Widgets */}
           <div className="space-y-4 xl:sticky xl:top-4">
             {/* Widget 1: Info */}
-            <div className="relative overflow-hidden rounded-xl p-[1px] bg-gradient-to-br from-teal-200 to-slate-200 shadow-sm">
+            <div className="relative overflow-hidden rounded-xl p-[1px] bg-[rgba(var(--ring),0.20)] shadow-sm">
               <div className="bg-white/95 backdrop-blur-xl rounded-[11px] p-4 relative">
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="p-1.5 bg-teal-50 rounded-lg text-teal-600">
+                  <div className="p-1.5 icon-tenant rounded-lg">
                     <Info className="w-4 h-4" />
                   </div>
                   <h3 className="font-bold text-slate-800 text-sm">
@@ -624,7 +620,7 @@ export default function ConsultantMyJobsPage() {
             <Card>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-slate-800 text-sm">สรุปงานวันนี้</h3>
-                <span className="text-[10px] font-bold tracking-wider text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full uppercase">
+                <span className="text-[10px] font-bold tracking-wider text-primary bg-[rgba(var(--ring),0.12)] px-2 py-0.5 rounded-full uppercase border border-primary/20 translate-y-[-10px]">
                   Update
                 </span>
               </div>
@@ -679,13 +675,13 @@ export default function ConsultantMyJobsPage() {
 
 const StatWidget = ({ title, value, icon: Icon, theme }: any) => {
   const themeStyles: any = {
-    teal: { bg: "bg-teal-50", text: "text-teal-600", border: "border-teal-100" },
+    tenant: { bg: "icon-tenant", text: "text-primary", border: "border-slate-200" },
     amber: { bg: "bg-amber-50", text: "text-amber-600", border: "border-amber-100" },
     indigo: { bg: "bg-indigo-50", text: "text-indigo-600", border: "border-indigo-100" },
     emerald: { bg: "bg-emerald-50", text: "text-emerald-600", border: "border-emerald-100" },
   };
 
-  const t = themeStyles[theme] || themeStyles.teal;
+  const t = themeStyles[theme] || themeStyles.tenant;
 
   return (
     <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 group cursor-default">
@@ -694,8 +690,9 @@ const StatWidget = ({ title, value, icon: Icon, theme }: any) => {
           <p className="text-xs font-semibold text-slate-400 mb-0.5">{title}</p>
           <h4 className="text-2xl font-black text-slate-800 tracking-tight">{value}</h4>
         </div>
-        <div className={`p-2.5 rounded-lg ${t.bg} ${t.text} ring-1 ring-inset ${t.border}`}>
-          <Icon className="w-5 h-5" />
+
+        <div className={`p-2.5 rounded-lg ${t.bg} border ${t.border}`}>
+          <Icon className={`w-5 h-5 ${t.text}`} />
         </div>
       </div>
     </div>
@@ -730,7 +727,7 @@ const JobItem = ({
   return (
     <div
       className={`group relative bg-white rounded-xl border shadow-sm transition-all duration-300 overflow-hidden
-    ${expanded ? "border-teal-200 ring-2 ring-teal-100" : "border-slate-100 hover:border-teal-200"}
+    ${expanded ? "border-primary/30 ring-2 ring-[rgba(var(--ring),0.18)]" : "border-slate-100 hover:border-primary/30"}
       `}
       tabIndex={0}
       onClick={onToggle}
@@ -757,10 +754,10 @@ const JobItem = ({
                 {job.category}
               </span>
             </div>
-            <h4 className="font-bold text-slate-800 text-sm truncate group-hover:text-teal-700 transition-colors">
+            <h4 className="font-bold text-slate-800 text-sm truncate group-hover:text-primary transition-colors">
               {job.userName}
             </h4>
-            <p className="text-xs text-teal-600 font-semibold mt-0.5 flex items-center gap-1 opacity-90">
+            <p className="text-xs text-primary font-semibold mt-0.5 flex items-center gap-1 opacity-90">
               {expanded ? "ซ่อนรายละเอียด" : "ดูรายละเอียด"}
               <ChevronDown
                 className={`w-3.5 h-3.5 transition-transform duration-300 ${expanded ? "rotate-180" : "rotate-0"
@@ -873,8 +870,8 @@ const InfoRow = ({ label, value }: { label: string; value: string }) => (
 
 const InstructionItem = ({ text }: { text: React.ReactNode }) => (
   <li className="flex gap-3 text-xs text-slate-600 leading-relaxed items-start group">
-    <div className="mt-1 w-4 h-4 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center shrink-0 group-hover:border-teal-400 group-hover:bg-teal-50 transition-colors shadow-sm">
-      <div className="w-1 h-1 rounded-full bg-slate-400 group-hover:bg-teal-500"></div>
+    <div className="mt-1 w-4 h-4 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center shrink-0 group-hover:border-primary group-hover:bg-[rgba(var(--ring),0.12)] transition-colors shadow-sm">
+      <div className="w-1 h-1 rounded-full bg-slate-400 group-hover:bg-primary"></div>
     </div>
     <span className="pt-0.5 font-medium">{text}</span>
   </li>
@@ -894,7 +891,7 @@ const SummaryRow = ({
       {label}
     </span>
     {isTotal ? (
-      <span className="text-base font-bold text-teal-600 tracking-tight">
+      <span className="text-base font-bold text-primary tracking-tight">
         {value} เคส
       </span>
     ) : (
@@ -1052,7 +1049,7 @@ function OutcomeModal({
             }
             rows={5}
             placeholder="พิมพ์สรุปประเด็น, แนวทางที่ให้คำแนะนำ, ข้อสังเกต ฯลฯ"
-            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-100 focus:border-teal-500"
+            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus-tenant"
           />
         </div>
 
@@ -1066,7 +1063,7 @@ function OutcomeModal({
               setDraft((d) => ({ ...d, nextStep: e.target.value }))
             }
             placeholder='เช่น "นัดติดตามผล 2 สัปดาห์"'
-            className="mt-2 w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-teal-100 focus:border-teal-500"
+            className="mt-2 w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus-tenant"
           />
         </div>
 
@@ -1082,7 +1079,7 @@ function OutcomeModal({
                 riskLevel: e.target.value ? Number(e.target.value) : null,
               }))
             }
-            className="mt-2 w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-teal-100 focus:border-teal-500"
+            className="mt-2 w-full h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus-tenant"
           >
             <option value="1">1 - ต่ำ</option>
             <option value="2">2 - ค่อนข้างต่ำ</option>
