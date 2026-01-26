@@ -8,7 +8,7 @@ import { BookingHeader } from "@/components/layout/header";
 import { LoadingSpinner } from "@/components/ui";
 
 // ✅ เพิ่ม 2 ตัวนี้
-import { AiChatModal } from "@/components/ai/AiChatModal";
+import AiChatModal from "@/components/ai/AiChatModal";
 import { FloatingAiButton } from "@/components/ai/FloatingAiButton";
 
 export default function BookingLayout({ children }: { children: React.ReactNode }) {

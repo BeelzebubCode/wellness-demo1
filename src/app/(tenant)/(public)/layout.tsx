@@ -8,7 +8,7 @@ import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
 import { roleDefaultPath } from "@/features/auth/login/login-utils";
 
 // ✅ เพิ่ม
-import { AiChatModal } from "@/components/ai/AiChatModal";
+import AiChatModal from "@/components/ai/AiChatModal";
 import { FloatingAiButton } from "@/components/ai/FloatingAiButton";
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {

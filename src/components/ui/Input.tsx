@@ -18,7 +18,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full space-y-2">
         {label && (
-          <label htmlFor={inputId} className="block text-base lg:text-lg font-bold text-gray-700">
+          <label htmlFor={inputId} className="block text-base lg:text-sm font-bold text-gray-700">
             {label}
           </label>
         )}
@@ -29,16 +29,16 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               {leftIcon}
             </div>
           )}
-          
+
           <input
             ref={ref}
             id={inputId}
-            /* 📏 Desktop สูง 56px (h-14) */
             className={cn(
-              'w-full h-12 lg:h-14 rounded-xl border-2 border-gray-200 bg-white text-gray-900',
-              'px-4 text-base lg:text-lg placeholder:text-gray-400',
+              'box-border w-full h-7 lg:h-9 rounded-xl',
+              'border-2 border-gray-200 bg-white text-gray-900',
+              'px-4 text-base lg:text-sm placeholder:text-gray-400',
               'transition-all duration-200',
-              'focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-100',
+              'focus:outline-none focus:border-primary-500 focus:ring- focus:ring-primary-100',
               'disabled:bg-gray-50 disabled:text-gray-500',
               error && 'border-red-300 focus:border-red-500 focus:ring-red-100',
               leftIcon && 'pl-12 lg:pl-14',
@@ -47,9 +47,9 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             )}
             {...props}
           />
-          
+
           {rightIcon && (
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl lg:text-2xl">
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm lg:text-2xl">
               {rightIcon}
             </div>
           )}

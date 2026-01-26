@@ -1,30 +1,29 @@
+// src/components/ai/AiChatModal.tsx
 "use client";
 
-import { Modal } from "@/components/ui/Modal";
+import { createPortal } from "react-dom";
 import { useAiWidget } from "@/features/ai/widget/useAiWidget";
-import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
-import AiChatPage from "@/components/ai/AiChatPage";
+import AiChatCore from "./AiChatCore";
 
-export function AiChatModal() {
+export default function AiChatModal() {
   const open = useAiWidget((s) => s.open);
   const closeChat = useAiWidget((s) => s.closeChat);
 
-  const { user, isLoading } = useRoleAuth({
-    allowedRoles: ["STUDENT"] as const,
-    loginToastKey: "ai_widget_login",
-    guard: false,
-    requireTenant: false,
-  });
+  if (!open) return null;
 
-  if (isLoading) return null;
-  if (!user || user.role !== "STUDENT") return null;
+  return createPortal(
+    <>
+      {/* backdrop */}
+      <div
+        className="fixed inset-0 z-[50] bg-black/30"
+        onClick={closeChat}
+      />
 
-  return (
-    <Modal open={open} onOpenChange={(v) => (v ? null : closeChat())} title="AI ผู้ช่วย">
-      <div className="h-[70vh] w-[min(420px,90vw)]">
-        {/* ✅ เปลี่ยนโหมดตรงนี้ */}
-        <AiChatPage variant="modal" mode="booking_agent" />
+      {/* floating chat */}
+      <div className="fixed bottom-24 right-5 z-[60] h-[65vh] w-[550px] rounded-2xl bg-white shadow-2xl overflow-hidden">
+        <AiChatCore mode="help" variant="modal" />
       </div>
-    </Modal>
+    </>,
+    document.body
   );
 }
