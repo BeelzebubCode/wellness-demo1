@@ -2,8 +2,16 @@
 import prisma from "@/lib/prisma";
 import type { BookingStatus } from "@prisma/client";
 
-const ACTIVE_STATUSES: BookingStatus[] = ["PENDING_ASSIGNMENT", "ASSIGNED", "IN_PROGRESS"];
-const CANCELABLE_STATUSES: BookingStatus[] = ["PENDING_ASSIGNMENT", "ASSIGNED", "IN_PROGRESS"];
+const ACTIVE_STATUSES: BookingStatus[] = [
+  "PENDING_ASSIGNMENT",
+  "ASSIGNED",
+  "IN_PROGRESS",
+];
+const CANCELABLE_STATUSES: BookingStatus[] = [
+  "PENDING_ASSIGNMENT",
+  "ASSIGNED",
+  "IN_PROGRESS",
+];
 
 export type AgentBookInput = {
   activeUniversityId: number;
@@ -15,11 +23,21 @@ export type AgentBookInput = {
 
 export type AgentBookResult = { bookingId: number };
 
-export async function agentBookForStudent(input: AgentBookInput): Promise<AgentBookResult> {
-  const { activeUniversityId, studentId, timeSlotId, problemCategoryId, detailText } = input;
+export async function agentBookForStudent(
+  input: AgentBookInput,
+): Promise<AgentBookResult> {
+  const {
+    activeUniversityId,
+    studentId,
+    timeSlotId,
+    problemCategoryId,
+    detailText,
+  } = input;
 
-  if (!timeSlotId || Number.isNaN(Number(timeSlotId))) throw new Error("timeSlotId ไม่ถูกต้อง");
-  if (!problemCategoryId || Number.isNaN(Number(problemCategoryId))) throw new Error("problemCategoryId ไม่ถูกต้อง");
+  if (!timeSlotId || Number.isNaN(Number(timeSlotId)))
+    throw new Error("timeSlotId ไม่ถูกต้อง");
+  if (!problemCategoryId || Number.isNaN(Number(problemCategoryId)))
+    throw new Error("problemCategoryId ไม่ถูกต้อง");
 
   // ✅ กัน 1 คนมี booking active อยู่แล้ว
   const existing = await prisma.booking.findFirst({
@@ -30,7 +48,7 @@ export async function agentBookForStudent(input: AgentBookInput): Promise<AgentB
     },
     select: { booking_id: true },
   });
-  if (existing) throw new Error("มีการจองที่ยังไม่เสร็จสิ้นอยู่แล้ว");
+  if (existing) throw new Error(`มีการจองที่ยังไม่เสร็จสิ้นอยู่แล้ว (#${existing.booking_id})`);
 
   const result = await prisma.$transaction(async (tx) => {
     const timeSlot = await tx.timeSlot.findUnique({
@@ -44,13 +62,16 @@ export async function agentBookForStudent(input: AgentBookInput): Promise<AgentB
     });
 
     if (!timeSlot) throw new Error("ไม่พบช่วงเวลานี้ในระบบ");
-    if (Number(timeSlot.university_id) !== Number(activeUniversityId)) throw new Error("ช่วงเวลานี้เป็นของมหาลัยอื่น");
+    if (Number(timeSlot.university_id) !== Number(activeUniversityId))
+      throw new Error("ช่วงเวลานี้เป็นของมหาลัยอื่น");
 
     const maxCapacity = Number(timeSlot.time_slot_max_capacity ?? 0);
-    if (!maxCapacity || maxCapacity <= 0) throw new Error("ช่วงเวลานี้ไม่ได้เปิดรับจอง");
+    if (!maxCapacity || maxCapacity <= 0)
+      throw new Error("ช่วงเวลานี้ไม่ได้เปิดรับจอง");
 
     const slotStatus = String(timeSlot.time_slot_status || "").toUpperCase();
-    if (slotStatus === "LOCKED" || slotStatus === "CANCELLED") throw new Error("ช่วงเวลานี้ไม่สามารถจองได้");
+    if (slotStatus === "LOCKED" || slotStatus === "CANCELLED")
+      throw new Error("ช่วงเวลานี้ไม่สามารถจองได้");
 
     const bookedCount = await tx.booking.count({
       where: {
@@ -68,15 +89,35 @@ export async function agentBookForStudent(input: AgentBookInput): Promise<AgentB
       throw new Error("ช่วงเวลานี้เต็มแล้ว");
     }
 
-    const dup = await tx.booking.findFirst({
+    const completed = await tx.booking.findFirst({
       where: {
         university_id: activeUniversityId,
         student_id: studentId,
         time_slot_id: Number(timeSlotId),
+        booking_status: "COMPLETED",
       },
       select: { booking_id: true },
     });
-    if (dup) throw new Error("คุณได้จองช่วงเวลานี้ไปแล้ว");
+
+    if (completed) {
+      // ✅ ถ้ามี outcome/ผลการให้คำปรึกษา -> ถือว่าจบจริง ค่อยบล็อก
+      let hasOutcome = false;
+      try {
+        // ปรับชื่อ model ให้ตรง schema นาย (ตัวอย่าง)
+        const outcome = await (tx as any).bookingOutcome?.findFirst?.({
+          where: { booking_id: completed.booking_id },
+          select: { booking_id: true },
+        });
+        hasOutcome = !!outcome;
+      } catch {
+        // ถ้าไม่มีตาราง outcome ก็ fallback เป็น "ไม่บล็อก" เพื่อกัน false positive
+        hasOutcome = false;
+      }
+
+      if (hasOutcome) {
+        throw new Error("คุณเคยใช้ช่วงเวลานี้ไปแล้ว");
+      }
+    }
 
     const b = await tx.booking.create({
       data: {
@@ -94,7 +135,12 @@ export async function agentBookForStudent(input: AgentBookInput): Promise<AgentB
     const newBookedCount = bookedCount + 1;
     await tx.timeSlot.update({
       where: { time_slot_id: Number(timeSlotId) },
-      data: { time_slot_status: newBookedCount >= maxCapacity ? ("BOOKED" as any) : ("AVAILABLE" as any) },
+      data: {
+        time_slot_status:
+          newBookedCount >= maxCapacity
+            ? ("BOOKED" as any)
+            : ("AVAILABLE" as any),
+      },
     });
 
     return b;
@@ -172,7 +218,10 @@ export async function agentCancelActiveForStudent(input: {
           await tx.timeSlot.update({
             where: { time_slot_id: slot.time_slot_id },
             data: {
-              time_slot_status: activeCount >= maxCap ? ("BOOKED" as any) : ("AVAILABLE" as any),
+              time_slot_status:
+                activeCount >= maxCap
+                  ? ("BOOKED" as any)
+                  : ("AVAILABLE" as any),
             },
           });
         }

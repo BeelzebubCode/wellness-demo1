@@ -1,3 +1,4 @@
+// src/components/ai/FloatingAiButton.tsx
 "use client";
 
 import { useAiWidget } from "@/features/ai/widget/useAiWidget";
@@ -19,22 +20,13 @@ export function FloatingAiButton() {
   return (
     <button
       type="button"
-      onClick={openChat}
-      className="
-        fixed bottom-5 right-5 z-[60]
-        bg-transparent
-        p-0
-        active:scale-95
-      "
+      onClick={() => openChat("booking_agent")}
+      className="fixed bottom-5 right-5 z-[60] bg-transparent p-0 active:scale-95"
     >
       <img
         src="/icons/Gif_Icon.gif"
         alt="AI Chat"
-        className="
-          w-32 h-32   /* 👈 ขยายขนาด icon (ปรับได้) */
-          object-contain
-          pointer-events-none
-        "
+        className="w-32 h-32 object-contain pointer-events-none"
       />
     </button>
   );

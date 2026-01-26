@@ -13,6 +13,9 @@ interface UseMyAppointmentsReturn {
   hasActiveBooking: boolean;
 }
 
+// ✅ ให้ทั้งระบบใช้ชื่อ event เดียวกัน
+const BOOKING_CHANGED_EVENT = "booking:changed";
+
 async function safeJson<T = any>(res: Response): Promise<T | null> {
   const text = await res.text().catch(() => "");
   if (!text) return null;
@@ -32,7 +35,6 @@ export function useMyAppointments(): UseMyAppointmentsReturn {
   const reqIdRef = useRef(0);
 
   const fetchBookings = useCallback(async () => {
-    // เพิ่ม request id
     const reqId = ++reqIdRef.current;
 
     // ยกเลิก request เก่า
@@ -65,22 +67,32 @@ export function useMyAppointments(): UseMyAppointmentsReturn {
       setBookings((data?.bookings || []) as MyBooking[]);
     } catch (err: any) {
       if (err?.name === "AbortError") return;
-      // ถ้าไม่ใช่ request ล่าสุดแล้ว ไม่ต้องทำอะไรต่อ
       if (reqId !== reqIdRef.current) return;
 
       console.error("Error fetching bookings:", err);
       setError(err?.message || "ไม่สามารถโหลดข้อมูลการจองได้");
       setBookings([]);
     } finally {
-      // ถ้าไม่ใช่ request ล่าสุดแล้ว ไม่ต้องปิด loading
       if (reqId !== reqIdRef.current) return;
       setIsLoading(false);
     }
   }, []);
 
+  // ✅ โหลดครั้งแรก
   useEffect(() => {
     fetchBookings();
     return () => abortRef.current?.abort();
+  }, [fetchBookings]);
+
+  // ✅ ฟัง event แล้ว refetch อัตโนมัติ (หลังจอง/ยกเลิก)
+  useEffect(() => {
+    const onChanged = () => {
+      // กัน spam/refetch ซ้อน: ใช้ตัว fetchBookings ที่มี abort + reqId อยู่แล้ว
+      fetchBookings();
+    };
+
+    window.addEventListener(BOOKING_CHANGED_EVENT, onChanged);
+    return () => window.removeEventListener(BOOKING_CHANGED_EVENT, onChanged);
   }, [fetchBookings]);
 
   const activeBooking = useMemo(() => {

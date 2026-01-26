@@ -1,6 +1,9 @@
+// src/components/ai/AiChatCore.tsx
+
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useAiChat } from "@/features/ai/hooks/useAiChat";
 import { Card } from "@/components/ui/Card";
 
@@ -16,12 +19,24 @@ type Props = {
 };
 
 export default function AiChatCore({ mode, variant }: Props) {
-  const chat = useAiChat({ mode });
-  const listRef = useRef<HTMLDivElement | null>(null);
+  const router = useRouter();
+
+  const chat = useAiChat({
+    mode,
+    onConfirmed: () => {
+      router.refresh();
+    },
+  });
+
+  // ✅ ตรงนี้เปลี่ยน: เอา | null ออก
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    listRef.current?.scrollTo({
-      top: listRef.current.scrollHeight,
+    const el = listRef.current;
+    if (!el) return;
+
+    el.scrollTo({
+      top: el.scrollHeight,
       behavior: "smooth",
     });
   }, [chat.messages.length, chat.isLoading]);

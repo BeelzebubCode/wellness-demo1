@@ -9,13 +9,20 @@ type ChatMsg = { role: Role; content: string };
 
 type AgentIntent = "BOOK" | "CANCEL";
 
+type AgentQuestion = {
+  field: string;
+  text: string;
+  options?: { value: any; label: string; code?: string }[];
+};
+
 type AgentState = {
   intent: AgentIntent;
   confirmToken: string | null;
-  // จะเก็บ plan/suggested/candidates เพิ่มก็ได้
   plan?: any;
   suggested?: any;
   candidates?: any[];
+  missingFields?: string[];
+  questions?: AgentQuestion[];
 };
 
 function detectIntent(text: string): AgentIntent {
@@ -28,7 +35,6 @@ function detectIntent(text: string): AgentIntent {
 function endpointFor(mode: Mode, intent: AgentIntent) {
   if (mode === "help") return { plan: "/api/v2/ai/help", confirm: "" };
 
-  // booking_agent
   if (intent === "CANCEL") {
     return {
       plan: "/api/v2/ai/agent/booking/cancel/plan",
@@ -42,8 +48,9 @@ function endpointFor(mode: Mode, intent: AgentIntent) {
   };
 }
 
-export function useAiChat(input: { mode: Mode }) {
+export function useAiChat(input: { mode: Mode; onConfirmed?: () => void }) {
   const mode = input.mode;
+  const onConfirmed = input.onConfirmed;
 
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [text, setText] = useState("");
@@ -52,7 +59,10 @@ export function useAiChat(input: { mode: Mode }) {
 
   const [agent, setAgent] = useState<AgentState | null>(null);
 
-  const canSend = useMemo(() => !isLoading && text.trim().length > 0, [isLoading, text]);
+  const canSend = useMemo(
+    () => !isLoading && text.trim().length > 0,
+    [isLoading, text],
+  );
 
   const reset = useCallback(() => {
     setMessages([]);
@@ -71,35 +81,58 @@ export function useAiChat(input: { mode: Mode }) {
     // ✅ ถ้าพิมพ์ใหม่ ให้เคลียร์ confirm เก่า (กันกดผิด action/แผนเก่า)
     setAgent(null);
 
-    const nextMessages: ChatMsg[] = [...messages, { role: "user", content: userText }];
+    const nextMessages: ChatMsg[] = [
+      ...messages,
+      { role: "user", content: userText },
+    ];
     setMessages(nextMessages);
     setText("");
 
     try {
-      const intent: AgentIntent = mode === "booking_agent" ? detectIntent(userText) : "BOOK";
+      const intent: AgentIntent =
+        mode === "booking_agent" ? detectIntent(userText) : "BOOK";
       const ep = endpointFor(mode, intent);
 
       const res = await fetch(ep.plan, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: nextMessages.map((m) => ({ role: m.role, content: m.content })) }),
+        body: JSON.stringify({
+          messages: nextMessages.map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+        }),
       });
 
-      const data = await res.json().catch(() => ({} as any));
+      const data = await res.json().catch(() => ({}) as any);
 
-      // server ของนายตอบ {reply: "..."} เป็นหลัก
-      const replyText = String(data?.reply ?? data?.message ?? "").trim() || "…";
-      setMessages((prev) => [...prev, { role: "assistant", content: replyText }]);
+      const replyText =
+        String(data?.reply ?? data?.message ?? "").trim() || "…";
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: replyText },
+      ]);
 
       if (mode === "booking_agent") {
-        const confirmToken = typeof data?.confirmToken === "string" ? data.confirmToken : null;
+        const confirmToken =
+          typeof data?.confirmToken === "string"
+            ? data.confirmToken
+            : typeof data?.confirm_token === "string"
+              ? data.confirm_token
+              : typeof data?.token === "string"
+                ? data.token
+                : null;
 
         setAgent({
           intent,
           confirmToken,
           plan: data?.plan,
           suggested: data?.suggested,
-          candidates: data?.candidates,
+          candidates: Array.isArray(data?.candidates) ? data.candidates : [],
+          missingFields: Array.isArray(data?.missingFields)
+            ? data.missingFields
+            : [],
+          questions: Array.isArray(data?.questions) ? data.questions : [],
         });
       }
     } catch (e: any) {
@@ -126,21 +159,31 @@ export function useAiChat(input: { mode: Mode }) {
         body: JSON.stringify({ confirmToken: agent.confirmToken }),
       });
 
-      const data = await res.json().catch(() => ({} as any));
-      const replyText =
-        String(data?.reply ?? "").trim() ||
-        (data?.success ? "✅ สำเร็จ" : "❌ ไม่สำเร็จ");
+      const data = await res.json().catch(() => ({}) as any);
 
-      setMessages((prev) => [...prev, { role: "assistant", content: replyText }]);
+      const ok = Boolean(data?.success); // ✅ สำคัญ
+      const replyText =
+        String(data?.reply ?? "").trim() || (ok ? "✅ สำเร็จ" : "ไม่สำเร็จ");
+
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: replyText },
+      ]);
 
       // ✅ confirm แล้วเคลียร์ token กันกดซ้ำ
       setAgent(null);
+
+      // ✅ ให้หน้าอื่นรีเฟรช/รีเฟตช์
+      if (ok) {
+        onConfirmed?.(); // ให้ AiChatCore ทำ router.refresh()
+        window.dispatchEvent(new Event("booking:changed")); // ✅ บอกหน้าอื่น refetch
+      }
     } catch (e: any) {
       setError(e?.message ?? "network");
     } finally {
       setIsLoading(false);
     }
-  }, [mode, agent, isLoading]);
+  }, [mode, agent, isLoading, onConfirmed]);
 
   return {
     messages,

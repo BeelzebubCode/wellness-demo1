@@ -1,0 +1,88 @@
+// src/services/aiAgent/bookingPlan/slots.ts
+import prisma from "@/lib/prisma";
+import { bkkRange, toMinBkk } from "./time";
+
+const ACTIVE_BOOKING_STATUSES = ["PENDING_ASSIGNMENT", "ASSIGNED", "IN_PROGRESS"] as const;
+
+export async function listAvailableSlots(params: { universityId: number; date: string; limit?: number }) {
+  const { universityId, date, limit = 8 } = params;
+  const { start, end } = bkkRange(date);
+
+  const slots = await prisma.timeSlot.findMany({
+    where: {
+      university_id: universityId,
+      time_slot_start_datetime: { gte: start, lt: end },
+      NOT: [{ time_slot_status: "LOCKED" }, { time_slot_status: "CANCELLED" }],
+    },
+    orderBy: { time_slot_start_datetime: "asc" },
+    take: 60,
+    select: {
+      time_slot_id: true,
+      time_slot_start_datetime: true,
+      time_slot_end_datetime: true,
+      time_slot_max_capacity: true,
+      time_slot_status: true,
+    },
+  });
+
+  if (!slots.length) return [];
+
+  const counts = await prisma.booking.groupBy({
+    by: ["time_slot_id"],
+    where: {
+      university_id: universityId,
+      time_slot_id: { in: slots.map((s) => s.time_slot_id) },
+      booking_status: { in: [...ACTIVE_BOOKING_STATUSES] as any },
+    },
+    _count: { time_slot_id: true },
+  });
+
+  const countMap = new Map<number, number>();
+  for (const c of counts) countMap.set(Number(c.time_slot_id), Number(c._count.time_slot_id || 0));
+
+  return slots
+    .map((s) => {
+      const maxCap = Number(s.time_slot_max_capacity ?? 0);
+      const booked = countMap.get(s.time_slot_id) || 0;
+      const ok = maxCap > 0 && booked < maxCap && String(s.time_slot_status || "").toUpperCase() !== "BOOKED";
+      return {
+        timeSlotId: s.time_slot_id,
+        start: s.time_slot_start_datetime.toISOString(),
+        end: s.time_slot_end_datetime.toISOString(),
+        remaining: Math.max(0, maxCap - booked),
+        ok,
+      };
+    })
+    .filter((x) => x.ok)
+    .slice(0, limit);
+}
+
+export function pickBestSlot(slots: any[], timeRange: string) {
+  if (!slots.length) return null;
+
+  const tr = String(timeRange || "ANY").trim().toUpperCase();
+  if (tr === "ANY") return slots[0];
+
+  const m = tr.match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/);
+  if (!m) return slots[0];
+
+  const targetStartMin = Number(m[1]) * 60 + Number(m[2]);
+  const targetEndMin = Number(m[3]) * 60 + Number(m[4]);
+
+  let best = slots[0];
+  let bestDist = Infinity;
+
+  for (const s of slots) {
+    const st = toMinBkk(s.start);
+    const dist =
+      st >= targetStartMin && st <= targetEndMin
+        ? 0
+        : Math.min(Math.abs(st - targetStartMin), Math.abs(st - targetEndMin));
+
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = s;
+    }
+  }
+  return best;
+}
