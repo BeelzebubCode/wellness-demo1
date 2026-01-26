@@ -13,6 +13,8 @@ export type { BookingStatus };
 export type BookingTimeSlot = TimeSlotCore & {
   consultantId?: number | null;
   consultantName?: string | null;
+    // ✅ เพิ่ม 2 บรรทัดนี้
+  outcome?: BookingOutcomeCore | null;
 };
 
 // ✅ (หน้า student list / หน้าทั่วไปที่อยากใช้แบบง่าย)

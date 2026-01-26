@@ -1,3 +1,5 @@
+//src\components\booking\MyAppointmentCard.tsx
+
 "use client";
 
 import { cn } from "@/lib/cn";
@@ -50,13 +52,16 @@ export function MyAppointmentCard({
 
   // ✅ hasFeedback แบบ robust (กัน string/number/field คนละชื่อ)
   const hasFeedback =
+    Boolean((booking as any).outcome) ||
     Boolean((booking as any).hasFeedback) ||
     Boolean((booking as any).feedbackId) ||
     Boolean((booking as any).feedbackSubmitted) ||
     (Array.isArray((booking as any).feedbacks) && (booking as any).feedbacks.length > 0);
 
   // ✅ ปุ่ม Feedback แสดงเมื่อ: จบงาน + ยังไม่เคยประเมิน + มี callback
-  const showFeedbackAction = true;
+  const showFeedbackAction =
+    isCompleted && !hasFeedback && typeof onFeedback === "function";
+
   // const showFeedbackAction =
   //   isCompleted && !hasFeedback && typeof onFeedback === "function";
 
@@ -66,11 +71,11 @@ export function MyAppointmentCard({
   if (isCompact) {
     const fullDate = dateObj
       ? dateObj.toLocaleDateString("th-TH", {
-          weekday: "long",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
       : null;
 
     const bookingIdText = `#${String(booking.id).padStart(6, "0")}`;
@@ -159,7 +164,7 @@ export function MyAppointmentCard({
               <Button
                 size="sm"
                 variant="primary"
-                className="h-8 px-3 text-xs shadow-sm bg-amber-500 hover:bg-amber-600 text-white border-amber-600 animate-in fade-in zoom-in duration-300 shrink-0"
+                className="h-8 px-3 text-xs shadow-sm btn-tenant animate-in fade-in zoom-in duration-300 shrink-0"
                 onClick={(e) => {
                   e.stopPropagation();
                   onFeedback?.();

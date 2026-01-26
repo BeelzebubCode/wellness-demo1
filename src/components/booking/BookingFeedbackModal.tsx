@@ -1,3 +1,5 @@
+//src\components\booking\BookingFeedbackModal.tsx
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -37,7 +39,7 @@ export function BookingFeedbackModal({ isOpen, bookingId, onClose, onSuccess }: 
       try {
         setError(null);
         setIsLoadingCriteria(true);
-        const res = await fetch("/api/v1/evaluation-criteria", { cache: "no-store" });
+        const res = await fetch("/api/v2/evaluation-criteria", { cache: "no-store" });
         const json = await res.json();
         if (!res.ok || !json?.success) throw new Error(json?.error ?? "load failed");
 
@@ -85,7 +87,7 @@ export function BookingFeedbackModal({ isOpen, bookingId, onClose, onSuccess }: 
         score: scores[c.evaluation_criterion_id],
       }));
 
-      const res = await fetch(`/api/v1/bookings/${bookingId}/feedback`, {
+      const res = await fetch(`/api/v2/bookings/${bookingId}/feedback`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -186,16 +188,28 @@ export function BookingFeedbackModal({ isOpen, bookingId, onClose, onSuccess }: 
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" size="sm" onClick={onClose} disabled={isSubmitting}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onClose}
+                disabled={isSubmitting}
+              >
                 ยกเลิก
               </Button>
+
               <Button
                 size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="text-sm shadow-sm btn-tenant animate-in fade-in zoom-in duration-300 shrink-0"
                 disabled={!canSubmit || isSubmitting}
                 onClick={submit}
               >
-                {isSubmitting ? <LoadingSpinner size="sm" /> : "ส่งแบบประเมิน"}
+                {isSubmitting ? (
+                  <LoadingSpinner size="sm" />
+                ) : (
+                  <>
+                    ส่งแบบประเมิน
+                  </>
+                )}
               </Button>
             </div>
           </>

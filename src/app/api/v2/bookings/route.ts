@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { BookingStatus } from "@prisma/client";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
 import { handleListBookings } from "@/services/booking/handlers/listBookings";
+import { handleCreateBooking } from "@/services/booking/handlers/createBooking"; // ✅ เพิ่ม
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,7 +26,6 @@ export async function GET(request: NextRequest) {
 
     const consultantId = consultantIdRaw ? Number(consultantIdRaw) : null;
 
-    // ✅ ส่ง ctx + activeUniversityId เข้า service
     return await handleListBookings(
       { ...(account as any), activeUniversityId },
       {
@@ -39,6 +39,27 @@ export async function GET(request: NextRequest) {
     console.error("[GET /api/v2/bookings]", err);
     return NextResponse.json(
       { error: err?.message ?? "Failed to fetch bookings" },
+      { status: err?.status ?? 500 },
+    );
+  }
+}
+
+// ✅ เพิ่มตัวนี้เพื่อแก้ 405
+export async function POST(request: NextRequest) {
+  try {
+    const { account, activeUniversityId } = await requireTenant(request);
+
+    // ✅ ให้เฉพาะนักศึกษาจองเอง
+    assertRole(account.role, ["STUDENT"]);
+
+    return await handleCreateBooking(
+      { ...(account as any), activeUniversityId },
+      await request.json(),
+    );
+  } catch (err: any) {
+    console.error("[POST /api/v2/bookings]", err);
+    return NextResponse.json(
+      { error: err?.message ?? "Failed to create booking" },
       { status: err?.status ?? 500 },
     );
   }

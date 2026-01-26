@@ -80,6 +80,8 @@ export async function getMyBookings(params: {
       problemCategory: true,
       timeSlot: true,
 
+      feedback: { select: { feedback_id: true } },
+
       // ✅ include ชื่อ นศ. สำหรับ consultant
       student: {
         select: {
@@ -124,6 +126,8 @@ export async function getMyBookings(params: {
 
       // ✅ student ไม่ต้องเห็นชื่อนิสิต
       studentName: role === "STUDENT" ? undefined : fullName,
+
+      hasFeedback: Boolean(b.feedback?.feedback_id),
     };
   });
 }

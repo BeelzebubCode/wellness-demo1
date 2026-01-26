@@ -3,6 +3,7 @@
 
 import { useMyAppointments } from "@/features/booking/hooks/useMyAppointments";
 import { MyAppointmentCard } from "@/components/booking";
+import { BookingFeedbackModal } from "@/components/booking/BookingFeedbackModal"; // ✅ ADD
 import { Card, LoadingSpinner } from "@/components/ui";
 import { History, Inbox } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -27,8 +28,27 @@ function safeDate(raw: any): Date | null {
 }
 
 export default function BookingHistoryPage() {
-  const { pastBookings, isLoading } = useMyAppointments();
+  // ✅ เผื่อ hook มี refetch
+  const appts: any = useMyAppointments();
+  const pastBookings = appts.pastBookings ?? [];
+  const isLoading = appts.isLoading ?? false;
+  const refetch = appts.refetch; // อาจมีหรือไม่มีก็ได้
+
   const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  // ✅ Feedback modal state
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackBookingId, setFeedbackBookingId] = useState<number | null>(null);
+
+  const openFeedback = (bookingId: number) => {
+    setFeedbackBookingId(bookingId);
+    setFeedbackOpen(true);
+  };
+
+  const closeFeedback = () => {
+    setFeedbackOpen(false);
+    setFeedbackBookingId(null);
+  };
 
   const [filters, setFilters] = useState<BookingHistoryFilters>({
     status: "ALL",
@@ -168,6 +188,8 @@ export default function BookingHistoryPage() {
                       isCompact
                       isExpanded={isExpanded}
                       onToggle={() => setExpandedId(isExpanded ? null : booking.id)}
+                      // ✅ สำคัญ: ส่ง callback ให้ปุ่มประเมิน
+                      onFeedback={() => openFeedback(booking.id)}
                     />
                   </div>
                 );
@@ -182,6 +204,17 @@ export default function BookingHistoryPage() {
           </div>
         )}
       </Card>
+
+      {/* ✅ Feedback Modal */}
+      <BookingFeedbackModal
+        isOpen={feedbackOpen}
+        bookingId={feedbackBookingId}
+        onClose={closeFeedback}
+        onSuccess={() => {
+          // ✅ รีเฟรช list เพื่อให้ hasFeedback อัปเดต + ปุ่มหายไป
+          if (typeof refetch === "function") refetch();
+        }}
+      />
     </div>
   );
 }
