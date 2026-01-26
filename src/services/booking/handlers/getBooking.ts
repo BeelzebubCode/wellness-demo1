@@ -77,6 +77,7 @@ export async function handleGetBooking(ctx: AccountContext, bookingIdRaw: string
     id: booking.booking_id,
     status: booking.booking_status,
     problemType: booking.problemCategory.problem_category_name_th,
+    problemCategoryId: booking.problem_category_id,
     problemCategoryCode: booking.problemCategory.problem_category_code,
     detailText: booking.booking_detail_text,
     createdAt: booking.booking_created_at.toISOString(),

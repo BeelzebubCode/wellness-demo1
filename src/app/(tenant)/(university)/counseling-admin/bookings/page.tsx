@@ -1,21 +1,9 @@
-// ==========================================
-// 📌 Admin Page: Bookings Management
-// path: /admin/bookings
-// ==========================================
-
+// src/app/admin/bookings/page.tsx
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, ClipboardList } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ClipboardList } from "lucide-react";
 
-import { Button } from "@/components/ui";
-import type { Booking } from "@/types";
-import { toISODateString } from "@/lib/date";
-
-// ✅ calendar ตัวเดิม
-import { ScheduleCalendar } from "@/components/admin/schedule";
-
-// ✅ booking components
 import {
   BookingsListCard,
   ProblemDetailsModal,
@@ -23,130 +11,87 @@ import {
   AssignBookingModal,
   type ReschedulePayload,
   type AssignPayload,
-  type AssigneeOption,
 } from "@/components/admin/bookings";
 
+import type { AdminBookingRow } from "@/features/counseling-admin-bookings/type";
+import { useAdminBookings } from "@/features/counseling-admin-bookings/hooks/useAdminBookings";
+import { useAssignees } from "@/features/counseling-admin-bookings/hooks/useAssignees";
+
+import { FilterBar } from "@/components/filters/FilterBar";
+import type { AdminBookingStatusFilter } from "@/features/counseling-admin-bookings/api";
+
+import {
+  ADMIN_BOOKINGS_FILTER_DEFS,
+  type AdminBookingsFilters,
+} from "@/features/counseling-admin-bookings/filters/defs";
+
+function toYMD(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function fromYMD(s: string) {
+  return new Date(`${s}T00:00:00`);
+}
+
 export default function AdminBookingsPage() {
-  /* ------------------------------------------------------------------
-   * STATE
-   * ------------------------------------------------------------------ */
-  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [search, setSearch] = useState<string>(""); // ✅ เพิ่ม
 
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [assignees, setAssignees] = useState<AssigneeOption[]>([]);
+  const { bookings, isLoading, refresh, statusFilter, setStatusFilter } =
+    useAdminBookings(selectedDate);
 
-  const [isLoading, setIsLoading] = useState(false);
+  const { assignees } = useAssignees();
 
-  const [rescheduleTarget, setRescheduleTarget] = useState<Booking | null>(null);
-  const [assignTarget, setAssignTarget] = useState<Booking | null>(null);
-  const [problemTarget, setProblemTarget] = useState<Booking | null>(null);
+  // modals
+  const [rescheduleTarget, setRescheduleTarget] = useState<AdminBookingRow | null>(null);
+  const [assignTarget, setAssignTarget] = useState<AdminBookingRow | null>(null);
+  const [problemTarget, setProblemTarget] = useState<AdminBookingRow | null>(null);
 
-  // 🔥 คุมการเปิด / ปิดปฏิทิน
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-
-  const calendarRef = useRef<HTMLDivElement | null>(null);
-  const calendarBtnRef = useRef<HTMLButtonElement | null>(null);
-
-  /* ------------------------------------------------------------------
-   * DATE FORMAT
-   * ------------------------------------------------------------------ */
-  const selectedDateStr = useMemo(
-    () => toISODateString(selectedDate),
-    [selectedDate]
+  // ✅ ส่งค่าให้ FilterBar (date + status + search)
+  const filterValue: AdminBookingsFilters = useMemo(
+    () => ({
+      date: toYMD(selectedDate),
+      status: statusFilter as any,
+      search,
+    }),
+    [selectedDate, statusFilter, search],
   );
 
-  const selectedDateLabel = useMemo(
-    () =>
-      selectedDate.toLocaleDateString("th-TH", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }),
-    [selectedDate]
-  );
+  // ✅ กรองใน client (ชื่อ / LINE ID / ประเภทปัญหา)
+  const filteredBookings = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return bookings;
 
-  /* ------------------------------------------------------------------
-   * FETCH
-   * ------------------------------------------------------------------ */
-  const fetchBookings = async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch(`/api/v1/bookings?date=${selectedDateStr}`);
-      const data = await res.json();
-      setBookings(data.bookings ?? []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    return bookings.filter((b: any) => {
+      const userName = String(b.userName ?? "").toLowerCase();
+      const lineUserId = String(b.lineUserId ?? "").toLowerCase();
+      const problemType = String(b.problemType ?? "").toLowerCase();
+      const detail = String(b.problemDescription ?? b.detailText ?? "").toLowerCase();
 
-  const fetchAssignees = async () => {
-    try {
-      const res = await fetch("/api/v1/consultants");
-      const data = await res.json();
+      return (
+        userName.includes(q) ||
+        lineUserId.includes(q) ||
+        problemType.includes(q) ||
+        detail.includes(q)
+      );
+    });
+  }, [bookings, search]);
 
-      const mapped: AssigneeOption[] = (data.consultants ?? [])
-        .map((c: any) =>
-          typeof c.id === "number" && c.name
-            ? { id: c.id, name: c.name }
-            : null
-        )
-        .filter(Boolean);
-
-      setAssignees(mapped);
-    } catch {
-      setAssignees([]);
-    }
-  };
-
-  useEffect(() => {
-    fetchBookings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDateStr]);
-
-  useEffect(() => {
-    fetchAssignees();
-  }, []);
-
-  /* ------------------------------------------------------------------
-   * CLICK OUTSIDE → CLOSE CALENDAR
-   * ------------------------------------------------------------------ */
-  useEffect(() => {
-    if (!isCalendarOpen) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
-
-      if (
-        calendarRef.current?.contains(target) ||
-        calendarBtnRef.current?.contains(target)
-      ) {
-        return; // ✅ คลิกภายใน ไม่ปิด
-      }
-
-      setIsCalendarOpen(false); // ✅ คลิกนอก ปิด
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isCalendarOpen]);
-
-  /* ------------------------------------------------------------------
-   * ACTION HANDLERS
-   * ------------------------------------------------------------------ */
   const handleReschedule = async (payload: ReschedulePayload) => {
     if (!rescheduleTarget) return;
 
     await fetch(`/api/admin/bookings/${rescheduleTarget.id}/reschedule`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify(payload),
     });
 
     setRescheduleTarget(null);
-    fetchBookings();
+    refresh();
   };
 
   const handleAssign = async (payload: AssignPayload) => {
@@ -160,78 +105,51 @@ export default function AdminBookingsPage() {
     });
 
     setAssignTarget(null);
-    fetchBookings();
+    refresh();
   };
 
-  /* ------------------------------------------------------------------
-   * RENDER
-   * ------------------------------------------------------------------ */
   return (
     <div className="max-w-[1400px] mx-auto px-4 py-6 space-y-6">
-      {/* ================= Header ================= */}
+      {/* Header */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-primary-500 text-white flex items-center justify-center">
           <ClipboardList className="w-5 h-5" />
         </div>
         <div>
           <h5 className="text-2xl font-bold">จัดการคิวการให้คำปรึกษา</h5>
-          <p className="text-sm text-gray-500">
-            เลือกวันที่จากปฏิทินเพื่อดูคิวในวันนั้น
-          </p>
+          <p className="text-sm text-gray-500">เลือกวันที่และตัวกรองเพื่อดูคิว</p>
         </div>
       </div>
 
-      {/* ================= Date Bar ================= */}
-      <div className="relative rounded-2xl border bg-white p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-primary-50 flex items-center justify-center">
-            <CalendarDays className="w-4 h-4 text-primary-600" />
-          </div>
-          <div>
-            <div className="text-xs text-gray-500">วันที่เลือก</div>
-            <div className="font-bold">{selectedDateLabel}</div>
-          </div>
-        </div>
+      {/* ✅ Filters + Search */}
+      <FilterBar
+        defs={ADMIN_BOOKINGS_FILTER_DEFS}
+        value={filterValue}
+        searchKey="search"
+        searchPlaceholder="ค้นหาชื่อ / LINE ID / ประเภทเรื่อง / รายละเอียด..."
+        onChange={(next) => {
+          // date
+          const nextDateStr = String((next as any).date ?? "").trim();
+          if (nextDateStr) setSelectedDate(fromYMD(nextDateStr));
 
-        <Button
-          ref={calendarBtnRef}
-          variant="outline"
-          className="rounded-xl gap-2"
-          onClick={() => setIsCalendarOpen((v) => !v)}
-        >
-          <CalendarDays className="w-4 h-4" />
-          ดูปฏิทิน
-        </Button>
+          // status
+          setStatusFilter(((next as any).status ?? "ALL") as AdminBookingStatusFilter);
 
-        {/* ================= Calendar Popover ================= */}
-        {isCalendarOpen && (
-          <div
-            ref={calendarRef}
-            className="absolute top-full right-0 mt-3 z-50
-                       rounded-2xl border bg-white shadow-xl p-4 w-[360px]"
-          >
-            <ScheduleCalendar
-              currentMonth={currentMonth}
-              selectedDate={selectedDate}
-              onMonthChange={setCurrentMonth}
-              onDateSelect={(date) => {
-                setSelectedDate(date); // ✅ เปลี่ยนวันอย่างเดียว
-              }}
-            />
-          </div>
-        )}
-      </div>
+          // search
+          setSearch(String((next as any).search ?? ""));
+        }}
+      />
 
-      {/* ================= Booking List ================= */}
+      {/* Booking List */}
       <BookingsListCard
         isLoading={isLoading}
-        bookings={bookings}
+        bookings={filteredBookings}
         onOpenProblem={setProblemTarget}
         onOpenReschedule={setRescheduleTarget}
         onOpenAssign={setAssignTarget}
       />
 
-      {/* ================= Modals ================= */}
+      {/* Modals */}
       <RescheduleBookingModal
         booking={rescheduleTarget}
         onClose={() => setRescheduleTarget(null)}

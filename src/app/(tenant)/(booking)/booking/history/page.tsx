@@ -5,11 +5,79 @@ import { useMyAppointments } from "@/features/booking/hooks/useMyAppointments";
 import { MyAppointmentCard } from "@/components/booking";
 import { Card, LoadingSpinner } from "@/components/ui";
 import { History, Inbox } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+
+import { FilterBar } from "@/components/filters/FilterBar";
+import {
+  BOOKING_HISTORY_FILTER_DEFS,
+  type BookingHistoryFilters,
+} from "@/features/booking-history/filters/defs";
+
+function ymdToDateStart(ymd: string) {
+  return new Date(`${ymd}T00:00:00`);
+}
+function ymdToDateEnd(ymd: string) {
+  return new Date(`${ymd}T23:59:59.999`);
+}
+
+function safeDate(raw: any): Date | null {
+  if (!raw) return null;
+  const d = raw instanceof Date ? raw : new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
 
 export default function BookingHistoryPage() {
   const { pastBookings, isLoading } = useMyAppointments();
   const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  const [filters, setFilters] = useState<BookingHistoryFilters>({
+    status: "ALL",
+    search: "",
+  });
+
+  const filteredBookings = useMemo(() => {
+    const status = filters.status ?? "ALL";
+    const q = (filters.search ?? "").trim().toLowerCase();
+    const from = filters.dateFrom ? ymdToDateStart(filters.dateFrom) : null;
+    const to = filters.dateTo ? ymdToDateEnd(filters.dateTo) : null;
+
+    return (pastBookings ?? []).filter((b: any) => {
+      // 1) status
+      if (status !== "ALL" && b.status !== status) return false;
+
+      // 2) date range
+      if (from || to) {
+        const rawDate = b.date || b.startDate || b.startAt || b.createdAt || null;
+        const d = safeDate(rawDate);
+        if (!d) return false;
+        if (from && d < from) return false;
+        if (to && d > to) return false;
+      }
+
+      // 3) search
+      if (q) {
+        const hay = [
+          b.problemType,
+          b.problemCategoryCode,
+          b.problemDescription,
+          b.consultant?.name,
+          b.userName,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        if (!hay.includes(q)) return false;
+      }
+
+      return true;
+    });
+  }, [pastBookings, filters]);
+
+  const totalAll = pastBookings.length;
+  const total = filteredBookings.length;
+  const done = filteredBookings.filter((b: any) => b.status === "COMPLETED").length;
+  const cancelled = filteredBookings.filter((b: any) => b.status === "CANCELLED").length;
 
   if (isLoading) {
     return (
@@ -20,65 +88,86 @@ export default function BookingHistoryPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          <History className="w-6 h-6 text-primary-600" />
-          ประวัติการจอง
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          รายการจองที่เสร็จสิ้นหรือยกเลิกแล้ว
-        </p>
+    <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-6">
+      {/* Header + Counter (Desktop) */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            <History className="w-6 h-6 text-primary-600" />
+            ประวัติการจอง
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">รายการจองที่เสร็จสิ้นหรือยกเลิกแล้ว</p>
+        </div>
+
+        <div className="hidden md:flex items-center gap-2">
+          <span className="text-sm text-gray-600">
+            แสดง <span className="font-semibold text-gray-900">{total}</span>{" "}
+            {totalAll !== total ? (
+              <span className="text-gray-500">จาก {totalAll}</span>
+            ) : null}{" "}
+            รายการ
+          </span>
+          <span className="text-sm text-gray-400">•</span>
+          <span className="text-sm text-emerald-700">
+            เสร็จสิ้น <span className="font-semibold">{done}</span>
+          </span>
+          <span className="text-sm text-gray-400">•</span>
+          <span className="text-sm text-red-700">
+            ยกเลิก <span className="font-semibold">{cancelled}</span>
+          </span>
+        </div>
       </div>
 
-      {/* Stats - ลบ "ไม่มา" ออก */}
-      <div className="grid grid-cols-3 gap-4">
-        <StatCard
-          label="ทั้งหมด"
-          value={pastBookings.length}
-          color="text-gray-700"
-        />
-        <StatCard
-          label="เสร็จสิ้น"
-          value={pastBookings.filter((b) => b.status === "COMPLETED").length}
-          color="text-emerald-600"
-        />
-        <StatCard
-          label="ยกเลิก"
-          value={pastBookings.filter((b) => b.status === "CANCELLED").length}
-          color="text-red-600"
-        />
+      {/* FilterBar */}
+      <FilterBar
+        defs={BOOKING_HISTORY_FILTER_DEFS}
+        value={filters}
+        onChange={setFilters}
+        searchKey={"search"}
+        searchPlaceholder="ค้นหาเรื่อง/รายละเอียด/ผู้ให้คำปรึกษา..."
+      />
+
+      {/* Counter (Mobile) */}
+      <div className="md:hidden rounded-xl border bg-white px-4 py-3 flex items-center justify-between">
+        <div className="text-sm text-gray-700">
+          แสดง <span className="font-semibold">{total}</span>
+          {totalAll !== total ? <span className="text-gray-500"> / {totalAll}</span> : null}
+        </div>
+        <div className="text-xs text-gray-500">
+          เสร็จสิ้น <span className="font-semibold text-emerald-700">{done}</span> • ยกเลิก{" "}
+          <span className="font-semibold text-red-700">{cancelled}</span>
+        </div>
       </div>
 
-      {/* History List */}
+      {/* List */}
       <Card className="rounded-2xl p-6 shadow-sm">
-        <h2 className="text-sm font-semibold text-gray-800 flex items-center gap-2 mb-4">
-          <History className="w-4 h-4 text-primary-500" />
-          รายการทั้งหมด ({pastBookings.length})
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+            <History className="w-4 h-4 text-primary-500" />
+            รายการที่แสดง
+          </h2>
+          <div className="text-xs text-gray-500">
+            {total} รายการ{totalAll !== total ? ` (จาก ${totalAll})` : ""}
+          </div>
+        </div>
 
-        {pastBookings.length > 0 ? (
+        {filteredBookings.length > 0 ? (
           <div className="relative pl-6">
-            {/* timeline line */}
             <div className="absolute left-2 top-1 bottom-1 w-px bg-gray-200" />
 
             <div className="space-y-4">
-              {pastBookings.map((booking) => {
+              {filteredBookings.map((booking: any) => {
                 const isExpanded = expandedId === booking.id;
 
                 return (
                   <div key={booking.id} className="relative">
-                    {/* dot */}
                     <div className="absolute -left-[2px] top-5 h-3 w-3 rounded-full bg-primary-500 ring-4 ring-white" />
 
                     <MyAppointmentCard
                       booking={booking}
                       isCompact
                       isExpanded={isExpanded}
-                      onToggle={() =>
-                        setExpandedId(isExpanded ? null : booking.id)
-                      }
+                      onToggle={() => setExpandedId(isExpanded ? null : booking.id)}
                     />
                   </div>
                 );
@@ -88,31 +177,11 @@ export default function BookingHistoryPage() {
         ) : (
           <div className="text-center py-12 border border-dashed rounded-xl bg-gray-50">
             <Inbox className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="font-semibold text-gray-700">ยังไม่มีประวัติการจอง</p>
-            <p className="text-sm text-gray-500 mt-1">
-              เมื่อมีการจองที่เสร็จสิ้นจะแสดงที่นี่
-            </p>
+            <p className="font-semibold text-gray-700">ไม่พบรายการตามตัวกรอง</p>
+            <p className="text-sm text-gray-500 mt-1">ลองเปลี่ยนสถานะหรือช่วงวันที่ดู</p>
           </div>
         )}
       </Card>
     </div>
-  );
-}
-
-// Sub-component
-function StatCard({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: number;
-  color: string;
-}) {
-  return (
-    <Card className="rounded-xl p-4 text-center">
-      <p className="text-xs text-gray-500 mb-1">{label}</p>
-      <p className={`text-2xl font-bold ${color}`}>{value}</p>
-    </Card>
   );
 }

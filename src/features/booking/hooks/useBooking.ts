@@ -2,12 +2,11 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import type { CreateBookingDTO, Booking } from "@/features/booking/types";
+import type { CreateBookingDTO, BookingListItem } from "@/features/booking/types";
 
 interface UseBookingReturn {
-  createBooking: (data: CreateBookingDTO) => Promise<Booking>;
+  createBooking: (data: CreateBookingDTO) => Promise<BookingListItem>;
   cancelBooking: (id: string | number, reason: string) => Promise<void>;
-
   isCreating: boolean;
   isCancelling: boolean;
 
@@ -17,7 +16,7 @@ interface UseBookingReturn {
 
 type ApiErrorShape = { error?: string; message?: string; success?: boolean };
 type CreateBookingResponse =
-  | { success: true; booking?: Booking; bookingId?: string | number }
+  | { success: true; booking?: BookingListItem; bookingId?: string | number }
   | (ApiErrorShape & Record<string, any>);
 
 // helper: parse JSON แบบปลอดภัย (เผื่อ response ว่าง/ไม่ใช่ JSON)
@@ -32,15 +31,52 @@ async function safeJson<T = any>(response: Response): Promise<T | null> {
 }
 
 function pickErrorMessage(res: Response, body: any) {
-  // ถ้า server ส่ง error/message มาก็ใช้
   const msg = body?.error || body?.message;
   if (msg) return String(msg);
 
-  // แยกเคสยอดฮิต
   if (res.status === 401) return "กรุณาเข้าสู่ระบบใหม่";
   if (res.status === 403) return "คุณไม่มีสิทธิ์ทำรายการนี้";
 
   return `Request failed (status ${res.status})`;
+}
+
+// ✅ ดึง booking เต็มจาก /api/v2/bookings/:id แล้ว map เป็น BookingListItem
+async function fetchBookingById(id: string | number): Promise<BookingListItem> {
+  const res = await fetch(`/api/v2/bookings/${id}`, {
+    method: "GET",
+    credentials: "include",
+    cache: "no-store",
+  });
+
+  const body = await safeJson<any>(res);
+
+  if (!res.ok || body?.success === false) {
+    throw new Error(pickErrorMessage(res, body));
+  }
+
+  const b = body?.booking;
+  if (!b) throw new Error("Invalid booking payload from server");
+
+  // NOTE: ถ้า BookingListItem ของคุณมี field มากกว่านี้ ให้เติม mapping เพิ่ม
+  return {
+    id: b.id,
+    status: b.status,
+
+    studentId: b.student?.id ?? 0,
+    studentName: b.student?.name ?? "ไม่ทราบชื่อ",
+
+    problemType: b.problemType ?? "",
+    problemCategoryId: b.problemCategoryId ?? 0,
+
+    date: b.date ?? null,
+    startTime: b.startTime ?? null,
+    endTime: b.endTime ?? null,
+
+    createdAt: b.createdAt,
+    updatedAt: b.updatedAt,
+
+    hasFeedback: !!b.feedback,
+  } as BookingListItem;
 }
 
 export function useBooking(): UseBookingReturn {
@@ -48,16 +84,14 @@ export function useBooking(): UseBookingReturn {
   const [isCancelling, setIsCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const createBooking = useCallback(async (data: CreateBookingDTO): Promise<Booking> => {
+  const createBooking = useCallback(async (data: CreateBookingDTO): Promise<BookingListItem> => {
     setIsCreating(true);
     setError(null);
 
     try {
       if (!data.studentCode) throw new Error("ไม่พบ studentCode (account_username)");
       if (!data.timeSlotId || Number(data.timeSlotId) <= 0) throw new Error("timeSlotId ไม่ถูกต้อง");
-      if (!data.problemCategoryId || Number(data.problemCategoryId) <= 0) {
-        throw new Error("problemCategoryId ไม่ถูกต้อง");
-      }
+      if (!data.problemCategoryId || Number(data.problemCategoryId) <= 0) throw new Error("problemCategoryId ไม่ถูกต้อง");
 
       const response = await fetch("/api/v2/bookings", {
         method: "POST",
@@ -74,26 +108,21 @@ export function useBooking(): UseBookingReturn {
         throw new Error(pickErrorMessage(response, result));
       }
 
-      const booking = (result as any)?.booking as Booking | undefined;
+      const booking = (result as any)?.booking as BookingListItem | undefined;
       const bookingIdRaw = (result as any)?.bookingId as string | number | undefined;
 
       if (booking) return booking;
 
       if (bookingIdRaw !== undefined && bookingIdRaw !== null) {
-        const bookingId = typeof bookingIdRaw === "string" ? Number.parseInt(bookingIdRaw, 10) : bookingIdRaw;
+        const bookingId =
+          typeof bookingIdRaw === "string"
+            ? Number.parseInt(bookingIdRaw, 10)
+            : bookingIdRaw;
+
         if (!Number.isFinite(bookingId)) throw new Error("Invalid bookingId from server");
 
-        // fallback
-        return {
-          id: bookingId,
-          studentId: 0,
-          studentName: "",
-          problemType: "",
-          problemCategoryId: data.problemCategoryId,
-          status: "PENDING_ASSIGNMENT",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
+        // ✅ ดึงตัวเต็ม
+        return await fetchBookingById(bookingId);
       }
 
       throw new Error("Invalid response from server");
@@ -126,13 +155,10 @@ export function useBooking(): UseBookingReturn {
 
       const result = await safeJson<ApiErrorShape & Record<string, any>>(response);
 
-      // รองรับทั้งแบบ status ไม่ ok และแบบ success:false
       if (!response.ok || result?.success === false) {
         console.error("[cancelBooking] status/body:", response.status, result);
         throw new Error(pickErrorMessage(response, result));
       }
-
-      return;
     } catch (err: any) {
       const msg = err?.message || "เกิดข้อผิดพลาดในการยกเลิก";
       console.error("[cancelBooking] err:", err);

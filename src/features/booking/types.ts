@@ -1,54 +1,48 @@
 // src/features/booking/types.ts
 import type { TimeSlotCore } from "@/shared/types/timeSlot";
+import type {
+  BookingCore,
+  BookingStatus,
+  BookingOutcomeCore,
+  BookingCancellationCore,
+} from "@/shared/types/booking";
 
-export type BookingStatus =
-  | "PENDING_ASSIGNMENT"
-  | "ASSIGNED"
-  | "IN_PROGRESS"
-  | "COMPLETED"
-  | "CANCELLED";
+export type { BookingStatus };
 
 // ✅ booking ต้องการ slot + consultant info บางกรณี
-export type BookingTimeSlot = Omit<
-  TimeSlotCore,
-  // booking บางหน้ามันไม่จำเป็นต้องรู้ครบ แต่การมีไว้ไม่เสียหาย
-  never
-> & {
-  consultantId?: number;
+export type BookingTimeSlot = TimeSlotCore & {
+  consultantId?: number | null;
   consultantName?: string | null;
 };
 
-export interface Booking {
-  id: number;
+// ✅ (หน้า student list / หน้าทั่วไปที่อยากใช้แบบง่าย)
+export interface BookingListItem extends Omit<BookingCore, "date" | "startTime" | "endTime"> {
   studentId: number;
   studentName: string;
+
   problemType: string;
   problemCategoryId: number;
-  status: BookingStatus;
-  createdAt: string;
-  updatedAt: string;
-  date?: string;
-  startTime?: string;
-  endTime?: string;
+
+  // optional schedule (บาง list ไม่ join slot)
+  date?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+
   hasFeedback?: boolean;
 }
 
-export interface MyBooking {
-  id: number;
-  status: BookingStatus;
+// ✅ (หน้า My booking)
+export interface MyBooking extends Pick<BookingCore, "id" | "status" | "date" | "startTime" | "endTime" | "createdAt" | "updatedAt"> {
   problemType: string | null;
-
-  createdAt: string | null;
-  updatedAt: string | null;
-
-  date: string | null;
-  startTime: string | null;
-  endTime: string | null;
-
   hasFeedback?: boolean;
 }
 
-export interface BookingDetail extends Booking {
+// ✅ (หน้า detail)
+export interface BookingDetail extends BookingCore {
+  problemType: string;
+  problemCategoryCode?: string;
+  detailText?: string | null;
+
   student: {
     id: number;
     code?: string;
@@ -59,23 +53,21 @@ export interface BookingDetail extends Booking {
     department?: string;
     lineId?: string;
   };
+
   consultant?: {
     id: number;
     name: string;
     email?: string;
     phone?: string;
     organization?: string;
-  };
+  } | null;
 
-  // ✅ เปลี่ยนตรงนี้
-  timeSlots: BookingTimeSlot[];
+  timeSlots?: BookingTimeSlot[];
 
-  outcome?: {
-    note: string;
-    nextStep?: string;
-    riskLevel?: number;
-    recordedAt: string;
-  };
+  outcome?: BookingOutcomeCore | null;
+  cancellation?: BookingCancellationCore | null;
+
+  hasFeedback?: boolean;
 }
 
 export interface CreateBookingDTO {
@@ -94,4 +86,3 @@ export interface ProblemCategory {
 }
 
 export type TimeSlot = BookingTimeSlot;
-

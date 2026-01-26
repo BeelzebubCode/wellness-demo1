@@ -1,8 +1,9 @@
-'use client';
+// path: src/components/admin/bookings/RescheduleBookingModal.tsx
+"use client";
 
-import { useEffect, useState } from 'react';
-import { Modal, Button } from '@/components/ui';
-import type { Booking } from '@/types';
+import { useEffect, useState } from "react";
+import { Modal, Button } from "@/components/ui";
+import type { AdminBookingRow } from "@/features/counseling-admin-bookings/type";
 
 export interface ReschedulePayload {
   date: string;
@@ -16,22 +17,21 @@ export function RescheduleBookingModal({
   onClose,
   onConfirm,
 }: {
-  booking: Booking | null;
+  booking: AdminBookingRow | null;
   onClose: () => void;
   onConfirm: (payload: ReschedulePayload) => void;
 }) {
-  const [date, setDate] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
-  const [reason, setReason] = useState('');
+  const [date, setDate] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [reason, setReason] = useState("");
 
   useEffect(() => {
-    if (booking) {
-      setDate(booking.date ?? '');
-      setStartTime(booking.startTime ?? '');
-      setEndTime(booking.endTime ?? '');
-      setReason('');
-    }
+    if (!booking) return;
+    setDate((booking as any).date ?? ""); // ถ้า AdminBookingRow ไม่มี date ให้คงเป็น "" ได้
+    setStartTime(booking.startTime ?? "");
+    setEndTime(booking.endTime ?? "");
+    setReason("");
   }, [booking]);
 
   if (!booking) return null;
@@ -46,9 +46,9 @@ export function RescheduleBookingModal({
         className="space-y-4"
       >
         <p className="text-xs text-gray-500">
-          กำลังเลื่อนคิวของ{' '}
+          กำลังเลื่อนคิวของ{" "}
           <span className="font-semibold text-gray-800">
-            {booking.userName ?? 'ไม่ทราบชื่อ'}
+            {booking.userName ?? "ไม่ทราบชื่อ"}
           </span>
         </p>
 
@@ -63,6 +63,7 @@ export function RescheduleBookingModal({
               required
             />
           </div>
+
           <div>
             <label className="block text-xs text-gray-600 mb-1">เวลาเริ่มต้น</label>
             <input
@@ -73,6 +74,7 @@ export function RescheduleBookingModal({
               required
             />
           </div>
+
           <div>
             <label className="block text-xs text-gray-600 mb-1">เวลาสิ้นสุด</label>
             <input

@@ -13,7 +13,6 @@ async function resolveAssignerConsultantId(params: {
 }) {
   const { accountId, activeUniversityId } = params;
 
-  // ถ้ามี activeUniversityId ให้ match ตาม tenant ก่อน
   const row = await prisma.consultant.findFirst({
     where: {
       account_id: accountId,
@@ -28,9 +27,9 @@ async function resolveAssignerConsultantId(params: {
 }
 
 export async function handleAssignBooking(
-  ctx: AccountContext & { activeUniversityId?: number }, // ✅ เผื่อ route ส่งมา
+  ctx: AccountContext & { activeUniversityId?: number },
   bookingIdRaw: string,
-  body: AssignBody
+  body: AssignBody,
 ) {
   const bookingId = Number(bookingIdRaw);
   if (!Number.isFinite(bookingId)) {
@@ -42,25 +41,26 @@ export async function handleAssignBooking(
     return NextResponse.json({ error: "Permission denied" }, { status: 403 });
   }
 
-  // ✅ ผู้มอบหมาย: ถ้า ctx.consultantId ไม่มี ให้หาเองจาก DB
   let assignedById = (ctx as any).consultantId as number | undefined;
   if (typeof assignedById !== "number") {
-    assignedById = await resolveAssignerConsultantId({
+    assignedById = (await resolveAssignerConsultantId({
       accountId: (ctx as any).accountId,
       activeUniversityId: (ctx as any).activeUniversityId,
-    }) as any;
+    })) as any;
   }
-
   if (typeof assignedById !== "number") {
     return NextResponse.json(
       { error: "ไม่พบข้อมูลผู้ให้คำปรึกษาของผู้มอบหมาย (consultantId)" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
   const consultantId = body?.consultantId;
   if (typeof consultantId !== "number") {
-    return NextResponse.json({ error: "กรุณาระบุผู้ให้คำปรึกษา" }, { status: 400 });
+    return NextResponse.json(
+      { error: "กรุณาระบุผู้ให้คำปรึกษา" },
+      { status: 400 },
+    );
   }
 
   const booking = await prisma.booking.findUnique({
@@ -71,30 +71,48 @@ export async function handleAssignBooking(
     return NextResponse.json({ error: "ไม่พบรายการจอง" }, { status: 404 });
   }
 
-  // tenant guard (เดิม)
   const deniedUni = requireUniversity(ctx as any, booking.university_id);
   if (deniedUni) return deniedUni;
 
-  // ✅ กันมอบหมายข้ามมหาลัย (กันเคสพลาด)
   const assignee = await prisma.consultant.findUnique({
     where: { consultant_id: consultantId },
     select: { university_id: true },
   });
   if (!assignee) {
-    return NextResponse.json({ error: "ไม่พบผู้ให้คำปรึกษาที่เลือก" }, { status: 400 });
+    return NextResponse.json(
+      { error: "ไม่พบผู้ให้คำปรึกษาที่เลือก" },
+      { status: 400 },
+    );
   }
   if (assignee.university_id !== booking.university_id) {
     return NextResponse.json(
       { error: "ไม่สามารถมอบหมายให้ผู้ให้คำปรึกษาต่างมหาวิทยาลัยได้" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.booking.update({
-      where: { booking_id: bookingId },
-      data: { booking_status: BookingStatus.ASSIGNED, consultant_id: consultantId },
+  // ✅ แจกได้ “เฉพาะตอนยังรอแจกงาน”
+  const allowed: BookingStatus[] = [BookingStatus.PENDING_ASSIGNMENT];
+
+  const result = await prisma.$transaction(async (tx) => {
+    const upd = await tx.booking.updateMany({
+      where: {
+        booking_id: bookingId,
+        university_id: booking.university_id,
+
+        // ✅ กันแจกซ้ำ: ต้องยังไม่มีคนรับ
+        consultant_id: null,
+
+        // ✅ และต้องอยู่ในสถานะที่อนุญาต
+        booking_status: { in: allowed },
+      },
+      data: {
+        booking_status: BookingStatus.ASSIGNED,
+        consultant_id: consultantId,
+      },
     });
+
+    if (upd.count === 0) return { ok: false as const };
 
     await tx.bookingAssignment.create({
       data: {
@@ -104,7 +122,16 @@ export async function handleAssignBooking(
         booking_assignment_note: body?.note ?? null,
       },
     });
+
+    return { ok: true as const };
   });
+
+  if (!result.ok) {
+    return NextResponse.json(
+      { error: "รายการนี้ถูกมอบหมายไปแล้ว หรือสถานะไม่อนุญาตให้แจกงาน" },
+      { status: 409 },
+    );
+  }
 
   return NextResponse.json({ success: true, status: BookingStatus.ASSIGNED });
 }
