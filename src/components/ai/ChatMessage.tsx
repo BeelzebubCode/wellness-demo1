@@ -16,66 +16,95 @@ export default function ChatMessage({
 
   return (
     <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
-      <div
-        className={cn(
-          // bubble width
-          "max-w-[88%] md:max-w-[72%]",
+    {/* 🔹 Bubble */}
+          <div
+            className={cn(
+              // ความกว้างสูงสุดของ bubble
+              isUser ? "max-w-[70%]" : "max-w-[80%]",
 
-          // bubble style
-          "rounded-2xl px-4 py-3 text-[13px] leading-relaxed",
-          "break-words whitespace-normal",
+              // ขนาดตัวอักษร
+              "text-sm leading-[20px]",
 
-          // color
-          isUser
-            ? "bg-primary-600 text-white"
-            : "bg-white text-slate-900 border border-slate-200 shadow-sm",
+              // padding + shape
+              "px-3 py-2 rounded-xl",
+                    "break-words whitespace-pre-wrap",
+
+              // ตัดคำ
+              "break-words whitespace-pre-wrap",
+
+              // สี
+            isUser
+              ? "bg-black text-white"
+              : "bg-white text-slate-900 border border-slate-100",
+            )}
+          >
+        {
+        /* 
+        ===============================
+            USER → plain text (ไม่ markdown)
+        =============================== 
+        */
+        }
+        {isUser ? (
+          <span className="block">{content}</span>
+        ) : (
+          /* 
+          ===============================
+              AI → markdown (ควบคุม spacing)
+          =============================== 
+          */
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              /* ===== AI TEXT BASE ===== */
+              p: ({ children }) => (
+                <p className="m-0 text-sm leading-[20px]">
+                  {children}
+                </p>
+              ),
+
+              ul: ({ children }) => (
+                <ul className="m-0 list-disc list-inside text-sm leading-[20px]">
+                  {children}
+                </ul>
+              ),
+
+              ol: ({ children }) => (
+                <ol className="m-0 list-decimal list-inside text-sm leading-[20px]">
+                  {children}
+                </ol>
+              ),
+
+              li: ({ children }) => (
+                <li className="m-0">{children}</li>
+              ),
+
+              strong: ({ children }) => (
+                <strong className="font-semibold">{children}</strong>
+              ),
+
+              code: ({ children }) => (
+                <code className="rounded bg-slate-100 px-1 py-0.5 text-[11px]">
+                  {children}
+                </code>
+              ),
+
+              a: ({ children, ...props }) => (
+                <a
+                  {...props}
+                  className="underline underline-offset-2 text-primary-600"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {children}
+                </a>
+              ),
+            }}
+          >
+
+            {String(content || "")}
+          </ReactMarkdown>
         )}
-      >
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          components={{
-            p: ({ children }) => <p className="m-0">{children}</p>,
-
-            ul: ({ children }) => (
-              <ul className="my-2 list-disc pl-5 space-y-1">{children}</ul>
-            ),
-            ol: ({ children }) => (
-              <ol className="my-2 list-decimal pl-5 space-y-1">{children}</ol>
-            ),
-            li: ({ children }) => <li className="m-0">{children}</li>,
-
-            strong: ({ children }) => (
-              <strong className="font-semibold">{children}</strong>
-            ),
-
-            code: ({ children }) => (
-              <code
-                className={cn(
-                  "rounded-md px-1 py-0.5 text-[12px]",
-                  isUser ? "bg-white/20" : "bg-slate-100",
-                )}
-              >
-                {children}
-              </code>
-            ),
-
-            a: ({ children, ...props }) => (
-              <a
-                {...props}
-                className={cn(
-                  "underline underline-offset-2",
-                  isUser ? "text-white" : "text-primary-700",
-                )}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {children}
-              </a>
-            ),
-          }}
-        >
-          {String(content || "")}
-        </ReactMarkdown>
       </div>
     </div>
   );

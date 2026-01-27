@@ -19,8 +19,8 @@ export default function AiChatModal() {
       <div
         className="
           fixed bottom-24 right-5 z-[60]
-          h-[65vh]
-          w-[92vw] max-w-[560px]
+          h-[75vh]
+          w-[92vw] max-w-[1200px]
           rounded-2xl bg-white shadow-2xl overflow-hidden
         "
       >

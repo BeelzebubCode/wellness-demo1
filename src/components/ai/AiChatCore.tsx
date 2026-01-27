@@ -64,7 +64,7 @@ export default function AiChatCore({ mode, variant }: Props) {
         className="
           flex h-[75vh] flex-col
           overflow-hidden
-          rounded-[28px]
+          rounded-[20px]
           border border-slate-200
           bg-white
         "
