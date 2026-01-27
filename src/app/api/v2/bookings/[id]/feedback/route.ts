@@ -146,9 +146,14 @@ export async function POST(
       });
 
       // 5) ให้แต้มหลังประเมิน (ถ้ามี point_rule)
-      const rule = await tx.pointRule.findUnique({
-        where: { point_rule_code: RULE_CODE },
-      });
+      const rule =
+        (await tx.pointRule.findFirst({
+          where: {
+            point_rule_is_active: true,
+            point_rule_code: { in: ["FEEDBACK_SUBMITTED", "POINT_5"] },
+          },
+          orderBy: { point_rule_created_at: "desc" },
+        })) ?? null;
 
       let pointsAwarded = 0;
 

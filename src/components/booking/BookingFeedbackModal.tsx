@@ -100,6 +100,9 @@ export function BookingFeedbackModal({ isOpen, bookingId, onClose, onSuccess }: 
       const json = await res.json();
       if (!res.ok || !json?.success) throw new Error(json?.error ?? "submit failed");
 
+      // ✅ บอกให้ header/points badge รีเฟรชแต้ม
+      window.dispatchEvent(new Event("points-changed"));
+
       onSuccess();
       onClose();
     } catch (e: any) {

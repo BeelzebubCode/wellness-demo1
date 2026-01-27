@@ -3,10 +3,11 @@
 
 import { Menu, User } from "lucide-react";
 import LogoutButton from "@/components/auth/LogoutButton";
+import { StudentPointsBadge } from "@/components/points/StudentPointsBadge";
 
 export interface BookingHeaderProps {
   userName?: string;
-  userRole?: string;
+  userRole?: string; // แนะนำให้ส่งเป็น "STUDENT" หรือ role จริงจาก /api/v2/auth/me
   onMenuClick: () => void;
 }
 
@@ -15,6 +16,11 @@ export function BookingHeader({
   userRole,
   onMenuClick,
 }: BookingHeaderProps) {
+  // ✅ แปลง role ให้ badge ใช้ตัดสินใจ (ถ้าส่งมาเป็น "นักศึกษา" ก็ไม่ match)
+  // ถ้าคุณส่ง role จาก backend เป็น "STUDENT" อยู่แล้ว อันนี้ก็ผ่าน
+  const roleForBadge =
+    userRole === "นักศึกษา" ? "STUDENT" : userRole ?? null;
+
   return (
     <header className="bg-white sticky top-0 z-30 border-b border-gray-200 shadow-sm px-6 h-20 flex items-center justify-between">
       {/* Left */}
@@ -35,6 +41,9 @@ export function BookingHeader({
 
       {/* Right */}
       <div className="flex items-center gap-4 lg:gap-6">
+        {/* ✅ Points (Student only) */}
+        <StudentPointsBadge role={roleForBadge} />
+
         <div className="hidden sm:flex flex-col items-end mr-2">
           <p className="text-xs font-semibold text-gray-800 leading-none">
             {userName || "student1"}

@@ -11,7 +11,7 @@ import LogoutButton from "@/components/auth/LogoutButton";
 import { BrandLogo } from "@/components/shared";
 import { Menu, X, LogIn, User } from "lucide-react";
 import { TENANTS, normalizeTenant } from "@/config/tenants";
-
+import { StudentPointsBadge } from "@/components/points/StudentPointsBadge";
 
 type PublicUser = {
   name?: string | null;
@@ -319,6 +319,10 @@ export function PublicHeader({
               <div className="flex items-center gap-3" suppressHydrationWarning>
                 {isLoggedIn && (
                   <div className="hidden sm:flex items-center gap-2">
+
+                    {/* ✅ Points (Student only) */}
+                    {isLoggedIn && <StudentPointsBadge role={auth.user.role} />} 
+
                     {/* Avatar + Name : สเกลเดียวกับเมนูซ้าย */}
                     <div
                       className="flex items-center gap-1.5 px-2 py-1 rounded-full
