@@ -284,7 +284,7 @@ model Advisor {
   advisor_prefix          String? @db.VarChar(50)
   advisor_first_name      String  @db.VarChar(100)
   advisor_last_name       String  @db.VarChar(100)
-  advisor_email           String? @db.VarChar(100)
+  advisor_email           String? @unique @db.VarChar(100)
   advisor_phone_number    String? @db.VarChar(50)
   advisor_office_location String? @db.VarChar(100)
 
