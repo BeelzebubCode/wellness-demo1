@@ -57,7 +57,7 @@ function normalizeSlot(s: any): TimeSlot {
     bookedCount: Number(s?.bookedCount ?? 0),
     availableCount: Number(s?.availableCount ?? 0),
 
-    status: (s?.status ?? "AVAILABLE") as any,
+    status: (s?.status ?? "OPEN") as any,
     isAvailable: Boolean(s?.isAvailable),
     isClosed: Boolean(s?.isClosed),
     isPastTime: Boolean(s?.isPastTime),
@@ -181,7 +181,7 @@ export const scheduleApi = {
     return { success: true };
   },
 
-  async setSlotStatus(slotId: number, status: "AVAILABLE" | "LOCKED") {
+  async setSlotStatus(slotId: number, status: "OPEN" | "CLOSED") {
     return this.updateSlot(slotId, { status });
   },
 

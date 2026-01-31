@@ -6,7 +6,7 @@ import prisma from "@/lib/prisma";
 type PatchBody = {
   capacity?: number;
   isAvailable?: boolean;
-  status?: "AVAILABLE" | "LOCKED" | "CANCELLED" | "BOOKED";
+  status?: "OPEN" | "CLOSED" | "CANCELLED" | "FULL";
 };
 
 export async function PATCH(
@@ -31,7 +31,7 @@ export async function PATCH(
     }
 
     if (typeof body.isAvailable === "boolean") {
-      data.time_slot_status = body.isAvailable ? "AVAILABLE" : "LOCKED";
+      data.time_slot_status = body.isAvailable ? "OPEN" : "CLOSED";
     }
 
     if (typeof body.status === "string") {

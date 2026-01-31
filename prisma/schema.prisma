@@ -384,7 +384,7 @@ model TimeSlot {
   time_slot_start_datetime DateTime       @db.Timestamptz(3)
   time_slot_end_datetime   DateTime       @db.Timestamptz(3)
   time_slot_max_capacity   Int            @default(1)
-  time_slot_status         TimeSlotStatus @default(AVAILABLE)
+  time_slot_status         TimeSlotStatus @default(OPEN)
 
   university University @relation(fields: [university_id], references: [university_id])
 
@@ -905,10 +905,10 @@ enum StudentAddressType {
 }
 
 enum TimeSlotStatus {
-  AVAILABLE
-  BOOKED
-  LOCKED
+  OPEN
+  CLOSED
   CANCELLED
+  FULL
 }
 
 enum BookingStatus {

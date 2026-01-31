@@ -194,7 +194,7 @@ export async function POST(request: NextRequest) {
       if (!maxCapacity || maxCapacity <= 0) throw new Error("ช่วงเวลานี้ไม่ได้เปิดรับจอง");
 
       const slotStatus = String(timeSlot.time_slot_status || "").toUpperCase();
-      if (slotStatus === "LOCKED" || slotStatus === "CANCELLED") {
+      if (slotStatus === "CLOSED" || slotStatus === "CANCELLED") {
         throw new Error("ช่วงเวลานี้ไม่สามารถจองได้");
       }
 
@@ -208,7 +208,7 @@ export async function POST(request: NextRequest) {
       if (bookedCount >= maxCapacity) {
         await tx.timeSlot.update({
           where: { time_slot_id: timeSlotId },
-          data: { time_slot_status: "BOOKED" },
+          data: { time_slot_status: "FULL" },
         });
         throw new Error("ช่วงเวลานี้เต็มแล้ว");
       }
@@ -234,7 +234,7 @@ export async function POST(request: NextRequest) {
       await tx.timeSlot.update({
         where: { time_slot_id: timeSlotId },
         data: {
-          time_slot_status: newBookedCount >= maxCapacity ? "BOOKED" : "AVAILABLE",
+          time_slot_status: newBookedCount >= maxCapacity ? "FULL" : "OPEN",
         },
       });
 

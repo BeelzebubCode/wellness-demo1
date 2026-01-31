@@ -1,17 +1,10 @@
 // src/components/admin/schedule/DayHeader.tsx
-'use client';
+"use client";
 
-import { useMemo } from 'react';
-import { cn } from '@/lib/cn';
-import { 
-  Clock,
-  Users,
-  TrendingUp,
-  Plus,
-  Trash2,
-  Sparkles
-} from 'lucide-react';
-import type { TimeSlot } from '@/features/schedule/types';
+import { useMemo } from "react";
+import { cn } from "@/lib/cn";
+import { Clock, Users, TrendingUp, Plus, Trash2, Sparkles } from "lucide-react";
+import type { TimeSlot } from "@/features/schedule/types";
 
 interface DayHeaderProps {
   date: Date;
@@ -28,22 +21,37 @@ export function DayHeader({
   isLoading = false,
   onAutoGenerate,
   onDeleteAll,
-  onAddSlot
+  onAddSlot,
 }: DayHeaderProps) {
   const dayNumber = date.getDate();
-  const dayName = date.toLocaleDateString('th-TH', { weekday: 'short' });
-  const monthYear = date.toLocaleDateString('th-TH', { month: 'short', year: 'numeric' });
+  const dayName = date.toLocaleDateString("th-TH", { weekday: "short" });
+  const monthYear = date.toLocaleDateString("th-TH", {
+    month: "short",
+    year: "numeric",
+  });
 
   // Calculate stats
   const stats = useMemo(() => {
     const totalSlots = slots.length;
     const totalCapacity = slots.reduce((sum, s) => sum + s.maxCapacity, 0);
     const totalBooked = slots.reduce((sum, s) => sum + s.bookedCount, 0);
-    const availableSlots = slots.filter(s => s.isAvailable && s.bookedCount < s.maxCapacity).length;
-    const lockedSlots = slots.filter(s => !s.isAvailable || s.status === 'LOCKED').length;
-    const utilizationRate = totalCapacity > 0 ? Math.round((totalBooked / totalCapacity) * 100) : 0;
+    const availableSlots = slots.filter(
+      (s) => s.isAvailable && s.bookedCount < s.maxCapacity,
+    ).length;
+    const lockedSlots = slots.filter(
+      (s) => !s.isAvailable || s.status === "CLOSED",
+    ).length;
+    const utilizationRate =
+      totalCapacity > 0 ? Math.round((totalBooked / totalCapacity) * 100) : 0;
 
-    return { totalSlots, totalCapacity, totalBooked, availableSlots, lockedSlots, utilizationRate };
+    return {
+      totalSlots,
+      totalCapacity,
+      totalBooked,
+      availableSlots,
+      lockedSlots,
+      utilizationRate,
+    };
   }, [slots]);
 
   const hasBookings = stats.totalBooked > 0;
@@ -68,18 +76,26 @@ export function DayHeader({
           <div className="flex items-center gap-3 text-sm">
             <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 rounded-lg">
               <Clock className="w-3.5 h-3.5 text-blue-500" />
-              <span className="font-semibold text-slate-700">{stats.totalSlots}</span>
-              <span className="text-slate-400 text-xs hidden sm:inline">ช่วงเวลา</span>
+              <span className="font-semibold text-slate-700">
+                {stats.totalSlots}
+              </span>
+              <span className="text-slate-400 text-xs hidden sm:inline">
+                ช่วงเวลา
+              </span>
             </div>
-            
+
             <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 rounded-lg">
               <Users className="w-3.5 h-3.5 text-emerald-500" />
-              <span className="font-semibold text-slate-700">{stats.totalBooked}/{stats.totalCapacity}</span>
+              <span className="font-semibold text-slate-700">
+                {stats.totalBooked}/{stats.totalCapacity}
+              </span>
             </div>
-            
+
             <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 rounded-lg">
               <TrendingUp className="w-3.5 h-3.5 text-amber-500" />
-              <span className="font-semibold text-slate-700">{stats.utilizationRate}%</span>
+              <span className="font-semibold text-slate-700">
+                {stats.utilizationRate}%
+              </span>
             </div>
 
             {stats.lockedSlots > 0 && (
@@ -101,15 +117,17 @@ export function DayHeader({
               <Sparkles className="w-3.5 h-3.5" />
               สร้างอัตโนมัติ
             </button>
-          ) : !hasBookings && (
-            <button
-              onClick={onDeleteAll}
-              disabled={isLoading}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 bg-white border border-slate-200 rounded-lg hover:bg-red-50 hover:border-red-200 transition-colors disabled:opacity-50"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">ลบทั้งหมด</span>
-            </button>
+          ) : (
+            !hasBookings && (
+              <button
+                onClick={onDeleteAll}
+                disabled={isLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 bg-white border border-slate-200 rounded-lg hover:bg-red-50 hover:border-red-200 transition-colors disabled:opacity-50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">ลบทั้งหมด</span>
+              </button>
+            )
           )}
 
           <button

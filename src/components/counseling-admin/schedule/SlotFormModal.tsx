@@ -126,7 +126,7 @@ export function SlotFormModal({
   const isValid = duration > 0 && !hasConflict && formData.maxCapacity >= 1;
 
   // Slot status
-  const isLocked = editingSlot?.status === 'LOCKED' || !editingSlot?.isAvailable;
+  const isLocked = editingSlot?.status === 'CLOSED' || !editingSlot?.isAvailable;
   const hasBookings = (editingSlot?.bookedCount ?? 0) > 0;
 
   // Apply duration preset

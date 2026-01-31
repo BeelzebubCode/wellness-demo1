@@ -3,10 +3,16 @@ import prisma from "@/lib/prisma";
 import { ACTIVE_BOOKING_STATUSES, UnavailableReason } from "./constants";
 import { fmtDateBkk, fmtTimeBkk, getDayRangeBangkok } from "./utils";
 
-export async function listTimeSlotsByDate(dateStr: string, universityId: number, opts?: { autoGenerateIfEmpty?: boolean }) {
+type SlotStatus = "OPEN" | "CLOSED" | "CANCELLED" | "FULL";
+
+export async function listTimeSlotsByDate(
+  dateStr: string,
+  universityId: number,
+  opts?: { autoGenerateIfEmpty?: boolean }
+) {
   const { start: startOfDay, end: endOfDay } = getDayRangeBangkok(dateStr);
 
-  let timeSlots = await prisma.timeSlot.findMany({
+  const timeSlots = await prisma.timeSlot.findMany({
     where: {
       university_id: universityId,
       time_slot_start_datetime: { gte: startOfDay, lte: endOfDay },
@@ -15,8 +21,7 @@ export async function listTimeSlotsByDate(dateStr: string, universityId: number,
   });
 
   if (opts?.autoGenerateIfEmpty && timeSlots.length === 0) {
-    // ให้ route ไปเรียก generate ก่อนแล้วค่อยมา list ซ้ำก็ได้
-    // แต่เพื่อความสะดวก เรา "ไม่ generate ใน service นี้"
+    // ไม่ generate ใน service นี้
   }
 
   const slotIds = timeSlots.map((s) => s.time_slot_id);
@@ -43,22 +48,31 @@ export async function listTimeSlotsByDate(dateStr: string, universityId: number,
     const maxCap = Number(slot.time_slot_max_capacity ?? 0);
     const availableCount = Math.max(0, maxCap - activeBookings);
 
-    const isClosed =
-      slot.time_slot_status === "LOCKED" ||
-      slot.time_slot_status === "CANCELLED" ||
-      slot.time_slot_status !== "AVAILABLE";
+    // ✅ prisma enum น่าจะเป็น "OPEN"|"CLOSED"|"CANCELLED"|"FULL" อยู่แล้ว
+    const st = String(slot.time_slot_status || "").toUpperCase() as SlotStatus;
+
+    const isCancelled = st === "CANCELLED";
+    const isClosedOnly = st === "CLOSED";
+    const isFullByStatus = st === "FULL";
 
     const slotStart = slot.time_slot_start_datetime;
     const slotEnd = slot.time_slot_end_datetime;
 
     const isPastTime = slotEnd.getTime() <= now;
-    const isAvailable = !isClosed && availableCount > 0 && !isPastTime;
+
+    const isAvailable =
+      !isPastTime &&
+      !isClosedOnly &&
+      !isCancelled &&
+      !isFullByStatus &&
+      availableCount > 0;
 
     let unavailableReason: UnavailableReason | null = null;
     if (!isAvailable) {
       if (isPastTime) unavailableReason = "PAST_TIME";
-      else if (isClosed) unavailableReason = "CLOSED";
-      else if (availableCount <= 0) unavailableReason = "FULL";
+      else if (isCancelled) unavailableReason = "CANCELLED";
+      else if (isClosedOnly) unavailableReason = "CLOSED";
+      else if (availableCount <= 0 || isFullByStatus) unavailableReason = "FULL";
       else unavailableReason = "UNAVAILABLE";
     }
 
@@ -76,10 +90,13 @@ export async function listTimeSlotsByDate(dateStr: string, universityId: number,
       maxCapacity: maxCap,
       bookedCount: activeBookings,
       availableCount,
-      status: slot.time_slot_status,
+
+      // ✅ ส่ง status ตาม enum ใหม่
+      status: st,
 
       isAvailable,
-      isClosed,
+      // UI มอง Cancelled เป็น "ปิด" ด้วย
+      isClosed: isClosedOnly || isCancelled,
       isPastTime,
       unavailableReason,
     };

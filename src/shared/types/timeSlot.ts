@@ -2,9 +2,17 @@
 
 export type DayStatus = "OPEN" | "CLOSED";
 
-export type SlotStatus = "AVAILABLE" | "LOCKED" | "CANCELLED" | "BOOKED";
+// ✅ ให้ตรงกับ Prisma enum ใหม่
+export type SlotStatus = "OPEN" | "CLOSED" | "CANCELLED" | "FULL";
 
-export type UnavailableReason = "PAST_TIME" | "FULL" | "CLOSED" | "UNAVAILABLE";
+// ✅ เหตุผลที่ “จองไม่ได้” (FULL = เต็ม, CLOSED = ปิด, PAST_TIME = หมดเวลา)
+export type UnavailableReason =
+  | "PAST_TIME"
+  | "FULL"
+  | "CLOSED"
+  | "CANCELLED"
+  | "UNAVAILABLE";
+
 
 export interface TimeSlotCore {
   id: number;
@@ -26,8 +34,11 @@ export interface TimeSlotCore {
 
   // state
   status: SlotStatus;
-  isAvailable: boolean;
-  isClosed: boolean;
+
+  // ✅ derived booleans (แนะนำให้คำนวณจาก status + count + time)
+  isAvailable: boolean; // status=OPEN && !isPastTime && availableCount>0
+  isClosed: boolean;    // status===CLOSED || status===CANCELLED
   isPastTime: boolean;
+
   unavailableReason?: UnavailableReason | null;
 }

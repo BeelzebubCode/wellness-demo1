@@ -122,7 +122,7 @@ export async function seedBookings(
     const needCapacity = isActiveStatus(status);
 
     const candidates = slots.filter((s) => {
-      if (s.time_slot_status !== TimeSlotStatus.AVAILABLE) return false;
+      if (s.time_slot_status !== TimeSlotStatus.OPEN) return false;
 
       const start = new Date(s.time_slot_start_datetime);
 

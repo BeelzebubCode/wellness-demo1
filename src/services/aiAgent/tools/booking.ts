@@ -1,12 +1,14 @@
 // src/services/aiAgent/tools/booking.ts
 import prisma from "@/lib/prisma";
 import type { BookingStatus } from "@prisma/client";
+import { TimeSlotStatus } from "@prisma/client";
 
 const ACTIVE_STATUSES: BookingStatus[] = [
   "PENDING_ASSIGNMENT",
   "ASSIGNED",
   "IN_PROGRESS",
 ];
+
 const CANCELABLE_STATUSES: BookingStatus[] = [
   "PENDING_ASSIGNMENT",
   "ASSIGNED",
@@ -48,7 +50,12 @@ export async function agentBookForStudent(
     },
     select: { booking_id: true },
   });
-  if (existing) throw new Error(`มีการจองที่ยังไม่เสร็จสิ้นอยู่แล้ว (#${existing.booking_id})`);
+
+  if (existing) {
+    throw new Error(
+      `มีการจองที่ยังไม่เสร็จสิ้นอยู่แล้ว (#${existing.booking_id})`,
+    );
+  }
 
   const result = await prisma.$transaction(async (tx) => {
     const timeSlot = await tx.timeSlot.findUnique({
@@ -69,9 +76,15 @@ export async function agentBookForStudent(
     if (!maxCapacity || maxCapacity <= 0)
       throw new Error("ช่วงเวลานี้ไม่ได้เปิดรับจอง");
 
+    // ✅ block ตาม enum ใหม่
     const slotStatus = String(timeSlot.time_slot_status || "").toUpperCase();
-    if (slotStatus === "LOCKED" || slotStatus === "CANCELLED")
+    if (
+      slotStatus === TimeSlotStatus.CLOSED ||
+      slotStatus === TimeSlotStatus.CANCELLED ||
+      slotStatus === TimeSlotStatus.FULL
+    ) {
       throw new Error("ช่วงเวลานี้ไม่สามารถจองได้");
+    }
 
     const bookedCount = await tx.booking.count({
       where: {
@@ -82,13 +95,15 @@ export async function agentBookForStudent(
     });
 
     if (bookedCount >= maxCapacity) {
+      // mark FULL (กันข้อมูลค้าง)
       await tx.timeSlot.update({
         where: { time_slot_id: Number(timeSlotId) },
-        data: { time_slot_status: "BOOKED" as any },
+        data: { time_slot_status: TimeSlotStatus.FULL },
       });
       throw new Error("ช่วงเวลานี้เต็มแล้ว");
     }
 
+    // กันเคส “จองซ้ำ slot เดิม” แบบ completed + มี outcome แล้ว
     const completed = await tx.booking.findFirst({
       where: {
         university_id: activeUniversityId,
@@ -100,17 +115,14 @@ export async function agentBookForStudent(
     });
 
     if (completed) {
-      // ✅ ถ้ามี outcome/ผลการให้คำปรึกษา -> ถือว่าจบจริง ค่อยบล็อก
       let hasOutcome = false;
       try {
-        // ปรับชื่อ model ให้ตรง schema นาย (ตัวอย่าง)
         const outcome = await (tx as any).bookingOutcome?.findFirst?.({
           where: { booking_id: completed.booking_id },
           select: { booking_id: true },
         });
         hasOutcome = !!outcome;
       } catch {
-        // ถ้าไม่มีตาราง outcome ก็ fallback เป็น "ไม่บล็อก" เพื่อกัน false positive
         hasOutcome = false;
       }
 
@@ -119,6 +131,7 @@ export async function agentBookForStudent(
       }
     }
 
+    // create booking
     const b = await tx.booking.create({
       data: {
         university_id: activeUniversityId,
@@ -132,14 +145,15 @@ export async function agentBookForStudent(
       select: { booking_id: true },
     });
 
+    // update slot status -> FULL / OPEN
     const newBookedCount = bookedCount + 1;
     await tx.timeSlot.update({
       where: { time_slot_id: Number(timeSlotId) },
       data: {
         time_slot_status:
           newBookedCount >= maxCapacity
-            ? ("BOOKED" as any)
-            : ("AVAILABLE" as any),
+            ? TimeSlotStatus.FULL
+            : TimeSlotStatus.OPEN,
       },
     });
 
@@ -154,8 +168,12 @@ export async function agentCancelActiveForStudent(input: {
   activeUniversityId: number;
   studentId: number;
   reason?: string | null;
+
+  // ✅ ถ้าคุณอยากบันทึกลง BookingCancellation ให้ส่ง accountId คนกดยกเลิกเข้ามาด้วย
+  // (ไม่ส่งมาก็ยังทำงานได้ แค่ไม่สร้าง record)
+  cancelledByAccountId?: number | null;
 }) {
-  const { activeUniversityId, studentId, reason } = input;
+  const { activeUniversityId, studentId, reason, cancelledByAccountId } = input;
 
   return await prisma.$transaction(async (tx) => {
     const booking = await tx.booking.findFirst({
@@ -164,7 +182,7 @@ export async function agentCancelActiveForStudent(input: {
         student_id: studentId,
         booking_status: { in: CANCELABLE_STATUSES },
       },
-      orderBy: { booking_created_at: "desc" as any }, // ถ้าชื่อไม่ตรง schema ให้แก้
+      orderBy: { booking_created_at: "desc" },
       select: {
         booking_id: true,
         university_id: true,
@@ -178,22 +196,26 @@ export async function agentCancelActiveForStudent(input: {
 
     await tx.booking.update({
       where: { booking_id: booking.booking_id },
-      data: { booking_status: "CANCELLED" as any },
+      data: { booking_status: "CANCELLED" },
     });
 
-    // optional cancellation table
-    try {
-      await (tx as any).bookingCancellation.create({
-        data: {
-          booking_id: booking.booking_id,
-          university_id: activeUniversityId,
-          cancel_reason: reason || "ยกเลิกโดยผู้ใช้",
-          cancelled_at: new Date(),
-        },
-      });
-    } catch {}
+    // ✅ optional cancellation table (ให้ตรง schema นายจริง ๆ)
+    if (cancelledByAccountId && Number(cancelledByAccountId) > 0) {
+      try {
+        await (tx as any).bookingCancellation.create({
+          data: {
+            booking_id: booking.booking_id,
+            booking_cancellation_cancelled_by_id: Number(cancelledByAccountId),
+            booking_cancellation_reason: reason || "ยกเลิกโดยผู้ใช้",
+            // booking_cancellation_cancelled_at มี default now() ใน schema แล้ว ใส่ก็ได้ไม่ใส่ก็ได้
+          },
+        });
+      } catch {
+        // ถ้าตารางนี้ยังไม่พร้อม/ไม่มีสิทธิ์ ก็ไม่ให้ล้มทั้ง transaction
+      }
+    }
 
-    // recalc slot status
+    // recalc slot status (FULL / OPEN) — แต่ถ้า slot ถูก CLOSED/CANCELLED อยู่แล้ว ไม่ต้องไปทับ
     if (booking.time_slot_id) {
       const slot = await tx.timeSlot.findUnique({
         where: { time_slot_id: booking.time_slot_id },
@@ -201,29 +223,42 @@ export async function agentCancelActiveForStudent(input: {
           time_slot_id: true,
           university_id: true,
           time_slot_max_capacity: true,
+          time_slot_status: true,
         },
       });
 
       if (slot && Number(slot.university_id) === Number(activeUniversityId)) {
-        const maxCap = Number(slot.time_slot_max_capacity ?? 0);
-        if (maxCap > 0) {
-          const activeCount = await tx.booking.count({
-            where: {
-              university_id: activeUniversityId,
-              time_slot_id: slot.time_slot_id,
-              booking_status: { in: ACTIVE_STATUSES },
-            },
-          });
+        const st = String(slot.time_slot_status || "").toUpperCase();
+        const isHardBlocked =
+          st === TimeSlotStatus.CLOSED || st === TimeSlotStatus.CANCELLED;
 
-          await tx.timeSlot.update({
-            where: { time_slot_id: slot.time_slot_id },
-            data: {
-              time_slot_status:
-                activeCount >= maxCap
-                  ? ("BOOKED" as any)
-                  : ("AVAILABLE" as any),
-            },
-          });
+        if (!isHardBlocked) {
+          const maxCap = Number(slot.time_slot_max_capacity ?? 0);
+          if (maxCap > 0) {
+            const activeCount = await tx.booking.count({
+              where: {
+                university_id: activeUniversityId,
+                time_slot_id: slot.time_slot_id,
+                booking_status: { in: ACTIVE_STATUSES },
+              },
+            });
+
+            await tx.timeSlot.update({
+              where: { time_slot_id: slot.time_slot_id },
+              data: {
+                time_slot_status:
+                  activeCount >= maxCap
+                    ? TimeSlotStatus.FULL
+                    : TimeSlotStatus.OPEN,
+              },
+            });
+          } else {
+            // maxCap=0 ถือว่าไม่เปิดรับจอง -> ปิด
+            await tx.timeSlot.update({
+              where: { time_slot_id: slot.time_slot_id },
+              data: { time_slot_status: TimeSlotStatus.CLOSED },
+            });
+          }
         }
       }
     }

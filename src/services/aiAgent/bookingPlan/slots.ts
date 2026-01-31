@@ -1,8 +1,13 @@
 // src/services/aiAgent/bookingPlan/slots.ts
 import prisma from "@/lib/prisma";
 import { bkkRange, toMinBkk } from "./time";
+import { TimeSlotStatus, BookingStatus } from "@prisma/client";
 
-const ACTIVE_BOOKING_STATUSES = ["PENDING_ASSIGNMENT", "ASSIGNED", "IN_PROGRESS"] as const;
+const ACTIVE_BOOKING_STATUSES: BookingStatus[] = [
+  BookingStatus.PENDING_ASSIGNMENT,
+  BookingStatus.ASSIGNED,
+  BookingStatus.IN_PROGRESS,
+];
 
 export async function listAvailableSlots(params: { universityId: number; date: string; limit?: number }) {
   const { universityId, date, limit = 8 } = params;
@@ -12,7 +17,11 @@ export async function listAvailableSlots(params: { universityId: number; date: s
     where: {
       university_id: universityId,
       time_slot_start_datetime: { gte: start, lt: end },
-      NOT: [{ time_slot_status: "LOCKED" }, { time_slot_status: "CANCELLED" }],
+      NOT: [
+        { time_slot_status: TimeSlotStatus.CLOSED },
+        { time_slot_status: TimeSlotStatus.CANCELLED },
+        { time_slot_status: TimeSlotStatus.FULL },
+      ],
     },
     orderBy: { time_slot_start_datetime: "asc" },
     take: 60,
@@ -32,19 +41,20 @@ export async function listAvailableSlots(params: { universityId: number; date: s
     where: {
       university_id: universityId,
       time_slot_id: { in: slots.map((s) => s.time_slot_id) },
-      booking_status: { in: [...ACTIVE_BOOKING_STATUSES] as any },
+      booking_status: { in: ACTIVE_BOOKING_STATUSES },
     },
-    _count: { time_slot_id: true },
+    _count: { _all: true },
   });
 
   const countMap = new Map<number, number>();
-  for (const c of counts) countMap.set(Number(c.time_slot_id), Number(c._count.time_slot_id || 0));
+  for (const c of counts) countMap.set(Number(c.time_slot_id), Number(c._count._all || 0));
 
   return slots
     .map((s) => {
       const maxCap = Number(s.time_slot_max_capacity ?? 0);
       const booked = countMap.get(s.time_slot_id) || 0;
-      const ok = maxCap > 0 && booked < maxCap && String(s.time_slot_status || "").toUpperCase() !== "BOOKED";
+      const ok = maxCap > 0 && booked < maxCap;
+
       return {
         timeSlotId: s.time_slot_id,
         start: s.time_slot_start_datetime.toISOString(),
@@ -60,7 +70,9 @@ export async function listAvailableSlots(params: { universityId: number; date: s
 export function pickBestSlot(slots: any[], timeRange: string) {
   if (!slots.length) return null;
 
-  const tr = String(timeRange || "ANY").trim().toUpperCase();
+  const tr = String(timeRange || "ANY")
+    .trim()
+    .toUpperCase();
   if (tr === "ANY") return slots[0];
 
   const m = tr.match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/);

@@ -74,7 +74,7 @@ export async function seedTimeSlots(
           time_slot_start_datetime: s.start,
           time_slot_end_datetime: s.end,
           time_slot_max_capacity: DEFAULT_CAPACITY,
-          time_slot_status: TimeSlotStatus.AVAILABLE,
+          time_slot_status: TimeSlotStatus.OPEN,
         });
       }
     }

@@ -14,7 +14,7 @@ interface SlotCardProps {
 export function SlotCard({ slot, onClick, disabled = false }: SlotCardProps) {
   // Status calculations
   const isFull = slot.bookedCount >= slot.maxCapacity;
-  const isLocked = slot.status === "LOCKED" || !slot.isAvailable;
+  const isLocked = slot.status === "CLOSED" || !slot.isAvailable;
   const hasBookings = slot.bookedCount > 0;
   const availableSlots = Math.max(0, slot.maxCapacity - slot.bookedCount);
 

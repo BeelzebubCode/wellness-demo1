@@ -14,7 +14,7 @@ export async function generateDefaultSlotsForUniversity(dateStr: string, univers
     time_slot_start_datetime: r.start,
     time_slot_end_datetime: r.end,
     time_slot_max_capacity: DEFAULT_CAPACITY,
-    time_slot_status: TimeSlotStatus.AVAILABLE,
+    time_slot_status: TimeSlotStatus.OPEN,
   }));
 
   const result = await prisma.timeSlot.createMany({

@@ -6,13 +6,13 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import type { CreateBorrowRequestInput } from "@/features/borrow-requests/types";
 
-export function BorrowRequestForm({
-  onSubmit,
-  loading,
-}: {
+type Props = {
   loading?: boolean;
+  onCancel?: () => void;
   onSubmit: (input: CreateBorrowRequestInput) => Promise<void> | void;
-}) {
+};
+
+export function BorrowRequestForm({ onSubmit, onCancel, loading }: Props) {
   const [title, setTitle] = useState("");
   const [reason, setReason] = useState("");
   const [detail, setDetail] = useState("");
@@ -20,7 +20,7 @@ export function BorrowRequestForm({
 
   const can = useMemo(
     () => title.trim().length > 0 && reason.trim().length > 0 && neededCount >= 1,
-    [title, reason, neededCount],
+    [title, reason, neededCount]
   );
 
   return (
@@ -57,16 +57,23 @@ export function BorrowRequestForm({
         />
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        {onCancel ? (
+          <Button variant="outline" disabled={loading} onClick={onCancel}>
+            ยกเลิก
+          </Button>
+        ) : null}
+
         <Button
           disabled={!can || loading}
           onClick={() =>
             onSubmit({
-              title: title.trim(),
-              reason: reason.trim(),
-              detail: detail.trim() ? detail.trim() : null,
-              neededCount,
-            })
+              // ⚠️ ตรงนี้ “ต้องตรงกับ CreateBorrowRequestInput ของนาย”
+              borrowRequestTitle: title.trim(),
+              borrowRequestReason: reason.trim(),
+              borrowRequestDetail: detail.trim() ? detail.trim() : null,
+              borrowNeededCount: neededCount,
+            } as any)
           }
         >
           สร้างคำขอ

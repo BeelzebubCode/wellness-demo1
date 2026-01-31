@@ -25,4 +25,10 @@ export const ACTIVE_BOOKING_STATUSES = [
   "IN_PROGRESS",
 ] as const;
 
-export type UnavailableReason = "PAST_TIME" | "FULL" | "CLOSED" | "UNAVAILABLE";
+// ✅ เพิ่ม CANCELLED ให้ตรงกับ listByDate.ts
+export type UnavailableReason =
+  | "PAST_TIME"
+  | "FULL"
+  | "CLOSED"
+  | "CANCELLED"
+  | "UNAVAILABLE";

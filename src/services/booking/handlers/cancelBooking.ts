@@ -91,7 +91,7 @@ export async function handleCancelBooking({ tenant, bookingIdRaw, body }: Input)
     });
 
     const cap = Number(slot.time_slot_max_capacity ?? 0);
-    const nextStatus = activeCount < cap ? TimeSlotStatus.AVAILABLE : TimeSlotStatus.BOOKED;
+    const nextStatus = activeCount < cap ? TimeSlotStatus.OPEN : TimeSlotStatus.FULL;
 
     await tx.timeSlot.update({
       where: { time_slot_id: slot.time_slot_id },
