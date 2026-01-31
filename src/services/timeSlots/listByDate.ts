@@ -2,19 +2,32 @@
 import prisma from "@/lib/prisma";
 import { ACTIVE_BOOKING_STATUSES, UnavailableReason } from "./constants";
 import { fmtDateBkk, fmtTimeBkk, getDayRangeBangkok } from "./utils";
-
-type SlotStatus = "OPEN" | "CLOSED" | "CANCELLED" | "FULL";
+import { TimeSlotStatus } from "@prisma/client";
 
 export async function listTimeSlotsByDate(
   dateStr: string,
   universityId: number,
   opts?: { autoGenerateIfEmpty?: boolean }
 ) {
-  const { start: startOfDay, end: endOfDay } = getDayRangeBangkok(dateStr);
+  // ------------------------------
+  // guards (กัน 500 จาก input เพี้ยน)
+  // ------------------------------
+  const ds = String(dateStr || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ds)) {
+    throw Object.assign(new Error("Invalid date (expected YYYY-MM-DD)"), {
+      status: 400,
+    });
+  }
+  const uniId = Number(universityId);
+  if (!Number.isFinite(uniId) || uniId <= 0) {
+    throw Object.assign(new Error("Invalid universityId"), { status: 400 });
+  }
+
+  const { start: startOfDay, end: endOfDay } = getDayRangeBangkok(ds);
 
   const timeSlots = await prisma.timeSlot.findMany({
     where: {
-      university_id: universityId,
+      university_id: uniId,
       time_slot_start_datetime: { gte: startOfDay, lte: endOfDay },
     },
     orderBy: { time_slot_start_datetime: "asc" },
@@ -38,22 +51,24 @@ export async function listTimeSlotsByDate(
     : [];
 
   const countMap = new Map<number, number>();
-  for (const row of bookingCounts) countMap.set(row.time_slot_id, row._count._all);
+  for (const row of bookingCounts) {
+    countMap.set(row.time_slot_id, row._count._all);
+  }
 
   const now = Date.now();
 
-  const slots = timeSlots.map((slot) => {
+  return timeSlots.map((slot) => {
     const activeBookings = countMap.get(slot.time_slot_id) ?? 0;
 
     const maxCap = Number(slot.time_slot_max_capacity ?? 0);
     const availableCount = Math.max(0, maxCap - activeBookings);
 
-    // ✅ prisma enum น่าจะเป็น "OPEN"|"CLOSED"|"CANCELLED"|"FULL" อยู่แล้ว
-    const st = String(slot.time_slot_status || "").toUpperCase() as SlotStatus;
+    // ✅ ใช้ enum ของ Prisma ตรง ๆ
+    const st = slot.time_slot_status as TimeSlotStatus;
 
-    const isCancelled = st === "CANCELLED";
-    const isClosedOnly = st === "CLOSED";
-    const isFullByStatus = st === "FULL";
+    const isCancelled = st === TimeSlotStatus.CANCELLED;
+    const isClosedOnly = st === TimeSlotStatus.CLOSED;
+    const isFullByStatus = st === TimeSlotStatus.FULL;
 
     const slotStart = slot.time_slot_start_datetime;
     const slotEnd = slot.time_slot_end_datetime;
@@ -68,6 +83,7 @@ export async function listTimeSlotsByDate(
       availableCount > 0;
 
     let unavailableReason: UnavailableReason | null = null;
+
     if (!isAvailable) {
       if (isPastTime) unavailableReason = "PAST_TIME";
       else if (isCancelled) unavailableReason = "CANCELLED";
@@ -91,7 +107,7 @@ export async function listTimeSlotsByDate(
       bookedCount: activeBookings,
       availableCount,
 
-      // ✅ ส่ง status ตาม enum ใหม่
+      // ✅ ส่ง enum ใหม่ตรง ๆ
       status: st,
 
       isAvailable,
@@ -101,6 +117,4 @@ export async function listTimeSlotsByDate(
       unavailableReason,
     };
   });
-
-  return slots;
 }
