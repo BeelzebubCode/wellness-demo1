@@ -67,10 +67,57 @@ export function roleDefaultPath(role?: string) {
 }
 
 /** ✅ map tenantCode -> subdomain (เพิ่มมหาลัย เพิ่มแค่นี้) */
+/** ✅ map tenantCode -> subdomain (auto ตาม seed) */
 export const TENANT_SUBDOMAIN_MAP: Record<string, string> = {
-  NU: "nu",
-  KKU: "kku",
+  // ===== CENTRAL / BANGKOK =====
   CU: "cu",
+  TU: "tu",
+  MU: "mu",
+  KU: "ku",
+  SU: "su",
+  SWU: "swu",
+  RU: "ru",
+  NIDA: "nida",
+  KMUTT: "kmutt",
+  KMITL: "kmitl",
+  KMUTNB: "kmutnb",
+
+  // ===== NORTH =====
+  CMU: "cmu",
+  MFU: "mfu",
+  MJU: "mju",
+  UP: "up",
+  NU: "nu",
+
+  // ===== NORTHEAST =====
+  KKU: "kku",
+  MSU: "msu",
+  SURO: "suro",
+  UBU: "ubu",
+  NPU: "npu",
+  KSU: "ksu",
+
+  // ===== EAST =====
+  BUU: "buu",
+
+  // ===== SOUTH =====
+  PSU: "psu",
+  WU: "wu",
+  TSU: "tsu",
+
+  // ===== RAJABHAT =====
+  SRRU: "srru",
+  BRU: "bru",
+  CRRU: "crru",
+  CMRU: "cmru",
+  KPRU: "kpru",
+
+  // ===== PRIVATE =====
+  BU: "bu",
+  SPU: "spu",
+  UTCC: "utcc",
+  RSU: "rsu",
+  ABAC: "abac",
 };
 
 export function buildTargetHostFromTenantCode(tenantCode: string) {

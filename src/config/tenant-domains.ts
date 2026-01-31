@@ -1,14 +1,31 @@
 // src/config/tenant-domains.ts
-export type TenantCode = "DEFAULT" | "NU" | "CU" | "KKU";
 
-export function tenantFromHost(host: string): TenantCode {
-  const h = (host || "").toLowerCase().split(":")[0]; // ตัด port
+/**
+ * ดึง university_code จาก host
+ * - nu.wellness.local        -> NU
+ * - wellness.nu.ac.th        -> NU
+ * - wellness.local / localhost -> DEFAULT
+ */
+export function tenantFromHost(host?: string | null): string {
+  if (!host) return "DEFAULT";
 
-  if (h.startsWith("cu.")) return "CU";
-  if (h.startsWith("nu.")) return "NU";
-  if (h.startsWith("kku.")) return "KKU";
+  const h = host.toLowerCase().split(":")[0]; // ตัด port
 
-  // domain หลัก / local หลัก
-  // wellness.local หรือ wellness.localhost อะไรก็แล้วแต่ -> DEFAULT
+  // pattern 1: {tenant}.wellness.local
+  if (h.endsWith(".wellness.local")) {
+    const sub = h.split(".")[0];
+    return sub.toUpperCase();
+  }
+
+  // pattern 2: wellness.{tenant}.ac.th
+  if (h.endsWith(".ac.th")) {
+    const parts = h.split(".");
+    // ["wellness","nu","ac","th"]
+    if (parts.length >= 4 && parts[0] === "wellness") {
+      return parts[1].toUpperCase();
+    }
+  }
+
+  // domain หลัก
   return "DEFAULT";
 }
