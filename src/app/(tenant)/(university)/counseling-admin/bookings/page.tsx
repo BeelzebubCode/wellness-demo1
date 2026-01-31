@@ -9,6 +9,7 @@ import {
   ProblemDetailsModal,
   RescheduleBookingModal,
   AssignBookingModal,
+  BookingsDashboard,
   type ReschedulePayload,
   type AssignPayload,
 } from "@/components/counseling-admin/bookings";
@@ -46,9 +47,14 @@ export default function AdminBookingsPage() {
   const { assignees } = useAssignees();
 
   // modals
-  const [rescheduleTarget, setRescheduleTarget] = useState<AdminBookingRow | null>(null);
-  const [assignTarget, setAssignTarget] = useState<AdminBookingRow | null>(null);
-  const [problemTarget, setProblemTarget] = useState<AdminBookingRow | null>(null);
+  const [rescheduleTarget, setRescheduleTarget] =
+    useState<AdminBookingRow | null>(null);
+  const [assignTarget, setAssignTarget] = useState<AdminBookingRow | null>(
+    null,
+  );
+  const [problemTarget, setProblemTarget] = useState<AdminBookingRow | null>(
+    null,
+  );
 
   // ✅ ส่งค่าให้ FilterBar (date + status + search)
   const filterValue: AdminBookingsFilters = useMemo(
@@ -69,7 +75,9 @@ export default function AdminBookingsPage() {
       const userName = String(b.userName ?? "").toLowerCase();
       const lineUserId = String(b.lineUserId ?? "").toLowerCase();
       const problemType = String(b.problemType ?? "").toLowerCase();
-      const detail = String(b.problemDescription ?? b.detailText ?? "").toLowerCase();
+      const detail = String(
+        b.problemDescription ?? b.detailText ?? "",
+      ).toLowerCase();
 
       return (
         userName.includes(q) ||
@@ -117,7 +125,9 @@ export default function AdminBookingsPage() {
         </div>
         <div>
           <h5 className="text-2xl font-bold">จัดการคิวการให้คำปรึกษา</h5>
-          <p className="text-sm text-gray-500">เลือกวันที่และตัวกรองเพื่อดูคิว</p>
+          <p className="text-sm text-gray-500">
+            เลือกวันที่และตัวกรองเพื่อดูคิว
+          </p>
         </div>
       </div>
 
@@ -125,6 +135,7 @@ export default function AdminBookingsPage() {
       <FilterBar
         defs={ADMIN_BOOKINGS_FILTER_DEFS}
         value={filterValue}
+        dateKey="date" // ✅ เพิ่มบรรทัดนี้ (ปัก date ไว้บนแถบหลัก)
         searchKey="search"
         searchPlaceholder="ค้นหาชื่อ / LINE ID / ประเภทเรื่อง / รายละเอียด..."
         onChange={(next) => {
@@ -133,12 +144,17 @@ export default function AdminBookingsPage() {
           if (nextDateStr) setSelectedDate(fromYMD(nextDateStr));
 
           // status
-          setStatusFilter(((next as any).status ?? "ALL") as AdminBookingStatusFilter);
+          setStatusFilter(
+            ((next as any).status ?? "ALL") as AdminBookingStatusFilter,
+          );
 
           // search
           setSearch(String((next as any).search ?? ""));
         }}
       />
+
+      {/* Dashboard */}
+      {!isLoading && <BookingsDashboard bookings={filteredBookings} />}
 
       {/* Booking List */}
       <BookingsListCard

@@ -38,7 +38,9 @@ export default function BookingHistoryPage() {
 
   // ✅ Feedback modal state
   const [feedbackOpen, setFeedbackOpen] = useState(false);
-  const [feedbackBookingId, setFeedbackBookingId] = useState<number | null>(null);
+  const [feedbackBookingId, setFeedbackBookingId] = useState<number | null>(
+    null,
+  );
 
   const openFeedback = (bookingId: number) => {
     setFeedbackBookingId(bookingId);
@@ -50,9 +52,17 @@ export default function BookingHistoryPage() {
     setFeedbackBookingId(null);
   };
 
+  function toYMD(d: Date) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
   const [filters, setFilters] = useState<BookingHistoryFilters>({
     status: "ALL",
     search: "",
+    dateFrom: toYMD(new Date()), // หรือเอาวันนี้ - 7 ก็ได้
   });
 
   const filteredBookings = useMemo(() => {
@@ -67,7 +77,8 @@ export default function BookingHistoryPage() {
 
       // 2) date range
       if (from || to) {
-        const rawDate = b.date || b.startDate || b.startAt || b.createdAt || null;
+        const rawDate =
+          b.date || b.startDate || b.startAt || b.createdAt || null;
         const d = safeDate(rawDate);
         if (!d) return false;
         if (from && d < from) return false;
@@ -96,8 +107,12 @@ export default function BookingHistoryPage() {
 
   const totalAll = pastBookings.length;
   const total = filteredBookings.length;
-  const done = filteredBookings.filter((b: any) => b.status === "COMPLETED").length;
-  const cancelled = filteredBookings.filter((b: any) => b.status === "CANCELLED").length;
+  const done = filteredBookings.filter(
+    (b: any) => b.status === "COMPLETED",
+  ).length;
+  const cancelled = filteredBookings.filter(
+    (b: any) => b.status === "CANCELLED",
+  ).length;
 
   if (isLoading) {
     return (
@@ -116,7 +131,9 @@ export default function BookingHistoryPage() {
             <History className="w-6 h-6 text-primary-600" />
             ประวัติการจอง
           </h1>
-          <p className="text-sm text-gray-500 mt-1">รายการจองที่เสร็จสิ้นหรือยกเลิกแล้ว</p>
+          <p className="text-sm text-gray-500 mt-1">
+            รายการจองที่เสร็จสิ้นหรือยกเลิกแล้ว
+          </p>
         </div>
 
         <div className="hidden md:flex items-center gap-2">
@@ -143,7 +160,8 @@ export default function BookingHistoryPage() {
         defs={BOOKING_HISTORY_FILTER_DEFS}
         value={filters}
         onChange={setFilters}
-        searchKey={"search"}
+        dateKey="dateFrom" // ✅ เพิ่มอันนี้
+        searchKey="search"
         searchPlaceholder="ค้นหาเรื่อง/รายละเอียด/ผู้ให้คำปรึกษา..."
       />
 
@@ -151,11 +169,14 @@ export default function BookingHistoryPage() {
       <div className="md:hidden rounded-xl border bg-white px-4 py-3 flex items-center justify-between">
         <div className="text-sm text-gray-700">
           แสดง <span className="font-semibold">{total}</span>
-          {totalAll !== total ? <span className="text-gray-500"> / {totalAll}</span> : null}
+          {totalAll !== total ? (
+            <span className="text-gray-500"> / {totalAll}</span>
+          ) : null}
         </div>
         <div className="text-xs text-gray-500">
-          เสร็จสิ้น <span className="font-semibold text-emerald-700">{done}</span> • ยกเลิก{" "}
-          <span className="font-semibold text-red-700">{cancelled}</span>
+          เสร็จสิ้น{" "}
+          <span className="font-semibold text-emerald-700">{done}</span> •
+          ยกเลิก <span className="font-semibold text-red-700">{cancelled}</span>
         </div>
       </div>
 
@@ -187,7 +208,9 @@ export default function BookingHistoryPage() {
                       booking={booking}
                       isCompact
                       isExpanded={isExpanded}
-                      onToggle={() => setExpandedId(isExpanded ? null : booking.id)}
+                      onToggle={() =>
+                        setExpandedId(isExpanded ? null : booking.id)
+                      }
                       // ✅ สำคัญ: ส่ง callback ให้ปุ่มประเมิน
                       onFeedback={() => openFeedback(booking.id)}
                     />
@@ -200,7 +223,9 @@ export default function BookingHistoryPage() {
           <div className="text-center py-12 border border-dashed rounded-xl bg-gray-50">
             <Inbox className="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <p className="font-semibold text-gray-700">ไม่พบรายการตามตัวกรอง</p>
-            <p className="text-sm text-gray-500 mt-1">ลองเปลี่ยนสถานะหรือช่วงวันที่ดู</p>
+            <p className="text-sm text-gray-500 mt-1">
+              ลองเปลี่ยนสถานะหรือช่วงวันที่ดู
+            </p>
           </div>
         )}
       </Card>

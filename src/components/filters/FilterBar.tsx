@@ -1,4 +1,3 @@
-// path: src/components/filters/FilterBar.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -7,6 +6,7 @@ import { Button } from "@/components/ui";
 import type { FilterDef } from "./types";
 import { FilterPopover } from "./FilterPopover";
 import { FilterChipsRow } from "./FilterChipsRow";
+import { DateCalendarPopover } from "./inputs/DateCalendarPopover";
 
 function isEmptyValue(v: any) {
   return v === undefined || v === null || v === "" || v === "ALL";
@@ -17,12 +17,14 @@ export function FilterBar<TFilters extends Record<string, any>>({
   value,
   onChange,
   searchKey,
+  dateKey,
   searchPlaceholder = "ค้นหา...",
 }: {
   defs: FilterDef<TFilters>[];
   value: TFilters;
   onChange: (next: TFilters) => void;
   searchKey?: keyof TFilters;
+  dateKey?: keyof TFilters;
   searchPlaceholder?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -93,9 +95,10 @@ export function FilterBar<TFilters extends Record<string, any>>({
     onChange(keepSearch as any);
   };
 
+  const dateYMD = dateKey ? String((value as any)[dateKey] ?? "").trim() : "";
+
   return (
-    <div className="bg-white border rounded-xl p-4">
-      {/* ✅ แถวบน: Search + ปุ่มตัวกรอง */}
+    <div className="bg-white border rounded-2xl p-4">
       <div className="flex items-center gap-3">
         {searchKey && (
           <input
@@ -103,6 +106,14 @@ export function FilterBar<TFilters extends Record<string, any>>({
             value={(value as any)[searchKey] ?? ""}
             onChange={(e) => setFilter(searchKey, e.target.value as any)}
             placeholder={searchPlaceholder}
+          />
+        )}
+
+        {dateKey && (
+          <DateCalendarPopover
+            valueYMD={dateYMD}
+            onChangeYMD={(ymd) => setFilter(dateKey as any, ymd as any)}
+            closeOnSelect={false}
           />
         )}
 
@@ -132,7 +143,6 @@ export function FilterBar<TFilters extends Record<string, any>>({
         </div>
       </div>
 
-      {/* ✅ แถวล่าง: list ตัวกรองที่เลือก (chips) */}
       {activeDefs.length > 0 && (
         <div className="mt-3">
           <FilterChipsRow

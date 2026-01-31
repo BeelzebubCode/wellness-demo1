@@ -18,14 +18,11 @@ import { Button, Card, LoadingSpinner } from '@/components/ui';
 import { addDays } from '@/lib/date';
 import type { BookingTimeSlot as TimeSlot } from '@/features/booking/types';
 import type { BookingFormData } from '@/components/booking/BookingForm';
-import Link from 'next/link';
 import {
   CalendarClock,
   Info,
   RotateCcw,
-  UserRound,
 } from 'lucide-react';
-import { ImageCard } from '@/components/ui/ImageCard';
 import { TimePeriodTabs, TimePeriod } from '@/components/booking/TimePeriodTabs';
 import { useState, useMemo, useEffect, useRef } from 'react'; // ✅ เพิ่ม useRef
 
