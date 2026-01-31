@@ -65,9 +65,6 @@ model University {
   timeSlots     TimeSlot[]
   bookings      Booking[]
 
-  // =========================
-  // ✅ AI KB / Feedback (เพิ่มใหม่)
-  // =========================
   aiKbDocuments    AiKbDocument[]    @relation("UniversityAiKbDocuments")
   aiKbChunks       AiKbChunk[]       @relation("UniversityAiKbChunks")
   aiFeedbackEvents AiFeedbackEvent[] @relation("UniversityAiFeedbackEvents")
@@ -160,6 +157,7 @@ model Student {
   pointWallet       StudentPointWallet?
   pointTransactions StudentPointTransaction[]
 
+  @@unique([university_id, student_id])
   @@unique([university_id, student_code])
   @@index([student_status_id])
   @@index([university_id])
@@ -176,11 +174,17 @@ model StudentStatus {
 }
 
 model StudentProfile {
-  student_id           Int            @id
-  student_prefix       String?        @db.VarChar(10)
-  student_first_name   String         @db.VarChar(100)
-  student_last_name    String         @db.VarChar(100)
-  student_nickname     String?        @db.VarChar(20)
+  student_id            Int     @id
+  university_id         Int
+  student_prefix        String? @db.VarChar(10)
+  student_first_name_th String  @db.VarChar(100)
+  student_last_name_th  String  @db.VarChar(100)
+  student_nickname_th   String? @db.VarChar(20)
+
+  student_first_name_en String? @db.VarChar(100)
+  student_last_name_en  String? @db.VarChar(100)
+  student_nickname_en   String? @db.VarChar(20)
+
   student_gender       StudentGender?
   student_birthday     DateTime?      @db.Date
   student_nationality  String?        @db.VarChar(50)
@@ -188,14 +192,17 @@ model StudentProfile {
   student_blood_group  String?        @db.VarChar(10)
   student_phone_number String?        @db.VarChar(20)
   student_email        String?        @db.VarChar(100)
-  student              Student        @relation(fields: [student_id], references: [student_id])
 
+  student Student @relation(fields: [university_id, student_id], references: [university_id, student_id])
+
+  @@unique([university_id, student_id])
   @@map("student_profile")
 }
 
 model StudentAddress {
   student_address_id           Int                @id @default(autoincrement())
   student_id                   Int
+  university_id                Int
   province_id                  Int
   student_address_type         StudentAddressType
   student_address_detail       String?            @db.VarChar(200)
@@ -203,36 +210,51 @@ model StudentAddress {
   student_address_district     String?            @db.VarChar(100)
   student_address_postal_code  String             @db.VarChar(10)
   province                     Province           @relation(fields: [province_id], references: [province_id])
-  student                      Student            @relation(fields: [student_id], references: [student_id])
+  student                      Student            @relation(fields: [university_id, student_id], references: [university_id, student_id])
 
-  @@unique([student_id, student_address_type])
-  @@index([province_id])
+  @@unique([university_id, student_id, student_address_type])
+  @@index([university_id, student_id])
   @@map("student_address")
 }
 
 model StudentAcademic {
-  student_id                  Int        @id
-  faculty_id                  Int
-  department_id               Int
-  advisor_id                  Int?
-  student_program             String?    @db.VarChar(50)
-  student_degree              String?    @db.VarChar(50)
-  student_degree_name         String?    @db.VarChar(100)
-  student_admit_academic_year Int?
-  advisor                     Advisor?   @relation(fields: [advisor_id], references: [advisor_id])
-  department                  Department @relation(fields: [department_id], references: [department_id])
-  faculty                     Faculty    @relation(fields: [faculty_id], references: [faculty_id])
-  student                     Student    @relation(fields: [student_id], references: [student_id])
+  student_id    Int  @id
+  university_id Int
+  faculty_id    Int
+  department_id Int
+  advisor_id    Int?
 
+  student_program             String? @db.VarChar(50)
+  student_degree              String? @db.VarChar(50)
+  student_degree_name         String? @db.VarChar(100)
+  student_admit_academic_year Int?
+
+  student    Student    @relation(fields: [university_id, student_id], references: [university_id, student_id])
+  faculty    Faculty    @relation(fields: [university_id, faculty_id], references: [university_id, faculty_id])
+  department Department @relation(fields: [university_id, department_id], references: [university_id, department_id])
+  advisor    Advisor?   @relation(fields: [advisor_id], references: [advisor_id])
+
+  @@unique([university_id, student_id])
+  @@index([university_id, faculty_id])
+  @@index([university_id, department_id])
   @@index([advisor_id])
-  @@index([department_id])
-  @@index([faculty_id])
   @@map("student_academic")
 }
 
 // ==========================================
-// 🏢 FACULTY & DEPARTMENT (ผูกมหาลัย)
+// 🏢 FACULTY & DEPARTMENT (ผูกมหาลัย) AcademicGroup
 // ==========================================
+
+model EducationFieldGroup {
+  education_field_group_id Int    @id @default(autoincrement())
+  isced_broad_field_code   String @unique @db.VarChar(2) // "00".."10"
+  field_group_name_th      String @db.VarChar(150)
+  field_group_name_en      String @db.VarChar(150)
+
+  faculties Faculty[]
+
+  @@map("education_field_group")
+}
 
 model Faculty {
   faculty_id      Int     @id @default(autoincrement())
@@ -241,14 +263,19 @@ model Faculty {
   faculty_name_th String  @db.VarChar(100)
   faculty_name_en String? @db.VarChar(100)
 
+  education_field_group_id Int?
+  educationFieldGroup      EducationFieldGroup? @relation(fields: [education_field_group_id], references: [education_field_group_id])
+
   university University @relation(fields: [university_id], references: [university_id])
 
   advisors         Advisor[]
   departments      Department[]
   studentAcademics StudentAcademic[]
 
+  @@unique([university_id, faculty_id])
   @@unique([university_id, faculty_code])
   @@index([university_id])
+  @@index([education_field_group_id])
   @@map("faculty")
 }
 
@@ -260,13 +287,16 @@ model Department {
   department_name_th String  @db.VarChar(100)
   department_name_en String? @db.VarChar(100)
 
-  university       University        @relation(fields: [university_id], references: [university_id])
+  university University @relation(fields: [university_id], references: [university_id])
+  faculty    Faculty    @relation(fields: [university_id, faculty_id], references: [university_id, faculty_id])
+
   advisors         Advisor[]
-  faculty          Faculty           @relation(fields: [faculty_id], references: [faculty_id])
   studentAcademics StudentAcademic[]
 
+  @@unique([university_id, department_id])
   @@unique([university_id, department_code])
   @@index([faculty_id])
+  @@index([university_id, faculty_id])
   @@index([university_id])
   @@map("department")
 }
@@ -289,13 +319,13 @@ model Advisor {
   advisor_office_location String? @db.VarChar(100)
 
   university       University        @relation(fields: [university_id], references: [university_id])
-  department       Department        @relation(fields: [department_id], references: [department_id])
-  faculty          Faculty           @relation(fields: [faculty_id], references: [faculty_id])
+  faculty          Faculty           @relation(fields: [university_id, faculty_id], references: [university_id, faculty_id])
+  department       Department        @relation(fields: [university_id, department_id], references: [university_id, department_id])
   studentAcademics StudentAcademic[]
 
-  @@index([department_id])
-  @@index([faculty_id])
   @@index([university_id])
+  @@index([university_id, faculty_id])
+  @@index([university_id, department_id])
   @@map("advisor")
 }
 
@@ -324,6 +354,7 @@ model Consultant {
   feedbacks         Feedback[]
   borrowAssignments BorrowAssignment[]
 
+  @@unique([university_id, consultant_id])
   @@index([organization_id])
   @@index([university_id])
   @@map("consultant")
@@ -387,22 +418,20 @@ model TimeSlot {
   time_slot_status         TimeSlotStatus @default(OPEN)
 
   university University @relation(fields: [university_id], references: [university_id])
+  bookings   Booking[]
 
-  // ✅ จากเดิม Booking? (1-1) -> Booking[] (1-many)
-  bookings Booking[]
-
-  // ✅ กันเวลาซ้ำ "ระดับมหาลัย" (คิวรวม)
+  @@unique([university_id, time_slot_id])
   @@unique([university_id, time_slot_start_datetime, time_slot_end_datetime])
   @@index([university_id, time_slot_start_datetime])
   @@map("time_slot")
 }
 
 // ==========================================
-// 📅 BOOKING (1 booking = 1 slot, 1 slot ถูกจองได้ครั้งเดียว)
+// 📅 BOOKING 
 // ==========================================
 
 model Booking {
-  booking_id          Int  @id @default(autoincrement())
+  booking_id          Int  @default(autoincrement())
   university_id       Int
   student_id          Int
   consultant_id       Int?
@@ -415,12 +444,10 @@ model Booking {
   booking_updated_at  DateTime      @default(now()) @updatedAt
 
   university University  @relation(fields: [university_id], references: [university_id])
-  student    Student     @relation(fields: [student_id], references: [student_id])
-  consultant Consultant? @relation(fields: [consultant_id], references: [consultant_id])
+  student    Student     @relation(fields: [university_id, student_id], references: [university_id, student_id])
+  consultant Consultant? @relation(fields: [university_id, consultant_id], references: [university_id, consultant_id])
 
-  // ✅ จากเดิม 1-1 -> 1-many
-  timeSlot TimeSlot @relation(fields: [time_slot_id], references: [time_slot_id])
-
+  timeSlot        TimeSlot        @relation(fields: [university_id, time_slot_id], references: [university_id, time_slot_id])
   problemCategory ProblemCategory @relation(fields: [problem_category_id], references: [problem_category_id])
 
   assignments       BookingAssignment[]
@@ -430,13 +457,15 @@ model Booking {
   notifications     Notification[]
   pointTransactions StudentPointTransaction[] @relation("BookingPointTx")
 
-  @@index([time_slot_id])
-  @@index([university_id])
+  @@id([university_id, booking_id]) // ✅ สำคัญสุด
+  @@unique([university_id, student_id, time_slot_id])
+  @@index([university_id, time_slot_id])
   @@index([booking_status])
   @@index([student_id])
   @@index([consultant_id])
   @@index([problem_category_id])
   @@index([student_id, booking_status])
+  @@index([university_id, time_slot_id, booking_status])
   @@map("booking")
 }
 
@@ -452,8 +481,10 @@ model ProblemCategory {
 }
 
 model BookingAssignment {
-  booking_assignment_id             Int      @id @default(autoincrement())
-  booking_id                        Int
+  booking_assignment_id Int @id @default(autoincrement())
+  booking_id            Int
+  university_id         Int
+
   booking_assignment_assigned_by_id Int
   booking_assignment_assigned_to_id Int
   booking_assignment_note           String?  @db.Text
@@ -461,34 +492,45 @@ model BookingAssignment {
 
   assignedBy Consultant @relation("AssignedBy", fields: [booking_assignment_assigned_by_id], references: [consultant_id])
   assignedTo Consultant @relation("AssignedTo", fields: [booking_assignment_assigned_to_id], references: [consultant_id])
-  booking    Booking    @relation(fields: [booking_id], references: [booking_id])
+  booking    Booking    @relation(fields: [university_id, booking_id], references: [university_id, booking_id])
 
   @@index([booking_id])
+  @@index([university_id, booking_id])
   @@index([booking_assignment_assigned_by_id])
   @@index([booking_assignment_assigned_to_id])
   @@map("booking_assignment")
 }
 
 model BookingOutcome {
-  booking_id                      Int      @id
+  booking_id    Int
+  university_id Int
+
   booking_outcome_consultant_note String   @db.Text
   booking_outcome_next_step       String?  @db.Text
   booking_outcome_risk_level      Int?
   booking_outcome_recorded_at     DateTime @default(now())
-  booking                         Booking  @relation(fields: [booking_id], references: [booking_id])
 
+  booking Booking @relation(fields: [university_id, booking_id], references: [university_id, booking_id])
+
+  @@id([university_id, booking_id])
+  @@index([booking_id])
   @@map("booking_outcome")
 }
 
 model BookingCancellation {
-  booking_id                           Int      @id
+  booking_id    Int
+  university_id Int
+
   booking_cancellation_cancelled_by_id Int
   booking_cancellation_reason          String   @db.Text
   booking_cancellation_cancelled_at    DateTime @default(now())
-  cancelledBy                          Account  @relation(fields: [booking_cancellation_cancelled_by_id], references: [account_id])
-  booking                              Booking  @relation(fields: [booking_id], references: [booking_id])
 
+  cancelledBy Account @relation(fields: [booking_cancellation_cancelled_by_id], references: [account_id])
+  booking     Booking @relation(fields: [university_id, booking_id], references: [university_id, booking_id])
+
+  @@id([university_id, booking_id])
   @@index([booking_cancellation_cancelled_by_id])
+  @@index([booking_id])
   @@map("booking_cancellation")
 }
 
@@ -497,20 +539,25 @@ model BookingCancellation {
 // ==========================================
 
 model Feedback {
-  feedback_id           Int              @id @default(autoincrement())
-  booking_id            Int              @unique
-  student_id            Int
-  consultant_id         Int
-  feedback_is_anonymous Boolean          @default(true)
-  feedback_created_at   DateTime         @default(now())
-  booking               Booking          @relation(fields: [booking_id], references: [booking_id])
-  consultant            Consultant       @relation(fields: [consultant_id], references: [consultant_id])
-  student               Student          @relation(fields: [student_id], references: [student_id])
-  comment               FeedbackComment?
-  ratings               FeedbackRating[]
+  feedback_id   Int @id @default(autoincrement())
+  university_id Int
+  booking_id    Int
+  student_id    Int
+  consultant_id Int
 
+  feedback_is_anonymous Boolean  @default(true)
+  feedback_created_at   DateTime @default(now())
+
+  booking    Booking          @relation(fields: [university_id, booking_id], references: [university_id, booking_id])
+  consultant Consultant       @relation(fields: [university_id, consultant_id], references: [university_id, consultant_id])
+  student    Student          @relation(fields: [university_id, student_id], references: [university_id, student_id])
+  comment    FeedbackComment?
+  ratings    FeedbackRating[]
+
+  @@unique([university_id, booking_id])
   @@index([consultant_id])
   @@index([student_id])
+  @@index([university_id])
   @@map("feedback")
 }
 
@@ -567,23 +614,27 @@ model NotificationTemplate {
 }
 
 model Notification {
-  notification_id            Int                  @id @default(autoincrement())
-  account_id                 Int
-  notification_template_id   Int
-  booking_id                 Int?
-  notification_channel       String               @default("LINE") @db.VarChar(20)
+  notification_id          Int  @id @default(autoincrement())
+  account_id               Int
+  notification_template_id Int
+  university_id            Int?
+  booking_id               Int?
+
+  notification_channel       String    @default("LINE") @db.VarChar(20)
   notification_data          Json?
-  notification_status        String               @default("PENDING") @db.VarChar(20)
+  notification_status        String    @default("PENDING") @db.VarChar(20)
   notification_sent_at       DateTime?
-  notification_error_message String?              @db.Text
-  notification_created_at    DateTime             @default(now())
-  account                    Account              @relation(fields: [account_id], references: [account_id])
-  booking                    Booking?             @relation(fields: [booking_id], references: [booking_id])
-  template                   NotificationTemplate @relation(fields: [notification_template_id], references: [notification_template_id])
+  notification_error_message String?   @db.Text
+  notification_created_at    DateTime  @default(now())
+
+  account  Account              @relation(fields: [account_id], references: [account_id])
+  template NotificationTemplate @relation(fields: [notification_template_id], references: [notification_template_id])
+
+  booking Booking? @relation(fields: [university_id, booking_id], references: [university_id, booking_id])
 
   @@index([account_id])
   @@index([notification_status])
-  @@index([booking_id])
+  @@index([university_id, booking_id])
   @@index([notification_template_id])
   @@map("notification")
 }
@@ -607,12 +658,13 @@ model PointRule {
 }
 
 model StudentPointWallet {
-  student_id               Int      @id
-  student_point_balance    Int      @default(0)
-  student_point_updated_at DateTime @default(now())
+  student_id            Int
+  university_id         Int
+  student_point_balance Int @default(0)
 
-  student Student @relation(fields: [student_id], references: [student_id])
+  student Student @relation(fields: [university_id, student_id], references: [university_id, student_id])
 
+  @@id([university_id, student_id])
   @@map("student_point_wallet")
 }
 
@@ -620,7 +672,9 @@ model StudentPointTransaction {
   student_point_transaction_id Int  @id @default(autoincrement())
   student_id                   Int
   point_rule_id                Int?
-  booking_id                   Int?
+
+  booking_university_id Int?
+  booking_id            Int?
 
   student_point_txn_type   PointTxnType
   student_point_amount     Int
@@ -629,12 +683,13 @@ model StudentPointTransaction {
 
   student Student    @relation(fields: [student_id], references: [student_id])
   rule    PointRule? @relation(fields: [point_rule_id], references: [point_rule_id])
-  booking Booking?   @relation("BookingPointTx", fields: [booking_id], references: [booking_id])
+
+  booking Booking? @relation("BookingPointTx", fields: [booking_university_id, booking_id], references: [university_id, booking_id])
 
   @@index([student_id])
-  @@index([booking_id])
   @@index([point_rule_id])
   @@index([student_point_txn_type])
+  @@index([booking_university_id, booking_id])
   @@map("student_point_transaction")
 }
 

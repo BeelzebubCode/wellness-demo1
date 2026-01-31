@@ -8,13 +8,20 @@ export async function seedAccounts(
 ) {
   const { universities, org, passwordHash } = args;
 
-  console.log("👑 Upserting head accounts (NU/KKU/CU)...");
+  // ✅ deterministic order (เหมือน students)
+  const sortedUnis = [...universities].sort(
+    (a, b) => a.university_id - b.university_id,
+  );
 
+  console.log("👑 Upserting head accounts (ALL universities)...");
+
+  // ✅ ใช้ key เป็น uniCode แบบ “ตัวใหญ่” เสมอ เพื่ออ่านง่าย
   const headsByUni: Record<string, { account: any; consultant: any }> = {};
-  const targetHeadUnis = universities.filter((u) => ["NU", "KKU", "CU"].includes(u.university_code));
 
-  for (const uni of targetHeadUnis) {
-    const username = `head_${uni.university_code.toLowerCase()}`;
+  for (const uni of sortedUnis) {
+    const uniCode = String(uni.university_code).toUpperCase();
+    const uniCodeLower = uniCode.toLowerCase();
+    const username = `head_${uniCodeLower}`;
 
     const headAccount = await prisma.account.upsert({
       where: { account_username: username },
@@ -49,38 +56,52 @@ export async function seedAccounts(
       create: {
         consultant_id: headConsultant.consultant_id,
         consultant_first_name: "Head",
-        consultant_last_name: uni.university_code,
+        consultant_last_name: uniCode,
         consultant_nickname: "Boss",
-        consultant_email: `${username}@${uni.university_code.toLowerCase()}.ac.th`,
+        consultant_email: `${username}@${uniCodeLower}.ac.th`,
         consultant_gender: randomItem(["MALE", "FEMALE"]) as any,
         consultant_phone_number: `08${randomInt(10000000, 99999999)}`,
       },
       update: {
         consultant_first_name: "Head",
-        consultant_last_name: uni.university_code,
+        consultant_last_name: uniCode,
         consultant_nickname: "Boss",
-        consultant_email: `${username}@${uni.university_code.toLowerCase()}.ac.th`,
+        consultant_email: `${username}@${uniCodeLower}.ac.th`,
       },
     });
 
     await prisma.consultantLanguage.createMany({
       data: [
-        { consultant_id: headConsultant.consultant_id, consultant_language_code: "TH", consultant_language_fluency_level: "NATIVE" },
-        { consultant_id: headConsultant.consultant_id, consultant_language_code: "EN", consultant_language_fluency_level: "GOOD" },
+        {
+          consultant_id: headConsultant.consultant_id,
+          consultant_language_code: "TH",
+          consultant_language_fluency_level: "NATIVE",
+        },
+        {
+          consultant_id: headConsultant.consultant_id,
+          consultant_language_code: "EN",
+          consultant_language_fluency_level: "GOOD",
+        },
       ],
       skipDuplicates: true,
     });
 
     await prisma.consultantSpecialization.createMany({
       data: [
-        { consultant_id: headConsultant.consultant_id, consultant_specialization_topic: "Academic Counseling" },
-        { consultant_id: headConsultant.consultant_id, consultant_specialization_topic: "Stress Management" },
+        {
+          consultant_id: headConsultant.consultant_id,
+          consultant_specialization_topic: "Academic Counseling",
+        },
+        {
+          consultant_id: headConsultant.consultant_id,
+          consultant_specialization_topic: "Stress Management",
+        },
       ],
       skipDuplicates: true,
     });
 
-    headsByUni[uni.university_code] = { account: headAccount, consultant: headConsultant };
-    console.log(`✅ Upserted ${username} for ${uni.university_code}`);
+    headsByUni[uniCode] = { account: headAccount, consultant: headConsultant };
+    console.log(`✅ Upserted ${username} for ${uniCode} (uni_id=${uni.university_id})`);
   }
 
   // MAP: university_id -> head account_id
@@ -88,16 +109,18 @@ export async function seedAccounts(
   for (const uniCode of Object.keys(headsByUni)) {
     const headAcc = headsByUni[uniCode]?.account;
     if (headAcc?.account_home_university_id && headAcc?.account_id) {
-      headAccountIdByUniversityId.set(headAcc.account_home_university_id, headAcc.account_id);
+      headAccountIdByUniversityId.set(
+        headAcc.account_home_university_id,
+        headAcc.account_id,
+      );
     }
   }
 
-  // Rector
-  console.log("🏛️ Upserting rector accounts (NU/KKU/CU)...");
+  console.log("🏛️ Upserting rector accounts (ALL universities)...");
 
-  const rectorTargets = universities.filter((u) => ["NU", "KKU", "CU"].includes(u.university_code));
-  for (const uni of rectorTargets) {
-    const username = `rector_${uni.university_code.toLowerCase()}`;
+  for (const uni of sortedUnis) {
+    const uniCode = String(uni.university_code).toUpperCase();
+    const username = `rector_${uniCode.toLowerCase()}`;
 
     await prisma.account.upsert({
       where: { account_username: username },
@@ -114,10 +137,9 @@ export async function seedAccounts(
       },
     });
 
-    console.log(`✅ Upserted ${username} for ${uni.university_code}`);
+    console.log(`✅ Upserted ${username} for ${uniCode} (uni_id=${uni.university_id})`);
   }
 
-  // Super Admin
   console.log("🛡️ Upserting super admin account...");
 
   const superAccount = await prisma.account.upsert({

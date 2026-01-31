@@ -51,3 +51,4 @@ export const universitiesData = [
 ] as const;
 
 export type UniversitySeedItem = (typeof universitiesData)[number];
+export type UniversityCode = (typeof universitiesData)[number]["code"];

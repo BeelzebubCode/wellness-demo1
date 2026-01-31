@@ -1,37 +1,68 @@
-// prisma/seeds/03-faculty.ts
-import { PrismaClient, type Faculty, type Department } from "@prisma/client";
-import { FACULTIES, DEPARTMENTS } from "../seed-data/faculties";
+// seeds/03-faculty.ts
+import {
+  PrismaClient,
+  type Faculty,
+  type Department,
+} from "@prisma/client";
+
+import { educationFieldGroupsData } from "../seed-data/education-field-groups";
+import { facultiesData } from "../seed-data/faculties";
+import { departmentsData } from "../seed-data/departments";
+
+type UniLite = { university_id: number; university_code: string };
 
 export async function seedFacultiesDepartments(
   prisma: PrismaClient,
-  args: { universities: Array<{ university_id: number }> },
+  args: { universities: UniLite[] }
 ) {
-  console.log("🏛️  Creating faculties and departments...");
+  console.log("🏛️  Creating education field groups, faculties and departments...");
 
   const { universities } = args;
 
-  const facultyByUniAndCode = new Map<string, Faculty>();
-  const deptByUniAndCode = new Map<string, Department>();
+  // =========================
+  // 0) EDUCATION FIELD GROUPS (global, rerun-safe)
+  // =========================
+  await prisma.educationFieldGroup.createMany({
+    data: educationFieldGroupsData.map((g) => ({
+      isced_broad_field_code: g.isced_broad_field_code,
+      field_group_name_th: g.field_group_name_th,
+      field_group_name_en: g.field_group_name_en,
+    })),
+    skipDuplicates: true,
+  });
+
+  const groups = await prisma.educationFieldGroup.findMany();
+  const groupIdByIsc = new Map<string, number>(
+    groups.map((g) => [g.isced_broad_field_code, g.education_field_group_id])
+  );
 
   // =========================
-  // 1) FACULTIES (rerun-safe)
+  // 1) FACULTIES (per-university, rerun-safe)
   // =========================
+  const facultyByUniAndCode = new Map<string, Faculty>();
+
   for (const uni of universities) {
+    const facSeeds = facultiesData.filter(
+      (f) => f.university_code === uni.university_code
+    );
+
     await prisma.faculty.createMany({
-      data: FACULTIES.map((f) => ({
+      data: facSeeds.map((f) => ({
         university_id: uni.university_id,
-        faculty_code: f.code,
-        faculty_name_th: f.th,
-        faculty_name_en: f.en,
+        faculty_code: f.faculty_code,
+        faculty_name_th: f.faculty_name_th,
+        faculty_name_en: f.faculty_name_en ?? null,
+        education_field_group_id: f.isced_broad_field_code
+          ? groupIdByIsc.get(f.isced_broad_field_code) ?? null
+          : null,
       })),
       skipDuplicates: true,
     });
 
-    // ดึงกลับมาสร้าง map
     const facs = await prisma.faculty.findMany({
       where: {
         university_id: uni.university_id,
-        faculty_code: { in: FACULTIES.map((x) => x.code) },
+        faculty_code: { in: facSeeds.map((x) => x.faculty_code) },
       },
     });
 
@@ -41,9 +72,15 @@ export async function seedFacultiesDepartments(
   }
 
   // =========================
-  // 2) DEPARTMENTS (rerun-safe)
+  // 2) DEPARTMENTS (per-university, rerun-safe)
   // =========================
+  const deptByUniAndCode = new Map<string, Department>();
+
   for (const uni of universities) {
+    const deptSeeds = departmentsData.filter(
+      (d) => d.university_code === uni.university_code
+    );
+
     const data: Array<{
       university_id: number;
       faculty_id: number;
@@ -52,16 +89,16 @@ export async function seedFacultiesDepartments(
       department_name_en?: string | null;
     }> = [];
 
-    for (const d of DEPARTMENTS) {
-      const fac = facultyByUniAndCode.get(`${uni.university_id}:${d.facultyCode}`);
+    for (const d of deptSeeds) {
+      const fac = facultyByUniAndCode.get(`${uni.university_id}:${d.faculty_code}`);
       if (!fac) continue;
 
       data.push({
         university_id: uni.university_id,
         faculty_id: fac.faculty_id,
-        department_code: d.code,
-        department_name_th: d.th,
-        department_name_en: d.en,
+        department_code: d.department_code,
+        department_name_th: d.department_name_th,
+        department_name_en: d.department_name_en ?? null,
       });
     }
 
@@ -73,7 +110,7 @@ export async function seedFacultiesDepartments(
     const depts = await prisma.department.findMany({
       where: {
         university_id: uni.university_id,
-        department_code: { in: DEPARTMENTS.map((x) => x.code) },
+        department_code: { in: deptSeeds.map((x) => x.department_code) },
       },
     });
 

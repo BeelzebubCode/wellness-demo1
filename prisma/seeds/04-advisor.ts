@@ -1,8 +1,31 @@
 // prisma/seeds/04-advisor.ts
 import { PrismaClient, type Advisor } from "@prisma/client";
-import { DEPARTMENTS } from "../seed-data/faculties";
+import { departmentsData } from "../seed-data/departments";
 import { firstNames, lastNames } from "../seed-data/people";
-import { randomInt, randomItem } from "../seed-utils/rand";
+
+function hash32(str: string) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function pickDeterministic<T>(arr: readonly T[], key: string, salt: string) {
+  const idx = hash32(`${salt}:${key}`) % arr.length;
+  return arr[idx];
+}
+
+function randRangeDeterministic(
+  key: string,
+  salt: string,
+  min: number,
+  max: number,
+) {
+  const span = max - min + 1;
+  return min + (hash32(`${salt}:${key}`) % span);
+}
 
 export async function seedAdvisors(
   prisma: PrismaClient,
@@ -12,56 +35,83 @@ export async function seedAdvisors(
     deptByUniAndCode: Map<string, any>;
   },
 ) {
-  console.log("👨‍🏫 Creating advisors...");
+  console.log("👨‍🏫 Upserting advisors...");
 
   const { universities, facultyByUniAndCode, deptByUniAndCode } = args;
 
   const advisors: Advisor[] = [];
 
-  for (const uni of universities) {
-    const uniCode = String(uni.university_code).toLowerCase();
+  // pools
+  const ranks = ["Asst. Prof.", "Assoc. Prof.", "Lecturer"] as const;
+  const prefixes = ["ดร.", "ผศ.ดร.", "อ."] as const;
+  const buildings = ["A", "B", "C", "D"] as const;
 
-    for (const d of DEPARTMENTS) {
-      const fac = facultyByUniAndCode.get(`${uni.university_id}:${d.facultyCode}`);
-      const dep = deptByUniAndCode.get(`${uni.university_id}:${d.code}`);
+  for (const uni of universities) {
+    const uniCode = String(uni.university_code);
+    const uniCodeLower = uniCode.toLowerCase();
+
+    // ✅ ใช้ departmentsData ของใหม่ (กรองตามมหาลัย)
+    const deptSeeds = departmentsData.filter(
+      (d) => String(d.university_code).toUpperCase() === uniCode.toUpperCase(),
+    );
+
+    for (const d of deptSeeds) {
+      // ✅ key ต้องตรงกับที่ 03-faculty.ts set ไว้
+      const fac = facultyByUniAndCode.get(
+        `${uni.university_id}:${d.faculty_code}`,
+      );
+      const dep = deptByUniAndCode.get(
+        `${uni.university_id}:${d.department_code}`,
+      );
+
       if (!fac || !dep) continue;
 
-      const email = `advisor_${uniCode}_${String(d.code).toLowerCase()}@university.ac.th`;
+      const email = `advisor_${uniCodeLower}_${String(d.department_code).toLowerCase()}@${uniCodeLower}.ac.th`;
 
-      const existing = await prisma.advisor.findFirst({
-        where: { advisor_email: email },
-      });
+      // deterministic fields (rerun แล้วเหมือนเดิม)
+      const advisor_academic_rank = pickDeterministic(ranks, email, "rank");
+      const advisor_prefix = pickDeterministic(prefixes, email, "prefix") as any;
+      const advisor_first_name = pickDeterministic(firstNames, email, "fname");
+      const advisor_last_name = pickDeterministic(lastNames, email, "lname");
+      const advisor_phone_number = `0${randRangeDeterministic(
+        email,
+        "phone",
+        800000000,
+        899999999,
+      )}`;
+      const advisor_office_location = `Building ${pickDeterministic(
+        buildings,
+        email,
+        "bld",
+      )}, Room ${randRangeDeterministic(email, "room", 101, 499)}`;
 
       const data = {
         university_id: uni.university_id,
         faculty_id: fac.faculty_id,
         department_id: dep.department_id,
-        advisor_academic_rank: randomItem(["Asst. Prof.", "Assoc. Prof.", "Lecturer"]),
-        advisor_prefix: randomItem(["ดร.", "ผศ.ดร.", "อ."]) as any,
-        advisor_first_name: randomItem(firstNames),
-        advisor_last_name: randomItem(lastNames),
+        advisor_academic_rank,
+        advisor_prefix,
+        advisor_first_name,
+        advisor_last_name,
         advisor_email: email,
-        advisor_phone_number: `0${randomInt(800000000, 899999999)}`,
-        advisor_office_location: `Building ${randomItem(["A", "B", "C", "D"])}, Room ${randomInt(101, 499)}`,
+        advisor_phone_number,
+        advisor_office_location,
       };
 
-      const createdOrUpdated = existing
-        ? await prisma.advisor.update({
-            where: { advisor_id: existing.advisor_id },
-            data: {
-              // update เฉพาะ field ที่อยากให้เปลี่ยนตอน rerun
-              advisor_academic_rank: data.advisor_academic_rank,
-              advisor_first_name: data.advisor_first_name,
-              advisor_last_name: data.advisor_last_name,
-              advisor_phone_number: data.advisor_phone_number,
-              advisor_office_location: data.advisor_office_location,
-              // ถ้าอยาก “ล็อกความสัมพันธ์” ก็ปล่อย 3 ตัวนี้ไว้ได้
-              university_id: data.university_id,
-              faculty_id: data.faculty_id,
-              department_id: data.department_id,
-            },
-          })
-        : await prisma.advisor.create({ data });
+      const createdOrUpdated = await prisma.advisor.upsert({
+        where: { advisor_email: email }, // ต้องมี advisor_email @unique (ของคุณมีแล้ว)
+        create: data,
+        update: {
+          advisor_academic_rank: data.advisor_academic_rank,
+          advisor_first_name: data.advisor_first_name,
+          advisor_last_name: data.advisor_last_name,
+          advisor_phone_number: data.advisor_phone_number,
+          advisor_office_location: data.advisor_office_location,
+          university_id: data.university_id,
+          faculty_id: data.faculty_id,
+          department_id: data.department_id,
+        },
+      });
 
       advisors.push(createdOrUpdated);
     }

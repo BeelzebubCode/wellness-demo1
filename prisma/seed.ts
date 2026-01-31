@@ -20,7 +20,7 @@ async function main() {
   await clearDatabase(prisma);
 
   const geo = await seedGeo(prisma); // regions, provinces, universities
-  const st = await seedStatic(prisma); // status, org, categories, criteria, templates, pointRule, passwordHash
+  const st = await seedStatic(prisma); // status, org, categories, criteria, templates, pointRule, passwordHash, plainPassword
 
   const acad = await seedFacultiesDepartments(prisma, {
     universities: geo.universities,
@@ -57,9 +57,9 @@ async function main() {
   const timeSlots = await seedTimeSlots(prisma, { universities: geo.universities });
 
   const bookingPlan: { status: BookingStatus; count: number }[] = [
-    { status: BookingStatus.COMPLETED, count: 1200 },
-    { status: BookingStatus.IN_PROGRESS, count: 0 },
-    { status: BookingStatus.PENDING_ASSIGNMENT, count: 0 },
+    { status: BookingStatus.COMPLETED, count: 2000 },
+    { status: BookingStatus.IN_PROGRESS, count: 50 },
+    { status: BookingStatus.PENDING_ASSIGNMENT, count: 50 },
     { status: BookingStatus.CANCELLED, count: 100 },
   ];
 
@@ -80,38 +80,64 @@ async function main() {
   });
 
   // =========================
-  // Summary (เหมือนเดิม)
+  // Summary (รองรับทุกมหาลัย)
   // =========================
-  const [uniNU, uniKKU, uniCU] = geo.universities;
-
   console.log("\n✅ Database seeding completed successfully!\n");
   console.log("📊 Summary:");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log(`🏫 Universities: ${geo.universities.length} (NU, KKU, CU)`);
-  console.log(`👑 Head Consultants: 3 (head_nu, head_kku, head_cu)`);
-  console.log(`🏛️ Rectors: 3 (rector_nu, rector_kku, rector_cu)`);
+
+  const uniCount = geo.universities.length;
+  const headCount = accounts.headAccountIdByUniversityId.size; // 1 head ต่อมหาลัย
+  const rectorCount = uniCount; // 1 rector ต่อมหาลัย (ตาม seedAccounts ใหม่)
+  const consultantCount = consultants.consultants.length;
+  const studentCount = students.length;
+
+  console.log(`🏫 Universities: ${uniCount}`);
+  console.log(`👑 Head Consultants: ${headCount} (head_{university_code})`);
+  console.log(`🏛️ Rectors: ${rectorCount} (rector_{university_code})`);
   console.log(`🛡️ Super Admin: 1 (superAdmin)`);
-  console.log(`🎓 Students: ${students.length}`);
+  console.log(`💼 Consultants: ${consultantCount} (consultant_{university_code}_1..5)`);
+  console.log(`🎓 Students: ${studentCount}`);
 
-  const cntNU = students.filter((s) => s.university_id === uniNU.university_id).length;
-  const cntKKU = students.filter((s) => s.university_id === uniKKU.university_id).length;
-  const cntCU = students.filter((s) => s.university_id === uniCU.university_id).length;
+  // distribution: นับนิสิตต่อมหาลัย (top 5)
+  const uniById = new Map<number, any>(geo.universities.map((u) => [u.university_id, u]));
 
-  console.log(`🎓 Students: ${students.length} (NU=${cntNU}, KKU=${cntKKU}, CU=${cntCU})`);
+  const countByUniId = new Map<number, number>();
+  for (const s of students) {
+    countByUniId.set(s.university_id, (countByUniId.get(s.university_id) ?? 0) + 1);
+  }
+
+  const top = [...countByUniId.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([uniId, cnt]) => {
+      const u = uniById.get(uniId);
+      const code = u?.university_code ?? `ID:${uniId}`;
+      return `${code}=${cnt}`;
+    })
+    .join(", ");
+
+  console.log(`🎓 Students per uni (top5): ${top || "-"}`);
+
   console.log(`⏰ Time Slots: ${timeSlots.totalTimeSlots}`);
   console.log(`📅 Bookings: ${bookingPlan.reduce((sum, p) => sum + p.count, 0)}`);
   console.log(`   - Completed: ${bookingPlan.find((p) => p.status === BookingStatus.COMPLETED)?.count || 0}`);
   console.log(`   - In Progress: ${bookingPlan.find((p) => p.status === BookingStatus.IN_PROGRESS)?.count || 0}`);
   console.log(`   - Pending: ${bookingPlan.find((p) => p.status === BookingStatus.PENDING_ASSIGNMENT)?.count || 0}`);
   console.log(`   - Cancelled: ${bookingPlan.find((p) => p.status === BookingStatus.CANCELLED)?.count || 0}`);
+
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
+  // =========================
+  // Credentials (รองรับทุกมหาลัย)
+  // =========================
   console.log("\n🔑 Login Credentials:");
-  console.log("   Head: head_nu / head_kku / head_cu");
-  console.log("   Rector: rector_nu / rector_kku / rector_cu");
+  console.log("   Head: head_{university_code}");
+  console.log("   Rector: rector_{university_code}");
   console.log("   Super: superAdmin");
-  console.log("   Consultant: consultant_{nu|kku|cu}_1 .. _5");
-  console.log("   Student: student1 - student20");
+  console.log("   Consultant: consultant_{university_code}_1 .. _5");
+  console.log("   Student (new): stu_{university_code}_01 .. _30");
+  console.log("   Student (old): student1 - student120  (ถ้ายังใช้ seedStudents เวอร์ชันเก่า)");
   console.log(`   Password: ${st.plainPassword}`);
   console.log("\n💡 Note: Bookings created for ALL students\n");
 
