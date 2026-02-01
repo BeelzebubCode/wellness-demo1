@@ -1,17 +1,11 @@
-// ==========================================
 // src/components/booking/BookingForm.tsx
-// ==========================================
-
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui";
 import { AlertTriangle } from "lucide-react";
-import {
-  PROBLEM_CATEGORY_CONFIG,
-  ProblemCategoryCode,
-} from "@/lib/problem-category.config";
+import { getProblemCategoryUi } from "@/lib/problem-category.config";
 import { AlertBox } from "../notification/AlertBox";
 
 type ProblemCategory = {
@@ -34,11 +28,7 @@ export interface BookingFormProps {
   error?: string | null;
 }
 
-export function BookingForm({
-  onSubmit,
-  isLoading = false,
-  error,
-}: BookingFormProps) {
+export function BookingForm({ onSubmit, isLoading = false, error }: BookingFormProps) {
   const [formData, setFormData] = useState<BookingFormData>({
     problemCategoryId: 0,
     problemTypeOther: "",
@@ -54,10 +44,8 @@ export function BookingForm({
   const [errors, setErrors] = useState<FormErrors>({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
 
-  // ✅ กัน submit ซ้อนในระดับฟอร์ม (เผื่อ state isLoading ยังไม่ทันอัปเดต)
   const submitLockRef = useRef(false);
 
-  // ---- Load categories from API (nameTh) ----
   const [categories, setCategories] = useState<ProblemCategory[]>([]);
   const [isCatLoading, setIsCatLoading] = useState(true);
   const [catError, setCatError] = useState<string | null>(null);
@@ -70,9 +58,7 @@ export function BookingForm({
         setIsCatLoading(true);
         setCatError(null);
 
-        const res = await fetch("/api/v1/problem-categories", {
-          cache: "no-store",
-        });
+        const res = await fetch("/api/v1/problem-categories", { cache: "no-store" });
         const data = await res.json();
 
         if (!res.ok || !data?.success) {
@@ -81,9 +67,7 @@ export function BookingForm({
 
         if (!mounted) return;
 
-        const list: ProblemCategory[] = Array.isArray(data.categories)
-          ? data.categories
-          : [];
+        const list: ProblemCategory[] = Array.isArray(data.categories) ? data.categories : [];
         setCategories(list);
       } catch (e: any) {
         if (!mounted) return;
@@ -105,12 +89,12 @@ export function BookingForm({
     [categories, formData.problemCategoryId],
   );
 
-  const isOtherSelected = selectedCategory?.code?.toUpperCase() === "OTHER";
+  const isOtherSelected =
+    String(selectedCategory?.code ?? "").trim().toUpperCase() === "OTHER";
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // ✅ กันยิงซ้ำตอนกำลังส่ง (กดรัว / กด Enter ซ้ำ)
     if (isLoading || submitLockRef.current) return;
 
     setHasSubmitted(true);
@@ -146,7 +130,6 @@ export function BookingForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Problem Category Selection */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-3">
           ประเภทปัญหาที่ต้องการปรึกษา <span className="text-red-500">*</span>
@@ -169,11 +152,8 @@ export function BookingForm({
               {categories.map((c) => {
                 const isSelected = formData.problemCategoryId === c.id;
 
-                const code = c.code as ProblemCategoryCode;
-                const config =
-                  PROBLEM_CATEGORY_CONFIG[code] ??
-                  PROBLEM_CATEGORY_CONFIG.OTHER;
-
+                const codeUpper = String(c.code ?? "").trim().toUpperCase();
+                const config = getProblemCategoryUi(c.code);
                 const Icon = config.icon;
 
                 return (
@@ -181,19 +161,16 @@ export function BookingForm({
                     key={c.id}
                     type="button"
                     onClick={() => {
-                      if (isLoading) return; // ✅ กันเปลี่ยนค่าระหว่างกำลังส่ง
+                      if (isLoading) return;
 
                       setFormData((prev) => ({
                         ...prev,
                         problemCategoryId: c.id,
-                        problemTypeOther:
-                          code === "OTHER" ? prev.problemTypeOther : "",
+                        // ✅ เคลียร์ช่อง "อื่นๆ" เฉพาะตอนเปลี่ยนไปหมวดอื่น
+                        problemTypeOther: codeUpper === "OTHER" ? prev.problemTypeOther : "",
                       }));
 
-                      setErrors((prev) => ({
-                        ...prev,
-                        problemCategoryId: undefined,
-                      }));
+                      setErrors((prev) => ({ ...prev, problemCategoryId: undefined }));
                       setHasSubmitted(false);
                     }}
                     className={cn(
@@ -224,7 +201,6 @@ export function BookingForm({
         )}
       </div>
 
-      {/* Other Problem Type Input */}
       {isOtherSelected && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -238,10 +214,7 @@ export function BookingForm({
             onChange={(e) => {
               if (isLoading) return;
 
-              setFormData((prev) => ({
-                ...prev,
-                problemTypeOther: e.target.value,
-              }));
+              setFormData((prev) => ({ ...prev, problemTypeOther: e.target.value }));
 
               if (hasSubmitted) {
                 setErrors((prev) => ({ ...prev, problemTypeOther: undefined }));
@@ -259,7 +232,6 @@ export function BookingForm({
         </div>
       )}
 
-      {/* Problem Description */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           รายละเอียดเพิ่มเติม <span className="text-red-500">*</span>
@@ -271,10 +243,7 @@ export function BookingForm({
           onChange={(e) => {
             if (isLoading) return;
 
-            setFormData((prev) => ({
-              ...prev,
-              problemDescription: e.target.value,
-            }));
+            setFormData((prev) => ({ ...prev, problemDescription: e.target.value }));
             if (hasSubmitted) {
               setErrors((prev) => ({ ...prev, problemDescription: undefined }));
             }
@@ -296,14 +265,12 @@ export function BookingForm({
         )}
 
         <p className="mt-1 text-xs text-gray-400">
-          ข้อมูลนี้จะถูกเก็บรักษาเป็นความลับ
-          และใช้เพื่อการเตรียมตัวของผู้ให้คำปรึกษาเท่านั้น
+          ข้อมูลนี้จะถูกเก็บรักษาเป็นความลับ และใช้เพื่อการเตรียมตัวของผู้ให้คำปรึกษาเท่านั้น
         </p>
       </div>
 
       {error && <AlertBox type="error" message={error} />}
 
-      {/* Submit Button */}
       <Button
         type="submit"
         variant="primary"

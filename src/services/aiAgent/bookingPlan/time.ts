@@ -1,3 +1,5 @@
+// services/aiAgent/bookingPlan/time.ts
+
 const TZ = "Asia/Bangkok";
 
 function pad2(n: number) {
@@ -163,4 +165,13 @@ export function extractDateISOFromThai(text: string): string | null {
   }
 
   return null;
+}
+
+/** เพิ่มวันให้ dateISO ("YYYY-MM-DD") แล้วคืน dateISO ใหม่ */
+export function addDaysISO(dateISO: string, days: number) {
+  if (!dateISO) return bkkTodayISO();
+  const base = new Date(`${dateISO}T00:00:00+07:00`);
+  if (Number.isNaN(base.getTime())) return bkkTodayISO();
+  base.setDate(base.getDate() + Number(days || 0));
+  return base.toLocaleDateString("en-CA", { timeZone: TZ });
 }

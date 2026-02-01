@@ -1,6 +1,6 @@
 // src/services/aiAgent/bookingPlan/slots.ts
 import prisma from "@/lib/prisma";
-import { bkkRange, toMinBkk } from "./time";
+import { bkkRange, toMinBkk, bkkTodayISO } from "./time";
 import { TimeSlotStatus, BookingStatus } from "@prisma/client";
 
 const ACTIVE_BOOKING_STATUSES: BookingStatus[] = [
@@ -9,8 +9,19 @@ const ACTIVE_BOOKING_STATUSES: BookingStatus[] = [
   BookingStatus.IN_PROGRESS,
 ];
 
-export async function listAvailableSlots(params: { universityId: number; date: string; limit?: number }) {
-  const { universityId, date, limit = 8 } = params;
+function nowMinBkk() {
+  return toMinBkk(new Date().toISOString());
+}
+
+const clampDayMin = (m: number) => Math.max(0, Math.min(24 * 60 - 1, m));
+
+export async function listAvailableSlots(params: {
+  universityId: number;
+  date: string;
+  limit?: number;
+  minStartMinBkk?: number;
+}) {
+  const { universityId, date, limit = 8, minStartMinBkk } = params;
   const { start, end } = bkkRange(date);
 
   const slots = await prisma.timeSlot.findMany({
@@ -30,7 +41,6 @@ export async function listAvailableSlots(params: { universityId: number; date: s
       time_slot_start_datetime: true,
       time_slot_end_datetime: true,
       time_slot_max_capacity: true,
-      time_slot_status: true,
     },
   });
 
@@ -47,33 +57,48 @@ export async function listAvailableSlots(params: { universityId: number; date: s
   });
 
   const countMap = new Map<number, number>();
-  for (const c of counts) countMap.set(Number(c.time_slot_id), Number(c._count._all || 0));
+  for (const c of counts) {
+    countMap.set(Number(c.time_slot_id), Number(c._count._all || 0));
+  }
 
-  return slots
+  const mapped = slots
     .map((s) => {
       const maxCap = Number(s.time_slot_max_capacity ?? 0);
       const booked = countMap.get(s.time_slot_id) || 0;
-      const ok = maxCap > 0 && booked < maxCap;
 
       return {
         timeSlotId: s.time_slot_id,
         start: s.time_slot_start_datetime.toISOString(),
         end: s.time_slot_end_datetime.toISOString(),
         remaining: Math.max(0, maxCap - booked),
-        ok,
+        ok: maxCap > 0 && booked < maxCap,
       };
     })
-    .filter((x) => x.ok)
-    .slice(0, limit);
+    .filter((x) => x.ok);
+
+  const isToday = String(date) === bkkTodayISO();
+  const bufferMin = 15;
+
+  const rawMin =
+    typeof minStartMinBkk === "number"
+      ? minStartMinBkk
+      : isToday
+        ? nowMinBkk() + bufferMin
+        : null;
+
+  const minMin = rawMin == null ? null : clampDayMin(rawMin);
+
+  const filtered =
+    minMin == null ? mapped : mapped.filter((s) => toMinBkk(s.start) >= minMin);
+
+  return filtered.slice(0, limit);
 }
 
 export function pickBestSlot(slots: any[], timeRange: string) {
   if (!slots.length) return null;
 
-  const tr = String(timeRange || "ANY")
-    .trim()
-    .toUpperCase();
-  if (tr === "ANY") return slots[0];
+  const tr = String(timeRange || "ANY").trim().toUpperCase();
+  if (tr === "AUTO" || tr === "ANY") return slots[0];
 
   const m = tr.match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/);
   if (!m) return slots[0];

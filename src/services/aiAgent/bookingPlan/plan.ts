@@ -1,116 +1,22 @@
 // src/services/aiAgent/bookingPlan/plan.ts
-import prisma from "@/lib/prisma";
 import { signToken } from "@/services/aiAgent/token";
 import { buildBookingPlanSystemPrompt } from "./prompt";
-import {
-  bkkTodayISO,
-  isISODate,
-  isPastDateISO,
-  timeHintRangeFromThai,
-  fmtBkkHHMM,
-  extractDateISOFromThai,
-} from "./time";
 import { listAvailableSlots, pickBestSlot } from "./slots";
+import { timeHintRangeFromThai, fmtBkkHHMM, toMinBkk, addDaysISO } from "./time";
+import { normalizePlanDate } from "./guards";
+import { callChatLLM, extractJsonFromText, safeParseJson } from "./llm";
+import {
+  loadProblemCategories,
+  categoriesJsonForPrompt,
+  allowedCategoryCodes,
+  findCategoryByCode,
+  mapCategoriesForUi,
+  categoryOptions,
+} from "./categories";
+import { buildProgressCard, replyNeedField, topCandidatesText } from "./format";
 import type { BookingPlanResponse, ChatMsg, PlanLLM, AgentQuestion } from "./types";
 
-const TZ = "Asia/Bangkok";
-
-/* -------------------- Pretty format helpers -------------------- */
-
-function fmtThaiDateLong(dateISO: string) {
-  const d = new Date(`${dateISO}T00:00:00+07:00`);
-  return new Intl.DateTimeFormat("th-TH", {
-    timeZone: TZ,
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(d);
-}
-
-function fmtTimeRangeLabel(timeRange: string) {
-  const tr = String(timeRange || "ANY").trim().toUpperCase();
-  if (tr === "ANY") return "เวลาใดก็ได้";
-  return tr;
-}
-
-function topCandidatesText(candidates: any[], limit = 3) {
-  const top = (candidates || []).slice(0, limit);
-  if (!top.length) return "";
-  const lines = top.map((s) => {
-    const st = fmtBkkHHMM(s.start);
-    const en = fmtBkkHHMM(s.end);
-    const remain = Number(s.remaining ?? 0);
-    return `- ${st}-${en} (เหลือ ${remain})`;
-  });
-  return lines.join("\n");
-}
-
-function buildProgressCard(input: {
-  dateISO: string;
-  timeRange: string;
-  categoryName?: string | null;
-  detailText?: string | null;
-}) {
-  const { dateISO, timeRange, categoryName, detailText } = input;
-
-  const dateLine = `✅ วันที่: **${fmtThaiDateLong(dateISO)}** (${dateISO})`;
-  const timeLine = `✅ ช่วงเวลา: **${fmtTimeRangeLabel(timeRange)}**`;
-
-  const catLine = categoryName
-    ? `✅ หมวดปัญหา: **${categoryName}**`
-    : `❌ หมวดปัญหา: _ยังไม่ระบุ_`;
-
-  const detailLine =
-    detailText && detailText.trim().length >= 5
-      ? `✅ ปัญหาโดยย่อ: “${detailText.trim()}”`
-      : `❌ ปัญหาโดยย่อ: _ยังไม่ระบุ_`;
-
-  return [
-    `**สรุปที่ผมเข้าใจตอนนี้**`,
-    dateLine,
-    timeLine,
-    catLine,
-    detailLine,
-  ].join("\n");
-}
-
-function replyNeedField(args: {
-  header: string;
-  progress: string;
-  ask: string;
-  examples?: string[];
-  candidates?: any[];
-}) {
-  const { header, progress, ask, examples = [], candidates = [] } = args;
-
-  const ex =
-    examples.length > 0
-      ? `\n\n**พิมพ์ตัวอย่างได้เลย**\n${examples.map((x) => `- ${x}`).join("\n")}`
-      : "";
-
-  const candText = topCandidatesText(candidates, 3);
-  const cand = candText
-    ? `\n\n**ช่วงเวลาว่างที่ใกล้เคียง (เลือกได้เลย)**\n${candText}`
-    : "";
-
-  return `${header}\n\n${progress}\n\n**ยังขาด:** ${ask}${cand}${ex}`;
-}
-
-/**
- * ✅ กันบัค: ห้ามจับเลขวันมั่ว
- * - จะยอม "override plan.date" จากข้อความ ก็ต่อเมื่อข้อความดูเหมือนระบุวันจริงๆ
- * - ป้องกันกรณีผู้ใช้พิมพ์ "เครียด 27 อย่าง..." แล้วโดนตีเป็นวันที่ 27
- */
-function userLooksLikeGaveDate(text: string) {
-  const t = String(text || "").trim();
-  return (
-    /วันนี้|พรุ่งนี้|มะรืน/.test(t) ||
-    /\b\d{1,2}\s*\/\s*\d{1,2}\b/.test(t) || // 29/01
-    /(?:จอง|วันที่|วัน)\s*\d{1,2}\b/.test(t) // จอง 29 / วันที่ 29
-  );
-}
-
-/* -------------------- misc helpers -------------------- */
+/* -------------------- msg helpers -------------------- */
 
 function coerceUserMessages(input: any): ChatMsg[] {
   if (!Array.isArray(input)) return [];
@@ -125,47 +31,13 @@ function lastUserText(msgs: ChatMsg[]) {
   return "";
 }
 
-async function fetchWithTimeout(url: string, init: RequestInit, ms: number) {
-  const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), ms);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } finally {
-    clearTimeout(t);
-  }
-}
-
-function extractJsonFromText(text: string) {
+function userLooksLikeGaveTime(text: string) {
   const t = String(text || "");
-  const fenced = t.match(/```json\s*([\s\S]*?)```/i);
-  if (fenced?.[1]) return fenced[1].trim();
-  const obj = t.match(/\{[\s\S]*\}/);
-  if (obj?.[0]) return obj[0].trim();
-  return "";
-}
-
-function safeParseJson<T>(s: string): T | null {
-  try {
-    return JSON.parse(s) as T;
-  } catch {
-    return null;
-  }
-}
-
-function mapCategoriesForUi(cats: any[]) {
-  return cats.map((c) => ({
-    id: c.problem_category_id,
-    code: c.problem_category_code,
-    name: c.problem_category_name_th,
-  }));
-}
-
-function categoryOptions(cats: any[]) {
-  return cats.map((c) => ({
-    value: c.problem_category_id,
-    code: c.problem_category_code,
-    label: c.problem_category_name_th,
-  }));
+  return (
+    /\b\d{1,2}:\d{2}\b/.test(t) || // 14:00
+    /\b\d{1,2}\s*โมง\b/.test(t) || // 2 โมง
+    /เช้า|สาย|บ่าย|เย็น|ค่ำ|เที่ยง/.test(t) // time hint
+  );
 }
 
 /* -------------------- main -------------------- */
@@ -177,60 +49,40 @@ export async function runBookingPlan(input: {
 }): Promise<BookingPlanResponse> {
   const { activeUniversityId, studentId, body } = input;
 
+  // 1) collect messages
   const { messages, message } = body ?? {};
   let userMessages: ChatMsg[] = [];
 
-  if (Array.isArray(messages))
-    userMessages = coerceUserMessages(messages).filter((m) => m.role !== "system");
-  else if (typeof message === "string" && message.trim())
-    userMessages = [{ role: "user", content: message.trim() }];
-  else
-    return { reply: "พิมพ์คำขอจองคิวสั้น ๆ ให้ผมหน่อยครับ 🙂" };
+  if (Array.isArray(messages)) userMessages = coerceUserMessages(messages).filter((m) => m.role !== "system");
+  else if (typeof message === "string" && message.trim()) userMessages = [{ role: "user", content: message.trim() }];
+  else return { reply: "พิมพ์คำขอจองคิวสั้น ๆ ให้ผมหน่อยครับ 🙂" };
 
   const question = lastUserText(userMessages).trim();
   if (!question) return { reply: "พิมพ์คำขอจองคิวสั้น ๆ ให้ผมหน่อยครับ 🙂" };
 
-  // categories
-  const cats = await prisma.problemCategory.findMany({
-    orderBy: { problem_category_name_th: "asc" },
-    select: {
-      problem_category_id: true,
-      problem_category_code: true,
-      problem_category_name_th: true,
-    },
-    take: 200,
-  });
-
-  const categoriesText =
-    cats.length > 0
-      ? cats.map((c) => `- ${c.problem_category_code}: ${c.problem_category_name_th}`).join("\n")
-      : "- (ไม่พบหมวดปัญหาในระบบ)";
+  // 2) load categories (DB = source of truth)
+  const cats = await loadProblemCategories();
+  const categoriesJson = cats.length ? categoriesJsonForPrompt(cats) : "[]";
+  const allowedCodes = allowedCategoryCodes(cats);
 
   const systemBase: ChatMsg = {
     role: "system",
-    content: buildBookingPlanSystemPrompt({ categoriesText }),
+    content: buildBookingPlanSystemPrompt({ categoriesJson }),
   };
 
-  // call LLM
+  // 3) call LLM
   const baseURL = (process.env.AI_BASE_URL || "http://localhost:11434").replace(/\/+$/, "");
   const model = process.env.AI_MODEL || "qwen2.5:7b";
 
   let r: Response;
   try {
-    r = await fetchWithTimeout(
-      `${baseURL}/api/chat`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model,
-          stream: false,
-          messages: [systemBase, ...userMessages],
-          options: { temperature: 0.2 },
-        }),
-      },
-      20000,
-    );
+    r = await callChatLLM({
+      baseURL,
+      model,
+      system: systemBase,
+      messages: userMessages,
+      timeoutMs: 20000,
+    });
   } catch (e: any) {
     const isAbort = String(e?.name) === "AbortError";
     return {
@@ -260,45 +112,56 @@ export async function runBookingPlan(input: {
     };
   }
 
-  // normalize timeRange
+  // 4) normalize fields
   if (!plan.timeRange) plan.timeRange = "ANY";
 
-  // ✅ override date เฉพาะเมื่อ user ดูเหมือนระบุวันจริงๆ (กันบัคจอง 27)
-  const explicitDate = extractDateISOFromThai(question);
-  if (explicitDate && userLooksLikeGaveDate(question)) {
-    plan.date = explicitDate;
-  }
+  // date normalize (กันบัคเลขวันมั่ว + default today)
+  plan.date = normalizePlanDate({ question, planDate: plan.date });
 
-  // validate date format
-  if (plan.date && !isISODate(plan.date)) {
-    plan.date = null;
-  }
-
-  // ✅ ถ้ายังไม่มีวันจริงๆ ให้ default เป็น “วันนี้”
-  if (!plan.date) {
-    plan.date = bkkTodayISO();
-  }
-
-  // no past date
-  if (plan.date && isPastDateISO(plan.date)) {
-    plan.date = bkkTodayISO();
-  }
-
-  // override thai hints
+  // override thai hints (เช้า/บ่าย/เย็น)
   const hintedRange = timeHintRangeFromThai(question);
   if (hintedRange) plan.timeRange = hintedRange;
 
-  // slots
-  const candidates = await listAvailableSlots({
+  // ✅ ถ้าผู้ใช้ไม่บอกเวลาเลย -> AUTO (ให้ระบบหาเวลาว่างที่เหมาะสุดเอง)
+  const hasTimeHint = userLooksLikeGaveTime(question) || !!hintedRange;
+  if (!hasTimeHint) {
+    plan.timeRange = "AUTO";
+  }
+
+  // validate category code against allowed list (กัน LLM มั่ว)
+  if (plan.problemCategoryCode && !allowedCodes.has(String(plan.problemCategoryCode))) {
+    plan.problemCategoryCode = null;
+  }
+
+  // ✅ ถ้าเป็น AUTO/ANY -> กันเวลาที่ผ่านมาแล้ว (วันนี้) ด้วย now+15 นาที
+  const trUpper = String(plan.timeRange || "ANY").toUpperCase();
+  const isAutoLike = trUpper === "AUTO" || trUpper === "ANY";
+  const minStartMinBkk = isAutoLike ? toMinBkk(new Date().toISOString()) + 15 : undefined;
+
+  // 5) slots (วันนี้ก่อน)
+  let candidates = await listAvailableSlots({
     universityId: activeUniversityId,
-    date: plan.date,
+    date: plan.date!,
     limit: 8,
+    minStartMinBkk,
   });
+
+  // ✅ ถ้า AUTO แล้ววันนี้ไม่เหลือ -> ขยับไป “พรุ่งนี้” อัตโนมัติ
+  if (!candidates.length && trUpper === "AUTO") {
+    const tomorrowISO = addDaysISO(plan.date!, 1);
+    plan.date = tomorrowISO;
+    candidates = await listAvailableSlots({
+      universityId: activeUniversityId,
+      date: plan.date!,
+      limit: 8,
+      // พรุ่งนี้ไม่ต้อง minStart
+    });
+  }
 
   if (!candidates.length) {
     const progress = buildProgressCard({
-      dateISO: plan.date,
-      timeRange: plan.timeRange,
+      dateISO: plan.date!,
+      timeRange: plan.timeRange!,
       categoryName: null,
       detailText: plan.detailText,
     });
@@ -313,12 +176,13 @@ export async function runBookingPlan(input: {
     };
   }
 
-  const suggested = pickBestSlot(candidates, plan.timeRange);
+  const suggested = pickBestSlot(candidates, plan.timeRange!);
 
+  // 6) ask timeRange if cannot pick (จริง ๆ AUTO/ANY จะ pick ได้เสมอ)
   if (!suggested?.timeSlotId) {
     const progress = buildProgressCard({
-      dateISO: plan.date,
-      timeRange: plan.timeRange,
+      dateISO: plan.date!,
+      timeRange: plan.timeRange!,
       categoryName: null,
       detailText: plan.detailText,
     });
@@ -343,15 +207,13 @@ export async function runBookingPlan(input: {
     };
   }
 
-  // category
-  const cat = plan.problemCategoryCode
-    ? cats.find((c) => String(c.problem_category_code) === String(plan.problemCategoryCode))
-    : null;
+  // 7) category resolve
+  const cat = findCategoryByCode(cats, plan.problemCategoryCode);
 
   if (!cat) {
     const progress = buildProgressCard({
-      dateISO: plan.date,
-      timeRange: plan.timeRange,
+      dateISO: plan.date!,
+      timeRange: plan.timeRange!,
       categoryName: null,
       detailText: plan.detailText,
     });
@@ -378,12 +240,12 @@ export async function runBookingPlan(input: {
     };
   }
 
-  // detail
+  // 8) detail
   const brief = String(plan.detailText || "").trim();
   if (brief.length < 5) {
     const progress = buildProgressCard({
-      dateISO: plan.date,
-      timeRange: plan.timeRange,
+      dateISO: plan.date!,
+      timeRange: plan.timeRange!,
       categoryName: cat.problem_category_name_th,
       detailText: plan.detailText,
     });
@@ -409,7 +271,7 @@ export async function runBookingPlan(input: {
     };
   }
 
-  // payload
+  // 9) payload
   const payload = {
     v: 1,
     exp: Date.now() + 5 * 60 * 1000,
@@ -428,10 +290,9 @@ export async function runBookingPlan(input: {
       ? `${fmtBkkHHMM(suggested.start)}-${fmtBkkHHMM(suggested.end)}`
       : plan.timeRange;
 
-  // ✅ ทำ reply พร้อมยืนยันให้ “สวย”
   const progress = buildProgressCard({
-    dateISO: plan.date,
-    timeRange: suggestedRange,
+    dateISO: plan.date!,
+    timeRange: suggestedRange!,
     categoryName: cat.problem_category_name_th,
     detailText: brief,
   });

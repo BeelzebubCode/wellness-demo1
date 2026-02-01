@@ -163,14 +163,10 @@ export async function agentBookForStudent(
   return { bookingId: result.booking_id };
 }
 
-// ✅ NEW: ยกเลิก active booking ล่าสุด (ไม่ต้อง bookingId จาก user)
 export async function agentCancelActiveForStudent(input: {
   activeUniversityId: number;
   studentId: number;
   reason?: string | null;
-
-  // ✅ ถ้าคุณอยากบันทึกลง BookingCancellation ให้ส่ง accountId คนกดยกเลิกเข้ามาด้วย
-  // (ไม่ส่งมาก็ยังทำงานได้ แค่ไม่สร้าง record)
   cancelledByAccountId?: number | null;
 }) {
   const { activeUniversityId, studentId, reason, cancelledByAccountId } = input;
@@ -192,31 +188,41 @@ export async function agentCancelActiveForStudent(input: {
       },
     });
 
-    if (!booking) throw new Error("ไม่พบนัดหมายที่กำลังดำเนินการอยู่");
+    if (!booking) {
+      // ✅ idempotent: ถ้าไม่มี active แล้ว ถือว่ายกเลิกไปแล้ว/ไม่มีนัด
+      // จะ throw ก็ได้ แต่แบบนี้ AI/UX จะ “ไม่แดง” เวลา user กดซ้ำ
+      return { bookingId: 0 };
+    }
 
-    await tx.booking.update({
-      where: { booking_id: booking.booking_id },
-      data: { booking_status: "CANCELLED" },
+    const upd = await tx.booking.updateMany({
+      where: {
+        university_id: booking.university_id,
+        booking_id: booking.booking_id,
+        booking_status: { in: CANCELABLE_STATUSES }, // ถ้าโดน cancel ไปแล้ว upd.count จะเป็น 0
+      },
+      data: { booking_status: "CANCELLED" as any },
     });
 
-    // ✅ optional cancellation table (ให้ตรง schema นายจริง ๆ)
-    if (cancelledByAccountId && Number(cancelledByAccountId) > 0) {
+    const bookingId = booking.booking_id;
+
+    // ✅ optional: create cancellation record (ทำแบบ "ไม่ทำให้ทั้ง txn ล้ม" เหมือนเดิม)
+    if (upd.count > 0 && cancelledByAccountId && Number(cancelledByAccountId) > 0) {
       try {
         await (tx as any).bookingCancellation.create({
           data: {
+            university_id: booking.university_id, // ✅ ถ้า schema มี tenant field
             booking_id: booking.booking_id,
             booking_cancellation_cancelled_by_id: Number(cancelledByAccountId),
             booking_cancellation_reason: reason || "ยกเลิกโดยผู้ใช้",
-            // booking_cancellation_cancelled_at มี default now() ใน schema แล้ว ใส่ก็ได้ไม่ใส่ก็ได้
           },
         });
       } catch {
-        // ถ้าตารางนี้ยังไม่พร้อม/ไม่มีสิทธิ์ ก็ไม่ให้ล้มทั้ง transaction
+        // ignore
       }
     }
 
-    // recalc slot status (FULL / OPEN) — แต่ถ้า slot ถูก CLOSED/CANCELLED อยู่แล้ว ไม่ต้องไปทับ
-    if (booking.time_slot_id) {
+    // ✅ recalc slot status เฉพาะตอนที่ “มีการเปลี่ยนสถานะจริง” (upd.count > 0)
+    if (upd.count > 0 && booking.time_slot_id) {
       const slot = await tx.timeSlot.findUnique({
         where: { time_slot_id: booking.time_slot_id },
         select: {
@@ -234,6 +240,7 @@ export async function agentCancelActiveForStudent(input: {
 
         if (!isHardBlocked) {
           const maxCap = Number(slot.time_slot_max_capacity ?? 0);
+
           if (maxCap > 0) {
             const activeCount = await tx.booking.count({
               where: {
@@ -247,13 +254,10 @@ export async function agentCancelActiveForStudent(input: {
               where: { time_slot_id: slot.time_slot_id },
               data: {
                 time_slot_status:
-                  activeCount >= maxCap
-                    ? TimeSlotStatus.FULL
-                    : TimeSlotStatus.OPEN,
+                  activeCount >= maxCap ? TimeSlotStatus.FULL : TimeSlotStatus.OPEN,
               },
             });
           } else {
-            // maxCap=0 ถือว่าไม่เปิดรับจอง -> ปิด
             await tx.timeSlot.update({
               where: { time_slot_id: slot.time_slot_id },
               data: { time_slot_status: TimeSlotStatus.CLOSED },
@@ -263,6 +267,7 @@ export async function agentCancelActiveForStudent(input: {
       }
     }
 
-    return { bookingId: booking.booking_id };
+    return { bookingId };
   });
 }
+

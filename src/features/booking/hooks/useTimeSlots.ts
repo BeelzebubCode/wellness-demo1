@@ -1,7 +1,7 @@
 // src/features/booking/hooks/useTimeSlots.ts
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { toISODateString } from "@/lib/date";
 import type { TimeSlot } from "../types";
 import { getTimeSlots } from "../api";
@@ -14,11 +14,15 @@ interface UseTimeSlotsReturn {
 }
 
 type Options = {
-  /** ถ้า false จะไม่ยิง API (ใช้คู่กับ useRoleAuth เพื่อกันยิงก่อน auth พร้อม) */
   enabled?: boolean;
-  /** ถ้าต้องการ override มหาลัยแบบ explicit (ปกติไม่ต้อง เพราะ requireTenant จัดการให้) */
   universityId?: number;
 };
+
+// ✅ helper: parse err msg แบบ robust
+function toErrMsg(err: any) {
+  if (typeof err?.message === "string" && err.message.trim()) return err.message;
+  return "ไม่สามารถโหลดข้อมูลช่วงเวลาได้ (กรุณาเข้าสู่ระบบใหม่)";
+}
 
 export function useTimeSlots(selectedDate: Date, opts?: Options): UseTimeSlotsReturn {
   const [slots, setSlots] = useState<TimeSlot[]>([]);
@@ -27,43 +31,58 @@ export function useTimeSlots(selectedDate: Date, opts?: Options): UseTimeSlotsRe
 
   const enabled = opts?.enabled ?? true;
 
-  // ทำให้ dependency เสถียร
+  // ทำ dependency ให้เสถียร
   const dateStr = useMemo(() => toISODateString(selectedDate), [selectedDate]);
-  const uniId = opts?.universityId;
+  const uniId = opts?.universityId ?? null;
+  const abortRef = useRef<AbortController | null>(null);
+  const reqIdRef = useRef(0);
 
   const fetchTimeSlots = useCallback(async () => {
     if (!enabled) return;
+
+    const reqId = ++reqIdRef.current;
+
+    // cancel request เก่า
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     setIsLoading(true);
     setError(null);
 
     try {
-      // ✅ getTimeSlots ควร fetch ด้วย credentials: "include"
-      const data = await getTimeSlots(dateStr, uniId ? { universityId: uniId } : undefined);
-      setSlots(Array.isArray(data) ? data : []);
+      const data = await getTimeSlots(
+        dateStr,
+        uniId ? { universityId: uniId, signal: controller.signal as any } : { signal: controller.signal as any }
+      );
+
+      // ถ้าไม่ใช่ request ล่าสุด ไม่ต้อง set state
+      if (reqId !== reqIdRef.current) return;
+
+      setSlots(Array.isArray(data) ? (data as TimeSlot[]) : []);
     } catch (err: any) {
+      // abort ไม่ถือเป็น error
+      if (err?.name === "AbortError") return;
+      if (reqId !== reqIdRef.current) return;
+
       console.error(err);
-
-      // ถ้าเป็น 401/403 จะได้ข้อความชัด ๆ
-      const msg =
-        typeof err?.message === "string" && err.message
-          ? err.message
-          : "ไม่สามารถโหลดข้อมูลช่วงเวลาได้ (กรุณาเข้าสู่ระบบใหม่)";
-
-      setError(msg);
+      setError(toErrMsg(err));
       setSlots([]);
     } finally {
+      if (reqId !== reqIdRef.current) return;
       setIsLoading(false);
     }
   }, [enabled, dateStr, uniId]);
 
   useEffect(() => {
     fetchTimeSlots();
+    return () => abortRef.current?.abort();
   }, [fetchTimeSlots]);
 
-  // กันเคสปิด enabled แล้วควร reset state
+  // ✅ ปิด enabled แล้ว reset state
   useEffect(() => {
     if (!enabled) {
+      abortRef.current?.abort();
       setSlots([]);
       setError(null);
       setIsLoading(false);
