@@ -8,23 +8,21 @@ import { BookingStatus, AccountRole } from "@prisma/client";
 type CompleteBody = {
   consultantNote?: string;
   nextStep?: string | null;
-  riskLevel?: any; // จะ parse เป็น number ให้
+  riskLevel?: any;
 };
 
 function normalizeNextStep(v: any): string | null {
   const s = String(v ?? "").trim();
   return s ? s : null;
 }
-
 function normalizeRiskLevel(v: any): number | null {
   if (v === null || v === undefined || v === "") return null;
   const n = Number(v);
-  if (!Number.isFinite(n)) return null;
-  return n;
+  return Number.isFinite(n) ? n : null;
 }
 
 export async function handleCompleteBooking(
-  ctx: AccountContext,
+  ctx: AccountContext & { activeUniversityId?: number },
   bookingIdRaw: string,
   body: CompleteBody
 ) {
@@ -33,12 +31,20 @@ export async function handleCompleteBooking(
     return NextResponse.json({ error: "Invalid booking ID" }, { status: 400 });
   }
 
+  const activeUniversityId = (ctx as any).activeUniversityId as number | undefined;
+  if (typeof activeUniversityId !== "number") {
+    return NextResponse.json({ error: "activeUniversityId missing" }, { status: 400 });
+  }
+
+  // tenant guard
+  const denied = requireUniversity(ctx as any, activeUniversityId);
+  if (denied) return denied;
+
   const role = ctx.role as AccountRole;
   if (role !== "CONSULTANT") {
     return NextResponse.json({ error: "Permission denied" }, { status: 403 });
   }
-
-  if (typeof ctx.consultantId !== "number") {
+  if (typeof (ctx as any).consultantId !== "number") {
     return NextResponse.json({ error: "Missing consultant id" }, { status: 400 });
   }
 
@@ -49,19 +55,23 @@ export async function handleCompleteBooking(
 
   const nextStep = normalizeNextStep(body?.nextStep);
   const riskLevel = normalizeRiskLevel(body?.riskLevel);
-
-  // ✅ validate risk 1-5 (หรือ null)
   if (riskLevel !== null && (riskLevel < 1 || riskLevel > 5)) {
     return NextResponse.json({ error: "Risk level ต้องอยู่ในช่วง 1-5" }, { status: 400 });
   }
 
+  // ✅ find booking ด้วย composite key
   const booking = await prisma.booking.findUnique({
-    where: { booking_id: bookingId },
+    where: {
+      university_id_booking_id: {
+        university_id: activeUniversityId,
+        booking_id: bookingId,
+      },
+    },
     select: {
       booking_id: true,
       university_id: true,
       consultant_id: true,
-      booking_status: true, // ✅ เพิ่ม status มาเช็ค
+      booking_status: true,
     },
   });
 
@@ -69,16 +79,11 @@ export async function handleCompleteBooking(
     return NextResponse.json({ error: "ไม่พบรายการจอง" }, { status: 404 });
   }
 
-  // tenant guard
-  const deniedUni = requireUniversity(ctx, booking.university_id);
-  if (deniedUni) return deniedUni;
-
-  // must be assigned to this consultant
-  if (booking.consultant_id !== ctx.consultantId) {
+  if (booking.consultant_id !== (ctx as any).consultantId) {
     return NextResponse.json({ error: "Permission denied" }, { status: 403 });
   }
 
-  // ✅ optional: บังคับ flow ต้อง IN_PROGRESS ก่อนถึงจะส่งงานได้
+  // บังคับ flow
   if (booking.booking_status !== BookingStatus.IN_PROGRESS) {
     return NextResponse.json(
       { error: `สถานะต้องเป็น IN_PROGRESS ก่อนส่งงาน (ตอนนี้: ${booking.booking_status})` },
@@ -87,26 +92,38 @@ export async function handleCompleteBooking(
   }
 
   await prisma.$transaction(async (tx) => {
-    // แนะนำ: เซฟ outcome ก่อน แล้วค่อย complete (กันเคสข้อมูล outcome หาย)
+    // ✅ outcome upsert ด้วย composite key
     await tx.bookingOutcome.upsert({
-      where: { booking_id: bookingId },
+      where: {
+        university_id_booking_id: {
+          university_id: activeUniversityId,
+          booking_id: bookingId,
+        },
+      },
       update: {
         booking_outcome_consultant_note: consultantNote,
         booking_outcome_next_step: nextStep,
         booking_outcome_risk_level: riskLevel,
-        booking_outcome_recorded_at: new Date(), // ✅ เพิ่ม
+        booking_outcome_recorded_at: new Date(),
       },
       create: {
+        university_id: activeUniversityId,
         booking_id: bookingId,
         booking_outcome_consultant_note: consultantNote,
         booking_outcome_next_step: nextStep,
         booking_outcome_risk_level: riskLevel,
-        booking_outcome_recorded_at: new Date(), // ✅ เพิ่ม
+        booking_outcome_recorded_at: new Date(),
       },
     });
 
+    // ✅ update booking ด้วย composite key
     await tx.booking.update({
-      where: { booking_id: bookingId },
+      where: {
+        university_id_booking_id: {
+          university_id: activeUniversityId,
+          booking_id: bookingId,
+        },
+      },
       data: { booking_status: BookingStatus.COMPLETED },
     });
   });

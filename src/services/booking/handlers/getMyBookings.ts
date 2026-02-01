@@ -11,12 +11,9 @@ export type MyBookingDTO = {
   date: string | null;
   startTime: string | null;
   endTime: string | null;
-
-  // ✅ รายละเอียดปัญหาที่นิสิตกรอก
   bookingDetailText: string | null;
-
-  // ✅ สำหรับฝั่ง consultant
   studentName?: string | null;
+  hasFeedback: boolean;
 };
 
 type RoleForMyBookings = "STUDENT" | "CONSULTANT" | "HEAD_CONSULTANT";
@@ -28,9 +25,7 @@ export async function getMyBookings(params: {
 }): Promise<MyBookingDTO[]> {
   const { accountId, activeUniversityId, role } = params;
 
-  const whereBase: any = { university_id: activeUniversityId };
-
-  // ✅ แยก logic ชัด ๆ: STUDENT vs CONSULTANT/HEAD_CONSULTANT
+  const whereBase = { university_id: activeUniversityId };
   let where: any = whereBase;
 
   if (role === "STUDENT") {
@@ -50,7 +45,6 @@ export async function getMyBookings(params: {
       student_id: student.student_id,
     };
   } else {
-    // ✅ lookup consultant_id แบบชัวร์
     const consultant = await prisma.consultant.findFirst({
       where: {
         account_id: accountId,
@@ -79,16 +73,14 @@ export async function getMyBookings(params: {
     include: {
       problemCategory: true,
       timeSlot: true,
-
       feedback: { select: { feedback_id: true } },
 
-      // ✅ include ชื่อ นศ. สำหรับ consultant
       student: {
         select: {
           profile: {
             select: {
-              student_first_name: true,
-              student_last_name: true,
+              student_first_name_th: true,
+              student_last_name_th: true,
             },
           },
         },
@@ -101,7 +93,7 @@ export async function getMyBookings(params: {
     const slot = b.timeSlot;
 
     const fullName = b.student?.profile
-      ? `${b.student.profile.student_first_name} ${b.student.profile.student_last_name}`
+      ? `${b.student.profile.student_first_name_th} ${b.student.profile.student_last_name_th}`
       : null;
 
     return {
@@ -121,7 +113,6 @@ export async function getMyBookings(params: {
         ? slot.time_slot_end_datetime.toTimeString().slice(0, 5)
         : null,
 
-      // ✅ ดึงจาก booking table ตรง ๆ
       bookingDetailText: b.booking_detail_text ?? null,
 
       // ✅ student ไม่ต้องเห็นชื่อนิสิต

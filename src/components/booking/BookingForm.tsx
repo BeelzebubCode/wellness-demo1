@@ -1,25 +1,13 @@
 // ==========================================
-// 📌 Booking Component: BookingForm (Uses nameTh from API)
+// src/components/booking/BookingForm.tsx
 // ==========================================
 
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui";
-import {
-  AlertTriangle,
-  Brain,
-  Heart,
-  Home,
-  MoonStar,
-  SmilePlus,
-  Users,
-  BriefcaseBusiness,
-  BookOpen,
-  CigaretteOff,
-  Sparkles,
-} from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import {
   PROBLEM_CATEGORY_CONFIG,
   ProblemCategoryCode,
@@ -35,14 +23,13 @@ type ProblemCategory = {
 };
 
 export interface BookingFormData {
-  // ✅ ส่ง id ตรง DB
   problemCategoryId: number;
   problemTypeOther?: string;
   problemDescription: string;
 }
 
 export interface BookingFormProps {
-  onSubmit: (data: BookingFormData) => void;
+  onSubmit: (data: BookingFormData) => void | Promise<void>;
   isLoading?: boolean;
   error?: string | null;
 }
@@ -66,6 +53,9 @@ export function BookingForm({
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
+
+  // ✅ กัน submit ซ้อนในระดับฟอร์ม (เผื่อ state isLoading ยังไม่ทันอัปเดต)
+  const submitLockRef = useRef(false);
 
   // ---- Load categories from API (nameTh) ----
   const [categories, setCategories] = useState<ProblemCategory[]>([]);
@@ -112,13 +102,17 @@ export function BookingForm({
 
   const selectedCategory = useMemo(
     () => categories.find((c) => c.id === formData.problemCategoryId) || null,
-    [categories, formData.problemCategoryId]
+    [categories, formData.problemCategoryId],
   );
 
   const isOtherSelected = selectedCategory?.code?.toUpperCase() === "OTHER";
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    // ✅ กันยิงซ้ำตอนกำลังส่ง (กดรัว / กด Enter ซ้ำ)
+    if (isLoading || submitLockRef.current) return;
+
     setHasSubmitted(true);
 
     const nextErrors: FormErrors = {};
@@ -136,14 +130,18 @@ export function BookingForm({
     }
 
     setErrors(nextErrors);
-
     if (Object.keys(nextErrors).length > 0) return;
 
-    onSubmit({
-      problemCategoryId: formData.problemCategoryId,
-      problemTypeOther: formData.problemTypeOther?.trim(),
-      problemDescription: formData.problemDescription.trim(),
-    });
+    submitLockRef.current = true;
+    try {
+      await onSubmit({
+        problemCategoryId: formData.problemCategoryId,
+        problemTypeOther: formData.problemTypeOther?.trim(),
+        problemDescription: formData.problemDescription.trim(),
+      });
+    } finally {
+      submitLockRef.current = false;
+    }
   };
 
   return (
@@ -183,6 +181,8 @@ export function BookingForm({
                     key={c.id}
                     type="button"
                     onClick={() => {
+                      if (isLoading) return; // ✅ กันเปลี่ยนค่าระหว่างกำลังส่ง
+
                       setFormData((prev) => ({
                         ...prev,
                         problemCategoryId: c.id,
@@ -190,7 +190,6 @@ export function BookingForm({
                           code === "OTHER" ? prev.problemTypeOther : "",
                       }));
 
-                      // ✅ ล้าง error ของ category + กันแดงค้าง
                       setErrors((prev) => ({
                         ...prev,
                         problemCategoryId: undefined,
@@ -201,8 +200,10 @@ export function BookingForm({
                       "flex items-center gap-2 rounded-xl border-2 p-3 text-left text-sm transition-all",
                       isSelected
                         ? "border-primary-500 bg-primary-50 text-primary-800 shadow-sm"
-                        : "border-gray-200 text-gray-700 hover:border-primary-200 hover:bg-primary-50/40"
+                        : "border-gray-200 text-gray-700 hover:border-primary-200 hover:bg-primary-50/40",
+                      isLoading && "opacity-60 cursor-not-allowed",
                     )}
+                    disabled={isLoading}
                   >
                     <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50">
                       <Icon className={cn("h-5 w-5", config.color)} />
@@ -214,7 +215,6 @@ export function BookingForm({
               })}
             </div>
 
-            {/* ✅ แจ้งเตือนแบบ box เมื่อไม่เลือกประเภท */}
             {hasSubmitted && errors.problemCategoryId && (
               <div className="mt-3">
                 <AlertBox type="error" message={errors.problemCategoryId} />
@@ -234,22 +234,23 @@ export function BookingForm({
           <input
             type="text"
             value={formData.problemTypeOther}
+            disabled={isLoading}
             onChange={(e) => {
+              if (isLoading) return;
+
               setFormData((prev) => ({
                 ...prev,
                 problemTypeOther: e.target.value,
               }));
 
-              // ✅ พิมพ์แล้วล้าง error
               if (hasSubmitted) {
                 setErrors((prev) => ({ ...prev, problemTypeOther: undefined }));
               }
             }}
             placeholder="เช่น ปัญหาการปรับตัว ปัญหาสุขภาพ ฯลฯ"
-            className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+            className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 disabled:opacity-60"
           />
 
-          {/* ✅ แจ้งเตือนแบบ box เมื่อเลือก OTHER แต่ไม่กรอก */}
           {hasSubmitted && errors.problemTypeOther && (
             <div className="mt-2">
               <AlertBox type="error" message={errors.problemTypeOther} />
@@ -266,7 +267,10 @@ export function BookingForm({
 
         <textarea
           value={formData.problemDescription}
+          disabled={isLoading}
           onChange={(e) => {
+            if (isLoading) return;
+
             setFormData((prev) => ({
               ...prev,
               problemDescription: e.target.value,
@@ -281,10 +285,10 @@ export function BookingForm({
             w-full resize-none rounded-xl border border-gray-200
             px-4 py-3 text-sm outline-none transition
             focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20
+            disabled:opacity-60
           "
         />
 
-        {/* อันนี้เป็น inline ก็โอเค (ถ้านายอยากให้เป็น box บอกพี่ เดี๋ยวปรับ) */}
         {hasSubmitted && errors.problemDescription && (
           <div className="mt-3">
             <AlertBox type="error" message={errors.problemDescription} />
@@ -297,7 +301,6 @@ export function BookingForm({
         </p>
       </div>
 
-      {/* Error Message (server error เท่านั้น) */}
       {error && <AlertBox type="error" message={error} />}
 
       {/* Submit Button */}
@@ -308,6 +311,8 @@ export function BookingForm({
         className="w-full bg-primary-500 hover:bg-primary-600"
         isLoading={isLoading}
         disabled={isLoading}
+        aria-disabled={isLoading}
+        aria-busy={isLoading}
       >
         ยืนยันการจอง
       </Button>

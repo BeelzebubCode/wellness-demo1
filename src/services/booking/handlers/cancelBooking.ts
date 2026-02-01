@@ -1,4 +1,5 @@
 // src/services/booking/handlers/cancelBooking.ts
+import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { assertRole, type TenantContext } from "@/lib/tenant/server";
 import { BookingStatus, TimeSlotStatus } from "@prisma/client";
@@ -17,76 +18,104 @@ function toInt(idRaw: string) {
 export async function handleCancelBooking({ tenant, bookingIdRaw, body }: Input) {
   const { account, activeUniversityId } = tenant;
 
-  // ✅ เฉพาะ STUDENT ยกเลิกเอง
   assertRole(String(account.role || "").toUpperCase(), ["STUDENT"]);
 
   const bookingId = toInt(bookingIdRaw);
   if (Number.isNaN(bookingId)) {
-    return { success: false, error: "Invalid booking ID" };
+    return NextResponse.json({ success: false, error: "Invalid booking ID" }, { status: 400 });
   }
 
   const cancelReason = String(body?.cancelReason ?? "").trim();
   if (!cancelReason) {
-    return { success: false, error: "กรุณากรอกเหตุผลในการยกเลิก" };
+    return NextResponse.json({ success: false, error: "กรุณากรอกเหตุผลในการยกเลิก" }, { status: 400 });
   }
 
-  // โหลด booking แบบ tenant-safe + owner-safe
+  // ✅ โหลด booking แบบ tenant-safe + owner-safe
   const booking = await prisma.booking.findFirst({
     where: {
       booking_id: bookingId,
-      university_id: activeUniversityId, // ✅ แยกตามมหาลัยทันที
-      student: { is: { account_id: account.accountId } }, // ✅ เจ้าของเท่านั้น
+      university_id: activeUniversityId,
+      student: { is: { account_id: account.accountId } },
     },
     select: {
       booking_id: true,
+      university_id: true,
       time_slot_id: true,
       booking_status: true,
     },
   });
 
   if (!booking) {
-    // จะเป็น not found หรือ tenant/owner ไม่ผ่านก็จะมาทางนี้ (ปลอดภัย)
-    return { success: false, error: "ไม่พบรายการจอง" };
+    return NextResponse.json({ success: false, error: "ไม่พบรายการจอง" }, { status: 404 });
   }
 
-  // กันยกเลิกซ้ำ/ยกเลิกหลังปิดเคส
-  if (booking.booking_status === BookingStatus.CANCELLED || booking.booking_status === BookingStatus.COMPLETED) {
-    return { success: false, error: "ไม่สามารถยกเลิกสถานะนี้ได้" };
+  if (
+    booking.booking_status === BookingStatus.CANCELLED ||
+    booking.booking_status === BookingStatus.COMPLETED
+  ) {
+    return NextResponse.json({ success: false, error: "ไม่สามารถยกเลิกสถานะนี้ได้" }, { status: 409 });
   }
 
   await prisma.$transaction(async (tx) => {
-    // 1) update booking status
+    // ✅ update booking ด้วย composite key
     await tx.booking.update({
-      where: { booking_id: bookingId },
+      where: {
+        university_id_booking_id: {
+          university_id: activeUniversityId,
+          booking_id: bookingId,
+        },
+      },
       data: { booking_status: BookingStatus.CANCELLED },
     });
 
-    // 2) upsert cancellation row
+    // ✅ upsert cancellation ด้วย composite key
     await tx.bookingCancellation.upsert({
-      where: { booking_id: bookingId },
+      where: {
+        university_id_booking_id: {
+          university_id: activeUniversityId,
+          booking_id: bookingId,
+        },
+      },
       update: {
         booking_cancellation_cancelled_by_id: account.accountId,
         booking_cancellation_reason: cancelReason,
       },
       create: {
+        university_id: activeUniversityId,
         booking_id: bookingId,
         booking_cancellation_cancelled_by_id: account.accountId,
         booking_cancellation_reason: cancelReason,
       },
     });
 
-    // 3) refresh slot status (คิวรวม/หลายคนจองได้)
+    // ✅ slot ต้อง query ด้วย composite key
     const slot = await tx.timeSlot.findUnique({
-      where: { time_slot_id: booking.time_slot_id },
-      select: { time_slot_id: true, time_slot_max_capacity: true },
+      where: {
+        university_id_time_slot_id: {
+          university_id: activeUniversityId,
+          time_slot_id: booking.time_slot_id,
+        },
+      },
+      select: {
+        time_slot_id: true,
+        time_slot_max_capacity: true,
+      },
     });
 
     if (!slot) return;
 
+    // ✅ count เฉพาะ tenant นี้
     const activeCount = await tx.booking.count({
       where: {
+        university_id: activeUniversityId,
         time_slot_id: slot.time_slot_id,
-        booking_status: { in: [BookingStatus.PENDING_ASSIGNMENT, BookingStatus.ASSIGNED, BookingStatus.IN_PROGRESS] },
+        booking_status: {
+          in: [
+            BookingStatus.PENDING_ASSIGNMENT,
+            BookingStatus.ASSIGNED,
+            BookingStatus.IN_PROGRESS,
+          ],
+        },
       },
     });
 
@@ -94,10 +123,15 @@ export async function handleCancelBooking({ tenant, bookingIdRaw, body }: Input)
     const nextStatus = activeCount < cap ? TimeSlotStatus.OPEN : TimeSlotStatus.FULL;
 
     await tx.timeSlot.update({
-      where: { time_slot_id: slot.time_slot_id },
+      where: {
+        university_id_time_slot_id: {
+          university_id: activeUniversityId,
+          time_slot_id: slot.time_slot_id,
+        },
+      },
       data: { time_slot_status: nextStatus },
     });
   });
 
-  return { success: true, status: BookingStatus.CANCELLED };
+  return NextResponse.json({ success: true, status: BookingStatus.CANCELLED });
 }

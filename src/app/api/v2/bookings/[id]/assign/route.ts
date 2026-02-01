@@ -1,77 +1,60 @@
+// src/app/api/v2/bookings/[id]/assign/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
-import { requireTenant } from "@/lib/tenant/server";
+import { requireTenant, assertRole } from "@/lib/tenant/server";
 import type { AccountContext } from "@/lib/auth/context";
 import { handleAssignBooking } from "@/services/booking/handlers/assignBooking";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   try {
     const { account, activeUniversityId } = await requireTenant(req);
+
+    // ✅ ต้องเป็นหัวหน้าที่แจกงาน
+    assertRole(account.role, ["HEAD_CONSULTANT"]);
+
+    const bookingId = Number(params.id);
+    if (!Number.isFinite(bookingId)) {
+      return NextResponse.json({ error: "Invalid booking ID" }, { status: 400 });
+    }
 
     const body = (await req.json().catch(() => ({}))) as {
       consultantId?: number;
       note?: string;
     };
 
-    // ✅ (แนะนำ) ดึง booking มาก่อน เพื่อกัน assign ข้ามมหาลัยแบบชัวร์ ๆ
-    const booking = await prisma.booking.findUnique({
-      where: { booking_id: Number(params.id) },
-      select: { booking_id: true, university_id: true },
-    });
-
-    if (!booking) {
-      return NextResponse.json({ error: "ไม่พบรายการจอง" }, { status: 404 });
-    }
-
-    if (booking.university_id !== activeUniversityId) {
-      return NextResponse.json(
-        { error: "Forbidden: university" },
-        { status: 403 }
-      );
-    }
-
-    // ✅ เอา consultantId ของ "คนมอบหมาย" จาก consultant table (ต้อง match uni ด้วย)
-    const me = await prisma.consultant.findFirst({
-      where: {
-        account_id: account.accountId,
-        university_id: activeUniversityId,
-      },
-      select: { consultant_id: true },
-    });
-
-    if (!me?.consultant_id) {
-      return NextResponse.json(
-        {
-          error:
-            "ไม่พบข้อมูลผู้ให้คำปรึกษาของผู้มอบหมาย (consultantId) — ตรวจ seed ว่า HEAD_CONSULTANT มี consultant ในมหาลัยนี้แล้ว",
-        },
-        { status: 400 }
-      );
-    }
-
-    const ctx: AccountContext = {
+    // ✅ สร้าง ctx ให้ handler ใช้ (handler จะ tenant-check + resolve consultantId ให้เอง)
+    const ctx: AccountContext & { activeUniversityId?: number } = {
       accountId: account.accountId,
       username:
-        (account as any)?.username ?? (account as any)?.account_username ?? "",
+        (account as any)?.username ??
+        (account as any)?.account_username ??
+        "",
       role: account.role,
 
-      // ✅ สำคัญ: ล็อกสิทธิ์ไว้แค่มหาลัย active (ตาม requirement)
+      // ถ้า guard ของคุณใช้ allowedUniversityIds ก็ใส่ไป
       allowedUniversityIds: [activeUniversityId],
 
+      // ✅ สำคัญ: ส่ง activeUniversityId ให้ handler
       activeUniversityId,
-      consultantId: me.consultant_id,
+      // ✅ ไม่จำเป็นต้องใส่ consultantId ที่นี่ก็ได้
+      // handler จะ resolve จาก accountId+activeUniversityId เอง
     } as any;
 
-    return await handleAssignBooking(ctx, params.id, body);
+    return await handleAssignBooking(ctx, String(bookingId), body);
   } catch (e: any) {
     console.error("[V2_ASSIGN_BOOKING_POST]", e);
+
     const status = e?.status ?? 500;
-    return NextResponse.json(
-      { error: e?.message ?? "Failed to assign booking" },
-      { status }
-    );
+    const message =
+      status === 401
+        ? "Unauthorized"
+        : status === 403
+        ? "Permission denied"
+        : e?.message ?? "Failed to assign booking";
+
+    return NextResponse.json({ error: message }, { status });
   }
 }

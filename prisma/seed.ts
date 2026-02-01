@@ -57,10 +57,10 @@ async function main() {
   const timeSlots = await seedTimeSlots(prisma, { universities: geo.universities });
 
   const bookingPlan: { status: BookingStatus; count: number }[] = [
-    { status: BookingStatus.COMPLETED, count: 2000 },
-    { status: BookingStatus.IN_PROGRESS, count: 50 },
-    { status: BookingStatus.PENDING_ASSIGNMENT, count: 50 },
-    { status: BookingStatus.CANCELLED, count: 100 },
+    { status: BookingStatus.COMPLETED, count: 0 },
+    { status: BookingStatus.IN_PROGRESS, count: 0 },
+    { status: BookingStatus.PENDING_ASSIGNMENT, count: 0 },
+    { status: BookingStatus.CANCELLED, count: 0 },
   ];
 
   await seedBookings(prisma, {

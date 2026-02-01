@@ -1,8 +1,11 @@
 // src/features/booking/hooks/useBooking.ts
 "use client";
 
-import { useState, useCallback } from "react";
-import type { CreateBookingDTO, BookingListItem } from "@/features/booking/types";
+import { useState, useCallback, useRef } from "react";
+import type {
+  CreateBookingDTO,
+  BookingListItem,
+} from "@/features/booking/types";
 
 interface UseBookingReturn {
   createBooking: (data: CreateBookingDTO) => Promise<BookingListItem>;
@@ -83,91 +86,123 @@ export function useBooking(): UseBookingReturn {
   const [isCreating, setIsCreating] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const creatingRef = useRef(false);
 
-  const createBooking = useCallback(async (data: CreateBookingDTO): Promise<BookingListItem> => {
-    setIsCreating(true);
-    setError(null);
-
-    try {
-      if (!data.studentCode) throw new Error("ไม่พบ studentCode (account_username)");
-      if (!data.timeSlotId || Number(data.timeSlotId) <= 0) throw new Error("timeSlotId ไม่ถูกต้อง");
-      if (!data.problemCategoryId || Number(data.problemCategoryId) <= 0) throw new Error("problemCategoryId ไม่ถูกต้อง");
-
-      const response = await fetch("/api/v2/bookings", {
-        method: "POST",
-        credentials: "include",
-        cache: "no-store",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      const result = await safeJson<CreateBookingResponse>(response);
-
-      if (!response.ok || result?.success === false) {
-        console.error("[createBooking] status/body:", response.status, result);
-        throw new Error(pickErrorMessage(response, result));
+  const createBooking = useCallback(
+    async (data: CreateBookingDTO): Promise<BookingListItem> => {
+      // ✅ กันยิงซ้ำ (double click / submit ซ้อน / handler ซ้ำ)
+      if (creatingRef.current) {
+        // จะ throw หรือ return เฉยๆ ก็ได้
+        throw new Error("กำลังส่งคำขอจองอยู่ กรุณารอสักครู่");
       }
 
-      const booking = (result as any)?.booking as BookingListItem | undefined;
-      const bookingIdRaw = (result as any)?.bookingId as string | number | undefined;
+      creatingRef.current = true;
+      setIsCreating(true);
+      setError(null);
 
-      if (booking) return booking;
+      try {
+        if (!data.studentCode)
+          throw new Error("ไม่พบ studentCode (account_username)");
+        if (!data.timeSlotId || Number(data.timeSlotId) <= 0)
+          throw new Error("timeSlotId ไม่ถูกต้อง");
+        if (!data.problemCategoryId || Number(data.problemCategoryId) <= 0)
+          throw new Error("problemCategoryId ไม่ถูกต้อง");
 
-      if (bookingIdRaw !== undefined && bookingIdRaw !== null) {
-        const bookingId =
-          typeof bookingIdRaw === "string"
-            ? Number.parseInt(bookingIdRaw, 10)
-            : bookingIdRaw;
+        const response = await fetch("/api/v2/bookings", {
+          method: "POST",
+          credentials: "include",
+          cache: "no-store",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
 
-        if (!Number.isFinite(bookingId)) throw new Error("Invalid bookingId from server");
+        const result = await safeJson<CreateBookingResponse>(response);
 
-        // ✅ ดึงตัวเต็ม
-        return await fetchBookingById(bookingId);
+        if (!response.ok || result?.success === false) {
+          console.error(
+            "[createBooking] status/body:",
+            response.status,
+            result,
+          );
+          throw new Error(pickErrorMessage(response, result));
+        }
+
+        const booking = (result as any)?.booking as BookingListItem | undefined;
+        const bookingIdRaw = (result as any)?.bookingId as
+          | string
+          | number
+          | undefined;
+
+        if (booking) return booking;
+
+        if (bookingIdRaw !== undefined && bookingIdRaw !== null) {
+          const bookingId =
+            typeof bookingIdRaw === "string"
+              ? Number.parseInt(bookingIdRaw, 10)
+              : bookingIdRaw;
+
+          if (!Number.isFinite(bookingId))
+            throw new Error("Invalid bookingId from server");
+
+          return await fetchBookingById(bookingId);
+        }
+
+        throw new Error("Invalid response from server");
+      } catch (err: any) {
+        const msg = err?.message || "เกิดข้อผิดพลาดในการจอง";
+        setError(msg);
+        throw new Error(msg);
+      } finally {
+        setIsCreating(false);
+        creatingRef.current = false;
       }
+    },
+    [],
+  );
 
-      throw new Error("Invalid response from server");
-    } catch (err: any) {
-      const msg = err?.message || "เกิดข้อผิดพลาดในการจอง";
-      setError(msg);
-      throw new Error(msg);
-    } finally {
-      setIsCreating(false);
-    }
-  }, []);
+  const cancelBooking = useCallback(
+    async (id: string | number, reason: string): Promise<void> => {
+      setIsCancelling(true);
+      setError(null);
 
-  const cancelBooking = useCallback(async (id: string | number, reason: string): Promise<void> => {
-    setIsCancelling(true);
-    setError(null);
+      try {
+        if (id === null || id === undefined || id === "")
+          throw new Error("booking id ไม่ถูกต้อง");
 
-    try {
-      if (id === null || id === undefined || id === "") throw new Error("booking id ไม่ถูกต้อง");
+        const cancelReason = String(reason || "").trim();
+        if (!cancelReason) throw new Error("กรุณากรอกเหตุผลในการยกเลิก");
 
-      const cancelReason = String(reason || "").trim();
-      if (!cancelReason) throw new Error("กรุณากรอกเหตุผลในการยกเลิก");
+        const response = await fetch(`/api/v2/bookings/${id}/cancel`, {
+          method: "PATCH",
+          credentials: "include",
+          cache: "no-store",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cancelReason }),
+        });
 
-      const response = await fetch(`/api/v2/bookings/${id}/cancel`, {
-        method: "PATCH",
-        credentials: "include",
-        cache: "no-store",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cancelReason }),
-      });
+        const result = await safeJson<ApiErrorShape & Record<string, any>>(
+          response,
+        );
 
-      const result = await safeJson<ApiErrorShape & Record<string, any>>(response);
-
-      if (!response.ok || result?.success === false) {
-        console.error("[cancelBooking] status/body:", response.status, result);
-        throw new Error(pickErrorMessage(response, result));
+        if (!response.ok || result?.success === false) {
+          console.error(
+            "[cancelBooking] status/body:",
+            response.status,
+            result,
+          );
+          throw new Error(pickErrorMessage(response, result));
+        }
+      } catch (err: any) {
+        const msg = err?.message || "เกิดข้อผิดพลาดในการยกเลิก";
+        console.error("[cancelBooking] err:", err);
+        setError(msg);
+        throw new Error(msg);
+      } finally {
+        setIsCancelling(false);
       }
-    } catch (err: any) {
-      const msg = err?.message || "เกิดข้อผิดพลาดในการยกเลิก";
-      console.error("[cancelBooking] err:", err);
-      setError(msg);
-      throw new Error(msg);
-    } finally {
-      setIsCancelling(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   const clearError = useCallback(() => setError(null), []);
 

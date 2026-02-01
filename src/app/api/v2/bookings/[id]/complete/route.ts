@@ -1,21 +1,34 @@
 // src/app/api/v2/bookings/[id]/complete/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getAccountFromRequest } from "@/lib/auth/context";
-import { requireAuth } from "@/lib/auth/guard";
+import { requireTenant, assertRole } from "@/lib/tenant/server";
 import { handleCompleteBooking } from "@/services/booking/handlers/completeBooking";
 
 type Params = { params: { id: string } };
 
 export async function PATCH(req: NextRequest, { params }: Params) {
   try {
-    const ctx = await getAccountFromRequest(req);
-    const unauth = requireAuth(ctx);
-    if (unauth) return unauth;
+    const { account, activeUniversityId } = await requireTenant(req);
+
+    // โดยทั่วไป complete จะให้ consultant/head/admin ทำ
+    assertRole(account.role, [
+      "CONSULTANT",
+      "HEAD_CONSULTANT",
+      "SUPER_ADMIN",
+      "RECTOR",
+    ]);
 
     const body = await req.json().catch(() => ({} as any));
-    return handleCompleteBooking(ctx!, params.id, body);
-  } catch (err) {
+
+    return await handleCompleteBooking(
+      { ...(account as any), activeUniversityId },
+      params.id,
+      body,
+    );
+  } catch (err: any) {
     console.error("[PATCH /api/v2/bookings/:id/complete]", err);
-    return NextResponse.json({ error: "Failed to complete booking" }, { status: 500 });
+    return NextResponse.json(
+      { error: err?.message ?? "Failed to complete booking" },
+      { status: err?.status ?? 500 },
+    );
   }
 }

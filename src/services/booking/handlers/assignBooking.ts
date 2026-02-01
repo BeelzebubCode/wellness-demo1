@@ -9,16 +9,14 @@ type AssignBody = { consultantId?: number; note?: string };
 
 async function resolveAssignerConsultantId(params: {
   accountId: number;
-  activeUniversityId?: number;
+  activeUniversityId: number;
 }) {
   const { accountId, activeUniversityId } = params;
 
   const row = await prisma.consultant.findFirst({
     where: {
       account_id: accountId,
-      ...(typeof activeUniversityId === "number"
-        ? { university_id: activeUniversityId }
-        : {}),
+      university_id: activeUniversityId,
     },
     select: { consultant_id: true },
   });
@@ -36,18 +34,41 @@ export async function handleAssignBooking(
     return NextResponse.json({ error: "Invalid booking ID" }, { status: 400 });
   }
 
+  const activeUniversityId = (ctx as any).activeUniversityId as
+    | number
+    | undefined;
+  if (typeof activeUniversityId !== "number") {
+    return NextResponse.json(
+      { error: "activeUniversityId missing" },
+      { status: 400 },
+    );
+  }
+
+  const deniedUni = requireUniversity(ctx as any, activeUniversityId);
+  if (deniedUni) return deniedUni;
+
   const role = ctx.role as AccountRole;
   if (role !== "HEAD_CONSULTANT") {
     return NextResponse.json({ error: "Permission denied" }, { status: 403 });
   }
 
-  let assignedById = (ctx as any).consultantId as number | undefined;
-  if (typeof assignedById !== "number") {
-    assignedById = (await resolveAssignerConsultantId({
-      accountId: (ctx as any).accountId,
-      activeUniversityId: (ctx as any).activeUniversityId,
-    })) as any;
+  // ✅ หา accountId แบบกันเคส ctx ใช้ snake_case
+  const accountId = (ctx as any).accountId ?? (ctx as any).account_id;
+
+  if (typeof accountId !== "number") {
+    return NextResponse.json({ error: "accountId missing" }, { status: 400 });
   }
+  
+  // ✅ หา consultantId ของคนมอบหมาย (HEAD_CONSULTANT)
+  let assignedById: number | null = (ctx as any).consultantId ?? null;
+
+  if (typeof assignedById !== "number") {
+    assignedById = await resolveAssignerConsultantId({
+      accountId,
+      activeUniversityId,
+    });
+  }
+
   if (typeof assignedById !== "number") {
     return NextResponse.json(
       { error: "ไม่พบข้อมูลผู้ให้คำปรึกษาของผู้มอบหมาย (consultantId)" },
@@ -55,55 +76,70 @@ export async function handleAssignBooking(
     );
   }
 
-  const consultantId = body?.consultantId;
-  if (typeof consultantId !== "number") {
+  // หลังจากนี้ assignedById จะถูก narrow เป็น number แน่นอน
+
+  // ✅ คนที่จะรับงาน
+  const consultantId = Number(body?.consultantId);
+  if (!Number.isFinite(consultantId)) {
     return NextResponse.json(
       { error: "กรุณาระบุผู้ให้คำปรึกษา" },
       { status: 400 },
     );
   }
 
+  // ✅ Booking ใช้ composite key: university_id + booking_id
   const booking = await prisma.booking.findUnique({
-    where: { booking_id: bookingId },
-    select: { booking_id: true, university_id: true },
+    where: {
+      university_id_booking_id: {
+        university_id: activeUniversityId,
+        booking_id: bookingId,
+      },
+    },
+    select: {
+      booking_id: true,
+      university_id: true,
+      consultant_id: true,
+      booking_status: true,
+    },
   });
+
   if (!booking) {
     return NextResponse.json({ error: "ไม่พบรายการจอง" }, { status: 404 });
   }
 
-  const deniedUni = requireUniversity(ctx as any, booking.university_id);
-  if (deniedUni) return deniedUni;
+  // ✅ ถ้ามีคนรับแล้วก็จบเลย (กันเคส upd.count=0 แล้ว error กว้างไป)
+  if (booking.consultant_id !== null) {
+    return NextResponse.json(
+      { error: "รายการนี้ถูกมอบหมายไปแล้ว" },
+      { status: 409 },
+    );
+  }
 
-  const assignee = await prisma.consultant.findUnique({
-    where: { consultant_id: consultantId },
-    select: { university_id: true },
+  // ✅ Consultant ใน schema เป็น id เดี่ยว (consultant_id เป็น @id) แต่เรายัง tenant-check ด้วย where university_id
+  const assignee = await prisma.consultant.findFirst({
+    where: {
+      consultant_id: consultantId,
+      university_id: activeUniversityId,
+    },
+    select: { consultant_id: true },
   });
+
   if (!assignee) {
     return NextResponse.json(
-      { error: "ไม่พบผู้ให้คำปรึกษาที่เลือก" },
-      { status: 400 },
-    );
-  }
-  if (assignee.university_id !== booking.university_id) {
-    return NextResponse.json(
-      { error: "ไม่สามารถมอบหมายให้ผู้ให้คำปรึกษาต่างมหาวิทยาลัยได้" },
+      { error: "ไม่พบผู้ให้คำปรึกษาที่เลือก (หรืออยู่นอกมหาวิทยาลัยนี้)" },
       { status: 400 },
     );
   }
 
-  // ✅ แจกได้ “เฉพาะตอนยังรอแจกงาน”
+  // ✅ แจกได้เฉพาะตอนยังรอแจกงาน
   const allowed: BookingStatus[] = [BookingStatus.PENDING_ASSIGNMENT];
 
   const result = await prisma.$transaction(async (tx) => {
     const upd = await tx.booking.updateMany({
       where: {
+        university_id: activeUniversityId,
         booking_id: bookingId,
-        university_id: booking.university_id,
-
-        // ✅ กันแจกซ้ำ: ต้องยังไม่มีคนรับ
         consultant_id: null,
-
-        // ✅ และต้องอยู่ในสถานะที่อนุญาต
         booking_status: { in: allowed },
       },
       data: {
@@ -114,8 +150,10 @@ export async function handleAssignBooking(
 
     if (upd.count === 0) return { ok: false as const };
 
+    // ✅ BookingAssignment ต้องใส่ university_id ด้วย (ตาม schema)
     await tx.bookingAssignment.create({
       data: {
+        university_id: activeUniversityId,
         booking_id: bookingId,
         booking_assignment_assigned_by_id: assignedById,
         booking_assignment_assigned_to_id: consultantId,
@@ -128,7 +166,7 @@ export async function handleAssignBooking(
 
   if (!result.ok) {
     return NextResponse.json(
-      { error: "รายการนี้ถูกมอบหมายไปแล้ว หรือสถานะไม่อนุญาตให้แจกงาน" },
+      { error: "สถานะไม่อนุญาตให้แจกงาน หรือรายการถูกเปลี่ยนไปแล้ว" },
       { status: 409 },
     );
   }

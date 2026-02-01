@@ -6,17 +6,40 @@ import { requireUniversity } from "@/lib/auth/guard";
 import { AccountRole } from "@prisma/client";
 
 function isAdminRole(role: AccountRole) {
-  return role === "HEAD_CONSULTANT" || role === "SUPER_ADMIN" || role === "RECTOR";
+  return (
+    role === "HEAD_CONSULTANT" || role === "SUPER_ADMIN" || role === "RECTOR"
+  );
 }
 
-export async function handleGetBooking(ctx: AccountContext, bookingIdRaw: string) {
+export async function handleGetBooking(
+  ctx: AccountContext & { activeUniversityId?: number },
+  bookingIdRaw: string,
+) {
   const bookingId = Number(bookingIdRaw);
   if (!Number.isFinite(bookingId)) {
     return NextResponse.json({ error: "Invalid booking ID" }, { status: 400 });
   }
 
+  const activeUniversityId = (ctx as any).activeUniversityId as number | undefined;
+  if (typeof activeUniversityId !== "number") {
+    return NextResponse.json(
+      { error: "activeUniversityId missing" },
+      { status: 400 },
+    );
+  }
+
+  // ✅ tenant guard ตั้งแต่ต้น
+  const denied = requireUniversity(ctx as any, activeUniversityId);
+  if (denied) return denied;
+
+  // ✅ Booking ใช้ composite key
   const booking = await prisma.booking.findUnique({
-    where: { booking_id: bookingId },
+    where: {
+      university_id_booking_id: {
+        university_id: activeUniversityId,
+        booking_id: bookingId,
+      },
+    },
     include: {
       student: {
         include: {
@@ -50,19 +73,16 @@ export async function handleGetBooking(ctx: AccountContext, bookingIdRaw: string
     return NextResponse.json({ error: "ไม่พบรายการจอง" }, { status: 404 });
   }
 
-  // tenant guard
-  const deniedUni = requireUniversity(ctx, booking.university_id);
-  if (deniedUni) return deniedUni;
-
+  // ✅ role-based view guard
   const role = ctx.role as AccountRole;
 
-  // role-based view guard
   if (role === "STUDENT") {
-    if (booking.student.account.account_id !== ctx.accountId) {
+    if (booking.student.account.account_id !== (ctx as any).accountId) {
       return NextResponse.json({ error: "Permission denied" }, { status: 403 });
     }
   } else if (role === "CONSULTANT") {
-    if (!ctx.consultantId || booking.consultant_id !== ctx.consultantId) {
+    const consultantId = (ctx as any).consultantId as number | undefined;
+    if (!consultantId || booking.consultant_id !== consultantId) {
       return NextResponse.json({ error: "Permission denied" }, { status: 403 });
     }
   } else if (!isAdminRole(role)) {
@@ -70,16 +90,19 @@ export async function handleGetBooking(ctx: AccountContext, bookingIdRaw: string
   }
 
   const timeSlot = booking.timeSlot;
-  const studentProfile = booking.student.profile;
-  const consultantProfile = booking.consultant?.profile;
+  const sp = booking.student.profile; // StudentProfile | null
+  const cp = booking.consultant?.profile;
 
   const formattedBooking = {
     id: booking.booking_id,
     status: booking.booking_status,
+
     problemType: booking.problemCategory.problem_category_name_th,
     problemCategoryId: booking.problem_category_id,
     problemCategoryCode: booking.problemCategory.problem_category_code,
+
     detailText: booking.booking_detail_text,
+
     createdAt: booking.booking_created_at.toISOString(),
     updatedAt: booking.booking_updated_at.toISOString(),
 
@@ -96,25 +119,30 @@ export async function handleGetBooking(ctx: AccountContext, bookingIdRaw: string
     student: {
       id: booking.student_id,
       code: booking.student.student_code,
-      name: studentProfile
-        ? `${studentProfile.student_first_name} ${studentProfile.student_last_name}`
+
+      // ✅ ชื่อ field ให้ตรง schema (…_th)
+      name: sp
+        ? `${sp.student_first_name_th} ${sp.student_last_name_th}`
         : null,
-      nickname: studentProfile?.student_nickname,
-      phone: studentProfile?.student_phone_number,
-      email: studentProfile?.student_email,
+      nickname: sp?.student_nickname_th ?? null,
+
+      phone: sp?.student_phone_number ?? null,
+      email: sp?.student_email ?? null,
+
       faculty: booking.student.academic?.faculty?.faculty_name_th ?? null,
       department: booking.student.academic?.department?.department_name_th ?? null,
-      lineUserId: booking.student.account.account_line_id,
+
+      lineUserId: booking.student.account.account_line_id ?? null,
     },
 
     consultant: booking.consultant
       ? {
           id: booking.consultant_id,
-          name: consultantProfile
-            ? `${consultantProfile.consultant_first_name} ${consultantProfile.consultant_last_name}`
+          name: cp
+            ? `${cp.consultant_first_name} ${cp.consultant_last_name}`
             : null,
-          phone: consultantProfile?.consultant_phone_number,
-          email: consultantProfile?.consultant_email,
+          phone: cp?.consultant_phone_number ?? null,
+          email: cp?.consultant_email ?? null,
         }
       : null,
 
@@ -155,8 +183,8 @@ export async function handleGetBooking(ctx: AccountContext, bookingIdRaw: string
             criterion: r.criterion.evaluation_criterion_topic_th,
             score: r.feedback_rating_score,
           })),
-          comment: booking.feedback.comment?.feedback_comment_text,
-          adminReply: booking.feedback.comment?.feedback_comment_admin_reply,
+          comment: booking.feedback.comment?.feedback_comment_text ?? null,
+          adminReply: booking.feedback.comment?.feedback_comment_admin_reply ?? null,
         }
       : null,
   };

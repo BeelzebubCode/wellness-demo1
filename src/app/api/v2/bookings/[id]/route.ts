@@ -1,20 +1,32 @@
 // src/app/api/v2/bookings/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getAccountFromRequest } from "@/lib/auth/context";
-import { requireAuth } from "@/lib/auth/guard";
+import { requireTenant, assertRole } from "@/lib/tenant/server";
 import { handleGetBooking } from "@/services/booking/handlers/getBooking";
 
 type Params = { params: { id: string } };
 
 export async function GET(req: NextRequest, { params }: Params) {
   try {
-    const ctx = await getAccountFromRequest(req);
-    const unauth = requireAuth(ctx);
-    if (unauth) return unauth;
+    const { account, activeUniversityId } = await requireTenant(req);
 
-    return handleGetBooking(ctx!, params.id);
-  } catch (err) {
+    // (เลือกใส่ตาม policy)
+    assertRole(account.role, [
+      "STUDENT",
+      "CONSULTANT",
+      "HEAD_CONSULTANT",
+      "SUPER_ADMIN",
+      "RECTOR",
+    ]);
+
+    return await handleGetBooking(
+      { ...(account as any), activeUniversityId },
+      params.id,
+    );
+  } catch (err: any) {
     console.error("[GET /api/v2/bookings/:id]", err);
-    return NextResponse.json({ error: "Failed to fetch booking" }, { status: 500 });
+    return NextResponse.json(
+      { error: err?.message ?? "Failed to fetch booking" },
+      { status: err?.status ?? 500 },
+    );
   }
 }
