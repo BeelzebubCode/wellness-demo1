@@ -1,4 +1,3 @@
-// src/app/(tenant)/(booking)/booking/profile/page.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -30,11 +29,20 @@ import {
 type LoadState =
   | { status: "idle" | "loading" }
   | { status: "error"; message: string }
-  | { status: "success"; data: ProfileMeDTO };
+  | {
+      status: "success";
+      dataTh: ProfileMeDTO; // ข้อมูลหลัก (TH)
+      dataEn: ProfileMeDTO | null; // ข้อมูล EN (optional)
+    };
 
 function safe(s?: string | null) {
   const t = (s ?? "").trim();
   return t ? t : "-";
+}
+
+function isMeaningful(v?: string | null) {
+  const t = (v ?? "").trim();
+  return !!t && t !== "-";
 }
 
 function formatThaiDateShort(iso?: string | null) {
@@ -55,62 +63,23 @@ function getAddressIcon(t: StudentAddressType) {
   return t === "CURRENT" ? <Home className="w-4 h-4" /> : <MapPin className="w-4 h-4" />;
 }
 
-function joinParts(parts: (string | null | undefined)[]) {
-  const arr = parts.map((x) => (x ?? "").trim()).filter(Boolean);
-  return arr.length ? arr.join(", ") : "-";
+// แปลง enum/code ให้เป็น label อ่านง่าย
+function genderLabel(code?: string | null) {
+  const v = String(code ?? "").trim();
+  if (!v) return "-";
+  const map: Record<string, string> = {
+    MALE: "ชาย",
+    FEMALE: "หญิง",
+    OTHER: "อื่น ๆ",
+    UNDISCLOSED: "ไม่ระบุ",
+    NOT_SPECIFIED: "ไม่ระบุ",
+    LGBTQ_PLUS: "LGBTQ+",
+    LGBTQPLUS: "LGBTQ+",
+  };
+  return map[v] ?? v; // ถ้าไม่รู้จัก ก็โชว์ raw
 }
 
-function SectionHeader({
-  title,
-  badge,
-  subtitle,
-  icon,
-}: {
-  title: string;
-  badge?: string;
-  subtitle?: string;
-  icon?: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <div className="flex items-start gap-3 min-w-0">
-        {icon ? (
-          <div className="mt-0.5 w-10 h-10 rounded-2xl bg-white/70 border border-white/60 shadow-sm backdrop-blur flex items-center justify-center shrink-0">
-            <div className="w-7 h-7 rounded-xl icon-tenant flex items-center justify-center">
-              {icon}
-            </div>
-          </div>
-        ) : null}
-
-        <div className="min-w-0">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h2 className="text-lg md:text-xl font-extrabold text-slate-800 tracking-tight">
-              {title}
-            </h2>
-
-            {badge ? (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-[12px] font-bold border border-[rgba(var(--ring),0.25)] bg-white/60 backdrop-blur">
-                <span className="text-[rgb(var(--primary))]">{badge}</span>
-              </span>
-            ) : null}
-          </div>
-
-          {subtitle ? (
-            <p className="text-sm text-slate-500 mt-1">{subtitle}</p>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SoftCard({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
+function SoftCard({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
     <div
       className={[
@@ -123,6 +92,29 @@ function SoftCard({
   );
 }
 
+function FieldRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <p className="text-[12px] font-bold text-slate-500">{label}</p>
+      <p className="text-[13px] font-semibold text-slate-800 text-right leading-snug">{value}</p>
+    </div>
+  );
+}
+
+async function fetchMe(lang: "th" | "en") {
+  const res = await fetch(
+    `/api/v2/profile/me?include=university,academic,addresses&lang=${lang}`,
+    { credentials: "include", cache: "no-store" }
+  );
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json?.error ?? "โหลดโปรไฟล์ไม่สำเร็จ");
+
+  const dto = (json?.data ?? null) as ProfileMeDTO | null;
+  if (!dto) throw new Error("ไม่พบข้อมูลโปรไฟล์");
+  return dto;
+}
+
 export default function StudentProfilePage() {
   const [state, setState] = useState<LoadState>({ status: "idle" });
 
@@ -132,16 +124,14 @@ export default function StudentProfilePage() {
     async function load() {
       setState({ status: "loading" });
       try {
-        const res = await fetch(
-          "/api/v2/profile/me?include=university,academic,addresses",
-          { credentials: "include", cache: "no-store" }
-        );
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(json?.error ?? "โหลดโปรไฟล์ไม่สำเร็จ");
-        const dto = (json?.data ?? null) as ProfileMeDTO | null;
-        if (!dto) throw new Error("ไม่พบข้อมูลโปรไฟล์");
+        // ✅ ดึง TH เป็นหลัก + ดึง EN เพื่อโชว์ฟิลด์ (EN) ให้ครบ
+        const [th, en] = await Promise.all([
+          fetchMe("th"),
+          fetchMe("en").catch(() => null), // EN optional
+        ]);
+
         if (!alive) return;
-        setState({ status: "success", data: dto });
+        setState({ status: "success", dataTh: th, dataEn: en });
       } catch (e: any) {
         if (!alive) return;
         setState({ status: "error", message: e?.message ?? "โหลดโปรไฟล์ไม่สำเร็จ" });
@@ -154,75 +144,121 @@ export default function StudentProfilePage() {
     };
   }, []);
 
-  const dto = state.status === "success" ? state.data : null;
-  const p = dto?.profile;
+  const dtoTh = state.status === "success" ? state.dataTh : null;
+  const dtoEn = state.status === "success" ? state.dataEn : null;
+
+  const pTh = dtoTh?.profile ?? null;
+  const pEn = dtoEn?.profile ?? null;
+
+  const isStudent = dtoTh?.role === "STUDENT";
 
   const subtitle = useMemo(() => {
-    if (!dto?.profile) return "";
-    const uni = dto.profile.universityName ? `• ${dto.profile.universityName}` : "";
-    const role = dto.role === "STUDENT" ? "ผู้รับบริการ" : dto.role;
-    return `${role} ${uni}`.trim();
-  }, [dto]);
+    if (!dtoTh?.profile) return "";
+    const uni = dtoTh.profile.universityName ? `• ${dtoTh.profile.universityName}` : "";
+    const roleLabel = dtoTh.role === "STUDENT" ? "ผู้รับบริการ" : dtoTh.role;
+    return `${roleLabel} ${uni}`.trim();
+  }, [dtoTh]);
 
+  // -------------------------
+  // PERSONAL (ครบ)
+  // -------------------------
   const personalItems: ProfileFieldItem[] = useMemo(() => {
-    if (!p) return [];
-    return [
-      { label: "ชื่อที่แสดง", value: dto?.displayName ?? "-", icon: <User className="w-4 h-4" /> },
-      { label: "ชื่อเล่น", value: safe(p.nickname), icon: <Bookmark className="w-4 h-4" /> },
-      { label: "เพศ", value: safe(p.gender), icon: <Shield className="w-4 h-4" /> },
-      { label: "วันเกิด", value: formatThaiDateShort(p.birthday), icon: <Cake className="w-4 h-4" /> },
-      { label: "สัญชาติ", value: safe(p.nationality), icon: <IdCard className="w-4 h-4" /> },
-      { label: "ศาสนา", value: safe(p.religion), icon: <Briefcase className="w-4 h-4" /> },
-      { label: "กรุ๊ปเลือด", value: safe(p.bloodGroup), icon: <Shield className="w-4 h-4" /> },
-    ];
-  }, [p, dto?.displayName]);
+    if (!dtoTh || !pTh) return [];
 
+    const items: ProfileFieldItem[] = [
+      { label: "ชื่อที่แสดง", value: safe(dtoTh.displayName), icon: <User className="w-4 h-4" /> },
+
+      { label: "คำนำหน้า", value: safe(pTh.prefix), icon: <User className="w-4 h-4" /> },
+      { label: "ชื่อ", value: safe(pTh.firstName), icon: <User className="w-4 h-4" /> },
+      { label: "นามสกุล", value: safe(pTh.lastName), icon: <User className="w-4 h-4" /> },
+      { label: "ชื่อเล่น", value: safe(pTh.nickname), icon: <Bookmark className="w-4 h-4" /> },
+    ];
+
+    // เพิ่มชื่อ EN ถ้ามี
+    if (pEn && (isMeaningful(pEn.firstName) || isMeaningful(pEn.lastName) || isMeaningful(pEn.nickname))) {
+      items.push(
+        { label: "ชื่อ (EN)", value: safe(pEn.firstName), icon: <User className="w-4 h-4" /> },
+        { label: "นามสกุล (EN)", value: safe(pEn.lastName), icon: <User className="w-4 h-4" /> },
+        { label: "ชื่อเล่น (EN)", value: safe(pEn.nickname), icon: <Bookmark className="w-4 h-4" /> }
+      );
+    }
+
+    if (isStudent) {
+      items.push(
+        { label: "เพศ", value: genderLabel(pTh.gender), icon: <Shield className="w-4 h-4" /> },
+        { label: "วันเกิด", value: formatThaiDateShort(pTh.birthday), icon: <Cake className="w-4 h-4" /> },
+        { label: "สัญชาติ", value: safe(pTh.nationality), icon: <IdCard className="w-4 h-4" /> },
+        { label: "ศาสนา", value: safe(pTh.religion), icon: <Briefcase className="w-4 h-4" /> },
+        { label: "กรุ๊ปเลือด", value: safe(pTh.bloodGroup), icon: <Shield className="w-4 h-4" /> }
+      );
+    }
+
+    return items;
+  }, [dtoTh, pTh, pEn, isStudent]);
+
+  // -------------------------
+  // CONTACT (ครบ)
+  // -------------------------
   const contactItems: ProfileFieldItem[] = useMemo(() => {
-    if (!p) return [];
-    return [
-      { label: "อีเมล", value: safe(p.email), icon: <Mail className="w-4 h-4" /> },
-      { label: "เบอร์โทร", value: safe(p.phone), icon: <Phone className="w-4 h-4" /> },
-      { label: "มหาวิทยาลัย", value: safe(p.universityName), icon: <Building2 className="w-4 h-4" /> },
+    if (!pTh) return [];
+    const items: ProfileFieldItem[] = [
+      { label: "อีเมล", value: safe(pTh.email), icon: <Mail className="w-4 h-4" /> },
+      { label: "เบอร์โทร", value: safe(pTh.phone), icon: <Phone className="w-4 h-4" /> },
+      { label: "มหาวิทยาลัย", value: safe(pTh.universityName), icon: <Building2 className="w-4 h-4" /> },
     ];
-  }, [p]);
+    return items;
+  }, [pTh]);
 
+  // -------------------------
+  // ACADEMIC (ครบ)
+  // -------------------------
   const academicItems: ProfileFieldItem[] = useMemo(() => {
-    if (!p) return [];
+    if (!pTh) return [];
     return [
-      { label: "หลักสูตร/โปรแกรม", value: safe(p.program), icon: <GraduationCap className="w-4 h-4" /> },
-      { label: "ระดับการศึกษา", value: safe(p.degree), icon: <GraduationCap className="w-4 h-4" /> },
-      { label: "ชื่อระดับ (เต็ม)", value: safe(p.degreeName), icon: <GraduationCap className="w-4 h-4" /> },
-      { label: "ปีที่เข้าศึกษา", value: p.admitAcademicYear?.toString() ?? "-", icon: <Bookmark className="w-4 h-4" /> },
+      { label: "หลักสูตร/โปรแกรม", value: safe(pTh.program), icon: <GraduationCap className="w-4 h-4" /> },
+      { label: "ระดับการศึกษา", value: safe(pTh.degree), icon: <GraduationCap className="w-4 h-4" /> },
+      { label: "ชื่อระดับ (เต็ม)", value: safe(pTh.degreeName), icon: <GraduationCap className="w-4 h-4" /> },
+      { label: "ปีที่เข้าศึกษา", value: pTh.admitAcademicYear?.toString() ?? "-", icon: <Bookmark className="w-4 h-4" /> },
 
-      { label: "คณะ", value: safe(p.facultyName), icon: <Building2 className="w-4 h-4" /> },
-      { label: "คณะ (EN)", value: safe(p.facultyNameEn), icon: <Building2 className="w-4 h-4" /> },
+      { label: "คณะ", value: safe(pTh.facultyName), icon: <Building2 className="w-4 h-4" /> },
+      { label: "คณะ (EN)", value: safe(pTh.facultyNameEn), icon: <Building2 className="w-4 h-4" /> },
+      { label: "ภาควิชา/สาขา", value: safe(pTh.departmentName), icon: <Building2 className="w-4 h-4" /> },
+      { label: "ภาควิชา/สาขา (EN)", value: safe(pTh.departmentNameEn), icon: <Building2 className="w-4 h-4" /> },
 
-      { label: "ภาควิชา/สาขา", value: safe(p.departmentName), icon: <Building2 className="w-4 h-4" /> },
-      { label: "ภาควิชา/สาขา (EN)", value: safe(p.departmentNameEn), icon: <Building2 className="w-4 h-4" /> },
-
-      { label: "อาจารย์ที่ปรึกษา", value: safe(p.advisorName), icon: <User className="w-4 h-4" /> },
+      { label: "อาจารย์ที่ปรึกษา", value: safe(pTh.advisorName), icon: <User className="w-4 h-4" /> },
     ];
-  }, [p]);
+  }, [pTh]);
 
   const addresses = useMemo(() => {
-    const arr = p?.addresses ?? [];
-    const sorted = arr.slice().sort((a, b) => a.type.localeCompare(b.type));
-    return sorted;
-  }, [p?.addresses]);
+    const arr = pTh?.addresses ?? [];
+    return arr.slice().sort((a, b) => a.type.localeCompare(b.type));
+  }, [pTh?.addresses]);
+
+  const hasAcademic =
+    !!pTh &&
+    (pTh.program != null ||
+      pTh.degree != null ||
+      pTh.degreeName != null ||
+      pTh.facultyName != null ||
+      pTh.departmentName != null ||
+      pTh.admitAcademicYear != null ||
+      pTh.advisorName != null);
+
+  const hasAddresses = addresses.length > 0;
 
   return (
     <div className="min-h-screen bg-tenant text-slate-900 relative overflow-hidden">
       <main className="relative z-10 max-w-[1200px] mx-auto px-4 md:px-6 py-8 space-y-6 pb-24">
         {/* HERO */}
         <ProfileHeroCard
-          name={dto?.displayName ?? "โปรไฟล์"}
-          roleLabel={dto?.role === "STUDENT" ? "ผู้รับบริการ" : dto?.role}
+          name={dtoTh?.displayName ?? "โปรไฟล์"}
+          roleLabel={dtoTh?.role === "STUDENT" ? "ผู้รับบริการ" : dtoTh?.role}
           subtitle={subtitle}
           onEdit={() => alert("TODO: เปิดหน้าแก้ไขโปรไฟล์")}
           editText="แก้ไขโปรไฟล์"
         />
 
-        {/* LOADING / ERROR */}
+        {/* LOADING */}
         {state.status === "loading" || state.status === "idle" ? (
           <SoftCard className="p-6 md:p-8">
             <div className="flex items-center gap-3 text-slate-600">
@@ -232,6 +268,7 @@ export default function StudentProfilePage() {
           </SoftCard>
         ) : null}
 
+        {/* ERROR */}
         {state.status === "error" ? (
           <SoftCard className="p-6 md:p-8">
             <div className="flex items-start gap-3">
@@ -255,42 +292,63 @@ export default function StudentProfilePage() {
         ) : null}
 
         {/* CONTENT */}
-        {state.status === "success" ? (
+        {state.status === "success" && dtoTh && pTh ? (
           <div className="space-y-6">
-            {/* SEGMENT: PERSONAL */}
+            {/* PERSONAL */}
             <ProfileSection
               title="ข้อมูลส่วนตัว"
               badge="Personal"
-              subtitle="ข้อมูลพื้นฐานสำหรับแสดงผลในระบบ"
+              subtitle="ข้อมูลพื้นฐานจากฐานข้อมูล"
               rightSlot={null}
             >
               <ProfileDetailsCard title="" items={personalItems} noCard />
             </ProfileSection>
 
-            {/* SEGMENT: CONTACT */}
+            {/* CONTACT */}
             <ProfileSection
               title="ข้อมูลติดต่อ"
               badge="Contact"
-              subtitle="ข้อมูลที่ใช้สำหรับการติดต่อและยืนยันตัวตน"
+              subtitle="ข้อมูลสำหรับการติดต่อและยืนยันตัวตน"
             >
               <ProfileDetailsCard title="" items={contactItems} noCard />
             </ProfileSection>
 
-            {/* SEGMENT: ACADEMIC */}
-            <ProfileSection
-              title="ข้อมูลการศึกษา"
-              badge="Academic"
-              subtitle="ใช้สำหรับจับคู่บริการ และแสดงผลในระบบ"
-            >
-              <ProfileDetailsCard title="" items={academicItems} noCard />
-            </ProfileSection>
-            
-            {/* SEGMENT: ADDRESSES */}
-            <div className="space-y-3">
-              <SoftCard className="p-6 md:p-8">
-                {addresses.length === 0 ? (
-                  <div className="text-sm text-slate-500">ยังไม่มีข้อมูลที่อยู่</div>
-                ) : (
+            {/* ACADEMIC */}
+            {isStudent ? (
+              hasAcademic ? (
+                <ProfileSection
+                  title="ข้อมูลการศึกษา"
+                  badge="Academic"
+                  subtitle="ข้อมูลการศึกษาในระบบ"
+                >
+                  <ProfileDetailsCard title="" items={academicItems} noCard />
+                </ProfileSection>
+              ) : (
+                <SoftCard className="p-6 md:p-8">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-white border border-slate-200/60 shadow-sm flex items-center justify-center">
+                      <GraduationCap className="w-5 h-5 text-slate-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-extrabold text-slate-800">ข้อมูลการศึกษา</p>
+                      <p className="text-sm text-slate-500 mt-0.5">ยังไม่มีข้อมูลการศึกษาในระบบ</p>
+                    </div>
+                  </div>
+                </SoftCard>
+              )
+            ) : null}
+
+            {/* ADDRESSES */}
+            {isStudent ? (
+              hasAddresses ? (
+                <SoftCard className="p-6 md:p-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <p className="text-lg font-extrabold text-slate-800">ที่อยู่</p>
+                      <p className="text-sm text-slate-500">ข้อมูลที่อยู่จากฐานข้อมูล</p>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {addresses.map((a, idx) => (
                       <div
@@ -326,23 +384,24 @@ export default function StudentProfilePage() {
                       </div>
                     ))}
                   </div>
-                )}
-              </SoftCard>
-            </div>
+                </SoftCard>
+              ) : (
+                <SoftCard className="p-6 md:p-8">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-white border border-slate-200/60 shadow-sm flex items-center justify-center">
+                      <MapPin className="w-5 h-5 text-slate-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-extrabold text-slate-800">ที่อยู่</p>
+                      <p className="text-sm text-slate-500 mt-0.5">ยังไม่มีข้อมูลที่อยู่ในระบบ</p>
+                    </div>
+                  </div>
+                </SoftCard>
+              )
+            ) : null}
           </div>
         ) : null}
       </main>
-    </div>
-  );
-}
-
-function FieldRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-start justify-between gap-3">
-      <p className="text-[12px] font-bold text-slate-500">{label}</p>
-      <p className="text-[13px] font-semibold text-slate-800 text-right leading-snug">
-        {value}
-      </p>
     </div>
   );
 }

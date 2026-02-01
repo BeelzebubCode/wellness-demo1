@@ -80,7 +80,7 @@ function pickIncludes(req: NextRequest) {
     organization: set.has("organization"),
     university: set.has("university"),
 
-    // ✅ student flags
+    // student flags
     academic: set.has("academic"),
     addresses: set.has("addresses"),
   };
@@ -96,6 +96,32 @@ function formatDisplayName(
   const l = last?.trim() ? ` ${last.trim()}` : "";
   const name = `${p}${f}${l}`.trim();
   return name || "ผู้ใช้งาน";
+}
+
+function pickStudentNames(
+  req: NextRequest,
+  p: {
+    student_first_name_th: string;
+    student_last_name_th: string;
+    student_nickname_th: string | null;
+    student_first_name_en: string | null;
+    student_last_name_en: string | null;
+    student_nickname_en: string | null;
+    student_prefix: string | null;
+  }
+) {
+  // รองรับ ?lang=en, ค่าอื่นๆ ใช้ th
+  const lang = (new URL(req.url).searchParams.get("lang") || "th")
+    .toLowerCase()
+    .trim();
+
+  const isEn = lang === "en";
+
+  const first = (isEn ? p.student_first_name_en : p.student_first_name_th) ?? p.student_first_name_th;
+  const last = (isEn ? p.student_last_name_en : p.student_last_name_th) ?? p.student_last_name_th;
+  const nick = (isEn ? p.student_nickname_en : p.student_nickname_th) ?? p.student_nickname_th;
+
+  return { first, last, nick };
 }
 
 export async function GET(req: NextRequest) {
@@ -192,7 +218,6 @@ export async function GET(req: NextRequest) {
     // STUDENT
     // =========================
     if (role === "STUDENT") {
-      // ✅ INCLUDE relations ตลอด เพื่อให้ TS เห็น faculty/department/advisor/province ชัวร์
       const student = await prisma.student.findFirst({
         where: {
           account_id: account.accountId,
@@ -202,6 +227,8 @@ export async function GET(req: NextRequest) {
           profile: true,
           university: inc.university,
 
+          // จะ include ไว้ตลอดก็ได้ (ง่ายและชัวร์)
+          // หรือถ้าต้องการประหยัด query: ใช้ inc.academic/inc.addresses เป็นเงื่อนไขแทนได้
           academic: {
             include: {
               faculty: true,
@@ -227,22 +254,21 @@ export async function GET(req: NextRequest) {
       const p = student.profile;
       const a = student.academic ?? null;
 
+      // ✅ ใช้ field *_th/_en ตาม schema
+      const { first, last, nick } = pickStudentNames(req, p);
+
       const dto: ProfileMeDTO = {
         role,
-        displayName: formatDisplayName(
-          p.student_prefix,
-          p.student_first_name,
-          p.student_last_name
-        ),
+        displayName: formatDisplayName(p.student_prefix, first, last),
         profile: {
           type: role,
           id: student.student_id,
 
           // common
           prefix: p.student_prefix ?? null,
-          firstName: p.student_first_name ?? null,
-          lastName: p.student_last_name ?? null,
-          nickname: p.student_nickname ?? null,
+          firstName: first ?? null,
+          lastName: last ?? null,
+          nickname: nick ?? null,
           email: p.student_email ?? null,
           phone: p.student_phone_number ?? null,
 
@@ -251,9 +277,7 @@ export async function GET(req: NextRequest) {
             ? student.university?.university_name_th ?? null
             : undefined,
 
-          // =========================
-          // ✅ student extras
-          // =========================
+          // student extras
           gender: p.student_gender ? String(p.student_gender) : null,
           birthday: p.student_birthday ? p.student_birthday.toISOString() : null,
           bloodGroup: p.student_blood_group ?? null,
