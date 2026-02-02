@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import AiChatPage from "@/components/ai/AiChatPage";
+import { AiChatPage } from "@/features/ai";
 
 export const metadata: Metadata = {
   title: "AI Help Center",

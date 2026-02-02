@@ -7,9 +7,9 @@ import { PublicHeader, PublicFooter } from "@/components/layout";
 import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
 import { roleDefaultPath } from "@/features/auth/login/login-utils";
 
-// ✅ เพิ่ม
-import AiChatModal from "@/components/ai/AiChatModal";
-import { FloatingAiButton } from "@/components/ai/FloatingAiButton";
+// ✅ เพิ่ม import { AiChatPage } from "@/features/ai";
+import { AiChatModal } from "@/features/ai";
+import { FloatingAiButton } from "@/features/ai";
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();

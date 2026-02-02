@@ -1,62 +1,41 @@
+// src/features/ai/hooks/useAiChat.ts
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { aiApi, detectIntent, endpointFor } from "@/features/ai/api";
+import type { ChatMsg, AiChatResponse, Mode, AgentIntent } from "@/features/ai/api";
+import type { AgentQuestion } from "@/features/ai/api/client";
 
-type Mode = "help" | "booking_agent";
 type Role = "user" | "assistant";
-
-type ChatMsg = { role: Role; content: string };
-
-type AgentIntent = "BOOK" | "CANCEL";
-
-type AgentQuestion = {
-  field: string;
-  text: string;
-  options?: { value: any; label: string; code?: string }[];
-};
+type UiMsg = { role: Role; content: string };
 
 type AgentState = {
   intent: AgentIntent;
   confirmToken: string | null;
-  plan?: any;
+  plan?: any;                 // map state->plan ได้
   suggested?: any;
   candidates?: any[];
   missingFields?: string[];
   questions?: AgentQuestion[];
 };
 
-function detectIntent(text: string): AgentIntent {
-  const t = (text || "").toLowerCase();
-  const cancelKw = ["ยกเลิก", "cancel", "เลื่อน", "ไม่ไป", "ติดธุระ", "ถอนนัด"];
-  if (cancelKw.some((k) => t.includes(k))) return "CANCEL";
-  return "BOOK";
-}
-
-function endpointFor(mode: Mode, intent: AgentIntent) {
-  if (mode === "help") return { plan: "/api/v2/ai/help", confirm: "" };
-
-  if (intent === "CANCEL") {
-    return {
-      plan: "/api/v2/ai/agent/booking/cancel/plan",
-      confirm: "/api/v2/ai/agent/booking/cancel/confirm",
-    };
-  }
-
-  return {
-    plan: "/api/v2/ai/agent/booking/plan",
-    confirm: "/api/v2/ai/agent/booking/confirm",
-  };
+function pickConfirmToken(data: any): string | null {
+  return typeof data?.confirmToken === "string"
+    ? data.confirmToken
+    : typeof data?.confirm_token === "string"
+      ? data.confirm_token
+      : typeof data?.token === "string"
+        ? data.token
+        : null;
 }
 
 export function useAiChat(input: { mode: Mode; onConfirmed?: () => void }) {
-  const mode = input.mode;
-  const onConfirmed = input.onConfirmed;
+  const { mode, onConfirmed } = input;
 
-  const [messages, setMessages] = useState<ChatMsg[]>([]);
+  const [messages, setMessages] = useState<UiMsg[]>([]);
   const [text, setText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const [agent, setAgent] = useState<AgentState | null>(null);
 
   const canSend = useMemo(
@@ -77,62 +56,39 @@ export function useAiChat(input: { mode: Mode; onConfirmed?: () => void }) {
 
     setError(null);
     setIsLoading(true);
+    setAgent(null); // กันกด confirm เก่า
 
-    // ✅ ถ้าพิมพ์ใหม่ ให้เคลียร์ confirm เก่า (กันกดผิด action/แผนเก่า)
-    setAgent(null);
-
-    const nextMessages: ChatMsg[] = [
-      ...messages,
-      { role: "user", content: userText },
-    ];
+    const nextMessages: UiMsg[] = [...messages, { role: "user", content: userText }];
     setMessages(nextMessages);
     setText("");
 
     try {
-      const intent: AgentIntent =
-        mode === "booking_agent" ? detectIntent(userText) : "BOOK";
+      const intent: AgentIntent = mode === "booking_agent" ? detectIntent(userText) : "BOOK";
       const ep = endpointFor(mode, intent);
 
-      const res = await fetch(ep.plan, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: nextMessages.map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-        }),
-      });
+      const payload = {
+        messages: nextMessages.map((m) => ({ role: m.role, content: m.content })),
+      };
 
-      const data = await res.json().catch(() => ({}) as any);
+      const data = await aiApi.chat(ep.plan, payload);
 
-      const replyText =
-        String(data?.reply ?? data?.message ?? "").trim() || "…";
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: replyText },
-      ]);
+      const replyText = String(data?.reply ?? data?.detail ?? "…").trim() || "…";
+      setMessages((prev) => [...prev, { role: "assistant", content: replyText }]);
 
       if (mode === "booking_agent") {
-        const confirmToken =
-          typeof data?.confirmToken === "string"
-            ? data.confirmToken
-            : typeof data?.confirm_token === "string"
-              ? data.confirm_token
-              : typeof data?.token === "string"
-                ? data.token
-                : null;
+        const confirmToken = pickConfirmToken(data);
+
+        // ✅ รองรับ response ใหม่: state
+        const planOrState = (data as any)?.state ?? (data as any)?.plan ?? null;
 
         setAgent({
           intent,
           confirmToken,
-          plan: data?.plan,
-          suggested: data?.suggested,
-          candidates: Array.isArray(data?.candidates) ? data.candidates : [],
-          missingFields: Array.isArray(data?.missingFields)
-            ? data.missingFields
-            : [],
-          questions: Array.isArray(data?.questions) ? data.questions : [],
+          plan: planOrState,
+          suggested: (data as any)?.suggested ?? null,
+          candidates: Array.isArray((data as any)?.candidates) ? (data as any).candidates : [],
+          missingFields: Array.isArray((data as any)?.missingFields) ? (data as any).missingFields : [],
+          questions: Array.isArray((data as any)?.questions) ? (data as any).questions : [],
         });
       }
     } catch (e: any) {
@@ -151,32 +107,20 @@ export function useAiChat(input: { mode: Mode; onConfirmed?: () => void }) {
     setIsLoading(true);
 
     try {
-      const ep = endpointFor(mode, agent.intent);
+      // ✅ confirm กลางอันเดียว
+      const data = await aiApi.bookingConfirm(agent.confirmToken);
 
-      const res = await fetch(ep.confirm, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ confirmToken: agent.confirmToken }),
-      });
-
-      const data = await res.json().catch(() => ({}) as any);
-
-      const ok = Boolean(data?.success); // ✅ สำคัญ
+      const ok = Boolean((data as any)?.success);
       const replyText =
-        String(data?.reply ?? "").trim() || (ok ? "✅ สำเร็จ" : "ไม่สำเร็จ");
+        String((data as any)?.reply ?? "").trim() || (ok ? "✅ สำเร็จ" : "ไม่สำเร็จ");
 
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: replyText },
-      ]);
+      setMessages((prev) => [...prev, { role: "assistant", content: replyText }]);
 
-      // ✅ confirm แล้วเคลียร์ token กันกดซ้ำ
       setAgent(null);
 
-      // ✅ ให้หน้าอื่นรีเฟรช/รีเฟตช์
       if (ok) {
-        onConfirmed?.(); // ให้ AiChatCore ทำ router.refresh()
-        window.dispatchEvent(new Event("booking:changed")); // ✅ บอกหน้าอื่น refetch
+        onConfirmed?.();
+        window.dispatchEvent(new Event("booking:changed"));
       }
     } catch (e: any) {
       setError(e?.message ?? "network");
