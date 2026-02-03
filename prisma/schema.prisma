@@ -7,18 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ==========================================
-// ✅ MULTI-UNIVERSITY + REGION/PROVINCE + POINTS + 1 BOOKING = 1 SLOT
-// - เพิ่ม Region / Province.region_id
-// - เพิ่ม University (tenant) + ผูกทุก entity ที่ต้องรู้มหาลัย
-// - เพิ่ม AccountRole: RECTOR, SUPER_ADMIN
-// - เพิ่ม Account.account_home_university_id
-// - เพิ่ม AccountUniversityAccess (ยืมคนข้ามมหาลัย)
-// - Booking.time_slot_id = UNIQUE (1 booking = 1 slot และ 1 slot ถูกจองได้ครั้งเดียว)
-// - TimeSlot ผูก consultant_id + university_id
-// - เพิ่มระบบสะสมแต้ม: PointRule, StudentPointWallet, StudentPointTransaction
-// ==========================================
-
 model Region {
   region_id      Int        @id @default(autoincrement())
   region_code    RegionCode @unique
@@ -53,7 +41,9 @@ model University {
   university_is_active  Boolean  @default(true)
   university_created_at DateTime @default(now())
 
-  province Province @relation(fields: [province_id], references: [province_id])
+  province             Province @relation(fields: [province_id], references: [province_id])
+  university_latitude  Decimal? @db.Decimal(9, 6)
+  university_longitude Decimal? @db.Decimal(9, 6)
 
   accountsHome  Account[]                 @relation("AccountHomeUniversity")
   accessMembers AccountUniversityAccess[]
@@ -71,6 +61,9 @@ model University {
 
   borrowRequestsFrom                      BorrowRequest[]
   borrowAssignmentsAsConsultantUniversity BorrowAssignment[]
+  borrowWindowPolicies                    BorrowWindowPolicy[]
+  BookingAssignment                       BookingAssignment[]
+  BorrowOnCallShift                       BorrowOnCallShift[]
 
   @@index([province_id])
   @@index([university_is_active])
@@ -127,7 +120,10 @@ model Account {
   borrowRequestsApproved  BorrowRequest[] @relation("BorrowApprovedBy")
   borrowRequestsRejected  BorrowRequest[] @relation("BorrowRejectedBy")
 
-  borrowAssignmentsMade BorrowAssignment[] @relation("BorrowAssignedBy")
+  borrowAssignmentsMade   BorrowAssignment[]        @relation("BorrowAssignedBy")
+  BookingAssignment       BookingAssignment[]
+  BookingConsentSignature BookingConsentSignature[]
+  BorrowOnCallShift       BorrowOnCallShift[]
 
   @@index([account_role])
   @@index([account_home_university_id])
@@ -340,9 +336,8 @@ model Consultant {
   organization_id       Int
   consultant_created_at DateTime @default(now())
 
-  bookings            Booking[]
-  assignmentsMade     BookingAssignment[] @relation("AssignedBy")
-  assignmentsReceived BookingAssignment[] @relation("AssignedTo")
+  bookings           Booking[]
+  borrowOnCallShifts BorrowOnCallShift[]
 
   account      Account      @relation(fields: [account_id], references: [account_id])
   university   University   @relation(fields: [university_id], references: [university_id])
@@ -353,6 +348,8 @@ model Consultant {
   specializations   ConsultantSpecialization[]
   feedbacks         Feedback[]
   borrowAssignments BorrowAssignment[]
+  timeSlotShifts    TimeSlotShift[]
+  BookingAssignment BookingAssignment[]
 
   @@unique([university_id, consultant_id])
   @@index([organization_id])
@@ -417,8 +414,10 @@ model TimeSlot {
   time_slot_max_capacity   Int            @default(1)
   time_slot_status         TimeSlotStatus @default(OPEN)
 
-  university University @relation(fields: [university_id], references: [university_id])
+  university University        @relation(fields: [university_id], references: [university_id])
   bookings   Booking[]
+  services   TimeSlotService[]
+  shifts     TimeSlotShift[]
 
   @@unique([university_id, time_slot_id])
   @@unique([university_id, time_slot_start_datetime, time_slot_end_datetime])
@@ -426,17 +425,80 @@ model TimeSlot {
   @@map("time_slot")
 }
 
+model TimeSlotService {
+  time_slot_service_id Int @id @default(autoincrement())
+
+  university_id         Int
+  time_slot_id          Int
+  service_mode          ServiceMode
+  // online fields
+  online_channel        OnlineChannel?
+  online_join_url       String?        @db.Text
+  online_channel_detail String?        @db.Text
+  // onsite fields
+  onsite_location_text  String?        @db.VarChar(200)
+  is_active             Boolean        @default(true)
+
+  timeSlot TimeSlot @relation(fields: [university_id, time_slot_id], references: [university_id, time_slot_id], onDelete: Cascade)
+
+  bookings Booking[]
+
+  // ✅ กันซ้ำ: slot เดียวมี mode เดียวกันได้รายการเดียว
+  @@unique([university_id, time_slot_id, service_mode])
+  @@index([university_id, time_slot_id])
+  @@index([service_mode])
+  @@map("time_slot_service")
+}
+
+model TimeSlotShift {
+  time_slot_shift_id Int @id @default(autoincrement())
+  university_id      Int
+
+  // link ไป slot
+  time_slot_id Int
+
+  // link ไป shift
+  consultant_shift_id Int
+
+  // link ไปหมอ (denormalize ช่วย query เร็ว + validate)
+  consultant_id Int
+
+  // optional: override ความจุต่อหมอใน slot นี้
+  capacity_for_this_shift Int @default(1)
+
+  // status เผื่อ shift cancel/เปลี่ยนแผน
+  link_status TimeSlotShiftStatus @default(ACTIVE)
+  created_at  DateTime            @default(now()) @db.Timestamptz(3)
+
+  // relations
+  timeSlot   TimeSlot   @relation(fields: [university_id, time_slot_id], references: [university_id, time_slot_id], onDelete: Cascade)
+  consultant Consultant @relation(fields: [consultant_id], references: [consultant_id])
+
+  // ===== Constraints / Index =====
+
+  // กันซ้ำ: slot เดียว link shift เดียวได้ครั้งเดียว
+  @@unique([university_id, time_slot_id, consultant_shift_id])
+  // กันซ้ำ: slot เดียวมีหมอคนเดิมได้ครั้งเดียว (กันกรณี shift ซ้อน/ข้อมูลพัง)
+  @@unique([university_id, time_slot_id, consultant_id])
+  // query ที่ใช้บ่อย
+  @@index([university_id, time_slot_id])
+  @@index([consultant_id])
+  @@index([consultant_shift_id])
+  @@map("time_slot_shift")
+}
+
 // ==========================================
 // 📅 BOOKING 
 // ==========================================
 
 model Booking {
-  booking_id          Int  @default(autoincrement())
-  university_id       Int
-  student_id          Int
-  consultant_id       Int?
-  time_slot_id        Int
-  problem_category_id Int
+  booking_id           Int  @default(autoincrement())
+  university_id        Int
+  student_id           Int
+  consultant_id        Int?
+  time_slot_id         Int
+  problem_category_id  Int
+  time_slot_service_id Int
 
   booking_detail_text String?       @db.Text
   booking_status      BookingStatus @default(PENDING_ASSIGNMENT)
@@ -449,16 +511,19 @@ model Booking {
 
   timeSlot        TimeSlot        @relation(fields: [university_id, time_slot_id], references: [university_id, time_slot_id])
   problemCategory ProblemCategory @relation(fields: [problem_category_id], references: [problem_category_id])
+  timeSlotService TimeSlotService @relation(fields: [time_slot_service_id], references: [time_slot_service_id])
 
-  assignments       BookingAssignment[]
-  cancellation      BookingCancellation?
-  outcome           BookingOutcome?
-  feedback          Feedback?
-  notifications     Notification[]
-  pointTransactions StudentPointTransaction[] @relation("BookingPointTx")
+  assignments             BookingAssignment[]
+  cancellation            BookingCancellation?
+  outcome                 BookingOutcome?
+  feedback                Feedback?
+  notifications           Notification[]
+  pointTransactions       StudentPointTransaction[] @relation("BookingPointTx")
+  BookingConsentSignature BookingConsentSignature[]
 
-  @@id([university_id, booking_id]) // ✅ สำคัญสุด
+  @@id([university_id, booking_id])
   @@unique([university_id, student_id, time_slot_id])
+  @@index([time_slot_service_id])
   @@index([university_id, time_slot_id])
   @@index([booking_status])
   @@index([student_id])
@@ -482,22 +547,28 @@ model ProblemCategory {
 
 model BookingAssignment {
   booking_assignment_id Int @id @default(autoincrement())
-  booking_id            Int
-  university_id         Int
 
-  booking_assignment_assigned_by_id Int
-  booking_assignment_assigned_to_id Int
-  booking_assignment_note           String?  @db.Text
-  booking_assignment_assigned_at    DateTime @default(now())
+  university_id Int
+  booking_id    Int
 
-  assignedBy Consultant @relation("AssignedBy", fields: [booking_assignment_assigned_by_id], references: [consultant_id])
-  assignedTo Consultant @relation("AssignedTo", fields: [booking_assignment_assigned_to_id], references: [consultant_id])
-  booking    Booking    @relation(fields: [university_id, booking_id], references: [university_id, booking_id])
+  consultant_id            Int
+  consultant_university_id Int
+  borrow_assignment_id     Int?
 
-  @@index([booking_id])
-  @@index([university_id, booking_id])
-  @@index([booking_assignment_assigned_by_id])
-  @@index([booking_assignment_assigned_to_id])
+  assigned_by_account_id Int
+  assigned_note          String?  @db.Text
+  assigned_at            DateTime @default(now()) @db.Timestamptz(3)
+
+  booking              Booking    @relation(fields: [university_id, booking_id], references: [university_id, booking_id], onDelete: Cascade)
+  consultant           Consultant @relation(fields: [consultant_university_id, consultant_id], references: [university_id, consultant_id])
+  consultantUniversity University @relation(fields: [consultant_university_id], references: [university_id])
+
+  assignedBy       Account           @relation(fields: [assigned_by_account_id], references: [account_id])
+  borrowAssignment BorrowAssignment? @relation(fields: [borrow_assignment_id], references: [borrow_assignment_id])
+
+  @@unique([university_id, booking_id])
+  @@index([consultant_id, assigned_at])
+  @@index([borrow_assignment_id])
   @@map("booking_assignment")
 }
 
@@ -515,6 +586,39 @@ model BookingOutcome {
   @@id([university_id, booking_id])
   @@index([booking_id])
   @@map("booking_outcome")
+}
+
+model BookingConsentSignature {
+  booking_consent_signature_id Int @id @default(autoincrement())
+
+  university_id Int
+  booking_id    Int
+
+  signed_by_account_id Int?
+  student_id           Int?
+
+  signature_method    ConsentSignatureMethod @default(CHECKBOX)
+  consent_doc_code    String                 @db.VarChar(50) // เช่น TELEHEALTH_CONSENT
+  consent_doc_version Int
+  consent_doc_hash    String                 @db.VarChar(128) // hash ของข้อความ/ไฟล์
+
+  sign_status       ConsentSignStatus @default(SIGNED)
+  signature_payload Json? // หรือ Text ถ้าเป็น base64
+  signature_hash    String?           @db.VarChar(128)
+
+  verified_at DateTime? @db.Timestamptz(3)
+  signed_at   DateTime  @default(now()) @db.Timestamptz(3)
+
+  ip_address String? @db.VarChar(64)
+  user_agent String? @db.Text
+
+  booking  Booking  @relation(fields: [university_id, booking_id], references: [university_id, booking_id], onDelete: Cascade)
+  signedBy Account? @relation(fields: [signed_by_account_id], references: [account_id])
+
+  @@unique([university_id, booking_id, consent_doc_code, consent_doc_version])
+  @@index([university_id, booking_id])
+  @@index([signed_by_account_id, signed_at])
+  @@map("booking_consent_signature")
 }
 
 model BookingCancellation {
@@ -837,10 +941,12 @@ model AiFeedbackEvent {
   @@map("ai_feedback_event")
 }
 
-model BorrowRequest {
-  borrow_request_id Int @id @default(autoincrement())
+// ==========================================
+// BORROW
+// ==========================================
 
-  // มหาลัยต้นทาง (ผู้ขอ)
+model BorrowRequest {
+  borrow_request_id       Int @id @default(autoincrement())
   from_university_id      Int
   requested_by_account_id Int
 
@@ -854,7 +960,6 @@ model BorrowRequest {
   borrow_needed_count   Int                 @default(1)
   borrow_request_status BorrowRequestStatus @default(DRAFT)
 
-  // submit / approve / reject
   borrow_submitted_at            DateTime? @db.Timestamptz(3)
   borrow_submitted_by_account_id Int?
   borrow_submit_note             String?   @db.Text
@@ -895,6 +1000,9 @@ model BorrowAssignment {
   consultant_id            Int
   consultant_university_id Int
 
+  // ✅ อ้างอิงเวรที่ใช้ยืมจริง
+  borrow_on_call_shift_id Int?
+
   borrow_assign_start_at DateTime @db.Timestamptz(3)
   borrow_assign_end_at   DateTime @db.Timestamptz(3)
 
@@ -902,19 +1010,61 @@ model BorrowAssignment {
   borrow_assignment_note        String?  @db.Text
   borrow_assigned_at            DateTime @default(now()) @db.Timestamptz(3)
 
-  // relations
   borrowRequest        BorrowRequest @relation(fields: [borrow_request_id], references: [borrow_request_id], onDelete: Cascade)
   consultant           Consultant    @relation(fields: [consultant_id], references: [consultant_id])
   consultantUniversity University    @relation(fields: [consultant_university_id], references: [university_id])
   assignedBy           Account       @relation("BorrowAssignedBy", fields: [borrow_assigned_by_account_id], references: [account_id])
 
-  // ✅ กันคนเดิมซ้ำใน request เดียวกัน
+  onCallShift       BorrowOnCallShift?  @relation(fields: [borrow_on_call_shift_id], references: [borrow_on_call_shift_id])
+  BookingAssignment BookingAssignment[]
+
   @@unique([borrow_request_id, consultant_id])
-  @@index([borrow_request_id])
-  @@index([consultant_id])
-  @@index([consultant_university_id])
-  @@index([borrow_assigned_by_account_id])
+  @@index([consultant_id, borrow_assign_start_at])
+  @@index([consultant_university_id, borrow_assign_start_at])
+  @@index([borrow_on_call_shift_id])
   @@map("borrow_assignment")
+}
+
+model BorrowOnCallShift {
+  borrow_on_call_shift_id Int @id @default(autoincrement())
+
+  consultant_id            Int
+  consultant_university_id Int
+
+  on_call_start_at DateTime @db.Timestamptz(3)
+  on_call_end_at   DateTime @db.Timestamptz(3)
+
+  on_call_status BorrowOnCallStatus @default(SCHEDULED)
+  on_call_note   String?            @db.Text
+
+  created_by_account_id Int?
+  created_at            DateTime           @default(now()) @db.Timestamptz(3)
+  updated_at            DateTime           @default(now()) @updatedAt @db.Timestamptz(3)
+  borrowAssignments     BorrowAssignment[]
+
+  consultant Consultant @relation(fields: [consultant_university_id, consultant_id], references: [university_id, consultant_id])
+  university University @relation(fields: [consultant_university_id], references: [university_id])
+  createdBy  Account?   @relation(fields: [created_by_account_id], references: [account_id])
+
+  @@unique([consultant_id, on_call_start_at, on_call_end_at])
+  @@index([consultant_university_id, on_call_start_at])
+  @@index([consultant_id, on_call_start_at])
+  @@map("borrow_on_call_shift")
+}
+
+model BorrowWindowPolicy {
+  borrow_window_policy_id Int  @id @default(autoincrement())
+  university_id           Int? // null = default/global
+
+  borrow_window_days Int     @default(14)
+  is_active          Boolean @default(true)
+
+  created_at DateTime @default(now()) @db.Timestamptz(3)
+
+  university University? @relation(fields: [university_id], references: [university_id])
+
+  @@index([university_id, is_active])
+  @@map("borrow_window_policy")
 }
 
 // ==========================================
@@ -1020,4 +1170,47 @@ enum BorrowRequestStatus {
   ASSIGNED
   COMPLETED
   CANCELLED
+}
+
+enum ShiftStatus {
+  SCHEDULED // วางตารางไว้แล้ว
+  ON_DUTY // เข้าเวรแล้ว (หรือระบบถือว่า active)
+  OFF_DUTY // ออกเวรแล้ว
+  CANCELLED // ยกเลิกเวร
+}
+
+enum ServiceMode {
+  ONSITE
+  ONLINE
+}
+
+enum OnlineChannel {
+  LINE_CALL
+  GOOGLE_MEET
+  ZOOM
+  MICROSOFT_TEAMS
+  PHONE
+  OTHER
+}
+
+enum TimeSlotShiftStatus {
+  ACTIVE
+  CANCELLED
+}
+
+enum BorrowOnCallStatus {
+  SCHEDULED
+  ACTIVE
+  CANCELLED
+}
+
+enum ConsentSignStatus {
+  SIGNED
+  REVOKED
+}
+
+enum ConsentSignatureMethod {
+  CHECKBOX
+  DRAW
+  UPLOAD
 }
