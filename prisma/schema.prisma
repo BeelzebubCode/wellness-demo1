@@ -124,6 +124,7 @@ model Account {
   BookingAssignment       BookingAssignment[]
   BookingConsentSignature BookingConsentSignature[]
   BorrowOnCallShift       BorrowOnCallShift[]
+  BookingSession          BookingSession[]
 
   @@index([account_role])
   @@index([account_home_university_id])
@@ -414,9 +415,8 @@ model TimeSlot {
   time_slot_max_capacity   Int            @default(1)
   time_slot_status         TimeSlotStatus @default(OPEN)
 
-  university University        @relation(fields: [university_id], references: [university_id])
+  university University      @relation(fields: [university_id], references: [university_id])
   bookings   Booking[]
-  services   TimeSlotService[]
   shifts     TimeSlotShift[]
 
   @@unique([university_id, time_slot_id])
@@ -425,62 +425,21 @@ model TimeSlot {
   @@map("time_slot")
 }
 
-model TimeSlotService {
-  time_slot_service_id Int @id @default(autoincrement())
-
-  university_id         Int
-  time_slot_id          Int
-  service_mode          ServiceMode
-  // online fields
-  online_channel        OnlineChannel?
-  online_join_url       String?        @db.Text
-  online_channel_detail String?        @db.Text
-  // onsite fields
-  onsite_location_text  String?        @db.VarChar(200)
-  is_active             Boolean        @default(true)
-
-  timeSlot TimeSlot @relation(fields: [university_id, time_slot_id], references: [university_id, time_slot_id], onDelete: Cascade)
-
-  bookings Booking[]
-
-  // ✅ กันซ้ำ: slot เดียวมี mode เดียวกันได้รายการเดียว
-  @@unique([university_id, time_slot_id, service_mode])
-  @@index([university_id, time_slot_id])
-  @@index([service_mode])
-  @@map("time_slot_service")
-}
-
 model TimeSlotShift {
-  time_slot_shift_id Int @id @default(autoincrement())
-  university_id      Int
+  time_slot_shift_id      Int                 @id @default(autoincrement())
+  university_id           Int
+  time_slot_id            Int
+  consultant_shift_id     Int
+  consultant_id           Int
+  capacity_for_this_shift Int                 @default(1)
+  link_status             TimeSlotShiftStatus @default(ACTIVE)
+  created_at              DateTime            @default(now()) @db.Timestamptz(3)
 
-  // link ไป slot
-  time_slot_id Int
-
-  // link ไป shift
-  consultant_shift_id Int
-
-  // link ไปหมอ (denormalize ช่วย query เร็ว + validate)
-  consultant_id Int
-
-  // optional: override ความจุต่อหมอใน slot นี้
-  capacity_for_this_shift Int @default(1)
-
-  // status เผื่อ shift cancel/เปลี่ยนแผน
-  link_status TimeSlotShiftStatus @default(ACTIVE)
-  created_at  DateTime            @default(now()) @db.Timestamptz(3)
-
-  // relations
   timeSlot   TimeSlot   @relation(fields: [university_id, time_slot_id], references: [university_id, time_slot_id], onDelete: Cascade)
   consultant Consultant @relation(fields: [consultant_id], references: [consultant_id])
 
-  // ===== Constraints / Index =====
-
-  // กันซ้ำ: slot เดียว link shift เดียวได้ครั้งเดียว
   @@unique([university_id, time_slot_id, consultant_shift_id])
-  // กันซ้ำ: slot เดียวมีหมอคนเดิมได้ครั้งเดียว (กันกรณี shift ซ้อน/ข้อมูลพัง)
   @@unique([university_id, time_slot_id, consultant_id])
-  // query ที่ใช้บ่อย
   @@index([university_id, time_slot_id])
   @@index([consultant_id])
   @@index([consultant_shift_id])
@@ -490,7 +449,6 @@ model TimeSlotShift {
 // ==========================================
 // 📅 BOOKING 
 // ==========================================
-
 model Booking {
   booking_id           Int  @default(autoincrement())
   university_id        Int
@@ -499,6 +457,9 @@ model Booking {
   time_slot_id         Int
   problem_category_id  Int
   time_slot_service_id Int
+
+  booking_service_mode   ServiceMode
+  booking_online_channel OnlineChannel? // ใช้เมื่อ ONLINE
 
   booking_detail_text String?       @db.Text
   booking_status      BookingStatus @default(PENDING_ASSIGNMENT)
@@ -511,7 +472,6 @@ model Booking {
 
   timeSlot        TimeSlot        @relation(fields: [university_id, time_slot_id], references: [university_id, time_slot_id])
   problemCategory ProblemCategory @relation(fields: [problem_category_id], references: [problem_category_id])
-  timeSlotService TimeSlotService @relation(fields: [time_slot_service_id], references: [time_slot_service_id])
 
   assignments             BookingAssignment[]
   cancellation            BookingCancellation?
@@ -520,10 +480,10 @@ model Booking {
   notifications           Notification[]
   pointTransactions       StudentPointTransaction[] @relation("BookingPointTx")
   BookingConsentSignature BookingConsentSignature[]
+  BookingSession          BookingSession?
 
   @@id([university_id, booking_id])
   @@unique([university_id, student_id, time_slot_id])
-  @@index([time_slot_service_id])
   @@index([university_id, time_slot_id])
   @@index([booking_status])
   @@index([student_id])
@@ -532,6 +492,34 @@ model Booking {
   @@index([student_id, booking_status])
   @@index([university_id, time_slot_id, booking_status])
   @@map("booking")
+}
+
+model BookingSession {
+  booking_session_id Int @id @default(autoincrement())
+
+  university_id Int
+  booking_id    Int
+
+  // ✅ ยืนยันตามที่รับเคสจริง (ส่วนใหญ่จะ = booking_service_mode แต่เผื่อเปลี่ยนได้)
+  booking_session_mode           ServiceMode
+  booking_session_online_channel OnlineChannel?
+
+  // ✅ สิ่งที่ consultant ส่งจริง
+  booking_session_join_url      String? @db.Text // meet/zoom link
+  booking_session_phone_number  String? @db.VarChar(30) // ถ้าเป็นโทร
+  booking_session_location_text String? @db.VarChar(200) // ถ้า onsite
+  booking_session_extra_detail  String? @db.Text // note เพิ่มเติม เช่น "ส่งไฟล์ในไลน์"
+
+  // audit: ใครส่ง/เมื่อไหร่
+  provided_by_account_id Int?
+  provided_at            DateTime? @db.Timestamptz(3)
+
+  booking    Booking  @relation(fields: [university_id, booking_id], references: [university_id, booking_id], onDelete: Cascade)
+  providedBy Account? @relation(fields: [provided_by_account_id], references: [account_id])
+
+  @@unique([university_id, booking_id]) // 1 booking มี session เดียวพอ (ถ้าจะให้แก้หลายครั้งก็ update แทน)
+  @@index([provided_by_account_id, provided_at])
+  @@map("booking_session")
 }
 
 model ProblemCategory {

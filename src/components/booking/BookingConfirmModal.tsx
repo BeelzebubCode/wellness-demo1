@@ -1,6 +1,4 @@
-// ==========================================
-// 📌 Booking Component: BookingConfirmModal (Scrollable)
-// ==========================================
+// src/components/booking/BookingConfirmModal.tsx
 
 'use client';
 

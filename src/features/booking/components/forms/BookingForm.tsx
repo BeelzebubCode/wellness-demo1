@@ -1,5 +1,3 @@
-// src/components/booking/BookingForm.tsx
-
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -7,7 +5,7 @@ import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui";
 import { AlertTriangle } from "lucide-react";
 import { getProblemCategoryUi } from "@/lib/problem-category.config";
-import { AlertBox } from "../notification/AlertBox";
+import { AlertBox } from "@/components/notification/AlertBox";
 
 type ProblemCategory = {
   id: number;
@@ -23,13 +21,17 @@ export interface BookingFormData {
   problemDescription: string;
 }
 
-export interface BookingFormProps {
+export function BookingForm({
+  onSubmit,
+  isLoading = false,
+  error,
+  disableSubmit,
+}: {
   onSubmit: (data: BookingFormData) => void | Promise<void>;
   isLoading?: boolean;
   error?: string | null;
-}
-
-export function BookingForm({ onSubmit, isLoading = false, error }: BookingFormProps) {
+  disableSubmit?: boolean;
+}) {
   const [formData, setFormData] = useState<BookingFormData>({
     problemCategoryId: 0,
     problemTypeOther: "",
@@ -44,7 +46,6 @@ export function BookingForm({ onSubmit, isLoading = false, error }: BookingFormP
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
-
   const submitLockRef = useRef(false);
 
   const [categories, setCategories] = useState<ProblemCategory[]>([]);
@@ -90,12 +91,10 @@ export function BookingForm({ onSubmit, isLoading = false, error }: BookingFormP
     [categories, formData.problemCategoryId],
   );
 
-  const isOtherSelected =
-    String(selectedCategory?.code ?? "").trim().toUpperCase() === "OTHER";
+  const isOtherSelected = String(selectedCategory?.code ?? "").trim().toUpperCase() === "OTHER";
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
     if (isLoading || submitLockRef.current) return;
 
     setHasSubmitted(true);
@@ -167,7 +166,6 @@ export function BookingForm({ onSubmit, isLoading = false, error }: BookingFormP
                       setFormData((prev) => ({
                         ...prev,
                         problemCategoryId: c.id,
-                        // ✅ เคลียร์ช่อง "อื่นๆ" เฉพาะตอนเปลี่ยนไปหมวดอื่น
                         problemTypeOther: codeUpper === "OTHER" ? prev.problemTypeOther : "",
                       }));
 
@@ -278,8 +276,8 @@ export function BookingForm({ onSubmit, isLoading = false, error }: BookingFormP
         size="lg"
         className="w-full bg-primary-500 hover:bg-primary-600"
         isLoading={isLoading}
-        disabled={isLoading}
-        aria-disabled={isLoading}
+        disabled={isLoading || !!disableSubmit}
+        aria-disabled={isLoading || !!disableSubmit} 
         aria-busy={isLoading}
       >
         ยืนยันการจอง
