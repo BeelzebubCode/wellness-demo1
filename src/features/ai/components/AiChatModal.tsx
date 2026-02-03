@@ -27,7 +27,6 @@ export default function AiChatModal() {
         "
       >
         <AiChatCore
-          key={mode}
           mode={mode}
           variant="modal"
           onModeChange={(m) => setMode(m)}

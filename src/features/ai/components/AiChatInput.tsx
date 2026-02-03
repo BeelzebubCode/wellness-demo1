@@ -1,15 +1,13 @@
-// /home/beelzebub/Web-Application/wellness-v3/src/features/ai/components/AiChatInput.tsx
-
+// src/features/ai/components/AiChatInput.tsx
 "use client";
 
 import { RotateCcw, Send, CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import type { useAiChat } from "@/features/ai/hooks/useAiChat";
+import { cn } from "@/lib/cn";
+import styles from "./aiChatTheme.module.css";
 
-/** mode */
 export type AiChatMode = "help" | "booking_agent";
-
-/** 🔥 ดึง type ของ chat จาก hook โดยตรง (ตัวจบปัญหา) */
 export type AiChatController = ReturnType<typeof useAiChat>;
 
 export default function AiChatInput({
@@ -19,29 +17,20 @@ export default function AiChatInput({
   mode?: AiChatMode;
   chat: AiChatController;
 }) {
-  const {
-    input,
-    setInput,
-    send,
-    reset,
-    isLoading,
-    canSend,
-    agent,
-    confirmAgentAction,
-  } = chat;
-
-  const showConfirm =
-    mode === "booking_agent" && !!agent?.confirmToken;
+  const { input, setInput, send, reset, isLoading, canSend, agent, confirmAgentAction } = chat;
+  const showConfirm = mode === "booking_agent" && !!agent?.confirmToken;
 
   return (
-    <div className="sticky bottom-0 z-10 border-t border-slate-200 bg-white px-5 py-3">
-      {/* confirm (booking agent only) */}
+    <div className={cn(styles.root, "sticky bottom-0 z-10 border-t border-slate-200 bg-white px-5 py-3")}>
       {showConfirm && (
         <button
           type="button"
           onClick={confirmAgentAction}
           disabled={isLoading}
-          className="mb-3 w-full rounded-xl bg-emerald-600 py-2.5 text-xs text-white disabled:opacity-60"
+          className={cn(
+            styles.hintList,
+            "mb-3 w-full rounded-xl bg-emerald-600 py-2.5 text-white disabled:opacity-60",
+          )}
         >
           <CheckCircle2 className="mr-2 inline h-4 w-4" />
           ยืนยัน
@@ -56,7 +45,7 @@ export default function AiChatInput({
           disabled={isLoading}
           className="
             inline-flex h-9 w-9 items-center justify-center
-            rounded-lg border border-slate-200
+            rounded-xl border border-slate-200
             bg-white text-slate-500
             hover:bg-slate-50
             disabled:opacity-40
@@ -67,17 +56,19 @@ export default function AiChatInput({
           <RotateCcw className="h-4 w-4" />
         </button>
 
-        {/* input */}
+        {/* input pill */}
         <div
           className="
-            flex h-9 flex-1 items-center
-            rounded-xl
-            border border-slate-200
-            bg-white px-3
+            flex h-10 flex-1 items-center gap-2
+            rounded-2xl border border-slate-200
+            bg-slate-50/60 px-3
+            transition
             focus-within:border-primary-400
+            focus-within:ring-2 focus-within:ring-primary-100
           "
         >
           <Input
+            variant="bare" // ✅ สำคัญ: ไม่เอา wrapper ของ Input เดิม
             value={input}
             placeholder={
               mode === "booking_agent"
@@ -92,15 +83,11 @@ export default function AiChatInput({
               }
             }}
             disabled={isLoading}
-            className="
-              w-full
-              border-1 bg-transparent
-              p-0
-              !text-sm
-              !leading-[20px]
-              placeholder:text-sm
-              focus:ring-0
-            "
+            className={cn(
+              styles.inputText,
+              "w-full bg-transparent outline-none border-0",
+              "placeholder:text-slate-400 placeholder:opacity-80",
+            )}
           />
         </div>
 
@@ -110,9 +97,9 @@ export default function AiChatInput({
           onClick={send}
           disabled={!canSend}
           className="
-            inline-flex h-7 w-7
+            inline-flex h-9 w-9
             items-center justify-center
-            rounded-md
+            rounded-xl
             text-slate-500
             hover:bg-slate-100
             disabled:opacity-40

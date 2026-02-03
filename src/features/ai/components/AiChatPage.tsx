@@ -1,5 +1,4 @@
 // src/features/ai/components/AiChatPage.tsx
-
 "use client";
 
 import { useState } from "react";
@@ -10,10 +9,10 @@ export default function AiChatPage({ mode = "help" }: { mode?: AiChatMode }) {
 
   return (
     <AiChatCore
-      key={m}
       mode={m}
       variant="page"
       onModeChange={(next) => setM(next)}
     />
   );
 }
+

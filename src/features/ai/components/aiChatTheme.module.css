@@ -1,0 +1,102 @@
+/* src/features/ai/components/aiChatTheme.module.css */
+
+.root {
+  /* ===== Typography Tokens (คุมจากตรงนี้จุดเดียว) ===== */
+  --ai-font: 13px;
+  --ai-line: 19px;
+
+  --ai-header-title: 15px;
+  --ai-header-title-line: 20px;
+
+  --ai-header-desc: 12px;
+  --ai-header-desc-line: 16px;
+
+  --ai-hint: 12px;
+  --ai-hint-line: 16px;
+
+  --ai-input: 14px;
+  --ai-input-line: 20px;
+
+  --ai-code: 12px;
+  --ai-code-line: 16px;
+
+  font-size: var(--ai-font);
+  line-height: var(--ai-line);
+}
+
+/* ✅ ตัว bubble */
+.msg {
+  font-size: var(--ai-font);
+  line-height: var(--ai-line);
+}
+
+/* ✅ สำคัญสุด: กัน globals.css (p/h1/h2/h3) มาทับใน markdown */
+.md,
+.md * {
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
+/* spacing สำหรับ markdown ให้ดูเป็น “ข้อความปกติ” */
+.md p {
+  margin: 4px 0;
+}
+.md ul,
+.md ol {
+  margin: 4px 0;
+  padding-left: 16px;
+}
+.md li {
+  margin: 0;
+}
+
+/* header */
+.headerTitle {
+  font-size: var(--ai-header-title);
+  line-height: var(--ai-header-title-line);
+}
+.headerDesc {
+  font-size: var(--ai-header-desc);
+  line-height: var(--ai-header-desc-line);
+}
+
+/* hint box */
+.hintList {
+  font-size: var(--ai-hint);
+  line-height: var(--ai-hint-line);
+}
+
+/* input text */
+.inputText {
+  font-size: var(--ai-input);
+  line-height: var(--ai-input-line);
+}
+
+/* code */
+.md code {
+  font-size: var(--ai-code) !important;
+  line-height: var(--ai-code-line) !important;
+  background: #f1f5f9;
+  padding: 1px 6px;
+  border-radius: 6px;
+}
+
+.md pre {
+  font-size: var(--ai-code) !important;
+  line-height: var(--ai-code-line) !important;
+  background: #f8fafc;
+  padding: 8px;
+  border-radius: 12px;
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+}
+
+/* (optional) link style */
+.md a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  color: #2563eb;
+}
+.md a:hover {
+  color: #1d4ed8;
+}

@@ -1,5 +1,3 @@
-// src/features/ai/components/AiChatMessages.tsx
-
 "use client";
 
 import { forwardRef } from "react";
@@ -8,7 +6,9 @@ import { Spinner } from "@/components/ui/Spinner";
 import ChatMessage from "./ChatMessage";
 import { AiChatMode } from "./AiChatCore";
 import { cn } from "@/lib/cn";
-import styles from "./aiChatTypography.module.css";
+
+// ✅ ใช้ theme ตัวเดียวกันทั้งแชท (ถ้าคุณยังใช้ชื่อ aiChatTypography ก็เปลี่ยนชื่อไฟล์ให้ตรง)
+import styles from "./aiChatTheme.module.css";
 
 type Props = {
   mode: AiChatMode;
@@ -22,28 +22,25 @@ const AiChatMessages = forwardRef<HTMLDivElement, Props>(
       <div
         ref={ref}
         className={cn(
-          styles.root, // ✅ สำคัญ: ครอบทั้ง chat
-          `
-      flex-1 overflow-y-auto
-      bg-slate-50
-      px-4 sm:px-5
-      py-4 pb-6
-    `,
+          styles.root, // ✅ ROOT: ครอบทั้ง chat เพื่อกัน globals.css
+          "flex-1 overflow-y-auto bg-slate-50 px-4 sm:px-5 py-4 pb-6",
         )}
       >
         {messages.length === 0 ? (
           <div className="mx-auto mt-3 max-w-[520px] rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">
+            {/* ✅ คุมฟอนต์จาก CSS module */}
+            <div className={cn("mb-2 flex items-center gap-2 font-semibold text-slate-800", styles.headerTitle)}>
               <Bot className="h-4 w-4" />
               AI Help Center
             </div>
 
-            <ul className="list-disc space-y-1 pl-5 text-xs text-slate-600">
+            {/* ✅ hint list ใช้ class จาก CSS module แทน text-xs */}
+            <ul className={cn("list-disc space-y-1 pl-5 text-slate-600", styles.hintList)}>
               {mode === "booking_agent" ? (
                 <>
                   <li>จองพรุ่งนี้ช่วงบ่าย</li>
                   <li>อยากได้ 10:00 - 12:00</li>
-                  <li>ยกเลิก bookingId 123</li>
+                  <li>ยกเลิกคิวยังไง</li>
                 </>
               ) : (
                 <>
@@ -61,7 +58,7 @@ const AiChatMessages = forwardRef<HTMLDivElement, Props>(
             ))}
 
             {isLoading && (
-              <div className="flex items-center gap-2 px-1 text-xs text-slate-500">
+              <div className={cn("flex items-center gap-2 px-1 text-slate-500", styles.hintList)}>
                 <Spinner className="h-3 w-3" />
                 กำลังพิมพ์...
               </div>
