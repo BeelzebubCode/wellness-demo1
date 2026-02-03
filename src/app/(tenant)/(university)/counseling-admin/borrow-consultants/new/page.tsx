@@ -1,3 +1,5 @@
+// src/app/(tenant)/(university)/counseling-admin/borrow-consultants/new/page.tsx
+
 "use client";
 
 import { useState } from "react";
@@ -21,7 +23,8 @@ export default function Page() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? "สร้างคำขอไม่สำเร็จ");
 
-      router.push("/counseling-admin/borrow-consultants");
+      // ✅ กลับ list แบบปลอดภัย
+      router.push("..");
     } catch (e: any) {
       alert(e?.message ?? "สร้างคำขอไม่สำเร็จ");
     } finally {

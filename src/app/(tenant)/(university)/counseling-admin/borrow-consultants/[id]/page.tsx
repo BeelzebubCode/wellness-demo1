@@ -12,7 +12,7 @@ export default function BorrowRequestDetailPage() {
   const params = useParams<{ id: string }>();
   const id = useMemo(() => Number(params?.id), [params]);
 
-  const { data, loading, submit, cancel, refetch } = useBorrowRequest(id);
+  const { data, loading, submit, cancel, refetch, error } = useBorrowRequest(id);
 
   if (!Number.isFinite(id) || id <= 0) {
     return <div className="text-red-600">Borrow request id ไม่ถูกต้อง</div>;
@@ -22,6 +22,19 @@ export default function BorrowRequestDetailPage() {
     return (
       <div className="py-16 flex justify-center">
         <LoadingSpinner />
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="space-y-3">
+        <Button variant="outline" onClick={() => router.back()}>
+          กลับ
+        </Button>
+        <div className="text-sm text-slate-600">
+          {error ? `โหลดไม่สำเร็จ: ${error}` : "ไม่พบข้อมูล"}
+        </div>
       </div>
     );
   }
@@ -42,13 +55,15 @@ export default function BorrowRequestDetailPage() {
 
       <BorrowRequestDetailPanel
         data={data}
+        loading={loading}
+        onEdit={() => router.push(`/counseling-admin/borrow-consultants/${id}/edit`)}
         onSubmit={async () => {
-          await submit(); // POST /api/v2/borrow-requests/[id]/submit
+          await submit();
           await refetch?.();
         }}
         onCancel={async () => {
-          await cancel?.(); // (ถ้าคุณทำ PATCH cancel)
-          router.replace("../borrow-consultants");
+          await cancel?.();
+          router.replace(`/counseling-admin/borrow-consultants`);
         }}
       />
     </div>

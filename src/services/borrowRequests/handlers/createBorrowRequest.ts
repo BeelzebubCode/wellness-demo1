@@ -3,23 +3,27 @@ import prisma from "@/lib/prisma";
 export async function createBorrowRequest(input: {
   universityId: number;
   requestedByAccountId: number;
-  title: string;
-  reason: string;
-  detail?: string | null;
-  neededFrom?: string | Date | null;
-  neededTo?: string | Date | null;
-  neededCount?: number | null;
+
+  borrow_request_title: string;
+  borrow_request_reason: string;
+  borrow_request_detail?: string | null;
+
+  borrow_needed_from?: string | Date | null;
+  borrow_needed_to?: string | Date | null;
+  borrow_needed_count?: number | null;
 }) {
-  const title = String(input.title || "").trim();
-  const reason = String(input.reason || "").trim();
+  const title = String(input.borrow_request_title || "").trim();
+  const reason = String(input.borrow_request_reason || "").trim();
   if (!title) throw new Error("TITLE_REQUIRED");
   if (!reason) throw new Error("REASON_REQUIRED");
 
-  const neededCount = input.neededCount == null ? 1 : Number(input.neededCount);
-  if (!Number.isFinite(neededCount) || neededCount <= 0) throw new Error("INVALID_NEEDED_COUNT");
+  const neededCount =
+    input.borrow_needed_count == null ? 1 : Number(input.borrow_needed_count);
+  if (!Number.isFinite(neededCount) || neededCount <= 0)
+    throw new Error("INVALID_NEEDED_COUNT");
 
-  const neededFrom = input.neededFrom ? new Date(input.neededFrom) : null;
-  const neededTo = input.neededTo ? new Date(input.neededTo) : null;
+  const neededFrom = input.borrow_needed_from ? new Date(input.borrow_needed_from) : null;
+  const neededTo = input.borrow_needed_to ? new Date(input.borrow_needed_to) : null;
 
   return prisma.borrowRequest.create({
     data: {
@@ -28,7 +32,7 @@ export async function createBorrowRequest(input: {
 
       borrow_request_title: title,
       borrow_request_reason: reason,
-      borrow_request_detail: input.detail ?? null,
+      borrow_request_detail: input.borrow_request_detail ?? null,
 
       borrow_needed_from: neededFrom,
       borrow_needed_to: neededTo,

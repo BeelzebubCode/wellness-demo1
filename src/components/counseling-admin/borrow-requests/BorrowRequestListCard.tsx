@@ -1,3 +1,5 @@
+// src/components/counseling-admin/borrow-requests/BorrowRequestListCard.tsx
+
 "use client";
 
 import { Card } from "@/components/ui/Card";
@@ -5,7 +7,9 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import type { BorrowRequest } from "@/features/borrow-requests/types";
 
-function tone(status: BorrowRequest["borrowRequestStatus"]) {
+type Status = BorrowRequest["borrowRequestStatus"];
+
+function tone(status: Status) {
   switch (status) {
     case "DRAFT":
       return "bg-slate-100 text-slate-700";
@@ -26,60 +30,71 @@ function tone(status: BorrowRequest["borrowRequestStatus"]) {
   }
 }
 
+function statusLabel(status: Status) {
+  switch (status) {
+    case "DRAFT":
+      return "ร่าง";
+    case "SUBMITTED":
+      return "ส่งแล้ว";
+    case "APPROVED":
+      return "อนุมัติ";
+    case "REJECTED":
+      return "ไม่อนุมัติ";
+    case "ASSIGNED":
+      return "มอบหมายแล้ว";
+    case "COMPLETED":
+      return "เสร็จสิ้น";
+    case "CANCELLED":
+      return "ยกเลิก";
+    default:
+      return status;
+  }
+}
+
+function formatDate(iso?: string | null) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleString("th-TH", { year: "numeric", month: "short", day: "2-digit" });
+}
+
 function BorrowRequestCard({
   item,
   onView,
-  onSubmit,
-  onCancel,
 }: {
   item: BorrowRequest;
   onView: (id: number) => void;
-  onSubmit?: (id: number) => void;
-  onCancel?: (id: number) => void;
 }) {
-  const canSubmit = item.borrowRequestStatus === "DRAFT";
-  const canCancel =
-    item.borrowRequestStatus === "DRAFT" || item.borrowRequestStatus === "SUBMITTED";
+  const submittedAt = formatDate(item.borrowSubmittedAt);
+  const createdAt = formatDate(item.borrowRequestCreatedAt);
 
   return (
     <Card className="p-4 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="font-semibold text-slate-800 truncate">
-            {item.borrowRequestTitle}
+            {item.borrowRequestTitle || "(ไม่มีหัวข้อ)"}
           </div>
           <div className="text-sm text-slate-500 line-clamp-2">
-            {item.borrowRequestReason}
+            {item.borrowRequestReason || "-"}
+          </div>
+
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+            <span>ต้องการ {item.borrowNeededCount} คน</span>
+            {createdAt ? <span>สร้าง: {createdAt}</span> : null}
+            {submittedAt ? <span>ส่ง: {submittedAt}</span> : null}
           </div>
         </div>
 
         <Badge className={tone(item.borrowRequestStatus)}>
-          {item.borrowRequestStatus}
+          {statusLabel(item.borrowRequestStatus)}
         </Badge>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="text-xs text-slate-500">
-          ต้องการ {item.borrowNeededCount} คน
-        </div>
-
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => onView(item.borrowRequestId)}>
-            ดูรายละเอียด
-          </Button>
-
-          <Button disabled={!canSubmit || !onSubmit} onClick={() => onSubmit?.(item.borrowRequestId)}>
-            ส่งคำขอ
-          </Button>
-
-          <Button
-            variant="danger"
-            disabled={!canCancel || !onCancel}
-            onClick={() => onCancel?.(item.borrowRequestId)}
-          >
-            ยกเลิก
-          </Button>
-        </div>
+      <div className="flex justify-end">
+        <Button variant="outline" onClick={() => onView(item.borrowRequestId)}>
+          ดูรายละเอียด
+        </Button>
       </div>
     </Card>
   );
@@ -89,33 +104,19 @@ export function BorrowRequestListCard({
   rows,
   loading,
   onView,
-  onSubmit,
-  onCancel,
 }: {
   rows: BorrowRequest[];
   loading?: boolean;
   onView: (id: number) => void;
-  onSubmit?: (id: number) => void;
-  onCancel?: (id: number) => void;
 }) {
   if (!rows?.length && !loading) {
-    return (
-      <Card className="p-10 text-center text-slate-500">
-        ไม่มีรายการ
-      </Card>
-    );
+    return <Card className="p-10 text-center text-slate-500">ไม่มีรายการ</Card>;
   }
 
   return (
     <div className="space-y-3">
       {(rows || []).map((item) => (
-        <BorrowRequestCard
-          key={item.borrowRequestId}
-          item={item}
-          onView={onView}
-          onSubmit={onSubmit}
-          onCancel={onCancel}
-        />
+        <BorrowRequestCard key={item.borrowRequestId} item={item} onView={onView} />
       ))}
     </div>
   );

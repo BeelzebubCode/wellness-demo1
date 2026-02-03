@@ -1,3 +1,5 @@
+//src\components\super-admin\borrow-requests\BorrowRequestTable.tsx
+
 "use client";
 
 import { useMemo, useState } from "react";
@@ -32,8 +34,10 @@ export function BorrowRequestsTable({
     q: "",
   });
 
+  const safeRows = Array.isArray(rows) ? rows : [];
+
   const filtered = useMemo(() => {
-    let list = rows || [];
+    let list = safeRows;
     if (filters.status && filters.status !== "ALL") {
       list = list.filter((r) => r.borrowRequestStatus === filters.status);
     }
@@ -46,7 +50,7 @@ export function BorrowRequestsTable({
       );
     }
     return list;
-  }, [rows, filters]);
+  }, [safeRows, filters]);
 
   return (
     <Card className="p-4 space-y-3">

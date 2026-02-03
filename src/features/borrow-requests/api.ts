@@ -52,36 +52,39 @@ function qs(obj: Record<string, any>) {
 // --------------------
 // HEAD (counseling-admin)
 // --------------------
+const HEAD_BASE = "/api/v2/borrow-request"; // ✅ singular
+
 export const borrowRequestsApi = {
   listMy: () =>
-    apiFetch<{ ok: true; data: BorrowRequest[] }>("/api/v2/borrow-requests"),
+    apiFetch<{ ok: true; data: BorrowRequest[] }>(HEAD_BASE),
 
   create: (input: CreateBorrowRequestInput) =>
-    apiFetch<{ ok: true; data: BorrowRequest }>("/api/v2/borrow-requests", {
+    apiFetch<{ ok: true; data: BorrowRequest }>(HEAD_BASE, {
       method: "POST",
       body: JSON.stringify(input),
     }),
 
+  // ⚠️ อันนี้จะใช้ได้ก็ต่อเมื่อคุณมี route /api/v2/borrow-request/[id]
   get: (id: number) =>
     apiFetch<{ ok: true; data: BorrowRequestDetail }>(
-      `/api/v2/borrow-requests/${id}`,
+      `${HEAD_BASE}/${id}`,
     ),
 
   update: (id: number, input: UpdateBorrowRequestInput) =>
     apiFetch<{ ok: true; data: BorrowRequest }>(
-      `/api/v2/borrow-requests/${id}`,
+      `${HEAD_BASE}/${id}`,
       { method: "PATCH", body: JSON.stringify(input) },
     ),
 
   submit: (id: number) =>
     apiFetch<{ ok: true; data: BorrowRequest }>(
-      `/api/v2/borrow-requests/${id}/submit`,
+      `${HEAD_BASE}/${id}/submit`,
       { method: "POST" },
     ),
 
   cancel: (id: number) =>
     apiFetch<{ ok: true; data: BorrowRequest }>(
-      `/api/v2/borrow-requests/${id}`,
+      `${HEAD_BASE}/${id}`,
       { method: "PATCH", body: JSON.stringify({ status: "CANCELLED" }) },
     ),
 };

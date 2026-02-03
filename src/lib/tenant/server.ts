@@ -63,6 +63,18 @@ async function resolveRequestedUniversity(req: NextRequest) {
     : null;
 }
 
+/**
+ * ✅ helper: เช็คว่า universityId มีจริงใน DB และ active
+ * (กัน header / cookie ใส่มั่ว แล้ว prisma query อื่นพังทีหลัง)
+ */
+async function assertUniversityExists(universityId: number) {
+  const uni = await prisma.university.findUnique({
+    where: { university_id: universityId },
+    select: { university_id: true },
+  });
+  if (!uni) throw err("UNIVERSITY_NOT_FOUND", 404);
+}
+
 const LOCK_HOME_ONLY_ROLES = new Set([
   "RECTOR",
   "HEAD_CONSULTANT",
@@ -89,30 +101,52 @@ export async function requireTenant(request: NextRequest): Promise<TenantContext
   const tenantCode = requested?.universityCode ?? "DEFAULT";
 
   // =========================
-  // 1) SUPER_ADMIN
+  // 1) SUPER_ADMIN  (✅ platform scope)
   // =========================
   if (role === "SUPER_ADMIN") {
-    if (!allowed.length) throw err("NO_ALLOWED_UNIVERSITIES", 403);
+    // ✅ SUPER_ADMIN ไม่ต้องมี allowed เลย
+    // (เก็บ allowed ไว้เฉย ๆ เผื่ออนาคตอยากใช้เป็น whitelist)
 
-    let active =
-      account.activeUniversityId ??
-      home ??
-      allowed[0] ??
-      null;
-
-    if (requestedUniversityId !== null && allowed.includes(requestedUniversityId)) {
-      active = requestedUniversityId;
-    }
+    // priority:
+    // 1) x-university-id header
+    // 2) requestedUniversityId (subdomain/cookie)
+    // 3) account.activeUniversityId
+    // 4) home
+    // 5) allowed[0] (ถ้ามี)
+    // 6) fallback: first university in DB
+    let active: number | null = null;
 
     const headerUni = request.headers.get("x-university-id");
     const headerUniId = headerUni ? Number(headerUni) : NaN;
     if (Number.isFinite(headerUniId) && headerUniId > 0) {
-      if (!allowed.includes(headerUniId)) throw err("UNIVERSITY_NOT_ALLOWED", 403);
       active = headerUniId;
+    } else if (requestedUniversityId !== null) {
+      active = requestedUniversityId;
+    } else if (typeof account.activeUniversityId === "number" && account.activeUniversityId > 0) {
+      active = account.activeUniversityId;
+    } else if (home) {
+      active = home;
+    } else if (allowed[0]) {
+      active = allowed[0];
+    } else {
+      const firstUni = await prisma.university.findFirst({
+        orderBy: { university_id: "asc" },
+        select: { university_id: true },
+      });
+      active = firstUni?.university_id ?? null;
     }
 
     if (!active || !Number.isFinite(active)) throw err("NO_UNIVERSITY_CONTEXT", 400);
-    if (!allowed.includes(active)) throw err("UNIVERSITY_NOT_ALLOWED", 403);
+
+    // ✅ validate ว่ามีจริง (และจะได้ไม่พังทีหลัง)
+    await assertUniversityExists(active);
+
+    // ✅ ถ้าคุณ “ยังอยาก” บังคับ whitelist เฉพาะกรณีมี allowed
+    // - ถ้า allowed ว่าง => ALL
+    // - ถ้ามี allowed => ต้องอยู่ใน allowed
+    if (allowed.length > 0 && !allowed.includes(active)) {
+      throw err("UNIVERSITY_NOT_ALLOWED", 403);
+    }
 
     return {
       accountId,

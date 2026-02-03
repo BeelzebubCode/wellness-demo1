@@ -1,5 +1,3 @@
-//src\components\booking\BookingFeedbackModal.tsx
-
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -39,6 +37,7 @@ export function BookingFeedbackModal({ isOpen, bookingId, onClose, onSuccess }: 
       try {
         setError(null);
         setIsLoadingCriteria(true);
+
         const res = await fetch("/api/v2/evaluation-criteria", { cache: "no-store" });
         const json = await res.json();
         if (!res.ok || !json?.success) throw new Error(json?.error ?? "load failed");
@@ -46,9 +45,9 @@ export function BookingFeedbackModal({ isOpen, bookingId, onClose, onSuccess }: 
         const list = (json.criteria ?? []) as Criterion[];
         setCriteria(list);
 
-        // default score = 5
+        // ✅ default score = 1 (เริ่มที่ 1)
         const init: Record<number, number> = {};
-        list.forEach((c) => (init[c.evaluation_criterion_id] = 5));
+        list.forEach((c) => (init[c.evaluation_criterion_id] = 1));
         setScores(init);
 
         setComment("");
@@ -100,7 +99,6 @@ export function BookingFeedbackModal({ isOpen, bookingId, onClose, onSuccess }: 
       const json = await res.json();
       if (!res.ok || !json?.success) throw new Error(json?.error ?? "submit failed");
 
-      // ✅ บอกให้ header/points badge รีเฟรชแต้ม
       window.dispatchEvent(new Event("points-changed"));
 
       onSuccess();
@@ -130,38 +128,47 @@ export function BookingFeedbackModal({ isOpen, bookingId, onClose, onSuccess }: 
           <>
             <div className="space-y-3">
               {criteria.map((c) => {
-                const current = scores[c.evaluation_criterion_id] ?? 5;
+                // ✅ fallback เป็น 1 (กันกรณี scores ยังไม่ set)
+                const current = scores[c.evaluation_criterion_id] ?? 1;
 
                 return (
-                  <div
-                    key={c.evaluation_criterion_id}
-                    className="rounded-xl border bg-white p-3"
-                  >
+                  <div key={c.evaluation_criterion_id} className="rounded-xl border bg-white p-3">
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-gray-800 truncate">
+                        <p className="text-sm font-semibold text-gray-800 whitespace-normal break-words">
                           {c.evaluation_criterion_topic_th}
                         </p>
                         <p className="text-xs text-gray-500">ให้คะแนน 1–5</p>
                       </div>
 
-                      <div className="flex items-center gap-1">
-                        {[1, 2, 3, 4, 5].map((s) => (
-                          <button
-                            key={s}
-                            type="button"
-                            onClick={() => setScore(c.evaluation_criterion_id, s)}
-                            className={cn(
-                              "w-9 h-9 rounded-lg border flex items-center justify-center transition",
-                              s <= current
-                                ? "border-amber-200 bg-amber-50 text-amber-600"
-                                : "border-gray-200 bg-white text-gray-300 hover:bg-gray-50"
-                            )}
-                            aria-label={`ให้คะแนน ${s}`}
-                          >
-                            <Star className="w-4 h-4" />
-                          </button>
-                        ))}
+                      {/* ✅ ดาวล้วน ๆ ไม่มีกรอบ */}
+                      <div className="flex items-center gap-2">
+                        {[1, 2, 3, 4, 5].map((s) => {
+                          const filled = s <= current;
+
+                          return (
+                            <button
+                              key={s}
+                              type="button"
+                              onClick={() => setScore(c.evaluation_criterion_id, s)}
+                              className={cn(
+                                "p-0 m-0 bg-transparent border-0 outline-none",
+                                "transition-transform active:scale-95",
+                                "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 rounded"
+                              )}
+                              aria-label={`ให้คะแนน ${s}`}
+                            >
+                              <Star
+                                className={cn(
+                                  "w-9 h-9",
+                                  filled
+                                    ? "text-amber-400 fill-amber-400"
+                                    : "text-amber-300 fill-transparent"
+                                )}
+                              />
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
@@ -170,7 +177,9 @@ export function BookingFeedbackModal({ isOpen, bookingId, onClose, onSuccess }: 
             </div>
 
             <div className="rounded-xl border bg-white p-3">
-              <label className="block text-xs text-gray-600 mb-1">ความคิดเห็นเพิ่มเติม (ไม่บังคับ)</label>
+              <label className="block text-xs text-gray-600 mb-1">
+                ความคิดเห็นเพิ่มเติม (ไม่บังคับ)
+              </label>
               <textarea
                 rows={3}
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-none"
@@ -191,12 +200,7 @@ export function BookingFeedbackModal({ isOpen, bookingId, onClose, onSuccess }: 
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onClose}
-                disabled={isSubmitting}
-              >
+              <Button variant="outline" size="sm" onClick={onClose} disabled={isSubmitting}>
                 ยกเลิก
               </Button>
 
@@ -206,13 +210,7 @@ export function BookingFeedbackModal({ isOpen, bookingId, onClose, onSuccess }: 
                 disabled={!canSubmit || isSubmitting}
                 onClick={submit}
               >
-                {isSubmitting ? (
-                  <LoadingSpinner size="sm" />
-                ) : (
-                  <>
-                    ส่งแบบประเมิน
-                  </>
-                )}
+                {isSubmitting ? <LoadingSpinner size="sm" /> : <>ส่งแบบประเมิน</>}
               </Button>
             </div>
           </>

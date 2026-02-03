@@ -1,3 +1,5 @@
+//src\app\api\v2\platform\borrow-requests\[id]\route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
 import { getBorrowRequest } from "@/services/borrowRequests";

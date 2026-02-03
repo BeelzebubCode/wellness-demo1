@@ -1,3 +1,5 @@
+//src\app\(platform)\super-admin\borrow-requests\[id]\page.tsx
+
 "use client";
 
 import { useMemo, useState } from "react";
@@ -19,7 +21,8 @@ export default function SuperBorrowRequestDetailPage() {
   const id = useMemo(() => Number(params?.id), [params]);
   const action = (search.get("action") || "").toLowerCase();
 
-  const { data, loading, refetch, approve, reject, assign } = usePlatformBorrowRequest(id);
+  const { data, loading, refetch, approve, reject, assign } =
+    usePlatformBorrowRequest(id);
 
   const [openReject, setOpenReject] = useState(action === "reject");
   const [openAssign, setOpenAssign] = useState(action === "assign");
@@ -30,6 +33,32 @@ export default function SuperBorrowRequestDetailPage() {
     return (
       <div className="py-16 flex justify-center">
         <LoadingSpinner />
+      </div>
+    );
+  }
+
+  // ✅ กัน null ก่อนส่งเข้า Panel
+  if (!data) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <Button variant="outline" onClick={() => router.back()}>
+            กลับ
+          </Button>
+
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => refetch?.()}>
+              รีเฟรช
+            </Button>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-white/60 bg-white/80 backdrop-blur-xl p-4">
+          <div className="text-lg font-semibold">ไม่พบคำขอยืมนี้</div>
+          <div className="text-sm text-zinc-600 mt-1">
+            อาจถูกลบ / ไม่มีสิทธิ์เข้าถึง / หรือ id ไม่ถูกต้อง
+          </div>
+        </div>
       </div>
     );
   }
@@ -66,10 +95,11 @@ export default function SuperBorrowRequestDetailPage() {
         open={openReject}
         onOpenChange={(v) => {
           setOpenReject(v);
-          if (!v) router.replace(`./borrow-requests/${id}`);
+          if (!v) router.replace(`./${id}`);
         }}
-        onSubmit={async (payload) => {
-          await reject(payload); // { reason: string }
+        loading={loading}
+        onConfirm={async (payload) => {
+          await reject({ reason: payload }); 
           setOpenReject(false);
           await refetch?.();
         }}
@@ -79,10 +109,12 @@ export default function SuperBorrowRequestDetailPage() {
         open={openAssign}
         onOpenChange={(v) => {
           setOpenAssign(v);
-          if (!v) router.replace(`./borrow-requests/${id}`);
+          if (!v) router.replace(`./${id}`);
         }}
-        onSubmit={async (payload) => {
-          await assign(payload); // { consultantId, consultantUniversityId, startAt, endAt }
+        loading={loading}
+        neededCount={data.borrowNeededCount ?? 1}
+        onConfirm={async (items) => {
+          await assign({ items });
           setOpenAssign(false);
           await refetch?.();
         }}

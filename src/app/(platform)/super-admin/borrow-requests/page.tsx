@@ -1,3 +1,5 @@
+//src\app\(platform)\super-admin\borrow-requests\page.tsx
+// src/app/(platform)/super-admin/borrow-requests/page.tsx
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -6,25 +8,19 @@ import { BorrowRequestsTable } from "@/components/super-admin/borrow-requests";
 
 export default function SuperBorrowRequestsPage() {
   const router = useRouter();
-  const { rows, loading, approve, reject, openAssign } = usePlatformBorrowRequests();
+  const { rows, loading } = usePlatformBorrowRequests();
+
+  const safeRows = Array.isArray(rows) ? rows : [];
 
   return (
     <BorrowRequestsTable
-      rows={rows || []}
+      rows={safeRows}
       loading={loading}
-      onView={(id) => router.push(`./borrow-requests/${id}`)}
-      onApprove={async (id) => {
-        await approve(id);
-      }}
-      onReject={(id) => {
-        // จะเปิด modal ก็ได้ หรือไปหน้า detail ก็ได้
-        router.push(`./borrow-requests/${id}?action=reject`);
-      }}
-      onAssign={(id) => {
-        // เปิด modal assign หรือไปหน้า detail
-        if (openAssign) openAssign(id);
-        else router.push(`./borrow-requests/${id}?action=assign`);
-      }}
+      onView={(id) => router.push(`./${id}`)}
+      onApprove={(id) => router.push(`./${id}`)}
+      onReject={(id) => router.push(`./${id}?action=reject`)}
+      onAssign={(id) => router.push(`./${id}?action=assign`)}
     />
   );
 }
+

@@ -1,3 +1,5 @@
+//src\features\borrow-requests\types.ts
+
 export type BorrowRequestStatus =
   | "DRAFT"
   | "SUBMITTED"
@@ -58,12 +60,23 @@ export type BorrowRequestDetail = BorrowRequest & {
   assignments: BorrowAssignment[];
 };
 
+// ✅ ใช้ใน UI form เท่านั้น
+export type BorrowRequestFormInput = {
+  title: string;
+  reason: string;
+  detail?: string | null;
+  neededFrom?: string | null; // ISO
+  neededTo?: string | null;   // ISO
+  neededCount: number;
+};
+
+// ✅ API payload ตรงกับ table borrow_request
 export type CreateBorrowRequestInput = {
   title: string;
   reason: string;
   detail?: string | null;
   neededFrom?: string | null; // ISO
-  neededTo?: string | null; // ISO
+  neededTo?: string | null;   // ISO
   neededCount?: number;
 };
 
