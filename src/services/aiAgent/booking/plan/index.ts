@@ -1,6 +1,6 @@
-// src/services/aiAgent/booking/plan/index.ts
 import { BookingPlanEngine } from "./engine";
 import type { BookingPlanResponse } from "./types";
+export { confirmBookingPlan } from "./confirm";
 
 const engine = new BookingPlanEngine({
   maxBookAheadDays: 7,

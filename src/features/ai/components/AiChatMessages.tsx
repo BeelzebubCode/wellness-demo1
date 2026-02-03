@@ -1,3 +1,5 @@
+// src/features/ai/components/AiChatMessages.tsx
+
 "use client";
 
 import { forwardRef } from "react";
@@ -5,6 +7,8 @@ import { Bot } from "lucide-react";
 import { Spinner } from "@/components/ui/Spinner";
 import ChatMessage from "./ChatMessage";
 import { AiChatMode } from "./AiChatCore";
+import { cn } from "@/lib/cn";
+import styles from "./aiChatTypography.module.css";
 
 type Props = {
   mode: AiChatMode;
@@ -17,12 +21,15 @@ const AiChatMessages = forwardRef<HTMLDivElement, Props>(
     return (
       <div
         ref={ref}
-        className="
-          flex-1 overflow-y-auto
-          bg-slate-50
-          px-4 sm:px-5
-          py-4 pb-6
-        "
+        className={cn(
+          styles.root, // ✅ สำคัญ: ครอบทั้ง chat
+          `
+      flex-1 overflow-y-auto
+      bg-slate-50
+      px-4 sm:px-5
+      py-4 pb-6
+    `,
+        )}
       >
         {messages.length === 0 ? (
           <div className="mx-auto mt-3 max-w-[520px] rounded-2xl border border-slate-200 bg-white p-4">
@@ -50,11 +57,7 @@ const AiChatMessages = forwardRef<HTMLDivElement, Props>(
         ) : (
           <div className="space-y-3">
             {messages.map((m, i) => (
-              <ChatMessage
-                key={i}
-                role={m.role}
-                content={m.content}
-              />
+              <ChatMessage key={i} role={m.role} content={m.content} />
             ))}
 
             {isLoading && (

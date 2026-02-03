@@ -7,7 +7,6 @@ import { PublicHeader, PublicFooter } from "@/components/layout";
 import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
 import { roleDefaultPath } from "@/features/auth/login/login-utils";
 
-// ✅ เพิ่ม import { AiChatPage } from "@/features/ai";
 import { AiChatModal } from "@/features/ai";
 import { FloatingAiButton } from "@/features/ai";
 

@@ -7,9 +7,8 @@ import { BookingSidebar } from "@/components/layout/sidebar";
 import { BookingHeader } from "@/components/layout/header";
 import { LoadingSpinner } from "@/components/ui";
 
-// ✅ เพิ่ม 2 ตัวนี้
-import AiChatModal from "@/components/ai/AiChatModal";
-import { FloatingAiButton } from "@/components/ai/FloatingAiButton";
+import { AiChatModal } from "@/features/ai";
+import { FloatingAiButton } from "@/features/ai";
 
 export default function BookingLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading, isAuthenticated } = useRoleAuth({

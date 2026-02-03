@@ -1,7 +1,7 @@
 // src/app/api/v2/ai/agent/booking/confirm/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
-import { confirmAgentAction } from "@/services/aiAgent/bookingPlan/confirm"; // ตอนนี้ใช้ของเดิมไปก่อน
+import { confirmAgentAction } from "@/services/aiAgent/core/confirm/action";
 
 export const runtime = "nodejs";
 
@@ -11,27 +11,20 @@ export async function POST(req: NextRequest) {
     assertRole(account.role, ["STUDENT"]);
 
     if (!account.studentId) {
-      return NextResponse.json(
-        { success: false, reply: "ไม่พบโปรไฟล์นักศึกษา" },
-        { status: 200 },
-      );
+      return NextResponse.json({ success: false, reply: "ไม่พบโปรไฟล์นักศึกษา" }, { status: 200 });
     }
 
     const body = await req.json().catch(() => ({} as any));
     const confirmToken = String(body?.confirmToken || "").trim();
-
-    // ✅ เพิ่ม
     if (!confirmToken) {
-      return NextResponse.json(
-        { success: false, reply: "ไม่พบ confirmToken" },
-        { status: 200 },
-      );
+      return NextResponse.json({ success: false, reply: "ไม่พบ confirmToken" }, { status: 200 });
     }
 
     const result = await confirmAgentAction({
       confirmToken,
       activeUniversityId,
       accountStudentId: account.studentId,
+      accountId: account.accountId, // ✅ เพิ่ม
     });
 
     return NextResponse.json(result, { status: 200 });

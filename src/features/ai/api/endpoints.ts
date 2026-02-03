@@ -11,7 +11,7 @@ export function detectIntent(text: string): AgentIntent {
 
 export function endpointFor(mode: Mode, intent: AgentIntent) {
   if (mode === "help") {
-    return { plan: "/api/v2/ai/help", confirm: "" };
+    return { plan: "/api/v2/ai/agent/help", confirm: "" };
   }
 
   if (intent === "CANCEL") {

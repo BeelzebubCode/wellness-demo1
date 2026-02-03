@@ -1,3 +1,5 @@
+// src/features/ai/components/AiChatPage.tsx
+
 "use client";
 
 import { useState } from "react";
