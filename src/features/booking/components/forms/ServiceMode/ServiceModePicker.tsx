@@ -87,7 +87,7 @@ export function ServiceModePicker({
       </div>
 
       {canPickChannel && (
-        <div className="rounded-2xl border border-gray-100 bg-gray-50/60 p-3">
+        <div>
           <div className="text-sm text-black-700 mb-2">
             ช่องทางออนไลน์ <span className="text-red-500">*</span>
           </div>
@@ -115,8 +115,8 @@ export function ServiceModePicker({
                       setBubbleOpenKey((prev) => (prev === key ? null : prev))
                     }
                     className={cn(
-                      // ⬛ square card
-                      "w-full aspect-square rounded-3xl border",
+                      // ⬛ compact square card
+                      "w-full h-[75px] rounded-[15px] border",
 
                       // center icon
                       "flex items-center justify-center",
@@ -126,18 +126,18 @@ export function ServiceModePicker({
 
                       // normal
                       !active &&
-                        "bg-white border-gray-200 hover:border-primary-300 hover:shadow-md",
+                        "bg-white border-gray-200 hover:border-primary-300 hover:shadow-sm",
 
                       // active
                       active &&
-                        "bg-primary-50 border-primary-500 ring-2 ring-primary-200 shadow-md",
+                        "bg-primary-50 border-primary-500 ring-2 ring-primary-200 shadow-sm",
 
                       // disabled
                       disabled && "opacity-50 cursor-not-allowed",
                     )}
                     aria-label={meta.label}
                   >
-                    <div className="h-10 w-10 grid place-items-center">
+                    <div className="h-8 w-8 grid place-items-center">
                       <ChannelIcon iconKey={meta.iconKey} disabled={disabled} />
                     </div>
                   </button>

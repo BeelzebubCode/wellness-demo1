@@ -100,98 +100,97 @@ export function BookingConfirmModal({
       ) : (
         <div className="flex flex-col max-h-[80vh]">
           {/* BODY */}
-          <div className="flex-1 overflow-auto pr-1">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-stretch">
-              {/* LEFT */}
-              <div className="min-w-0 h-full">
-                <div className="rounded-2xl border border-gray-100 bg-white p-3 h-full">
-                  <BookingForm
-                    value={form}
-                    onChange={setForm}
-                    hideSubmit
-                    isLoading={!!isLoading}
-                    error={null}
-                  />
+            <div className="flex-1 overflow-auto pr-2 custom-scroll">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+                {/* LEFT */}
+                <div className="min-w-0 h-full">
+                  <div className="rounded-xl border border-gray-100 bg-white p-2 h-full">
+                    <BookingForm
+                      value={form}
+                      onChange={setForm}
+                      hideSubmit
+                      isLoading={!!isLoading}
+                      error={null}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              {/* RIGHT */}
-              <div className="min-w-0 h-full">
-                <div className="rounded-2xl border border-gray-100 bg-white p-3 h-full flex flex-col">
-                  <div className="flex-1 space-y-3">
-                    {/* Service mode */}
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900">
-                        ประเภทการจอง <span className="text-red-500">*</span>
-                      </div>
-
-                      <div className="mt-2">
-                        <ServiceModePicker
-                          value={service}
-                          onChange={(next) => {
-                            setService(next);
-                            if (next.mode !== "ONLINE") {
-                              setConsentSignature(null);
-                            }
-                          }}
-                        />
-                      </div>
-
-                      {needsOnlineChannel && !service.onlineChannel ? (
-                        <div className="mt-2">
-                          <AlertBox
-                            type="warning"
-                            message="กรุณาเลือกช่องทางออนไลน์ก่อนทำการจอง"
-                          />
-                        </div>
-                      ) : null}
-                    </div>
-
-                    {/* Consent */}
-                    <div>
-                      <div className="mt-2">
-                        <ConsentBlock
-                          checked={consentChecked}
-                          onChange={setConsentChecked}
-                        />
-                      </div>
-
-                      {!consentChecked ? (
-                        <div className="mt-2">
-                          <AlertBox
-                            type="warning"
-                            message="กรุณายอมรับเงื่อนไขก่อนทำการจอง"
-                          />
-                        </div>
-                      ) : null}
-                    </div>
-
-                    {/* Signature (ONLINE only) */}
-                    {service.mode === "ONLINE" ? (
+                {/* RIGHT */}
+                <div className="min-w-0 h-full">
+                  <div className="rounded-xl border border-gray-100 bg-white p-2 h-full flex flex-col">
+                    <div className="flex-1 space-y-4">
+                      {/* Service mode */}
                       <div>
-                        <SignaturePad
-                          value={consentSignature}
-                          onChange={setConsentSignature}
-                          disabled={!!isLoading}
-                        />
+                        <div className="text-sm font-semibold text-gray-900">
+                          ประเภทการจอง <span className="text-red-500">*</span>
+                        </div>
 
-                        {!consentSignature ? (
+                        <div className="mt-2">
+                          <ServiceModePicker
+                            value={service}
+                            onChange={(next) => {
+                              setService(next);
+                              if (next.mode !== "ONLINE") {
+                                setConsentSignature(null);
+                              }
+                            }}
+                          />
+                        </div>
+
+                        {needsOnlineChannel && !service.onlineChannel ? (
                           <div className="mt-2">
                             <AlertBox
                               type="warning"
-                              message="กรุณาเซ็นลายเซ็นยินยอมก่อนทำการจองออนไลน์"
+                              message="กรุณาเลือกช่องทางออนไลน์ก่อนทำการจอง"
                             />
                           </div>
                         ) : null}
                       </div>
-                    ) : null}
 
-                    {error ? <AlertBox type="error" message={error} /> : null}
+                      {/* Consent */}
+                      <div>
+                        <ConsentBlock
+                          checked={consentChecked}
+                          onChange={setConsentChecked}
+                        />
+
+                        {!consentChecked ? (
+                          <div className="mt-2">
+                            <AlertBox
+                              type="warning"
+                              message="กรุณายอมรับเงื่อนไขก่อนทำการจอง"
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+
+                      {/* Signature */}
+                      {service.mode === "ONLINE" ? (
+                        <div>
+                          <SignaturePad
+                            value={consentSignature}
+                            onChange={setConsentSignature}
+                            disabled={!!isLoading}
+                          />
+
+                          {!consentSignature ? (
+                            <div className="mt-2">
+                              <AlertBox
+                                type="warning"
+                                message="กรุณาเซ็นลายเซ็นยินยอมก่อนทำการจองออนไลน์"
+                              />
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+
+                      {error ? <AlertBox type="error" message={error} /> : null}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+
 
           {/* FOOTER */}
           <div className="shrink-0 mt-3 pt-3 border-t border-gray-100 bg-white">
