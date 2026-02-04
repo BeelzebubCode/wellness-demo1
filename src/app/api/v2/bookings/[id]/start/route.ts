@@ -1,20 +1,26 @@
 // src/app/api/v2/bookings/[id]/start/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getAccountFromRequest } from "@/lib/auth/context";
-import { requireAuth } from "@/lib/auth/guard";
+import { requireTenant, assertRole } from "@/lib/tenant/server";
 import { handleStartBooking } from "@/services/booking/handlers/startBooking";
 
 type Params = { params: { id: string } };
 
 export async function PATCH(req: NextRequest, { params }: Params) {
   try {
-    const ctx = await getAccountFromRequest(req);
-    const unauth = requireAuth(ctx);
-    if (unauth) return unauth;
+    const { account, activeUniversityId } = await requireTenant(req);
 
-    return handleStartBooking(ctx as any, params.id);
-  } catch (err) {
+    // ✅ รับเคส = consultant เท่านั้น (ให้ตรง handler)
+    assertRole(account.role, ["CONSULTANT"]);
+
+    return await handleStartBooking(
+      { ...(account as any), activeUniversityId },
+      params.id,
+    );
+  } catch (err: any) {
     console.error("[PATCH /api/v2/bookings/:id/start]", err);
-    return NextResponse.json({ error: "Failed to start booking" }, { status: 500 });
+    return NextResponse.json(
+      { error: err?.message ?? "Failed to start booking" },
+      { status: err?.status ?? 500 },
+    );
   }
 }

@@ -5,6 +5,10 @@ import type { AccountContext } from "@/lib/auth/context";
 import { requireUniversity } from "@/lib/auth/guard";
 import { BookingStatus, AccountRole } from "@prisma/client";
 
+function upper(v: any) {
+  return String(v ?? "").toUpperCase();
+}
+
 export async function handleStartBooking(
   ctx: AccountContext & { activeUniversityId?: number },
   bookingIdRaw: string,
@@ -19,10 +23,13 @@ export async function handleStartBooking(
     return NextResponse.json({ error: "activeUniversityId missing" }, { status: 400 });
   }
 
-  const deniedUni = requireUniversity(ctx as any, activeUniversityId);
-  if (deniedUni) return deniedUni;
+  // tenant guard
+  const denied = requireUniversity(ctx as any, activeUniversityId);
+  if (denied) return denied;
 
   const role = ctx.role as AccountRole;
+
+  // ✅ รับเคสควรเป็น CONSULTANT เท่านั้น (ชัด ๆ)
   if (role !== "CONSULTANT") {
     return NextResponse.json({ error: "Permission denied" }, { status: 403 });
   }
@@ -32,6 +39,7 @@ export async function handleStartBooking(
     return NextResponse.json({ error: "Missing consultant id" }, { status: 400 });
   }
 
+  // ✅ หา booking ใน tenant นี้
   const booking = await prisma.booking.findUnique({
     where: {
       university_id_booking_id: {
@@ -41,13 +49,13 @@ export async function handleStartBooking(
     },
     select: {
       booking_id: true,
-      university_id: true,
       consultant_id: true,
       booking_status: true,
-
-      // ✅ เพิ่ม
       booking_service_mode: true,
-      booking_online_channel_url: true,
+      booking_online_channel: true,
+      // ถ้าคุณมี field แยก url/note ก็ select เพิ่มได้
+      // booking_online_channel_url: true,
+      // booking_online_channel_note: true,
     },
   });
 
@@ -55,17 +63,20 @@ export async function handleStartBooking(
     return NextResponse.json({ error: "ไม่พบรายการจอง" }, { status: 404 });
   }
 
+  // ✅ ต้องเป็นงานของ consultant คนนี้เท่านั้น
   if (booking.consultant_id !== consultantId) {
     return NextResponse.json({ error: "Permission denied" }, { status: 403 });
   }
 
+  // ✅ บังคับ flow
   if (booking.booking_status !== BookingStatus.ASSIGNED) {
     return NextResponse.json(
-      { error: `สถานะต้องเป็น ASSIGNED ก่อนเริ่มงาน (ตอนนี้: ${booking.booking_status})` },
+      { error: `สถานะต้องเป็น ASSIGNED ก่อนรับเคส (ตอนนี้: ${booking.booking_status})` },
       { status: 409 },
     );
   }
 
+  // ✅ update สถานะ (กัน race)
   const upd = await prisma.booking.updateMany({
     where: {
       university_id: activeUniversityId,
@@ -78,18 +89,21 @@ export async function handleStartBooking(
 
   if (upd.count === 0) {
     return NextResponse.json(
-      { error: "เริ่มงานไม่สำเร็จ (อาจถูกเปลี่ยนสถานะไปแล้ว)" },
+      { error: "สถานะไม่อนุญาตให้รับเคส หรือรายการถูกเปลี่ยนไปแล้ว" },
       { status: 409 },
     );
   }
 
-  // ✅ ตัดสินใจว่า “ต้องขอ online channel ไหม”
-  const mode = String(booking.booking_service_mode ?? "").toUpperCase();
-  const requireOnlineChannel = mode === "ONLINE" && !String(booking.booking_online_channel_url ?? "").trim();
+  // ✅ ถ้าเป็น ONLINE และยังไม่มีช่องทาง -> ให้ FE เปิด modal กรอกลิงก์
+  const isOnline = upper(booking.booking_service_mode) === "ONLINE";
+  const hasChannel = !!String(booking.booking_online_channel ?? "").trim();
 
   return NextResponse.json({
     success: true,
     status: BookingStatus.IN_PROGRESS,
-    requireOnlineChannel,
+    requireOnlineChannel: isOnline && !hasChannel,
+    serviceMode: booking.booking_service_mode ?? null,
+    onlineChannelUrl: booking.booking_online_channel ?? null,
+    onlineChannelNote: null,
   });
 }

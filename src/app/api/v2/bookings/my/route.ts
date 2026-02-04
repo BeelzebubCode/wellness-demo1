@@ -22,7 +22,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       universityId: activeUniversityId,
-      items, // ✅ ให้ตรงกับ FE
+
+      // ✅ FE อ่าน data.bookings
+      bookings: items,
+
+      // ✅ optional: เผื่อที่อื่นเรียก data.items อยู่ จะไม่พัง
+      items,
     });
   } catch (e: any) {
     console.error("[BOOKINGS_MY_V2_GET]", {

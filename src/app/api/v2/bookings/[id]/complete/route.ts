@@ -9,13 +9,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   try {
     const { account, activeUniversityId } = await requireTenant(req);
 
-    // โดยทั่วไป complete จะให้ consultant/head/admin ทำ
-    assertRole(account.role, [
-      "CONSULTANT",
-      "HEAD_CONSULTANT",
-      "SUPER_ADMIN",
-      "RECTOR",
-    ]);
+    // ✅ ให้ตรง handler
+    assertRole(account.role, ["CONSULTANT"]);
 
     const body = await req.json().catch(() => ({} as any));
 
