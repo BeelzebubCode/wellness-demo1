@@ -1,3 +1,5 @@
+// src/services/consultant/handlers/getConsultant.ts
+
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import type { AccountContext } from "@/lib/auth/context";

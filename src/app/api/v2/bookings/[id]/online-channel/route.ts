@@ -1,8 +1,9 @@
-// src/app/api/v2/bookings/[id]/start/route.ts
+// src/app/api/v2/bookings/[id]/online-channel/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import { getAccountFromRequest } from "@/lib/auth/context";
 import { requireAuth } from "@/lib/auth/guard";
-import { handleStartBooking } from "@/services/booking/handlers/startBooking";
+import { handleSetOnlineChannel } from "@/services/booking/handlers/setOnlineChannel";
 
 type Params = { params: { id: string } };
 
@@ -12,9 +13,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const unauth = requireAuth(ctx);
     if (unauth) return unauth;
 
-    return handleStartBooking(ctx as any, params.id);
+    const body = await req.json().catch(() => ({}));
+    return handleSetOnlineChannel(ctx as any, params.id, body);
   } catch (err) {
-    console.error("[PATCH /api/v2/bookings/:id/start]", err);
-    return NextResponse.json({ error: "Failed to start booking" }, { status: 500 });
+    console.error("[PATCH /api/v2/bookings/:id/online-channel]", err);
+    return NextResponse.json({ error: "Failed to set online channel" }, { status: 500 });
   }
 }
