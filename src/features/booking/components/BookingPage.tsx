@@ -53,6 +53,22 @@ function shouldScrollToElement(el: HTMLElement) {
   return true;
 }
 
+/** ✅ มือถือเท่านั้น (tailwind md = 768px) */
+function isMobileViewport() {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia?.("(max-width: 767px)")?.matches ?? false;
+}
+
+/** อ่านค่า safe-area-inset-top (ถ้าไม่มีจะเป็น 0) จาก CSS var */
+function getSafeAreaTopPx() {
+  if (typeof window === "undefined") return 0;
+  const v = getComputedStyle(document.documentElement)
+    .getPropertyValue("--sat")
+    .trim();
+  const n = Number.parseInt(v || "0", 10);
+  return Number.isFinite(n) ? n : 0;
+}
+
 export function BookingPage({ universityId }: { universityId?: number }) {
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(() => new Date());
@@ -103,12 +119,8 @@ export function BookingPage({ universityId }: { universityId?: number }) {
   }, [selectedDate, period]);
 
   /**
-   * ✅ scroll แบบ "ไม่กระตุก" และ "ชัวร์ว่า DOM พร้อม"
-   * - ยิงเฉพาะตอน dateStr เปลี่ยนจริง
-   * - รอ transition จบ + รอ loading เสร็จ
-   * - check ว่าหลุดจอจริงค่อย scroll
-   * - cooldown กันยิงถี่ๆ
-   * - ใช้ rAF 2 ชั้นให้ layout นิ่งก่อน
+   * ✅ มือถือเท่านั้น: เด้งไป slot พร้อม offset กันโดนขอบจอ/URL bar บัง
+   * ✅ PC: ไม่เด้ง
    */
   useEffect(() => {
     // ข้ามครั้งแรก (ตอน mount)
@@ -121,6 +133,9 @@ export function BookingPage({ universityId }: { universityId?: number }) {
     // วันไม่เปลี่ยนจริง => ไม่ทำอะไร
     if (prevDateStrRef.current === dateStr) return;
     prevDateStrRef.current = dateStr;
+
+    // ✅ PC ไม่ต้องเด้ง
+    if (!isMobileViewport()) return;
 
     // รอ transition จบ + รอโหลด slots เสร็จ
     if (isPending) return;
@@ -142,7 +157,17 @@ export function BookingPage({ universityId }: { universityId?: number }) {
 
     raf1 = requestAnimationFrame(() => {
       raf2 = requestAnimationFrame(() => {
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        const rect = el.getBoundingClientRect();
+        const absoluteTop = rect.top + window.scrollY;
+
+        // ✅ offset สำหรับมือถือ (safe-area + เผื่อหัว/ขอบจอ)
+        const safeTop = getSafeAreaTopPx();
+        const offset = safeTop + 16; // ปรับเป็น 24/32 ได้ตามต้องการ
+
+        window.scrollTo({
+          top: Math.max(0, absoluteTop - offset),
+          behavior: "smooth",
+        });
       });
     });
 
@@ -177,7 +202,13 @@ export function BookingPage({ universityId }: { universityId?: number }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div
+      className="min-h-screen bg-slate-50"
+      style={{
+        // ✅ ให้ iOS Safari อ่าน safe-area ได้
+        ["--sat" as any]: "env(safe-area-inset-top, 0px)",
+      }}
+    >
       <main className="mx-auto w-full max-w-5xl px-4 pt-4 pb-24 space-y-4">
         <Card className="rounded-2xl bg-primary-50 border border-primary-100 p-4">
           <div className="flex gap-3">
@@ -243,7 +274,6 @@ export function BookingPage({ universityId }: { universityId?: number }) {
 
           {/* RIGHT: Slots */}
           <div className="md:col-span-3 space-y-4">
-            {/* ✅ ref อยู่ที่ div ที่เป็น DOM จริง + ใส่ scroll-mt-20 ที่นี่ */}
             <div ref={slotsSectionRef} className="scroll-mt-20">
               <Card className="rounded-2xl bg-white shadow-sm overflow-hidden">
                 <div className="px-5 py-4 border-b border-gray-100">
