@@ -152,8 +152,8 @@ export function BookingForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3">
-          ประเภทปัญหาที่ต้องการปรึกษา <span className="text-red-500">*</span>
+        <label className="block text-sm font-bold text-black-700 mb-3">
+          ประเภทปัญหาที่ต้องการปรึกษา <span className="text-red-500 ">*</span>
         </label>
 
         {isCatLoading ? (
@@ -245,7 +245,7 @@ export function BookingForm({
       ) : null}
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm text-black-700 mb-2">
           รายละเอียดเพิ่มเติม <span className="text-red-500">*</span>
         </label>
 

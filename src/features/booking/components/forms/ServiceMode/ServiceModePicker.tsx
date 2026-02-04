@@ -56,9 +56,6 @@ export function ServiceModePicker({
   return (
     <div className="space-y-3" ref={wrapRef}>
       <div>
-        <div className="text-sm font-medium text-gray-700 mb-2">
-          ประเภทการจอง <span className="text-red-500">*</span>
-        </div>
 
         <div className="grid grid-cols-2 gap-2">
           <SegBtn
@@ -91,11 +88,11 @@ export function ServiceModePicker({
 
       {canPickChannel && (
         <div className="rounded-2xl border border-gray-100 bg-gray-50/60 p-3">
-          <div className="text-sm font-medium text-gray-700 mb-2">
+          <div className="text-sm text-black-700 mb-2">
             ช่องทางออนไลน์ <span className="text-red-500">*</span>
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-3">
             {PICKABLE_ONLINE_CHANNELS.map((key) => {
               const meta = ONLINE_CHANNEL_META[key];
               const active = value.onlineChannel === key;
@@ -118,17 +115,31 @@ export function ServiceModePicker({
                       setBubbleOpenKey((prev) => (prev === key ? null : prev))
                     }
                     className={cn(
-                      "h-11 w-full rounded-xl border transition-all inline-flex items-center justify-center",
-                      active
-                        ? "border-primary-500 bg-white shadow-sm"
-                        : "border-gray-200 bg-white hover:border-primary-200",
-                      disabled && "opacity-60 cursor-not-allowed",
+                      // ⬛ square card
+                      "w-full aspect-square rounded-3xl border",
+
+                      // center icon
+                      "flex items-center justify-center",
+
+                      // animation
+                      "transition-all duration-200",
+
+                      // normal
+                      !active &&
+                        "bg-white border-gray-200 hover:border-primary-300 hover:shadow-md",
+
+                      // active
+                      active &&
+                        "bg-primary-50 border-primary-500 ring-2 ring-primary-200 shadow-md",
+
+                      // disabled
+                      disabled && "opacity-50 cursor-not-allowed",
                     )}
                     aria-label={meta.label}
                   >
-                    <span className="inline-flex items-center justify-center">
+                    <div className="h-10 w-10 grid place-items-center">
                       <ChannelIcon iconKey={meta.iconKey} disabled={disabled} />
-                    </span>
+                    </div>
                   </button>
 
                   <SpeechBubble
@@ -140,6 +151,8 @@ export function ServiceModePicker({
               );
             })}
           </div>
+
+
 
           <p className="mt-2 text-xs text-gray-500">
             เลือกช่องทางที่สะดวก ระบบจะแจ้งลิงก์/รายละเอียดภายหลัง

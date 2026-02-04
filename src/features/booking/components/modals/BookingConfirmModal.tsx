@@ -16,7 +16,7 @@ import {
 import { ServiceModePicker } from "@/features/booking/components/forms/ServiceMode";
 
 import { ConsentBlock } from "@/features/booking/components/forms/ConsentBlock";
-import { SignaturePad } from "@/features/booking/components/forms/SignaturePad"; // ✅ เพิ่ม
+import { SignaturePad } from "@/features/booking/components/forms/SignaturePad";
 
 type ServicePick = {
   mode: ServiceMode;
@@ -34,21 +34,15 @@ export function BookingConfirmModal({
   open: boolean;
   onClose: () => void;
   slot: TimeSlotCore | null;
-
   onSubmit: (payload: {
     timeSlotId: number;
     problemCategoryId: number;
     bookingDetailText: string;
-
     serviceMode: ServiceMode;
     onlineChannel?: OnlineChannel | null;
-
     consentChecked: boolean;
-
-    // ✅ เพิ่ม: ลายเซ็น (เฉพาะ ONLINE)
     consentSignatureDataUrl?: string | null;
   }) => Promise<void> | void;
-
   isLoading?: boolean;
   error?: string | null;
 }) {
@@ -58,8 +52,7 @@ export function BookingConfirmModal({
   });
 
   const [consentChecked, setConsentChecked] = useState(false);
-
-  const [consentSignature, setConsentSignature] = useState<string | null>(null); // ✅ เพิ่ม
+  const [consentSignature, setConsentSignature] = useState<string | null>(null);
 
   const [form, setForm] = useState<BookingFormData>({
     problemCategoryId: 0,
@@ -68,7 +61,7 @@ export function BookingConfirmModal({
   });
 
   const needsOnlineChannel = service.mode === "ONLINE";
-  const needsSignature = service.mode === "ONLINE"; // ✅ online ต้องเซ็น
+  const needsSignature = service.mode === "ONLINE";
 
   const formOk =
     !!form.problemCategoryId &&
@@ -80,7 +73,7 @@ export function BookingConfirmModal({
     if (!slot) return false;
     if (!consentChecked) return false;
     if (needsOnlineChannel && !service.onlineChannel) return false;
-    if (needsSignature && !consentSignature) return false; // ✅ บังคับเซ็น
+    if (needsSignature && !consentSignature) return false;
     if (!formOk) return false;
     return true;
   }, [
@@ -106,11 +99,12 @@ export function BookingConfirmModal({
         <div className="text-sm text-slate-600">ยังไม่ได้เลือกช่วงเวลา</div>
       ) : (
         <div className="flex flex-col max-h-[80vh]">
+          {/* BODY */}
           <div className="flex-1 overflow-auto pr-1">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-stretch">
               {/* LEFT */}
-              <div className="min-w-0">
-                <div className="rounded-2xl border border-gray-100 bg-white p-3">
+              <div className="min-w-0 h-full">
+                <div className="rounded-2xl border border-gray-100 bg-white p-3 h-full">
                   <BookingForm
                     value={form}
                     onChange={setForm}
@@ -122,70 +116,78 @@ export function BookingConfirmModal({
               </div>
 
               {/* RIGHT */}
-              <div className="min-w-0">
-                <div className="rounded-2xl border border-gray-100 bg-white p-3 space-y-3">
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900">
-                      ประเภทการจอง <span className="text-red-500">*</span>
-                    </div>
+              <div className="min-w-0 h-full">
+                <div className="rounded-2xl border border-gray-100 bg-white p-3 h-full flex flex-col">
+                  <div className="flex-1 space-y-3">
+                    {/* Service mode */}
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">
+                        ประเภทการจอง <span className="text-red-500">*</span>
+                      </div>
 
-                    <div className="mt-2">
-                      <ServiceModePicker
-                        value={service}
-                        onChange={(next) => {
-                          setService(next);
-
-                          // ✅ ถ้าเปลี่ยนจาก ONLINE -> ONSITE ให้ล้าง signature / onlineChannel
-                          if (next.mode !== "ONLINE") {
-                            setConsentSignature(null);
-                          }
-                        }}
-                      />
-                    </div>
-
-                    {needsOnlineChannel && !service.onlineChannel ? (
                       <div className="mt-2">
-                        <AlertBox
-                          type="warning"
-                          message="กรุณาเลือกช่องทางออนไลน์ก่อนทำการจอง"
+                        <ServiceModePicker
+                          value={service}
+                          onChange={(next) => {
+                            setService(next);
+                            if (next.mode !== "ONLINE") {
+                              setConsentSignature(null);
+                            }
+                          }}
                         />
                       </div>
-                    ) : null}
-                  </div>
 
-                  <div>
-                    <div className="mt-2">
-                      <ConsentBlock checked={consentChecked} onChange={setConsentChecked} />
-                    </div>
-
-                    {!consentChecked ? (
-                      <div className="mt-2">
-                        <AlertBox type="warning" message="กรุณายอมรับเงื่อนไขก่อนทำการจอง" />
-                      </div>
-                    ) : null}
-                  </div>
-
-                  {/* ✅ Signature เฉพาะ Online */}
-                  {service.mode === "ONLINE" ? (
-                    <div>
-                      <SignaturePad
-                        value={consentSignature}
-                        onChange={setConsentSignature}
-                        disabled={!!isLoading}
-                      />
-
-                      {!consentSignature ? (
+                      {needsOnlineChannel && !service.onlineChannel ? (
                         <div className="mt-2">
                           <AlertBox
                             type="warning"
-                            message="กรุณาเซ็นลายเซ็นยินยอมก่อนทำการจองออนไลน์"
+                            message="กรุณาเลือกช่องทางออนไลน์ก่อนทำการจอง"
                           />
                         </div>
                       ) : null}
                     </div>
-                  ) : null}
 
-                  {error ? <AlertBox type="error" message={error} /> : null}
+                    {/* Consent */}
+                    <div>
+                      <div className="mt-2">
+                        <ConsentBlock
+                          checked={consentChecked}
+                          onChange={setConsentChecked}
+                        />
+                      </div>
+
+                      {!consentChecked ? (
+                        <div className="mt-2">
+                          <AlertBox
+                            type="warning"
+                            message="กรุณายอมรับเงื่อนไขก่อนทำการจอง"
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {/* Signature (ONLINE only) */}
+                    {service.mode === "ONLINE" ? (
+                      <div>
+                        <SignaturePad
+                          value={consentSignature}
+                          onChange={setConsentSignature}
+                          disabled={!!isLoading}
+                        />
+
+                        {!consentSignature ? (
+                          <div className="mt-2">
+                            <AlertBox
+                              type="warning"
+                              message="กรุณาเซ็นลายเซ็นยินยอมก่อนทำการจองออนไลน์"
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {error ? <AlertBox type="error" message={error} /> : null}
+                  </div>
                 </div>
               </div>
             </div>
@@ -200,8 +202,6 @@ export function BookingConfirmModal({
               className="w-full bg-primary-500 hover:bg-primary-600 h-11 text-sm"
               isLoading={!!isLoading}
               disabled={!canSubmit || !!isLoading}
-              aria-disabled={!canSubmit || !!isLoading}
-              aria-busy={!!isLoading}
               onClick={async () => {
                 if (!slot) return;
                 if (!canSubmit) return;
@@ -211,9 +211,12 @@ export function BookingConfirmModal({
                   problemCategoryId: Number(form.problemCategoryId),
                   bookingDetailText: form.problemDescription,
                   serviceMode: service.mode,
-                  onlineChannel: needsOnlineChannel ? (service.onlineChannel ?? null) : null,
+                  onlineChannel: needsOnlineChannel
+                    ? service.onlineChannel ?? null
+                    : null,
                   consentChecked,
-                  consentSignatureDataUrl: service.mode === "ONLINE" ? consentSignature : null,
+                  consentSignatureDataUrl:
+                    service.mode === "ONLINE" ? consentSignature : null,
                 });
               }}
             >
@@ -222,7 +225,8 @@ export function BookingConfirmModal({
 
             {!canSubmit ? (
               <p className="mt-2 text-xs text-gray-400 text-center">
-                กรุณากรอกข้อมูลให้ครบ เลือกช่องทาง/เซ็นลายเซ็น (ถ้าออนไลน์) และยอมรับเงื่อนไขก่อนทำการจอง
+                กรุณากรอกข้อมูลให้ครบ เลือกช่องทาง/เซ็นลายเซ็น (ถ้าออนไลน์)
+                และยอมรับเงื่อนไขก่อนทำการจอง
               </p>
             ) : null}
           </div>

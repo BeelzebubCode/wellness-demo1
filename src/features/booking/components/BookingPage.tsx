@@ -220,95 +220,102 @@ export function BookingPage({ universityId }: { universityId?: number }) {
           </div>
         </Card>
 
-        <section className="grid md:grid-cols-5 gap-4 items-start">
-          {/* LEFT: Calendar */}
-          <div className="md:col-span-2 space-y-3">
-            <Card className="rounded-2xl bg-white shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                <div className="flex items-center gap-2">
-                  <CalendarClock className="w-4 h-4 text-primary-600" />
-                  <span className="text-sm font-semibold text-gray-900">
-                    ปฏิทินการจอง
-                  </span>
-                  {isPending ? (
-                    <span className="ml-2 text-[11px] text-gray-400">
-                      กำลังอัปเดต…
-                    </span>
-                  ) : null}
-                </div>
+<section className="grid md:grid-cols-5 gap-4 items-stretch">
+  {/* LEFT: Calendar */}
+  <div className="md:col-span-2 h-full">
+    <Card className="rounded-2xl bg-white shadow-sm overflow-hidden h-full flex flex-col">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center gap-2">
+          <CalendarClock className="w-4 h-4 text-primary-600" />
+          <span className="text-sm font-semibold text-gray-900">
+            ปฏิทินการจอง
+          </span>
+          {isPending ? (
+            <span className="ml-2 text-[11px] text-gray-400">
+              กำลังอัปเดต…
+            </span>
+          ) : null}
+        </div>
 
-                <button
-                  type="button"
-                  onClick={handleToday}
-                  disabled={isPending}
-                  className={cn(
-                    "text-xs px-3 py-1 border border-gray-200 rounded-full",
-                    "flex items-center gap-1 text-gray-700 hover:bg-gray-50",
-                    isPending && "opacity-60 cursor-not-allowed",
-                  )}
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  วันนี้
-                </button>
-              </div>
+        <button
+          type="button"
+          onClick={handleToday}
+          disabled={isPending}
+          className={cn(
+            "text-xs px-3 py-1 border border-gray-200 rounded-full",
+            "flex items-center gap-1 text-gray-700 hover:bg-gray-50",
+            isPending && "opacity-60 cursor-not-allowed",
+          )}
+        >
+          <RotateCcw className="w-3 h-3" />
+          วันนี้
+        </button>
+      </div>
 
-              <div className="p-5">
-                <BookingCalendar
-                  embedded
-                  selectedDate={selectedDate}
-                  onSelectDate={(d) => {
-                    startTransition(() => {
-                      setSelectedDate(d);
-                      setCurrentMonth(new Date(d.getFullYear(), d.getMonth(), 1));
-                    });
-                  }}
-                  currentMonth={currentMonth}
-                  onPreviousMonth={handlePreviousMonth}
-                  onNextMonth={handleNextMonth}
-                  minDate={startOfDay(new Date())}
-                  maxDate={startOfDay(addDays(new Date(), 7))}
-                />
-              </div>
-            </Card>
+      {/* content กินพื้นที่ที่เหลือ */}
+      <div className="p-5 flex-1">
+        <BookingCalendar
+          embedded
+          selectedDate={selectedDate}
+          onSelectDate={(d) => {
+            startTransition(() => {
+              setSelectedDate(d);
+              setCurrentMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+            });
+          }}
+          currentMonth={currentMonth}
+          onPreviousMonth={handlePreviousMonth}
+          onNextMonth={handleNextMonth}
+          minDate={startOfDay(new Date())}
+          maxDate={startOfDay(addDays(new Date(), 7))}
+        />
+      </div>
+    </Card>
+  </div>
+
+{/* RIGHT: Slots */}
+<div className="md:col-span-3 h-full">
+  <div ref={slotsSectionRef} className="scroll-mt-20 h-full">
+    <Card className="rounded-2xl bg-white shadow-sm overflow-hidden h-full flex flex-col">
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-gray-100">
+        <TimePeriodTabs value={period} onChange={setPeriod} />
+      </div>
+
+      {/* Content */}
+      <div className="p-5 pt-4 flex-1 flex flex-col">
+        {hasActiveBooking ? (
+          <div className="mb-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">
+            คุณมีการจองที่กำลังดำเนินการอยู่ (คิวค้าง)
+            กรุณารอให้เสร็จสิ้นหรือยกเลิกก่อนจองใหม่
           </div>
+        ) : null}
 
-          {/* RIGHT: Slots */}
-          <div className="md:col-span-3 space-y-4">
-            <div ref={slotsSectionRef} className="scroll-mt-20">
-              <Card className="rounded-2xl bg-white shadow-sm overflow-hidden">
-                <div className="px-5 py-4 border-b border-gray-100">
-                  <TimePeriodTabs value={period} onChange={setPeriod} />
-                </div>
+        {/* 👇 กินพื้นที่ที่เหลือให้เต็มเท่าฝั่งซ้าย */}
+        <div className="flex-1">
+          <TimeSlotGrid
+            embedded
+            selectedDate={selectedDate}
+            slots={filtered}
+            isLoading={loading || isPending}
+            hasActiveBooking={hasActiveBooking}
+            onSelectSlot={(s) => {
+              if (hasActiveBooking) return;
+              setSelectedSlot(s);
+              setConfirmOpen(true);
+            }}
+          />
+        </div>
 
-                <div className="p-5 pt-4">
-                  {hasActiveBooking ? (
-                    <div className="mb-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                      คุณมีการจองที่กำลังดำเนินการอยู่ (คิวค้าง)
-                      กรุณารอให้เสร็จสิ้นหรือยกเลิกก่อนจองใหม่
-                    </div>
-                  ) : null}
+        {error ? (
+          <div className="mt-3 text-sm text-red-600">{error}</div>
+        ) : null}
+      </div>
+    </Card>
+  </div>
+</div>
 
-                  <TimeSlotGrid
-                    embedded
-                    selectedDate={selectedDate}
-                    slots={filtered}
-                    isLoading={loading || isPending}
-                    hasActiveBooking={hasActiveBooking}
-                    onSelectSlot={(s) => {
-                      if (hasActiveBooking) return;
-                      setSelectedSlot(s);
-                      setConfirmOpen(true);
-                    }}
-                  />
-
-                  {error ? (
-                    <div className="mt-3 text-sm text-red-600">{error}</div>
-                  ) : null}
-                </div>
-              </Card>
-            </div>
-          </div>
-        </section>
+</section>
 
         <BookingConfirmModal
           open={confirmOpen}
