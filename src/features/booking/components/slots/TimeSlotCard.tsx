@@ -1,11 +1,12 @@
+// src/features/booking/components/slots/TimeSlotCard.tsx
 "use client";
 
 import { cn } from "@/lib/cn";
-import type { TimeSlotCore as TimeSlot } from "@/shared/types/timeSlot";
+import type { TimeSlotCore } from "@/shared/types/timeSlot";
 import { CheckCircle, XCircle, AlertTriangle, Clock } from "lucide-react";
 
 export interface TimeSlotCardProps {
-  slot: TimeSlot;
+  slot: TimeSlotCore;
   onSelect: () => void;
   disabled?: boolean;
   showEndTime?: boolean;
@@ -14,16 +15,14 @@ export interface TimeSlotCardProps {
 type BadgeVariant = "available" | "full" | "blocked" | "past" | "closed" | "unavailable";
 
 export function TimeSlotCard({ slot, onSelect, disabled = false, showEndTime = true }: TimeSlotCardProps) {
-  const total = Number((slot as any).maxCapacity ?? 1);
-  const booked = Number((slot as any).bookedCount ?? 0);
+  const total = Number(slot.maxCapacity ?? 1);
+  const booked = Number(slot.bookedCount ?? 0);
   const queueText = `${booked}/${total}`;
 
-  const isAvailable = !!(slot as any).isAvailable && !disabled;
+  const isAvailable = slot.isAvailable && !disabled;
 
   const reason =
-    disabled
-      ? "BLOCKED_ACTIVE_BOOKING"
-      : (slot as any).unavailableReason ?? ((slot as any).isPastTime ? "PAST_TIME" : null);
+    disabled ? "BLOCKED_ACTIVE_BOOKING" : slot.unavailableReason ?? (slot.isPastTime ? "PAST_TIME" : null);
 
   const badge = (() => {
     if (isAvailable) {
@@ -35,6 +34,7 @@ export function TimeSlotCard({ slot, onSelect, disabled = false, showEndTime = t
       case "FULL":
         return { variant: "full" as BadgeVariant, icon: <XCircle className="w-3.5 h-3.5" />, text: `เต็ม ${queueText}` };
       case "CLOSED":
+      case "CANCELLED":
         return { variant: "closed" as BadgeVariant, icon: <XCircle className="w-3.5 h-3.5" />, text: "ปิดรับจอง" };
       case "BLOCKED_ACTIVE_BOOKING":
         return { variant: "blocked" as BadgeVariant, icon: <AlertTriangle className="w-3.5 h-3.5" />, text: "มีคิวค้าง" };
@@ -75,12 +75,12 @@ export function TimeSlotCard({ slot, onSelect, disabled = false, showEndTime = t
     >
       <div className="mb-2">
         <span className={cn("text-lg font-bold", isAvailable ? "text-green-700 group-hover:text-green-800" : "text-gray-400")}>
-          {(slot as any).startTime ?? "-"}
+          {slot.startTime}
         </span>
 
         {showEndTime && (
           <span className={cn("text-sm ml-1", isAvailable ? "text-green-600" : "text-gray-400")}>
-            - {(slot as any).endTime ?? "-"}
+            - {slot.endTime}
           </span>
         )}
       </div>

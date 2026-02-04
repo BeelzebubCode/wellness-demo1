@@ -220,7 +220,7 @@ function TimeSlotSection({
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
         {slots.map((slot) => (
           <TimeSlotCard
-            key={(slot as any).id}
+            key={slot.id}
             slot={slot}
             onSelect={() => onSelectSlot(slot)}
             disabled={disabled}

@@ -1,5 +1,4 @@
 // src/features/booking/hooks/useTimeSlots.ts
-
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TimeSlot } from "../types";
 import { getTimeSlots } from "../api";
@@ -39,13 +38,11 @@ export function useTimeSlots(date: string, universityId?: number) {
     return () => abortRef.current?.abort();
   }, [fetchSlots]);
 
-  // ✅ แปลงเป็น TimeSlotCore (ให้ตรง src/shared/types/timeSlot.ts)
   const slots: TimeSlotCore[] = useMemo(() => {
     const now = new Date();
     return rawSlots.map((s) => normalizeTimeSlot(s, now));
   }, [rawSlots]);
 
-  // ✅ Prisma enum ใหม่ใน shared ใช้ field "status"
   const openSlots = useMemo(() => slots.filter((s) => s.status === "OPEN"), [slots]);
 
   return { slots, openSlots, loading, error, refetch: fetchSlots };

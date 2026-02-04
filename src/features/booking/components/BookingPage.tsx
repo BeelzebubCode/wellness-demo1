@@ -1,7 +1,7 @@
 // src/features/booking/components/BookingPage.tsx
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { TimeSlotCore } from "@/shared/types/timeSlot";
 
 import { useTimeSlots } from "../hooks/useTimeSlots";
@@ -21,15 +21,36 @@ import { cn } from "@/lib/cn";
 import { addDays } from "@/lib/date";
 import { CalendarClock, Info, RotateCcw } from "lucide-react";
 
-// helper: Date -> "YYYY-MM-DD"
+// helper: Date -> "YYYY-MM-DD" (ใช้ local date ไม่ใช้ UTC)
 function toISODate(d: Date) {
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function startOfDay(d: Date) {
   const nd = new Date(d);
   nd.setHours(0, 0, 0, 0);
   return nd;
+}
+
+/**
+ * ✅ scroll เฉพาะตอน "หลุดจอ" หรือ "อยู่ไกล"
+ * - ถ้า element อยู่ใน viewport แล้ว: ไม่ scroll
+ * - ถ้า top ใกล้ๆ (กันกระตุก): ไม่ scroll
+ */
+function shouldScrollToElement(el: HTMLElement) {
+  const r = el.getBoundingClientRect();
+  const vh = window.innerHeight || document.documentElement.clientHeight;
+
+  const padding = 24;
+  const inView = r.top >= padding && r.bottom <= vh - padding;
+  if (inView) return false;
+
+  if (r.top > -80 && r.top < 120) return false;
+
+  return true;
 }
 
 export function BookingPage({ universityId }: { universityId?: number }) {
@@ -41,24 +62,25 @@ export function BookingPage({ universityId }: { universityId?: number }) {
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
-  const [latestBookingId, setLatestBookingId] = useState<number | null>(null);
 
-  // ✅ scroll ไป card เวลา (เหมือนหน้าเก่า)
+  // ✅ transition
+  const [isPending, startTransition] = useTransition();
+
+  // ✅ IMPORTANT: ref ต้องชี้ DOM จริง (อย่าชี้ Card ถ้าไม่ forwardRef)
   const slotsSectionRef = useRef<HTMLDivElement>(null);
-  const isFirstRun = useRef(true);
+
+  // ✅ กัน scroll ตอน mount + กันยิงซ้ำ
+  const didMountRef = useRef(false);
+  const prevDateStrRef = useRef<string | null>(null);
+  const scrollCooldownRef = useRef<number>(0);
 
   const dateStr = useMemo(() => toISODate(selectedDate), [selectedDate]);
 
-  // ✅ ต้องดึง refetch มาด้วย
   const { slots, loading, error, refetch } = useTimeSlots(dateStr, universityId);
 
-  const {
-    submitBooking,
-    loading: bookingLoading,
-    error: bookingError,
-  } = useBooking(universityId);
+  const { submitBooking, loading: bookingLoading, error: bookingError } =
+    useBooking(universityId);
 
-  // ✅ detect "มีคิวค้าง" จาก error ที่ได้จาก hook (ซึ่งควร map เป็นไทยแล้ว)
   const hasActiveBooking = useMemo(() => {
     const t = String(bookingError ?? "");
     return (
@@ -70,48 +92,93 @@ export function BookingPage({ universityId }: { universityId?: number }) {
   }, [bookingError]);
 
   const filtered = useMemo(() => {
-    return (slots ?? []).filter((s) => isSlotInPeriod((s as any).startTime, period));
+    return (slots ?? []).filter((s) =>
+      isSlotInPeriod((s as any).startTime, period),
+    );
   }, [slots, period]);
 
-  // ✅ เปลี่ยนวัน/ช่วงเวลา -> เคลียร์ slot ที่เลือกไว้
+  // ✅ เปลี่ยนวัน/ช่วง -> เคลียร์ slot ที่เลือก
   useEffect(() => {
     setSelectedSlot(null);
   }, [selectedDate, period]);
 
-  // ✅ scroll ลงมาหากเลือกวันใหม่ (ข้ามครั้งแรก)
+  /**
+   * ✅ scroll แบบ "ไม่กระตุก" และ "ชัวร์ว่า DOM พร้อม"
+   * - ยิงเฉพาะตอน dateStr เปลี่ยนจริง
+   * - รอ transition จบ + รอ loading เสร็จ
+   * - check ว่าหลุดจอจริงค่อย scroll
+   * - cooldown กันยิงถี่ๆ
+   * - ใช้ rAF 2 ชั้นให้ layout นิ่งก่อน
+   */
   useEffect(() => {
-    if (isFirstRun.current) {
-      isFirstRun.current = false;
+    // ข้ามครั้งแรก (ตอน mount)
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      prevDateStrRef.current = dateStr;
       return;
     }
-    if (slotsSectionRef.current) {
-      setTimeout(() => {
-        slotsSectionRef.current?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      }, 100);
-    }
-  }, [selectedDate]);
+
+    // วันไม่เปลี่ยนจริง => ไม่ทำอะไร
+    if (prevDateStrRef.current === dateStr) return;
+    prevDateStrRef.current = dateStr;
+
+    // รอ transition จบ + รอโหลด slots เสร็จ
+    if (isPending) return;
+    if (loading) return;
+
+    const el = slotsSectionRef.current;
+    if (!el) return;
+
+    // cooldown กันสั่ง scroll รัว ๆ
+    const now = Date.now();
+    if (now - scrollCooldownRef.current < 250) return;
+    scrollCooldownRef.current = now;
+
+    // ถ้าอยู่ในจอ/ใกล้แล้ว => ไม่ scroll
+    if (!shouldScrollToElement(el)) return;
+
+    let raf1 = 0;
+    let raf2 = 0;
+
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [dateStr, isPending, loading]);
 
   const handleToday = () => {
     const today = new Date();
-    setSelectedDate(today);
-    setCurrentMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+    startTransition(() => {
+      setSelectedDate(today);
+      setCurrentMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+    });
   };
 
   const handlePreviousMonth = () => {
-    setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+    startTransition(() => {
+      setCurrentMonth(
+        (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1),
+      );
+    });
   };
 
   const handleNextMonth = () => {
-    setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+    startTransition(() => {
+      setCurrentMonth(
+        (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1),
+      );
+    });
   };
 
   return (
     <div className="min-h-screen bg-slate-50">
       <main className="mx-auto w-full max-w-5xl px-4 pt-4 pb-24 space-y-4">
-        {/* ✅ Rules Card (เหมือนหน้าเก่า) */}
         <Card className="rounded-2xl bg-primary-50 border border-primary-100 p-4">
           <div className="flex gap-3">
             <Info className="w-5 h-5 text-primary-700 mt-1" />
@@ -122,7 +189,6 @@ export function BookingPage({ universityId }: { universityId?: number }) {
           </div>
         </Card>
 
-        {/* ✅ Calendar + Slots (md:grid-cols-5) */}
         <section className="grid md:grid-cols-5 gap-4 items-start">
           {/* LEFT: Calendar */}
           <div className="md:col-span-2 space-y-3">
@@ -133,14 +199,21 @@ export function BookingPage({ universityId }: { universityId?: number }) {
                   <span className="text-sm font-semibold text-gray-900">
                     ปฏิทินการจอง
                   </span>
+                  {isPending ? (
+                    <span className="ml-2 text-[11px] text-gray-400">
+                      กำลังอัปเดต…
+                    </span>
+                  ) : null}
                 </div>
 
                 <button
                   type="button"
                   onClick={handleToday}
+                  disabled={isPending}
                   className={cn(
                     "text-xs px-3 py-1 border border-gray-200 rounded-full",
                     "flex items-center gap-1 text-gray-700 hover:bg-gray-50",
+                    isPending && "opacity-60 cursor-not-allowed",
                   )}
                 >
                   <RotateCcw className="w-3 h-3" />
@@ -153,8 +226,10 @@ export function BookingPage({ universityId }: { universityId?: number }) {
                   embedded
                   selectedDate={selectedDate}
                   onSelectDate={(d) => {
-                    setSelectedDate(d);
-                    setCurrentMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+                    startTransition(() => {
+                      setSelectedDate(d);
+                      setCurrentMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+                    });
                   }}
                   currentMonth={currentMonth}
                   onPreviousMonth={handlePreviousMonth}
@@ -168,43 +243,43 @@ export function BookingPage({ universityId }: { universityId?: number }) {
 
           {/* RIGHT: Slots */}
           <div className="md:col-span-3 space-y-4">
-            <Card
-              ref={slotsSectionRef}
-              className="rounded-2xl bg-white shadow-sm overflow-hidden scroll-mt-20"
-            >
-              {/* Tabs */}
-              <div className="px-5 py-4 border-b border-gray-100">
-                <TimePeriodTabs value={period} onChange={setPeriod} />
-              </div>
+            {/* ✅ ref อยู่ที่ div ที่เป็น DOM จริง + ใส่ scroll-mt-20 ที่นี่ */}
+            <div ref={slotsSectionRef} className="scroll-mt-20">
+              <Card className="rounded-2xl bg-white shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-100">
+                  <TimePeriodTabs value={period} onChange={setPeriod} />
+                </div>
 
-              <div className="p-5 pt-4">
-                {/* ✅ แถบเตือนคิวค้างบนหน้า (เห็นชัด ไม่เงียบ) */}
-                {hasActiveBooking ? (
-                  <div className="mb-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                    คุณมีการจองที่กำลังดำเนินการอยู่ (คิวค้าง) กรุณารอให้เสร็จสิ้นหรือยกเลิกก่อนจองใหม่
-                  </div>
-                ) : null}
+                <div className="p-5 pt-4">
+                  {hasActiveBooking ? (
+                    <div className="mb-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                      คุณมีการจองที่กำลังดำเนินการอยู่ (คิวค้าง)
+                      กรุณารอให้เสร็จสิ้นหรือยกเลิกก่อนจองใหม่
+                    </div>
+                  ) : null}
 
-                <TimeSlotGrid
-                  embedded
-                  selectedDate={selectedDate}
-                  slots={filtered}
-                  isLoading={loading}
-                  hasActiveBooking={hasActiveBooking}
-                  onSelectSlot={(s) => {
-                    if (hasActiveBooking) return; // ✅ กันคลิก
-                    setSelectedSlot(s);
-                    setConfirmOpen(true);
-                  }}
-                />
+                  <TimeSlotGrid
+                    embedded
+                    selectedDate={selectedDate}
+                    slots={filtered}
+                    isLoading={loading || isPending}
+                    hasActiveBooking={hasActiveBooking}
+                    onSelectSlot={(s) => {
+                      if (hasActiveBooking) return;
+                      setSelectedSlot(s);
+                      setConfirmOpen(true);
+                    }}
+                  />
 
-                {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
-              </div>
-            </Card>
+                  {error ? (
+                    <div className="mt-3 text-sm text-red-600">{error}</div>
+                  ) : null}
+                </div>
+              </Card>
+            </div>
           </div>
         </section>
 
-        {/* Modals */}
         <BookingConfirmModal
           open={confirmOpen}
           onClose={() => setConfirmOpen(false)}
@@ -214,19 +289,13 @@ export function BookingPage({ universityId }: { universityId?: number }) {
           onSubmit={async (payload) => {
             try {
               const res = await submitBooking(payload);
-
-              // ✅ จองสำเร็จ -> รีเฟรช slot ทันที
               if (res && res.success === true) {
                 await refetch();
-                setLatestBookingId(res.bookingId);
                 setConfirmOpen(false);
                 setSuccessOpen(true);
               }
-            } catch (e) {
-              // ✅ จองไม่สำเร็จ (เช่น 409 มีคิวค้าง/slot เต็ม) -> รีเฟรชไว้ด้วย
-              // เพื่อให้ UI แสดงสถานะ slot ล่าสุด
+            } catch {
               await refetch();
-              // ไม่ต้องปิด modal ก็ได้ เพราะ BookingConfirmModal จะแสดง error อยู่แล้ว
             }
           }}
         />
@@ -234,9 +303,7 @@ export function BookingPage({ universityId }: { universityId?: number }) {
         <BookingSuccessModal
           isOpen={successOpen}
           onClose={() => setSuccessOpen(false)}
-          onViewAppointments={() => {
-            setSuccessOpen(false);
-          }}
+          onViewAppointments={() => setSuccessOpen(false)}
         />
       </main>
     </div>

@@ -1,7 +1,7 @@
 // src/features/booking/components/calendar/BookingCalendar.tsx
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useTransition } from "react";
 import { cn } from "@/lib/cn";
 import {
   getCalendarDays,
@@ -21,21 +21,22 @@ export interface BookingCalendarProps {
   onNextMonth: () => void;
   minDate?: Date;
   maxDate?: Date;
-
-  /** ✅ ถ้า embed ลง card ภายนอก: ไม่ต้องห่อ Card ซ้ำ */
   embedded?: boolean;
 }
 
-export function BookingCalendar({
-  selectedDate,
-  onSelectDate,
-  currentMonth,
-  onPreviousMonth,
-  onNextMonth,
-  minDate,
-  maxDate,
-  embedded = false,
-}: BookingCalendarProps) {
+export function BookingCalendar(props: BookingCalendarProps) {
+  const {
+    selectedDate,
+    onSelectDate,
+    currentMonth,
+    onPreviousMonth,
+    onNextMonth,
+    minDate,
+    maxDate,
+    embedded = false,
+  } = props;
+
+  const [isPending, startTransition] = useTransition();
   const calendarDays = useMemo(() => getCalendarDays(currentMonth), [currentMonth]);
 
   const isDateDisabled = (date: Date) => {
@@ -48,17 +49,20 @@ export function BookingCalendar({
 
   const body = (
     <div className={cn(!embedded && "overflow-hidden")}>
-      {/* Header (ให้เหมือนของเก่า) */}
       <div
         className={cn(
           "flex items-center justify-between border-b border-gray-100",
-          embedded ? "px-4 py-4" : "p-4"
+          embedded ? "px-4 py-4" : "p-4",
         )}
       >
         <button
           type="button"
-          onClick={onPreviousMonth}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
+          onClick={() => startTransition(onPreviousMonth)}
+          disabled={isPending}
+          className={cn(
+            "p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600",
+            isPending && "opacity-60 cursor-not-allowed",
+          )}
           aria-label="เดือนก่อนหน้า"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -72,8 +76,12 @@ export function BookingCalendar({
 
         <button
           type="button"
-          onClick={onNextMonth}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
+          onClick={() => startTransition(onNextMonth)}
+          disabled={isPending}
+          className={cn(
+            "p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600",
+            isPending && "opacity-60 cursor-not-allowed",
+          )}
           aria-label="เดือนถัดไป"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -82,9 +90,7 @@ export function BookingCalendar({
         </button>
       </div>
 
-      {/* Calendar Grid */}
       <div className={cn(embedded ? "px-4 py-4" : "p-4")}>
-        {/* Day Headers */}
         <div className="grid grid-cols-7 gap-1 mb-2">
           {THAI_DAYS_SHORT.map((day) => (
             <div key={day} className="text-center text-sm font-medium text-gray-400 py-2">
@@ -93,7 +99,6 @@ export function BookingCalendar({
           ))}
         </div>
 
-        {/* Date Grid */}
         <div className="grid grid-cols-7 gap-1">
           {calendarDays.map((date, index) => {
             const selected = isSameDay(date, selectedDate);
@@ -105,8 +110,11 @@ export function BookingCalendar({
               <button
                 key={index}
                 type="button"
-                onClick={() => !disabled && onSelectDate(date)}
-                disabled={disabled}
+                onClick={() => {
+                  if (disabled) return;
+                  startTransition(() => onSelectDate(date));
+                }}
+                disabled={disabled || isPending}
                 className={cn(
                   "aspect-square flex items-center justify-center rounded-lg text-sm",
                   "transition-all duration-200",
@@ -114,7 +122,7 @@ export function BookingCalendar({
                   inMonth && !disabled && "text-gray-700 hover:bg-gray-50",
                   selected && "bg-primary-500 text-white hover:bg-primary-600 shadow-md",
                   today && !selected && "ring-2 ring-primary-500 ring-inset font-bold text-primary-600",
-                  disabled && "text-gray-300 cursor-not-allowed hover:bg-transparent",
+                  (disabled || isPending) && "text-gray-300 cursor-not-allowed hover:bg-transparent",
                 )}
               >
                 {date.getDate()}
