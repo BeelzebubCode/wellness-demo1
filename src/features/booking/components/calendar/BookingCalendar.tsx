@@ -45,22 +45,29 @@ export function BookingCalendar(props: BookingCalendarProps) {
     return false;
   };
 
-  const isCurrentMonth = (date: Date) => date.getMonth() === currentMonth.getMonth();
+  const isCurrentMonth = (date: Date) =>
+    date.getMonth() === currentMonth.getMonth();
 
   const body = (
-    <div className={cn(!embedded && "overflow-hidden")}>
+    <div className={cn("bg-white", !embedded && "overflow-hidden")}>
+      {/* ================= Header ================= */}
       <div
         className={cn(
-          "flex items-center justify-between border-b border-gray-100",
-          embedded ? "px-4 py-4" : "p-4",
+          "relative flex items-center justify-between",
+          "border-b border-gray-100",
+          embedded ? "px-4 py-4" : "px-5 py-4",
         )}
       >
+        {/* Left arrow */}
         <button
           type="button"
           onClick={() => startTransition(onPreviousMonth)}
           disabled={isPending}
           className={cn(
-            "p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600",
+            "h-9 w-9 rounded-full",
+            "grid place-items-center",
+            "text-gray-500 hover:bg-gray-100 hover:text-gray-700",
+            "transition",
             isPending && "opacity-60 cursor-not-allowed",
           )}
           aria-label="เดือนก่อนหน้า"
@@ -70,16 +77,21 @@ export function BookingCalendar(props: BookingCalendarProps) {
           </svg>
         </button>
 
-        <h3 className="text-xl font-semibold text-gray-800">
+        {/* Center title (true center) */}
+        <h3 className="absolute left-1/2 -translate-x-1/2 text-base md:text-lg font-bold text-gray-900 tracking-tight">
           {formatMonthYear(currentMonth)}
         </h3>
 
+        {/* Right arrow */}
         <button
           type="button"
           onClick={() => startTransition(onNextMonth)}
           disabled={isPending}
           className={cn(
-            "p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600",
+            "h-9 w-9 rounded-full",
+            "grid place-items-center",
+            "text-gray-500 hover:bg-gray-100 hover:text-gray-700",
+            "transition",
             isPending && "opacity-60 cursor-not-allowed",
           )}
           aria-label="เดือนถัดไป"
@@ -90,16 +102,23 @@ export function BookingCalendar(props: BookingCalendarProps) {
         </button>
       </div>
 
-      <div className={cn(embedded ? "px-4 py-4" : "p-4")}>
-        <div className="grid grid-cols-7 gap-1 mb-2 auto-rows-fr">
+
+      {/* ================= Calendar ================= */}
+      <div className={cn(embedded ? "px-4 py-4" : "px-5 py-5")}>
+        {/* Days */}
+        <div className="grid grid-cols-7 mb-3">
           {THAI_DAYS_SHORT.map((day) => (
-            <div key={day} className="text-center text-sm font-medium text-gray-400 py-2">
+            <div
+              key={day}
+              className="text-center text-[11px] font-semibold text-gray-400 tracking-wide"
+            >
               {day}
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-1 auto-rows-fr">
+        {/* Dates */}
+        <div className="grid grid-cols-7 gap-2">
           {calendarDays.map((date, index) => {
             const selected = isSameDay(date, selectedDate);
             const today = isToday(date);
@@ -116,14 +135,36 @@ export function BookingCalendar(props: BookingCalendarProps) {
                 }}
                 disabled={disabled || isPending}
                 className={cn(
-                  "aspect-square flex items-center justify-center rounded-lg text-sm",
+                  // 🔹 shape
+                  "aspect-square rounded-xl", // ⬅️ ใช้ rounded-xl แทนความกลม
+
+                  // layout
+                  "flex items-center justify-center",
+                  "text-sm font-medium",
+
+                  // animation
                   "transition-all duration-200",
+
+                  // month state
                   !inMonth && "text-gray-300",
-                  inMonth && !disabled && "text-gray-700 hover:bg-gray-50",
-                  selected && "bg-primary-500 text-white hover:bg-primary-600 shadow-md",
-                  today && !selected && "ring-2 ring-primary-500 ring-inset font-bold text-primary-600",
-                  (disabled || isPending) && "text-gray-300 cursor-not-allowed hover:bg-transparent",
+
+                  // normal
+                  inMonth && !disabled && "text-gray-700 hover:bg-gray-100",
+
+                  // selected
+                  selected &&
+                    "bg-primary-500 text-white shadow-sm hover:bg-primary-600",
+
+                  // today (ไม่ให้เป็นวงกลม)
+                  today &&
+                    !selected &&
+                    "border border-primary-300 text-primary-600 font-semibold",
+
+                  // disabled
+                  (disabled || isPending) &&
+                    "text-gray-300 cursor-not-allowed hover:bg-transparent",
                 )}
+
               >
                 {date.getDate()}
               </button>
@@ -135,5 +176,10 @@ export function BookingCalendar(props: BookingCalendarProps) {
   );
 
   if (embedded) return body;
-  return <Card className="overflow-hidden">{body}</Card>;
+
+  return (
+    <Card className="overflow-hidden rounded-2xl shadow-sm">
+      {body}
+    </Card>
+  );
 }

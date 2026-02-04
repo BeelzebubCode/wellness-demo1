@@ -204,20 +204,28 @@ function TimeSlotSection({
   return (
     <section>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-3 gap-2">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center">
-            {icon}
+        <div className="flex items-start gap-3">
+          
+          {/* 🔥 icon ผูกกับ text block */}
+          <div className="relative">
+            <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center translate-y-[6px]">
+              {icon}
+            </div>
           </div>
-          <div>
-            <h3 className="text-sm md:text-base font-semibold text-gray-800">
+
+          {/* text */}
+          <div className="leading-none">
+            <h3 className="text-sm md:text-base font-semibold text-gray-800 leading-none">
               {title}
             </h3>
-            <p className="text-[11px] md:text-xs text-gray-400">{subtitle}</p>
+            <p className="text-[11px] md:text-xs text-gray-400 leading-none -mt-2.5">
+              {subtitle}
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 grid-rows-2 gap-3 md:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 grid-rows-2 gap-3 md:gap-2">
         {slots.map((slot) => (
           <TimeSlotCard
             key={slot.id}
