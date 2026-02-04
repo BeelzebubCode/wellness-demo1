@@ -91,7 +91,7 @@ export function BookingCalendar(props: BookingCalendarProps) {
       </div>
 
       <div className={cn(embedded ? "px-4 py-4" : "p-4")}>
-        <div className="grid grid-cols-7 gap-1 mb-2">
+        <div className="grid grid-cols-7 gap-1 mb-2 auto-rows-fr">
           {THAI_DAYS_SHORT.map((day) => (
             <div key={day} className="text-center text-sm font-medium text-gray-400 py-2">
               {day}
@@ -99,7 +99,7 @@ export function BookingCalendar(props: BookingCalendarProps) {
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-1 auto-rows-fr">
           {calendarDays.map((date, index) => {
             const selected = isSameDay(date, selectedDate);
             const today = isToday(date);

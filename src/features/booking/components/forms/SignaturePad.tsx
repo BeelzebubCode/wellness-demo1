@@ -120,7 +120,7 @@ export function SignaturePad({
   return (
     <div className={cn("space-y-2", className)}>
       <div className="flex items-center justify-between">
-        <div className="text-sm font-semibold text-gray-900">
+        <div className="text-sm font-bold text-black-700">
           ลายเซ็นยินยอม (Online) <span className="text-red-500">*</span>
         </div>
 
