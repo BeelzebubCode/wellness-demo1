@@ -37,7 +37,10 @@ export function BookingCalendar(props: BookingCalendarProps) {
   } = props;
 
   const [isPending, startTransition] = useTransition();
-  const calendarDays = useMemo(() => getCalendarDays(currentMonth), [currentMonth]);
+  const calendarDays = useMemo(
+    () => getCalendarDays(currentMonth),
+    [currentMonth],
+  );
 
   const isDateDisabled = (date: Date) => {
     if (minDate && date < minDate) return true;
@@ -53,7 +56,7 @@ export function BookingCalendar(props: BookingCalendarProps) {
       {/* ================= Header ================= */}
       <div
         className={cn(
-          "relative flex items-center justify-between",
+          "grid grid-cols-[36px_1fr_36px] items-center",
           "border-b border-gray-100",
           embedded ? "px-4 py-4" : "px-5 py-4",
         )}
@@ -63,44 +66,55 @@ export function BookingCalendar(props: BookingCalendarProps) {
           type="button"
           onClick={() => startTransition(onPreviousMonth)}
           disabled={isPending}
-          className={cn(
-            "h-9 w-9 rounded-full",
-            "grid place-items-center",
-            "text-gray-500 hover:bg-gray-100 hover:text-gray-700",
-            "transition",
-            isPending && "opacity-60 cursor-not-allowed",
-          )}
+          className="h-9 w-9 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100"
           aria-label="เดือนก่อนหน้า"
         >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          <svg
+            className="w-5 h-5 relative left-[0.5px]"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+          >
+            <path
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
         </button>
 
-        {/* Center title (true center) */}
-        <h3 className="absolute left-1/2 -translate-x-1/2 text-base md:text-lg font-bold text-gray-900 tracking-tight">
-          {formatMonthYear(currentMonth)}
-        </h3>
+        {/* Month */}
+        <div className="h-9 flex items-center justify-center">
+          <span className="text-base md:text-lg font-bold whitespace-nowrap leading-none">
+            {formatMonthYear(currentMonth)}
+          </span>
+        </div>
 
         {/* Right arrow */}
         <button
           type="button"
           onClick={() => startTransition(onNextMonth)}
           disabled={isPending}
-          className={cn(
-            "h-9 w-9 rounded-full",
-            "grid place-items-center",
-            "text-gray-500 hover:bg-gray-100 hover:text-gray-700",
-            "transition",
-            isPending && "opacity-60 cursor-not-allowed",
-          )}
+          className="h-9 w-9 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100"
           aria-label="เดือนถัดไป"
         >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          <svg
+            className="w-5 h-5 relative right-[0.5px]"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+          >
+            <path
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 5l7 7-7 7"
+            />
           </svg>
         </button>
       </div>
+
 
 
       {/* ================= Calendar ================= */}
@@ -110,7 +124,7 @@ export function BookingCalendar(props: BookingCalendarProps) {
           {THAI_DAYS_SHORT.map((day) => (
             <div
               key={day}
-              className="text-center text-[11px] font-semibold text-gray-400 tracking-wide"
+              className="text-center text-[16px] font-semibold text-gray-400 tracking-wide"
             >
               {day}
             </div>
@@ -135,36 +149,24 @@ export function BookingCalendar(props: BookingCalendarProps) {
                 }}
                 disabled={disabled || isPending}
                 className={cn(
-                  // 🔹 shape
-                  "aspect-square rounded-xl", // ⬅️ ใช้ rounded-xl แทนความกลม
-
-                  // layout
+                  "aspect-square rounded-xl",
                   "flex items-center justify-center",
                   "text-sm font-medium",
-
-                  // animation
                   "transition-all duration-200",
 
-                  // month state
                   !inMonth && "text-gray-300",
-
-                  // normal
                   inMonth && !disabled && "text-gray-700 hover:bg-gray-100",
 
-                  // selected
                   selected &&
                     "bg-primary-500 text-white shadow-sm hover:bg-primary-600",
 
-                  // today (ไม่ให้เป็นวงกลม)
                   today &&
                     !selected &&
                     "border border-primary-300 text-primary-600 font-semibold",
 
-                  // disabled
                   (disabled || isPending) &&
                     "text-gray-300 cursor-not-allowed hover:bg-transparent",
                 )}
-
               >
                 {date.getDate()}
               </button>

@@ -214,11 +214,11 @@ function TimeSlotSection({
           </div>
 
           {/* text */}
-          <div className="leading-none">
-            <h3 className="text-sm md:text-base font-semibold text-gray-800 leading-none">
+          <div className="flex flex-col gap-1.5">
+            <h3 className="text-sm md:text-base font-semibold text-gray-800">
               {title}
             </h3>
-            <p className="text-[11px] md:text-xs text-gray-400 leading-none -mt-2.5">
+            <p className="text-[11px] md:text-xs text-gray-400 -mt-3.5">
               {subtitle}
             </p>
           </div>

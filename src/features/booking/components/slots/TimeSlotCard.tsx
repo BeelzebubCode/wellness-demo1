@@ -12,9 +12,20 @@ export interface TimeSlotCardProps {
   showEndTime?: boolean;
 }
 
-type BadgeVariant = "available" | "full" | "blocked" | "past" | "closed" | "unavailable";
+type BadgeVariant =
+  | "available"
+  | "full"
+  | "blocked"
+  | "past"
+  | "closed"
+  | "unavailable";
 
-export function TimeSlotCard({ slot, onSelect, disabled = false, showEndTime = true }: TimeSlotCardProps) {
+export function TimeSlotCard({
+  slot,
+  onSelect,
+  disabled = false,
+  showEndTime = true,
+}: TimeSlotCardProps) {
   const total = Number(slot.maxCapacity ?? 1);
   const booked = Number(slot.bookedCount ?? 0);
   const queueText = `${booked}/${total}`;
@@ -22,24 +33,52 @@ export function TimeSlotCard({ slot, onSelect, disabled = false, showEndTime = t
   const isAvailable = slot.isAvailable && !disabled;
 
   const reason =
-    disabled ? "BLOCKED_ACTIVE_BOOKING" : slot.unavailableReason ?? (slot.isPastTime ? "PAST_TIME" : null);
+    disabled
+      ? "BLOCKED_ACTIVE_BOOKING"
+      : slot.unavailableReason ??
+        (slot.isPastTime ? "PAST_TIME" : null);
 
   const badge = (() => {
     if (isAvailable) {
-      return { variant: "available" as BadgeVariant, icon: <CheckCircle className="w-3.5 h-3.5" />, text: `ว่าง ${queueText}` };
+      return {
+        variant: "available" as BadgeVariant,
+        icon: <CheckCircle className="w-3.5 h-3.5" />,
+        text: `ว่าง ${queueText}`,
+      };
     }
+
     switch (reason) {
       case "PAST_TIME":
-        return { variant: "past" as BadgeVariant, icon: <Clock className="w-3.5 h-3.5" />, text: "หมดเวลา" };
+        return {
+          variant: "past" as BadgeVariant,
+          icon: <Clock className="w-3.5 h-3.5" />,
+          text: "หมดเวลา",
+        };
       case "FULL":
-        return { variant: "full" as BadgeVariant, icon: <XCircle className="w-3.5 h-3.5" />, text: `เต็ม ${queueText}` };
+        return {
+          variant: "full" as BadgeVariant,
+          icon: <XCircle className="w-3.5 h-3.5" />,
+          text: `เต็ม ${queueText}`,
+        };
       case "CLOSED":
       case "CANCELLED":
-        return { variant: "closed" as BadgeVariant, icon: <XCircle className="w-3.5 h-3.5" />, text: "ปิดรับจอง" };
+        return {
+          variant: "closed" as BadgeVariant,
+          icon: <XCircle className="w-3.5 h-3.5" />,
+          text: "ปิดรับจอง",
+        };
       case "BLOCKED_ACTIVE_BOOKING":
-        return { variant: "blocked" as BadgeVariant, icon: <AlertTriangle className="w-3.5 h-3.5" />, text: "มีคิวค้าง" };
+        return {
+          variant: "blocked" as BadgeVariant,
+          icon: <AlertTriangle className="w-3.5 h-3.5" />,
+          text: "มีคิวค้าง",
+        };
       default:
-        return { variant: "unavailable" as BadgeVariant, icon: <XCircle className="w-3.5 h-3.5" />, text: "ไม่พร้อมใช้งาน" };
+        return {
+          variant: "unavailable" as BadgeVariant,
+          icon: <XCircle className="w-3.5 h-3.5" />,
+          text: "ไม่พร้อมใช้งาน",
+        };
     }
   })();
 
@@ -61,7 +100,8 @@ export function TimeSlotCard({ slot, onSelect, disabled = false, showEndTime = t
       }}
       disabled={!isAvailable}
       className={cn(
-        "relative p-4 rounded-xl border-2 text-left transition-all duration-200",
+        "relative rounded-xl border-2 text-left transition-all duration-200",
+        "px-5 py-6", // 🔥 เพิ่ม padding ให้การ์ดหายใจ
         "focus:outline-none focus:ring-2 focus:ring-offset-2",
         isAvailable && [
           "bg-gradient-to-br from-green-50 to-emerald-50",
@@ -70,28 +110,51 @@ export function TimeSlotCard({ slot, onSelect, disabled = false, showEndTime = t
           "focus:ring-green-500",
           "group",
         ],
-        !isAvailable && ["bg-gray-50 border-gray-200", "cursor-not-allowed opacity-60"],
+        !isAvailable && [
+          "bg-gray-50 border-gray-200",
+          "cursor-not-allowed opacity-60",
+        ],
       )}
     >
-      <div className="mb-2">
-        <span className={cn("text-lg font-bold", isAvailable ? "text-green-700 group-hover:text-green-800" : "text-gray-400")}>
+      {/* เวลา */}
+      <div className="flex flex-col gap-1.5 mb-4">
+        <div
+          className={cn(
+            "text-base font-semibold",
+            isAvailable
+              ? "text-green-700 group-hover:text-green-800"
+              : "text-gray-400",
+          )}
+        >
           {slot.startTime}
-        </span>
-
-        {showEndTime && (
-          <span className={cn("text-sm ml-1", isAvailable ? "text-green-600" : "text-gray-400")}>
-            - {slot.endTime}
-          </span>
-        )}
+          {showEndTime && (
+            <span
+              className={cn(
+                "text-sm font-normal ml-1",
+                isAvailable ? "text-green-600" : "text-gray-400",
+              )}
+            >
+              - {slot.endTime}
+            </span>
+          )}
+        </div>
       </div>
 
-      <div className={cn("inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium", badgeClass)}>
+      {/* badge */}
+      <div
+        className={cn(
+          "inline-flex items-center gap-1.5",
+          "px-2.5 py-1 rounded-full text-xs font-medium",
+          badgeClass,
+        )}
+      >
         {badge.icon}
         <span>{badge.text}</span>
       </div>
 
+      {/* hover outline */}
       {isAvailable && (
-        <div className="absolute inset-0 rounded-xl border-2 border-green-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="pointer-events-none absolute inset-0 rounded-xl border-2 border-green-400 opacity-0 group-hover:opacity-100 transition-opacity" />
       )}
     </button>
   );
