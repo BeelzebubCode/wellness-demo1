@@ -38,6 +38,10 @@ export async function clearDatabase(prisma: PrismaClient) {
   await prisma.department.deleteMany();
   await prisma.faculty.deleteMany();
 
+  // ✅✅✅ ADD: Borrow system (must be before university delete)
+  await prisma.borrowAssignment.deleteMany();
+  await prisma.borrowRequest.deleteMany();
+
   await prisma.accountUniversityAccess.deleteMany();
 
   await prisma.university.deleteMany();
@@ -87,6 +91,10 @@ export async function clearDatabase(prisma: PrismaClient) {
     "notification_template",
     "notification",
     "account_university_access",
+
+    // ✅ (optional but nice) reset borrow sequences too if tables exist
+    "borrow_request",
+    "borrow_assignment",
   ];
 
   for (const table of tables) {

@@ -1,8 +1,14 @@
+// src/features/borrow-requests/hooks/usePlatformBorrowRequest.ts
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
 import { platformBorrowRequestsApi } from "../api";
-import type { AssignBorrowRequestInput, BorrowRequest, BorrowRequestDetail, RejectBorrowRequestInput } from "../types";
+import type {
+  AssignBorrowRequestInput,
+  BorrowRequest,
+  BorrowRequestDetail,
+  RejectBorrowRequestInput,
+} from "../types";
 
 export function usePlatformBorrowRequest(id: number | null) {
   const [data, setData] = useState<BorrowRequestDetail | null>(null);
@@ -40,7 +46,7 @@ export function usePlatformBorrowRequest(id: number | null) {
       await refetch();
       return res.data;
     },
-    [id, refetch],
+    [id, refetch]
   );
 
   const assign = useCallback(
@@ -51,7 +57,7 @@ export function usePlatformBorrowRequest(id: number | null) {
       await refetch();
       return res.data;
     },
-    [id, refetch],
+    [id, refetch]
   );
 
   useEffect(() => {

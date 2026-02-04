@@ -1,20 +1,29 @@
-//src\app\api\v2\platform\borrow-requests\[id]\route.ts
-
+// src/app/api/v2/platform/borrow-requests/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
-import { getBorrowRequest } from "@/services/borrowRequests";
+import { getBorrowRequest } from "@/services/borrowRequests/handlers/getBorrowRequest";
 
-export const runtime = "nodejs";
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { account } = await requireTenant(req);
+    assertRole(account.role, ["SUPER_ADMIN"]);
 
-export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
-  const { accountId, role } = await requireTenant(req);
-  assertRole(role, ["SUPER_ADMIN"]);
+    const borrowRequestId = Number(params.id);
+    if (!Number.isFinite(borrowRequestId)) {
+      return NextResponse.json({ ok: false, error: "Invalid id" }, { status: 400 });
+    }
 
-  const id = Number(ctx.params.id);
-  const data = await getBorrowRequest({
-    borrowRequestId: id,
-    viewer: { accountId, mode: "PLATFORM" },
-  });
+    const data = await getBorrowRequest({ borrowRequestId, includeRanking: true });
 
-  return NextResponse.json({ ok: true, data });
+    // ✅ FE ต้องการ { ok: true, data }
+    return NextResponse.json({ ok: true, data });
+  } catch (e: any) {
+    return NextResponse.json(
+      { ok: false, error: e?.message ?? "Unknown error" },
+      { status: 400 }
+    );
+  }
 }

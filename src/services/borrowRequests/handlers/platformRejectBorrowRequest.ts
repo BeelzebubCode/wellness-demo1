@@ -1,31 +1,40 @@
+// src/services/borrowRequests/handlers/platformRejectBorrowRequest.ts
 import prisma from "@/lib/prisma";
+import { parseRejectBorrowRequestBody } from "../validators";
 
-export async function platformRejectBorrowRequest(input: {
+export async function platformRejectBorrowRequest(params: {
   borrowRequestId: number;
-  accountId: number;
-  reason: string;
+  rejectedByAccountId: number;
+  body: unknown; // { reason: string }
 }) {
-  const reason = String(input.reason || "").trim();
-  if (!reason) throw new Error("REASON_REQUIRED");
+  const { reason } = parseRejectBorrowRequestBody(params.body);
 
-  const br = await prisma.borrowRequest.findUnique({
-    where: { borrow_request_id: input.borrowRequestId },
-    select: { borrow_request_status: true },
-  });
-  if (!br) throw new Error("NOT_FOUND");
-  if (br.borrow_request_status !== "SUBMITTED") throw new Error("ONLY_SUBMITTED_CAN_REJECT");
+  return prisma.$transaction(async (tx) => {
+    const br = await tx.borrowRequest.findUnique({
+      where: { borrow_request_id: params.borrowRequestId },
+      select: {
+        borrow_request_id: true,
+        borrow_request_status: true,
+      },
+    });
 
-  return prisma.borrowRequest.update({
-    where: { borrow_request_id: input.borrowRequestId },
-    data: {
-      borrow_request_status: "REJECTED",
-      borrow_rejected_at: new Date(),
-      borrow_rejected_by_account_id: input.accountId,
-      borrow_reject_reason: reason,
+    if (!br) throw new Error("NOT_FOUND");
 
-      // เคลียร์ approve เดิม (กันข้อมูลค้าง)
-      borrow_approved_at: null,
-      borrow_approved_by_account_id: null,
-    },
+    // ✅ ปกติ reject ได้ตอน SUBMITTED/APPROVED (แล้วแต่ rule ของคุณ)
+    if (!["SUBMITTED", "APPROVED"].includes(br.borrow_request_status as any)) {
+      throw new Error("NOT_REJECTABLE");
+    }
+
+    const updated = await tx.borrowRequest.update({
+      where: { borrow_request_id: params.borrowRequestId },
+      data: {
+        borrow_request_status: "REJECTED",
+        borrow_rejected_at: new Date(),
+        borrow_rejected_by_account_id: params.rejectedByAccountId,
+        borrow_reject_reason: reason,
+      },
+    });
+
+    return updated;
   });
 }

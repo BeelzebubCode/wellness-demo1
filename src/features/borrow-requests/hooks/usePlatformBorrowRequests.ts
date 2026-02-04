@@ -5,16 +5,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { platformBorrowRequestsApi } from "../api";
 import type { BorrowRequest, PlatformListParams } from "../types";
 
-type ApiBorrowRequest = {
-  borrow_request_id: number;
-  borrow_request_title: string;
-  borrow_request_reason: string;
-  borrow_request_status: string;
-  borrow_needed_count: number;
-};
-
 export function usePlatformBorrowRequests(params?: PlatformListParams) {
   const [rows, setRows] = useState<BorrowRequest[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,23 +20,38 @@ export function usePlatformBorrowRequests(params?: PlatformListParams) {
     setError(null);
 
     try {
-      const res = await platformBorrowRequestsApi.list(params || {});
+      console.log('🔄 Hook: Fetching with params:', params);
+      
+      const response = await platformBorrowRequestsApi.list(params || {});
+      
+      console.log('📦 Hook: Raw response:', response);
+      console.log('📦 Hook: response.ok:', response?.ok);
+      console.log('📦 Hook: response.data:', response?.data);
 
-      const items: BorrowRequest[] = res.data;
-
-      const mapped: BorrowRequest[] = items.map((r) => ({
-        borrowRequestId: r.borrowRequestId,
-        borrowRequestTitle: r.borrowRequestTitle,
-        borrowRequestReason: r.borrowRequestReason,
-        borrowRequestStatus: r.borrowRequestStatus,
-        borrowNeededCount: r.borrowNeededCount,
-      }));
-
-      setRows(mapped);
-
+      if (response.ok && response.data) {
+        const { items, total, page, pageSize } = response.data;
+        
+        console.log('✅ Hook: Extracted data:', { 
+          itemsLength: items?.length, 
+          total, 
+          page, 
+          pageSize 
+        });
+        
+        setRows(items || []);
+        setTotal(total || 0);
+        setPage(page || 1);
+        setPageSize(pageSize || 20);
+      } else {
+        console.warn('⚠️ Hook: Unexpected response format');
+        setRows([]);
+        setTotal(0);
+      }
     } catch (e: any) {
+      console.error('❌ Hook: Error:', e);
       setError(e?.message || "โหลดข้อมูลไม่สำเร็จ");
       setRows([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -51,5 +61,13 @@ export function usePlatformBorrowRequests(params?: PlatformListParams) {
     refetch();
   }, [refetch]);
 
-  return { rows, loading, error, refetch };
+  return { 
+    rows, 
+    total, 
+    page, 
+    pageSize, 
+    loading, 
+    error, 
+    refetch 
+  };
 }

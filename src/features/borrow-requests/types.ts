@@ -1,4 +1,4 @@
-//src\features\borrow-requests\types.ts
+// src/features/borrow-requests/types.ts
 
 export type BorrowRequestStatus =
   | "DRAFT"
@@ -56,8 +56,47 @@ export type BorrowAssignment = {
   borrowAssignmentNote?: string | null;
 };
 
+// ------------------------------
+// ✅ NEW: ranking & parsed detail
+// ------------------------------
+export type BorrowRequestDetailJson = {
+  serviceMode?: "ONLINE" | "ONSITE";
+  requiredTopics?: string[];
+  onlineChannel?: string | null;
+  onsiteLocationText?: string | null;
+  notes?: string | null;
+};
+
+export type RankedConsultant = {
+  consultantId: number;
+  consultantUniversityId: number;
+  consultantName: string;
+  matchedTopics: string[];
+  shifts: Array<{
+    borrowOnCallShiftId: number;
+    startAt: string; // ISO
+    endAt: string; // ISO
+    status: string;
+  }>;
+};
+
+export type RankedUniversity = {
+  universityId: number;
+  universityCode: string;
+  universityNameTh: string;
+  distanceKm: number | null;
+  matchScore: number;
+  reasons: string[];
+  availableConsultants: RankedConsultant[];
+};
+
+// ✅ Detail เดิม + เพิ่ม field ใหม่แบบ optional
 export type BorrowRequestDetail = BorrowRequest & {
   assignments: BorrowAssignment[];
+
+  // ✅ platform detail จะมี 2 field นี้เพิ่มมา (my-detail อาจไม่มี ก็ไม่พัง)
+  parsedDetail?: BorrowRequestDetailJson;
+  rankedUniversities?: RankedUniversity[];
 };
 
 // ✅ ใช้ใน UI form เท่านั้น
@@ -66,7 +105,7 @@ export type BorrowRequestFormInput = {
   reason: string;
   detail?: string | null;
   neededFrom?: string | null; // ISO
-  neededTo?: string | null;   // ISO
+  neededTo?: string | null; // ISO
   neededCount: number;
 };
 
@@ -74,9 +113,9 @@ export type BorrowRequestFormInput = {
 export type CreateBorrowRequestInput = {
   title: string;
   reason: string;
-  detail?: string | null;
+  detail?: string | null; // อาจเป็น JSON string ก็ได้
   neededFrom?: string | null; // ISO
-  neededTo?: string | null;   // ISO
+  neededTo?: string | null; // ISO
   neededCount?: number;
 };
 
@@ -105,3 +144,13 @@ export type AssignBorrowRequestInput = {
 export type RejectBorrowRequestInput = {
   reason: string;
 };
+
+// ✅ เพิ่ม type สำหรับ pagination response
+export type PaginatedResponse<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+export type BorrowRequestListResponse = PaginatedResponse<BorrowRequest>;

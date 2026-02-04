@@ -1,33 +1,32 @@
+// src/services/borrowRequests/handlers/submitBorrowRequest.ts
 import prisma from "@/lib/prisma";
 
-export async function submitBorrowRequest(input: {
+export async function submitBorrowRequest(params: {
   borrowRequestId: number;
+  activeUniversityId: number;
   accountId: number;
-  universityId: number;
-  note?: string;
 }) {
-  const br = await prisma.borrowRequest.findUnique({
-    where: { borrow_request_id: input.borrowRequestId },
-    select: {
-      borrow_request_id: true,
-      from_university_id: true,
-      requested_by_account_id: true,
-      borrow_request_status: true,
-    },
+  const req = await prisma.borrowRequest.findUnique({
+    where: { borrow_request_id: params.borrowRequestId },
   });
+  if (!req) throw new Error("BorrowRequest not found");
 
-  if (!br) throw new Error("NOT_FOUND");
-  if (br.from_university_id !== input.universityId) throw new Error("FORBIDDEN_TENANT");
-  if (br.requested_by_account_id !== input.accountId) throw new Error("FORBIDDEN_OWNER");
-  if (br.borrow_request_status !== "DRAFT") throw new Error("ONLY_DRAFT_CAN_SUBMIT");
+  if (req.from_university_id !== params.activeUniversityId) {
+    throw new Error("Forbidden (tenant mismatch)");
+  }
+  if (req.requested_by_account_id !== params.accountId) {
+    throw new Error("Forbidden (not owner)");
+  }
+  if (req.borrow_request_status !== "DRAFT") {
+    throw new Error("Only DRAFT can be submitted");
+  }
 
   return prisma.borrowRequest.update({
-    where: { borrow_request_id: input.borrowRequestId },
+    where: { borrow_request_id: params.borrowRequestId },
     data: {
       borrow_request_status: "SUBMITTED",
       borrow_submitted_at: new Date(),
-      borrow_submitted_by_account_id: input.accountId,
-      borrow_submit_note: input.note ? String(input.note).trim() : null,
+      borrow_submitted_by_account_id: params.accountId,
     },
   });
 }

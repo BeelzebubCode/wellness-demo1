@@ -1,3 +1,5 @@
+// prisma/seed-data/universities.ts
+
 export const universitiesData = [
   // ===== CENTRAL / BANGKOK =====
   { code: "CU", th: "จุฬาลงกรณ์มหาวิทยาลัย", en: "Chulalongkorn University", province_code: "BKK", is_active: true },

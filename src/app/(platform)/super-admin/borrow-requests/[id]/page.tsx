@@ -99,7 +99,7 @@ export default function SuperBorrowRequestDetailPage() {
         }}
         loading={loading}
         onConfirm={async (payload) => {
-          await reject({ reason: payload }); 
+          await reject({ reason: payload });
           setOpenReject(false);
           await refetch?.();
         }}
@@ -113,6 +113,14 @@ export default function SuperBorrowRequestDetailPage() {
         }}
         loading={loading}
         neededCount={data.borrowNeededCount ?? 1}
+
+        borrowRequestId={id}
+        fromUniversityId={data.fromUniversityId}
+
+        // ✅ ไม่มี field ใน type ก็ใส่ค่าว่างไป
+        defaultStartAt=""
+        defaultEndAt=""
+
         onConfirm={async (items) => {
           await assign({ items });
           setOpenAssign(false);

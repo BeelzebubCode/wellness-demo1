@@ -1,62 +1,39 @@
 // src/services/borrowRequests/handlers/platformListBorrowRequests.ts
 
 import prisma from "@/lib/prisma";
+import { presentBorrowRequest } from "../presenters/borrowRequest.presenter";
 
 export async function platformListBorrowRequests(input: {
   accountId: number;
   status?: string;
-  fromUniversityId?: number;
-  q?: string;
-  page: number;
-  pageSize: number;
+  page?: number;
+  pageSize?: number;
 }) {
   const page = Math.max(1, Number(input.page || 1));
   const pageSize = Math.min(100, Math.max(1, Number(input.pageSize || 20)));
 
   const where: any = {};
 
-  // ✅ SUPER_ADMIN → ไม่ต้องจำกัดมหาลัย
-  // ❌ อย่ามี logic NO_ALLOWED_UNIVERSITIES ตรงนี้
-
-  // ===== status =====
+  // Status filter
   const status = (input.status || "").toUpperCase();
   if (status && status !== "ALL") {
     const allowed = [
-      "DRAFT",
-      "SUBMITTED",
-      "APPROVED",
-      "REJECTED",
-      "ASSIGNED",
-      "COMPLETED",
-      "CANCELLED",
+      "DRAFT", 
+      "SUBMITTED", 
+      "APPROVED", 
+      "REJECTED", 
+      "ASSIGNED", 
+      "COMPLETED", 
+      "CANCELLED"
     ];
     if (allowed.includes(status)) {
       where.borrow_request_status = status;
     }
   }
 
-  // ===== filter มหาลัย (optional) =====
-  if (input.fromUniversityId) {
-    where.from_university_id = input.fromUniversityId;
-  }
+  console.log('🔍 Query where:', where);
 
-  // ===== search =====
-  const q = (input.q || "").trim();
-  if (q) {
-    where.OR = [
-      { borrow_request_title: { contains: q, mode: "insensitive" } },
-      { borrow_request_reason: { contains: q, mode: "insensitive" } },
-      {
-        fromUniversity: {
-          is: {
-            university_name_th: { contains: q, mode: "insensitive" },
-          },
-        },
-      },
-    ];
-  }
-
-  const [total, items] = await Promise.all([
+  const [total, rawItems] = await Promise.all([
     prisma.borrowRequest.count({ where }),
     prisma.borrowRequest.findMany({
       where,
@@ -64,7 +41,14 @@ export async function platformListBorrowRequests(input: {
       skip: (page - 1) * pageSize,
       take: pageSize,
       include: {
-        fromUniversity: true,
+        fromUniversity: {
+          select: {
+            university_id: true,
+            university_code: true,
+            university_name_th: true,
+            university_name_en: true,
+          }
+        },
         requestedBy: {
           select: {
             account_id: true,
@@ -73,16 +57,34 @@ export async function platformListBorrowRequests(input: {
         },
         assignments: {
           orderBy: { borrow_assigned_at: "desc" },
-          take: 3,
           include: {
             consultant: {
-              include: { profile: true },
+              include: { 
+                profile: true,
+              },
             },
+            consultantUniversity: {
+              select: {
+                university_id: true,
+                university_code: true,
+                university_name_th: true,
+              }
+            }
           },
         },
       },
     }),
   ]);
 
-  return { total, page, pageSize, items };
+  console.log('📊 DB Result:', { total, itemsCount: rawItems.length });
+
+  // ✅ แปลงข้อมูลผ่าน presenter
+  const items = rawItems.map(presentBorrowRequest);
+
+  return { 
+    items, 
+    total, 
+    page, 
+    pageSize 
+  };
 }

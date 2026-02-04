@@ -1,89 +1,71 @@
 // src/app/api/v2/borrow-request/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
-import { requireTenant } from "@/lib/tenant/server";
-import { createBorrowRequest, listMyBorrowRequests } from "@/services/borrowRequests";
-
-export const runtime = "nodejs";
-
-function toBorrowRequestDTO(r: any) {
-  return {
-    borrowRequestId: r.borrow_request_id,
-
-    fromUniversityId: r.from_university_id,
-    fromUniversityCode: r.fromUniversity?.university_code ?? null,
-    fromUniversityNameTh: r.fromUniversity?.university_name_th ?? null,
-
-    requestedByAccountId: r.requested_by_account_id,
-    requestedByName: null, // ถ้าจะเอาชื่อจริง ต้อง join account เพิ่ม
-
-    borrowRequestTitle: r.borrow_request_title,
-    borrowRequestReason: r.borrow_request_reason,
-    borrowRequestDetail: r.borrow_request_detail ?? null,
-
-    borrowNeededFrom: r.borrow_needed_from ? new Date(r.borrow_needed_from).toISOString() : null,
-    borrowNeededTo: r.borrow_needed_to ? new Date(r.borrow_needed_to).toISOString() : null,
-    borrowNeededCount: r.borrow_needed_count,
-
-    borrowRequestStatus: r.borrow_request_status,
-
-    borrowSubmittedAt: r.borrow_submitted_at ? new Date(r.borrow_submitted_at).toISOString() : null,
-    borrowApprovedAt: r.borrow_approved_at ? new Date(r.borrow_approved_at).toISOString() : null,
-    borrowRejectedAt: r.borrow_rejected_at ? new Date(r.borrow_rejected_at).toISOString() : null,
-
-    borrowRejectReason: r.borrow_reject_reason ?? null,
-
-    borrowRequestCreatedAt: new Date(r.borrow_request_created_at).toISOString(),
-    borrowRequestUpdatedAt: new Date(r.borrow_request_updated_at).toISOString(),
-  };
-}
+import { requireTenant, assertRole } from "@/lib/tenant/server";
+import { createBorrowRequest } from "@/services/borrowRequests/handlers/createBorrowRequest";
+import { listMyBorrowRequests } from "@/services/borrowRequests/handlers/listMyBorrowRequests";
+import { getAccountId } from "@/services/borrowRequests/helpers";
 
 export async function GET(req: NextRequest) {
-  const { accountId, universityId } = await requireTenant(req);
+  try {
+    const { account, activeUniversityId } = await requireTenant(req);
+    assertRole(account.role, ["HEAD_CONSULTANT", "COUNSELING_ADMIN"]);
 
-  const { searchParams } = new URL(req.url);
-  const status = searchParams.get("status") || undefined;
-  const q = searchParams.get("q") || undefined;
+    // ✅ debug ชัด ๆ
+    const accountId = getAccountId(account);
 
-  const rows = await listMyBorrowRequests({
-    accountId,
-    universityId,
-    status: status as any,
-    q,
-  });
+    if (!activeUniversityId) {
+      return NextResponse.json(
+        { ok: false, error: "NO_ACTIVE_UNIVERSITY", meta: { accountId, role: account.role } },
+        { status: 400 }
+      );
+    }
 
-  return NextResponse.json({
-    ok: true,
-    data: (rows || []).map(toBorrowRequestDTO),
-  });
+    const { searchParams } = new URL(req.url);
+    const status = searchParams.get("status") || undefined;
+    const q = searchParams.get("q") || undefined;
+
+    const rows = await listMyBorrowRequests({
+      accountId,
+      universityId: activeUniversityId,
+      status,
+      q,
+    });
+
+    return NextResponse.json({ ok: true, data: rows });
+  } catch (e: any) {
+    // ✅ ใส่ meta/stack เพื่อรู้สาเหตุจริง
+    return NextResponse.json(
+      {
+        ok: false,
+        error: e?.message ?? "Unknown error",
+        name: e?.name,
+        code: e?.code,
+        meta: e,
+      },
+      { status: 400 }
+    );
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const { accountId, universityId } = await requireTenant(req);
+  try {
+    const { account, activeUniversityId } = await requireTenant(req);
 
-  const body = await req.json().catch(() => ({}));
+    assertRole(account.role, ["HEAD_CONSULTANT", "COUNSELING_ADMIN"]);
 
-  // ✅ รับได้ทั้ง camelCase และ snake_case
-  const title = body.title ?? body.borrow_request_title;
-  const reason = body.reason ?? body.borrow_request_reason;
-  const detail = body.detail ?? body.borrow_request_detail ?? null;
+    const body = await req.json();
+    const created = await createBorrowRequest({
+      activeUniversityId,
+      accountId: getAccountId(account),
+      body,
+    });
 
-  const neededFrom = body.neededFrom ?? body.borrow_needed_from ?? null;
-  const neededTo = body.neededTo ?? body.borrow_needed_to ?? null;
-  const neededCount = body.neededCount ?? body.borrow_needed_count ?? 1;
-
-  const data = await createBorrowRequest({
-    universityId,
-    requestedByAccountId: accountId,
-
-    borrow_request_title: title,
-    borrow_request_reason: reason,
-    borrow_request_detail: detail,
-
-    borrow_needed_from: neededFrom,
-    borrow_needed_to: neededTo,
-    borrow_needed_count: neededCount,
-  });
-
-  return NextResponse.json({ ok: true, data }, { status: 201 });
+    // ✅ FE ต้องการ ok
+    return NextResponse.json({ ok: true, data: created });
+  } catch (e: any) {
+    return NextResponse.json(
+      { ok: false, error: e?.message ?? "Unknown error" },
+      { status: 400 }
+    );
+  }
 }

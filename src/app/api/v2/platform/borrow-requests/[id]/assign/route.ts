@@ -1,26 +1,36 @@
+// src/app/api/v2/platform/borrow-requests/[id]/assign/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
-import { platformAssignBorrowRequest } from "@/services/borrowRequests";
+import { platformAssignBorrowRequest } from "@/services/borrowRequests/handlers/platformAssignBorrowRequest";
+import { getAccountId } from "@/services/borrowRequests/helpers";
 
-export const runtime = "nodejs";
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { account } = await requireTenant(req);
+    assertRole(account.role, ["SUPER_ADMIN"]);
 
-export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
-  const { accountId, role } = await requireTenant(req);
-  assertRole(role, ["SUPER_ADMIN"]);
+    const borrowRequestId = Number(params.id);
+    if (!Number.isFinite(borrowRequestId)) {
+      return NextResponse.json({ ok: false, error: "Invalid id" }, { status: 400 });
+    }
 
-  const id = Number(ctx.params.id);
-  const body = await req.json().catch(() => ({}));
+    const body = await req.json();
 
-  const data = await platformAssignBorrowRequest({
-    borrowRequestId: id,
-    assignedByAccountId: accountId,
-    consultantId: Number(body.consultantId),
-    consultantUniversityId: Number(body.consultantUniversityId),
-    startAt: body.startAt,
-    endAt: body.endAt,
-    note: body.note,
-    // ถ้าจะให้ยืมหลายคนในครั้งเดียว: เปลี่ยน body เป็น array แล้ว loop create
-  });
+    const result = await platformAssignBorrowRequest({
+      borrowRequestId,
+      assignedByAccountId: getAccountId(account),
+      body,
+    });
 
-  return NextResponse.json({ ok: true, data });
+    // ✅ FE คาดว่า data เป็น BorrowRequestDetail
+    return NextResponse.json({ ok: true, data: result.request });
+  } catch (e: any) {
+    return NextResponse.json(
+      { ok: false, error: e?.message ?? "Unknown error" },
+      { status: 400 }
+    );
+  }
 }

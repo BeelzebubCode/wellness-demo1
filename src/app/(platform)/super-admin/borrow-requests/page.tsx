@@ -1,4 +1,3 @@
-//src\app\(platform)\super-admin\borrow-requests\page.tsx
 // src/app/(platform)/super-admin/borrow-requests/page.tsx
 "use client";
 
@@ -8,19 +7,39 @@ import { BorrowRequestsTable } from "@/components/super-admin/borrow-requests";
 
 export default function SuperBorrowRequestsPage() {
   const router = useRouter();
-  const { rows, loading } = usePlatformBorrowRequests();
+  const { rows, total, loading, error } = usePlatformBorrowRequests();
 
-  const safeRows = Array.isArray(rows) ? rows : [];
+  console.log('📊 Page Data:', { rows, total, loading, error });
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+          <strong>เกิดข้อผิดพลาด:</strong> {error}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <BorrowRequestsTable
-      rows={safeRows}
-      loading={loading}
-      onView={(id) => router.push(`./${id}`)}
-      onApprove={(id) => router.push(`./${id}`)}
-      onReject={(id) => router.push(`./${id}?action=reject`)}
-      onAssign={(id) => router.push(`./${id}?action=assign`)}
-    />
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">คำขอยืมตัวที่ปรึกษา</h1>
+        {!loading && (
+          <div className="text-sm text-gray-600">
+            พบ {total} รายการ
+          </div>
+        )}
+      </div>
+
+      <BorrowRequestsTable
+        rows={rows}
+        loading={loading}
+        onView={(id) => router.push(`/super-admin/borrow-requests/${id}`)}
+        onApprove={(id) => router.push(`/super-admin/borrow-requests/${id}`)}
+        onReject={(id) => router.push(`/super-admin/borrow-requests/${id}?action=reject`)}
+        onAssign={(id) => router.push(`/super-admin/borrow-requests/${id}?action=assign`)}
+      />
+    </div>
   );
 }
-

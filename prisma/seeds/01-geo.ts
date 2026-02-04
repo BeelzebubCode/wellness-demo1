@@ -1,6 +1,9 @@
-import { PrismaClient, RegionCode } from "@prisma/client";
+// prisma/seeds/01-geo.ts
+
+import { PrismaClient, Prisma, RegionCode } from "@prisma/client";
 import { provincesData } from "../seed-data/provinces";
 import { universitiesData } from "../seed-data/universities";
+import { universityGpsByCode } from "../seed-data/university-gps";
 
 export async function seedGeo(prisma: PrismaClient) {
   console.log("📍 Creating regions and provinces...");
@@ -52,6 +55,9 @@ export async function seedGeo(prisma: PrismaClient) {
   // =========================
   console.log("🏫 Creating universities...");
 
+  let gpsFilled = 0;
+  let gpsMissing = 0;
+
   for (const u of universitiesData) {
     const provinceId = provinceIdByCode.get(u.province_code);
     if (!provinceId) {
@@ -59,6 +65,10 @@ export async function seedGeo(prisma: PrismaClient) {
         `Province not found for university ${u.code}: province_code=${u.province_code}`,
       );
     }
+
+    const gps = (universityGpsByCode as any)[u.code];
+    if (gps) gpsFilled++;
+    else gpsMissing++;
 
     await prisma.university.upsert({
       where: { university_code: u.code },
@@ -68,15 +78,25 @@ export async function seedGeo(prisma: PrismaClient) {
         university_name_en: u.en,
         province_id: provinceId,
         university_is_active: u.is_active,
+
+        // ✅ เติม lat/lon (numeric/decimal)
+        university_latitude: gps ? new Prisma.Decimal(gps.lat) : null,
+        university_longitude: gps ? new Prisma.Decimal(gps.lon) : null,
       },
       update: {
         university_name_th: u.th,
         university_name_en: u.en,
         province_id: provinceId,
         university_is_active: u.is_active,
+
+        // ✅ เติม lat/lon (update ด้วย เผื่อ rerun แล้วเคย null)
+        university_latitude: gps ? new Prisma.Decimal(gps.lat) : null,
+        university_longitude: gps ? new Prisma.Decimal(gps.lon) : null,
       },
     });
   }
+
+  console.log(`📍 University GPS: filled=${gpsFilled}, missing=${gpsMissing}`);
 
   const universities = await prisma.university.findMany({
     where: { university_code: { in: universitiesData.map((x) => x.code) } },

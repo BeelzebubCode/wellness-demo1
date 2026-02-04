@@ -1,8 +1,17 @@
-export * from "./handlers/createBorrowRequest";
-export * from "./handlers/listMyBorrowRequests";
-export * from "./handlers/getBorrowRequest";
-export * from "./handlers/submitBorrowRequest";
-export * from "./handlers/platformListBorrowRequests";
-export * from "./handlers/platformApproveBorrowRequest";
-export * from "./handlers/platformRejectBorrowRequest";
-export * from "./handlers/platformAssignBorrowRequest";
+// src/services/borrowRequests/index.ts
+
+export * from "./types";
+export * from "./validators";
+export * from "./helpers";
+
+// ===== handlers (explicit export) =====
+export { createBorrowRequest } from "./handlers/createBorrowRequest";
+export { getBorrowRequest } from "./handlers/getBorrowRequest";
+export { listMyBorrowRequests } from "./handlers/listMyBorrowRequests";
+
+export { platformListBorrowRequests } from "./handlers/platformListBorrowRequests";
+export { platformApproveBorrowRequest } from "./handlers/platformApproveBorrowRequest";
+export { platformRejectBorrowRequest } from "./handlers/platformRejectBorrowRequest";
+export { platformAssignBorrowRequest } from "./handlers/platformAssignBorrowRequest";
+
+export { submitBorrowRequest } from "./handlers/submitBorrowRequest";

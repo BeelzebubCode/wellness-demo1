@@ -1,7 +1,10 @@
+// src/features/borrow-requests/api.ts
+
 import type {
   BorrowRequest,
   BorrowRequestDetail,
   CreateBorrowRequestInput,
+  BorrowRequestListResponse, 
   PlatformListParams,
   AssignBorrowRequestInput,
   RejectBorrowRequestInput,
@@ -52,11 +55,10 @@ function qs(obj: Record<string, any>) {
 // --------------------
 // HEAD (counseling-admin)
 // --------------------
-const HEAD_BASE = "/api/v2/borrow-request"; // ✅ singular
+const HEAD_BASE = "/api/v2/borrow-request";
 
 export const borrowRequestsApi = {
-  listMy: () =>
-    apiFetch<{ ok: true; data: BorrowRequest[] }>(HEAD_BASE),
+  listMy: () => apiFetch<{ ok: true; data: BorrowRequest[] }>(HEAD_BASE),
 
   create: (input: CreateBorrowRequestInput) =>
     apiFetch<{ ok: true; data: BorrowRequest }>(HEAD_BASE, {
@@ -64,60 +66,57 @@ export const borrowRequestsApi = {
       body: JSON.stringify(input),
     }),
 
-  // ⚠️ อันนี้จะใช้ได้ก็ต่อเมื่อคุณมี route /api/v2/borrow-request/[id]
   get: (id: number) =>
-    apiFetch<{ ok: true; data: BorrowRequestDetail }>(
-      `${HEAD_BASE}/${id}`,
-    ),
+    apiFetch<{ ok: true; data: BorrowRequestDetail }>(`${HEAD_BASE}/${id}`),
 
   update: (id: number, input: UpdateBorrowRequestInput) =>
-    apiFetch<{ ok: true; data: BorrowRequest }>(
-      `${HEAD_BASE}/${id}`,
-      { method: "PATCH", body: JSON.stringify(input) },
-    ),
+    apiFetch<{ ok: true; data: BorrowRequest }>(`${HEAD_BASE}/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    }),
 
   submit: (id: number) =>
-    apiFetch<{ ok: true; data: BorrowRequest }>(
-      `${HEAD_BASE}/${id}/submit`,
-      { method: "POST" },
-    ),
+    apiFetch<{ ok: true; data: BorrowRequest }>(`${HEAD_BASE}/${id}/submit`, {
+      method: "POST",
+    }),
 
   cancel: (id: number) =>
-    apiFetch<{ ok: true; data: BorrowRequest }>(
-      `${HEAD_BASE}/${id}`,
-      { method: "PATCH", body: JSON.stringify({ status: "CANCELLED" }) },
-    ),
+    apiFetch<{ ok: true; data: BorrowRequest }>(`${HEAD_BASE}/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: "CANCELLED" }),
+    }),
 };
 
 // --------------------
 // SUPER_ADMIN (platform)
 // --------------------
 export const platformBorrowRequestsApi = {
+  // ✅ แก้ return type ให้ถูกต้อง
   list: (params: PlatformListParams) =>
-    apiFetch<{ ok: true; data: BorrowRequest[] }>(
-      `/api/v2/platform/borrow-requests${qs(params)}`,
+    apiFetch<{ ok: true; data: BorrowRequestListResponse }>(
+      `/api/v2/platform/borrow-requests${qs(params)}`
     ),
 
   get: (id: number) =>
     apiFetch<{ ok: true; data: BorrowRequestDetail }>(
-      `/api/v2/platform/borrow-requests/${id}`,
+      `/api/v2/platform/borrow-requests/${id}`
     ),
 
   approve: (id: number) =>
     apiFetch<{ ok: true; data: BorrowRequest }>(
       `/api/v2/platform/borrow-requests/${id}/approve`,
-      { method: "POST" },
+      { method: "POST" }
     ),
 
   reject: (id: number, input: RejectBorrowRequestInput) =>
     apiFetch<{ ok: true; data: BorrowRequest }>(
       `/api/v2/platform/borrow-requests/${id}/reject`,
-      { method: "POST", body: JSON.stringify(input) },
+      { method: "POST", body: JSON.stringify(input) }
     ),
 
   assign: (id: number, input: AssignBorrowRequestInput) =>
     apiFetch<{ ok: true; data: BorrowRequestDetail }>(
       `/api/v2/platform/borrow-requests/${id}/assign`,
-      { method: "POST", body: JSON.stringify(input) },
+      { method: "POST", body: JSON.stringify(input) }
     ),
 };

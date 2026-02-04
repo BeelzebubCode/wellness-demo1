@@ -1,3 +1,5 @@
+// src/app/api/v2/platform/borrow-requests/[id]/approve/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
 import { platformApproveBorrowRequest } from "@/services/borrowRequests";

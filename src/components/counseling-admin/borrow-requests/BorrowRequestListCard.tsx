@@ -1,5 +1,4 @@
 // src/components/counseling-admin/borrow-requests/BorrowRequestListCard.tsx
-
 "use client";
 
 import { Card } from "@/components/ui/Card";
@@ -9,6 +8,9 @@ import type { BorrowRequest } from "@/features/borrow-requests/types";
 
 type Status = BorrowRequest["borrowRequestStatus"];
 
+// ================================
+// STATUS UI
+// ================================
 function tone(status: Status) {
   switch (status) {
     case "DRAFT":
@@ -35,7 +37,7 @@ function statusLabel(status: Status) {
     case "DRAFT":
       return "ร่าง";
     case "SUBMITTED":
-      return "ส่งแล้ว";
+      return "ส่งคำขอแล้ว";
     case "APPROVED":
       return "อนุมัติ";
     case "REJECTED":
@@ -51,13 +53,24 @@ function statusLabel(status: Status) {
   }
 }
 
+// ================================
+// UTIL
+// ================================
 function formatDate(iso?: string | null) {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleString("th-TH", { year: "numeric", month: "short", day: "2-digit" });
+
+  return d.toLocaleDateString("th-TH", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+  });
 }
 
+// ================================
+// CARD
+// ================================
 function BorrowRequestCard({
   item,
   onView,
@@ -65,24 +78,25 @@ function BorrowRequestCard({
   item: BorrowRequest;
   onView: (id: number) => void;
 }) {
-  const submittedAt = formatDate(item.borrowSubmittedAt);
   const createdAt = formatDate(item.borrowRequestCreatedAt);
+  const submittedAt = formatDate(item.borrowSubmittedAt);
 
   return (
     <Card className="p-4 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="font-semibold text-slate-800 truncate">
-            {item.borrowRequestTitle || "(ไม่มีหัวข้อ)"}
+            {item.borrowRequestTitle ?? "(ไม่มีหัวข้อ)"}
           </div>
+
           <div className="text-sm text-slate-500 line-clamp-2">
-            {item.borrowRequestReason || "-"}
+            {item.borrowRequestReason ?? "-"}
           </div>
 
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
             <span>ต้องการ {item.borrowNeededCount} คน</span>
-            {createdAt ? <span>สร้าง: {createdAt}</span> : null}
-            {submittedAt ? <span>ส่ง: {submittedAt}</span> : null}
+            {createdAt && <span>สร้าง: {createdAt}</span>}
+            {submittedAt && <span>ส่ง: {submittedAt}</span>}
           </div>
         </div>
 
@@ -92,7 +106,11 @@ function BorrowRequestCard({
       </div>
 
       <div className="flex justify-end">
-        <Button variant="outline" onClick={() => onView(item.borrowRequestId)}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onView(item.borrowRequestId)}
+        >
           ดูรายละเอียด
         </Button>
       </div>
@@ -100,6 +118,9 @@ function BorrowRequestCard({
   );
 }
 
+// ================================
+// LIST
+// ================================
 export function BorrowRequestListCard({
   rows,
   loading,
@@ -109,14 +130,22 @@ export function BorrowRequestListCard({
   loading?: boolean;
   onView: (id: number) => void;
 }) {
-  if (!rows?.length && !loading) {
-    return <Card className="p-10 text-center text-slate-500">ไม่มีรายการ</Card>;
+  if (!loading && (!rows || rows.length === 0)) {
+    return (
+      <Card className="p-10 text-center text-slate-500">
+        ไม่มีรายการคำขอยืมที่ปรึกษา
+      </Card>
+    );
   }
 
   return (
     <div className="space-y-3">
-      {(rows || []).map((item) => (
-        <BorrowRequestCard key={item.borrowRequestId} item={item} onView={onView} />
+      {rows.map((item) => (
+        <BorrowRequestCard
+          key={item.borrowRequestId}
+          item={item}
+          onView={onView}
+        />
       ))}
     </div>
   );
