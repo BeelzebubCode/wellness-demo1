@@ -1,38 +1,77 @@
-// ==========================================
-// 📌 Date Utilities
-// ==========================================
+// src/lib/date.ts
 
-const THAI_MONTHS = [
-  'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
-];
+// ===============================
+// BE <-> CE helpers (พ.ศ. <-> ค.ศ.)
+// ===============================
 
-const THAI_MONTHS_SHORT = [
-  'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
-  'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'
-];
+/** แปลง YYYY-MM-DD ที่อาจเป็นปี พ.ศ. (>=2400) ให้เป็น ค.ศ. */
+export function normalizeYMD(input: string) {
+  const raw = String(input || "").trim();
 
-const THAI_DAYS = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
-const THAI_DAYS_SHORT = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+  // รองรับ ISO เต็ม "2026-02-05T..." -> เอา 10 ตัวแรกก่อน
+  const head = raw.length >= 10 ? raw.slice(0, 10) : raw;
 
-/**
- * Convert Date to ISO date string (YYYY-MM-DD)
- */
-export function toISODateString(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const [yy, mm, dd] = head.split("-").map(Number);
+  if (!Number.isFinite(yy) || !Number.isFinite(mm) || !Number.isFinite(dd)) return head;
+
+  let y = yy;
+  if (y >= 2400) y = y - 543;
+
+  const pad2 = (n: number) => String(n).padStart(2, "0");
+  return `${y}-${pad2(mm)}-${pad2(dd)}`;
 }
 
-/**
- * Format date in Thai format
- */
+/** แปลง YYYY-MM-DD (พ.ศ./ค.ศ. ได้) เป็น Date (local) */
+export function fromYMD(input: string) {
+  const s = normalizeYMD(input);
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/** คืน YYYY-MM-DD จาก Date (local) */
+export function toYMD(d: Date) {
+  const pad2 = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+/** alias ชื่อเดิม (กันไฟล์เก่า import อยู่) */
+export const toISODateString = toYMD;
+
+/** เอา date จาก ISO datetime ให้เป็น YYYY-MM-DD (รองรับพ.ศ.ถ้ามีคนส่งมาแปลกๆ) */
+export function dateOnly(input: string) {
+  return normalizeYMD(input);
+}
+
+// ===============================
+// Thai labels
+// ===============================
+
+export const THAI_MONTHS = [
+  "มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
+  "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม",
+];
+
+export const THAI_MONTHS_SHORT = [
+  "ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.",
+  "ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค.",
+];
+
+export const THAI_DAYS = ["อาทิตย์","จันทร์","อังคาร","พุธ","พฤหัสบดี","ศุกร์","เสาร์"];
+export const THAI_DAYS_SHORT = ["อา","จ","อ","พ","พฤ","ศ","ส"];
+
+/** Format month+year ไทย (พ.ศ.) */
+export function formatMonthYear(date: Date, short = false) {
+  const month = short ? THAI_MONTHS_SHORT[date.getMonth()] : THAI_MONTHS[date.getMonth()];
+  const year = date.getFullYear() + 543;
+  return `${month} ${year}`;
+}
+
+/** Format วันที่แบบไทย (รองรับ string/date) */
 export function formatThaiDate(
   date: Date | string,
-  options: { short?: boolean; includeYear?: boolean; includeDay?: boolean } = {}
-): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
+  options: { short?: boolean; includeYear?: boolean; includeDay?: boolean } = {},
+) {
+  const d = typeof date === "string" ? new Date(date) : date;
   const { short = false, includeYear = true, includeDay = false } = options;
 
   const day = d.getDate();
@@ -43,31 +82,14 @@ export function formatThaiDate(
   let result = `${day} ${month}`;
   if (includeYear) result += ` ${short ? year.toString().slice(-2) : year}`;
   if (includeDay) result = `วัน${dayName} ${result}`;
-
   return result;
 }
 
-/**
- * Get Thai day name
- */
-export function getThaiDayName(date: Date, format: 'short' | 'full' = 'full'): string {
-  const dayIndex = date.getDay();
-  return format === 'short' ? THAI_DAYS_SHORT[dayIndex] : THAI_DAYS[dayIndex];
-}
+// ===============================
+// Date utils used by calendar
+// ===============================
 
-/**
- * Format month and year in Thai
- */
-export function formatMonthYear(date: Date, short = false): string {
-  const month = short ? THAI_MONTHS_SHORT[date.getMonth()] : THAI_MONTHS[date.getMonth()];
-  const year = date.getFullYear() + 543;
-  return `${month} ${year}`;
-}
-
-/**
- * Check if two dates are the same day
- */
-export function isSameDay(date1: Date, date2: Date): boolean {
+export function isSameDay(date1: Date, date2: Date) {
   return (
     date1.getDate() === date2.getDate() &&
     date1.getMonth() === date2.getMonth() &&
@@ -75,36 +97,35 @@ export function isSameDay(date1: Date, date2: Date): boolean {
   );
 }
 
-/**
- * Check if date is today
- */
-export function isToday(date: Date): boolean {
+export function isToday(date: Date) {
   return isSameDay(date, new Date());
 }
 
-/**
- * Check if date is in the past
- */
-export function isPast(date: Date): boolean {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const checkDate = new Date(date);
-  checkDate.setHours(0, 0, 0, 0);
+export function startOfDay(date: Date) {
+  const result = new Date(date);
+  result.setHours(0, 0, 0, 0);
+  return result;
+}
+
+export function endOfDay(date: Date) {
+  const result = new Date(date);
+  result.setHours(23, 59, 59, 999);
+  return result;
+}
+
+export function isPast(date: Date) {
+  const today = startOfDay(new Date());
+  const checkDate = startOfDay(new Date(date));
   return checkDate < today;
 }
 
-/**
- * Check if date is weekend
- */
-export function isWeekend(date: Date): boolean {
+export function isWeekend(date: Date) {
   const day = date.getDay();
   return day === 0 || day === 6;
 }
 
-/**
- * Get calendar days for a month (includes padding from prev/next months)
- */
-export function getCalendarDays(currentMonth: Date): Date[] {
+/** ปฏิทิน 42 ช่อง (6 สัปดาห์) */
+export function getCalendarDays(currentMonth: Date) {
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
   const firstDay = new Date(year, month, 1);
@@ -113,17 +134,14 @@ export function getCalendarDays(currentMonth: Date): Date[] {
 
   const days: Date[] = [];
 
-  // Previous month padding
   for (let i = startPadding - 1; i >= 0; i--) {
     days.push(new Date(year, month, -i));
   }
 
-  // Current month
   for (let i = 1; i <= lastDay.getDate(); i++) {
     days.push(new Date(year, month, i));
   }
 
-  // Next month padding (to make 42 days = 6 weeks)
   const remaining = 42 - days.length;
   for (let i = 1; i <= remaining; i++) {
     days.push(new Date(year, month + 1, i));
@@ -132,57 +150,28 @@ export function getCalendarDays(currentMonth: Date): Date[] {
   return days;
 }
 
-/**
- * Add days to date
- */
-export function addDays(date: Date, days: number): Date {
+export function addDays(date: Date, days: number) {
   const result = new Date(date);
   result.setDate(result.getDate() + days);
   return result;
 }
 
-/**
- * Get start of day
- */
-export function startOfDay(date: Date): Date {
-  const result = new Date(date);
-  result.setHours(0, 0, 0, 0);
-  return result;
+// ===============================
+// Time helpers (ไฟล์เก่ามีคนใช้)
+// ===============================
+
+export function formatTime(time: string) {
+  const [hours, minutes] = time.split(":");
+  return `${hours.padStart(2, "0")}:${minutes.padStart(2, "0")} น.`;
 }
 
-/**
- * Get end of day
- */
-export function endOfDay(date: Date): Date {
-  const result = new Date(date);
-  result.setHours(23, 59, 59, 999);
-  return result;
-}
-
-/**
- * Format time (HH:mm)
- */
-export function formatTime(time: string): string {
-  const [hours, minutes] = time.split(':');
-  return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')} น.`;
-}
-
-/**
- * Parse time string to minutes since midnight
- */
-export function timeToMinutes(time: string): number {
-  const [hours, minutes] = time.split(':').map(Number);
+export function timeToMinutes(time: string) {
+  const [hours, minutes] = time.split(":").map(Number);
   return hours * 60 + minutes;
 }
 
-/**
- * Convert minutes since midnight to time string
- */
-export function minutesToTime(minutes: number): string {
+export function minutesToTime(minutes: number) {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
-  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+  return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
 }
-
-// Export constants
-export { THAI_MONTHS, THAI_MONTHS_SHORT, THAI_DAYS, THAI_DAYS_SHORT };

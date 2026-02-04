@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Modal, Button } from "@/components/ui";
 import { cn } from "@/lib/cn";
 
-import type { AdminBookingRow, AssigneeOption } from "@/features/counseling-admin-bookings/type";
+import type { AdminBookingRow, AssigneeOption } from "@/features/counseling-admin/type";
 
 export interface AssignPayload {
   consultantId: number;

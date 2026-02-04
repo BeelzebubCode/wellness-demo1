@@ -10,14 +10,12 @@ import {
   isPast,
   THAI_DAYS_SHORT,
 } from "@/lib/date";
+import { THAI_MONTHS } from "@/lib/date";
+
 
 function formatMonthYearTH(d: Date) {
-  const thMonths = [
-    "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
-    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
-  ];
   const y = d.getFullYear() + 543;
-  return `${thMonths[d.getMonth()]} ${y}`;
+  return `${THAI_MONTHS[d.getMonth()]} ${y}`;
 }
 
 export type MiniCalendarProps = {

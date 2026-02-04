@@ -1,3 +1,5 @@
+// src/features/consultant/my-jobs/components/OnlineChannelModal.tsx
+
 "use client";
 
 import React from "react";

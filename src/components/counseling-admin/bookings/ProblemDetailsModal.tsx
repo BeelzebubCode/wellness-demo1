@@ -2,7 +2,7 @@
 "use client";
 
 import { Modal, Button } from "@/components/ui";
-import type { AdminBookingRow } from "@/features/counseling-admin-bookings/type";
+import type { AdminBookingRow } from "@/features/counseling-admin/type";
 
 export function ProblemDetailsModal({
   booking,

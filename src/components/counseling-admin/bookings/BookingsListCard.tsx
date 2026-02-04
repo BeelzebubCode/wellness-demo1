@@ -13,7 +13,7 @@ import {
   FileText,
 } from "lucide-react";
 
-import type { AdminBookingRow as Booking } from "@/features/counseling-admin-bookings/type";
+import type { AdminBookingRow as Booking } from "@/features/counseling-admin/type";
 
 /* -------------------- small ui helpers -------------------- */
 

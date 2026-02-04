@@ -1,3 +1,5 @@
+// src/app/api/v2/consultants/[id]/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
 import { handleGetConsultant } from "@/services/consultant/handlers/getConsultant";

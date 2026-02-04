@@ -1,19 +1,18 @@
-// features/counseling-admin-bookings/hooks/useAssignees.ts
-
+// src/features/counseling-admin/bookings/hook/useAssigneesQuery.ts
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { AssigneeOption } from "../type";
-import { fetchAssigneesV2 } from "../api";
+import type { AssigneeOption } from "../types";
+import { fetchAssignees } from "../api/assignees";
 
-export function useAssignees() {
+export function useAssigneesQuery() {
   const [assignees, setAssignees] = useState<AssigneeOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
     try {
-      const list = await fetchAssigneesV2();
+      const list = await fetchAssignees();
       setAssignees(list);
     } catch {
       setAssignees([]);

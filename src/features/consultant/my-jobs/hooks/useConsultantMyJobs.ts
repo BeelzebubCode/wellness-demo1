@@ -4,29 +4,55 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ConsultantMyJobsFilters } from "../filters/defs";
-import type { Job, BookingStatusUI, MyBookingApiRow, OutcomeDraft, OnlineChannelDraft } from "../types";
-import { fetchMyBookings, startBooking, completeBooking, setOnlineChannel } from "../api/myJobs";
-
-function fromYMD(s: string) {
-  const [y, m, d] = s.split("-").map(Number);
-  return new Date(y, m - 1, d);
-}
+import type {
+  Job,
+  BookingStatusUI,
+  MyBookingApiRow,
+  OutcomeDraft,
+  OnlineChannelDraft,
+} from "../types";
+import {
+  fetchMyBookings,
+  startBooking,
+  completeBooking,
+  setOnlineChannel,
+} from "../api/myJobs";
+import { normalizeYMD, fromYMD } from "@/lib/date";
 
 function mapStatus(dbStatus: string): BookingStatusUI {
   const s = String(dbStatus || "").toUpperCase();
-
-  // ✅ map ของ DB -> UI
-  if (s === "ASSIGNED") return "PENDING"; // สำคัญมาก (ของจริง consultant คือ ASSIGNED)
+  if (s === "ASSIGNED") return "PENDING";
   if (s === "IN_PROGRESS") return "IN_PROGRESS";
   if (s === "COMPLETED") return "COMPLETED";
   if (s === "CANCELLED") return "CANCELLED";
-
-  // fallback
   return "PENDING";
 }
 
+// ✅ กัน API ส่ง field วันไม่เหมือนกัน
+function getRowYmd(r: any) {
+  // ลองหา field ที่เป็นวัน/เวลาให้ได้ก่อน
+  const candidates = [
+    r?.date, // "2026-02-05" หรือ "2569-02-05"
+    r?.startAt, // "2026-02-05T..."
+    r?.startDateTime, // "2026-02-05T..."
+    r?.raw?.date,
+    r?.raw?.startAt,
+    r?.raw?.startDateTime,
+  ]
+    .filter(Boolean)
+    .map((x) => String(x));
+
+  // ถ้ามีซักตัว เอาอันแรก
+  return candidates.length ? normalizeYMD(candidates[0]) : "";
+}
+
 export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
-  const selectedDateStr = filters.date;
+  const selectedDateStr = filters.date; // อาจเป็น พ.ศ.
+  const selectedDateStrNorm = useMemo(
+    () => normalizeYMD(selectedDateStr),
+    [selectedDateStr],
+  );
+
   const statusFilter = filters.status;
   const search = filters.search ?? "";
 
@@ -38,38 +64,42 @@ export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
-  const [stats, setStats] = useState({ today: 0, pending: 0, inProgress: 0, completed: 0 });
+  const [stats, setStats] = useState({
+    today: 0,
+    pending: 0,
+    inProgress: 0,
+    completed: 0,
+  });
+
   const [refreshKey, setRefreshKey] = useState(0);
   const triggerRefresh = () => setRefreshKey((x) => x + 1);
 
-  // confirm accept
   const [confirmAccept, setConfirmAccept] = useState<{ open: boolean; job: Job | null }>({
     open: false,
     job: null,
   });
 
-  // outcome modal
   const [outcomeModal, setOutcomeModal] = useState<{ open: boolean; job: Job | null }>({
     open: false,
     job: null,
   });
+
   const [outcomeDraft, setOutcomeDraft] = useState<OutcomeDraft>({
     consultantNote: "",
     nextStep: "",
     riskLevel: 2,
   });
 
-  // ✅ online channel modal
   const [onlineModal, setOnlineModal] = useState<{ open: boolean; job: Job | null }>({
     open: false,
     job: null,
   });
+
   const [onlineDraft, setOnlineDraft] = useState<OnlineChannelDraft>({
     url: "",
     note: "",
   });
 
-  // fetch jobs
   useEffect(() => {
     let alive = true;
 
@@ -78,7 +108,8 @@ export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
       try {
         const rows = await fetchMyBookings();
 
-        const dayRows = rows.filter((r) => r.date === selectedDateStr);
+        // ✅ FIX: normalize วันทั้งสองฝั่ง + รองรับ date field ไม่ตรงกัน
+        const dayRows = rows.filter((r) => getRowYmd(r) === selectedDateStrNorm);
 
         const byStatus =
           statusFilter === "ALL"
@@ -147,9 +178,8 @@ export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
     return () => {
       alive = false;
     };
-  }, [selectedDateStr, statusFilter, search, refreshKey]);
+  }, [selectedDateStrNorm, statusFilter, search, refreshKey]);
 
-  // actions
   const handleAction = (job: Job) => {
     if (actionLoadingId) return;
 
@@ -165,7 +195,6 @@ export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
     alert("เคสนี้ปิดแล้ว/ยกเลิกแล้ว");
   };
 
-  /** ✅ รับเคส (start) -> ถ้า online ให้เด้ง modal ขอช่องทาง */
   const confirmAcceptJob = async () => {
     const job = confirmAccept.job;
     if (!job) return;
@@ -174,7 +203,6 @@ export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
     try {
       const started = await startBooking(job.id);
 
-      // update UI status
       setJobs((prev) => prev.map((j) => (j.id === job.id ? { ...j, status: "IN_PROGRESS" } : j)));
       setStats((s) => ({
         ...s,
@@ -184,7 +212,6 @@ export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
 
       setConfirmAccept({ open: false, job: null });
 
-      // ✅ ถ้าเป็นออนไลน์: เปิด modal ให้กรอกลิงก์/ช่องทาง แล้วส่งให้ user
       const shouldAskChannel =
         (job.serviceMode ?? "").toString().toUpperCase() === "ONLINE" ||
         started.requireOnlineChannel === true;
@@ -200,7 +227,6 @@ export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
     }
   };
 
-  /** ✅ ส่งช่องทางออนไลน์ */
   const submitOnlineChannel = async () => {
     const job = onlineModal.job;
     if (!job) return;
@@ -215,13 +241,12 @@ export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
     try {
       await setOnlineChannel(job.id, { url, note: onlineDraft.note?.trim() || "" });
 
-      // update job local cache
       setJobs((prev) =>
         prev.map((j) =>
           j.id === job.id
             ? { ...j, onlineChannelUrl: url, onlineChannelNote: onlineDraft.note?.trim() || "" }
-            : j
-        )
+            : j,
+        ),
       );
 
       setOnlineModal({ open: false, job: null });
@@ -232,7 +257,6 @@ export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
     }
   };
 
-  /** ✅ ส่ง outcome + complete */
   const submitOutcomeAndComplete = async () => {
     const job = outcomeModal.job;
     if (!job) return;

@@ -1,7 +1,7 @@
-// src/features/counseling-admin-bookings/type.ts
+// src/features/counseling-admin/bookings/types.ts
 import type {
-  BookingStatus,
   BookingCore,
+  BookingStatus,
   BookingOutcomeCore,
   BookingCancellationCore,
 } from "@/shared/types/booking";
@@ -28,8 +28,7 @@ export type AdminBookingRow = BookingCore & {
   cancellation?: BookingCancellationCore | null;
 };
 
-// อันนี้จริง ๆ เป็น shared ก็ได้ แต่จะวางที่ feature ก็ไม่ผิด
 export type AssigneeOption = { id: number; name: string };
 
-// re-export ถ้าจะให้ที่อื่น import สะดวก
+export type AdminBookingStatusFilter = BookingStatus | "ALL";
 export type { BookingStatus };

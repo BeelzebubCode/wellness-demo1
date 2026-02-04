@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/cn";
-import type { AdminBookingRow } from "@/features/counseling-admin-bookings/type";
+import type { AdminBookingRow } from "@/features/counseling-admin/type";
 import { Clock3, UserCheck, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 function StatCard({

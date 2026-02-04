@@ -10,7 +10,7 @@ function isStaff(role: AccountRole) {
 
 export async function handleListConsultants(
   ctx: AccountContext & { activeUniversityId?: number },
-  input?: { organizationId?: number | null },
+  input?: { organizationId?: number | null; includeBorrowed?: boolean },
 ) {
   const role = ctx.role as AccountRole;
   if (!isStaff(role)) {
@@ -22,20 +22,53 @@ export async function handleListConsultants(
     return NextResponse.json({ error: "activeUniversityId missing" }, { status: 400 });
   }
 
-  // ✅ tenant guard
   const denied = requireUniversity(ctx as any, activeUniversityId);
   if (denied) return denied;
 
+  const now = new Date();
+
+  // ✅ สำคัญ: default = false (ตาม requirement: head NU เห็นเฉพาะ NU)
+  const includeBorrowed = input?.includeBorrowed ?? false;
+
+  const where = {
+    ...(typeof input?.organizationId === "number"
+      ? { organization_id: input.organizationId }
+      : {}),
+
+    ...(includeBorrowed
+      ? {
+          OR: [
+            { university_id: activeUniversityId },
+            {
+              borrowAssignments: {
+                some: {
+                  borrow_assign_start_at: { lte: now },
+                  borrow_assign_end_at: { gte: now },
+                  borrowRequest: {
+                    from_university_id: activeUniversityId,
+                    borrow_request_status: { in: ["APPROVED", "ASSIGNED"] as any },
+                  },
+                },
+              },
+            },
+          ],
+        }
+      : {
+          university_id: activeUniversityId,
+        }),
+  };
+
   const consultants = await prisma.consultant.findMany({
-    where: {
-      university_id: activeUniversityId,
-      ...(typeof input?.organizationId === "number"
-        ? { organization_id: input.organizationId }
-        : {}),
-    },
+    where,
     select: {
       consultant_id: true,
-      profile: { select: { consultant_first_name: true, consultant_last_name: true } },
+      university_id: true,
+      profile: {
+        select: {
+          consultant_first_name: true,
+          consultant_last_name: true,
+        },
+      },
     },
     orderBy: { consultant_created_at: "desc" },
   });
@@ -45,10 +78,23 @@ export async function handleListConsultants(
       const name = c.profile
         ? `${c.profile.consultant_first_name} ${c.profile.consultant_last_name}`.trim()
         : null;
+
       if (!name) return null;
-      return { id: c.consultant_id, name };
+
+      return {
+        id: c.consultant_id, // ✅ id = consultant_id เสมอ
+        consultantId: c.consultant_id,
+        universityId: c.university_id,
+        name,
+      };
     })
     .filter(Boolean);
 
-  return NextResponse.json({ success: true, consultants: formatted });
+  // ✅ ส่ง activeUniversityId กลับไปด้วย เพื่อ debug ว่ามันถือมหาลัยไหน
+  return NextResponse.json({
+    success: true,
+    activeUniversityId,
+    includeBorrowed,
+    consultants: formatted,
+  });
 }

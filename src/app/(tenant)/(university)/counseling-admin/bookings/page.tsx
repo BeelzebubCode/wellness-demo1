@@ -1,187 +1,125 @@
-// src/app/admin/bookings/page.tsx
+// src/app/(tenant)/(university)/counseling-admin/bookings/page.tsx
+
 "use client";
 
 import { useMemo, useState } from "react";
 import { ClipboardList } from "lucide-react";
 
-import {
-  BookingsListCard,
-  ProblemDetailsModal,
-  RescheduleBookingModal,
-  AssignBookingModal,
-  BookingsDashboard,
-  type ReschedulePayload,
-  type AssignPayload,
-} from "@/components/counseling-admin/bookings";
-
-import type { AdminBookingRow } from "@/features/counseling-admin-bookings/type";
-import { useAdminBookings } from "@/features/counseling-admin-bookings/hooks/useAdminBookings";
-import { useAssignees } from "@/features/counseling-admin-bookings/hooks/useAssignees";
-
 import { FilterBar } from "@/components/filters/FilterBar";
-import type { AdminBookingStatusFilter } from "@/features/counseling-admin-bookings/api";
-
 import {
   ADMIN_BOOKINGS_FILTER_DEFS,
   type AdminBookingsFilters,
-} from "@/features/counseling-admin-bookings/filters/defs";
+} from "@/features/counseling-admin/filters/defs";
 
-function toYMD(d: Date) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
+import type { BookingStatus } from "@/features/counseling-admin/bookings/types";
+import { BookingsDashboard } from "@/features/counseling-admin/bookings/components/BookingsDashboard";
 
-function fromYMD(s: string) {
-  return new Date(`${s}T00:00:00`);
-}
+import { useBookingsQuery } from "@/features/counseling-admin/bookings/hook/useBookingsQuery";
+import { useAssigneesQuery } from "@/features/counseling-admin/bookings/hook/useAssigneesQuery";
+import { useBookingActions } from "@/features/counseling-admin/bookings/hook/useBookingActions";
 
-export default function AdminBookingsPage() {
+import { toYMD, fromYMD } from "@/lib/date";
+
+export default function CounselingAdminBookingsPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [search, setSearch] = useState<string>(""); // ✅ เพิ่ม
+  const [statusFilter, setStatusFilter] = useState<BookingStatus | "ALL">("ALL");
+  const [search, setSearch] = useState("");
 
-  const { bookings, isLoading, refresh, statusFilter, setStatusFilter } =
-    useAdminBookings(selectedDate);
+  const { rows, isLoading, error, refresh } = useBookingsQuery({
+    date: selectedDate,
+    status: statusFilter,
+  });
 
-  const { assignees } = useAssignees();
+  // ✅ rename ให้ตรง prop ที่ต้องใช้
+  const { assignees, isLoading: isLoadingAssignees } = useAssigneesQuery();
 
-  // modals
-  const [rescheduleTarget, setRescheduleTarget] =
-    useState<AdminBookingRow | null>(null);
-  const [assignTarget, setAssignTarget] = useState<AdminBookingRow | null>(
-    null,
-  );
-  const [problemTarget, setProblemTarget] = useState<AdminBookingRow | null>(
-    null,
-  );
+  // ✅ destructure ให้ตรงกับ hook
+  const { doAssign, doReschedule } = useBookingActions();
 
-  // ✅ ส่งค่าให้ FilterBar (date + status + search)
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return rows;
+
+    return rows.filter((b) => {
+      const user = String((b as any).userName ?? "").toLowerCase();
+      const line = String((b as any).lineUserId ?? "").toLowerCase();
+      const problem = String((b as any).problemType ?? "").toLowerCase();
+      const detail = String((b as any).problemDescription ?? "").toLowerCase();
+      return user.includes(q) || line.includes(q) || problem.includes(q) || detail.includes(q);
+    });
+  }, [rows, search]);
+
   const filterValue: AdminBookingsFilters = useMemo(
-    () => ({
-      date: toYMD(selectedDate),
-      status: statusFilter as any,
-      search,
-    }),
+    () => ({ date: toYMD(selectedDate), status: statusFilter as any, search }),
     [selectedDate, statusFilter, search],
   );
 
-  // ✅ กรองใน client (ชื่อ / LINE ID / ประเภทปัญหา)
-  const filteredBookings = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return bookings;
-
-    return bookings.filter((b: any) => {
-      const userName = String(b.userName ?? "").toLowerCase();
-      const lineUserId = String(b.lineUserId ?? "").toLowerCase();
-      const problemType = String(b.problemType ?? "").toLowerCase();
-      const detail = String(
-        b.problemDescription ?? b.detailText ?? "",
-      ).toLowerCase();
-
-      return (
-        userName.includes(q) ||
-        lineUserId.includes(q) ||
-        problemType.includes(q) ||
-        detail.includes(q)
-      );
-    });
-  }, [bookings, search]);
-
-  const handleReschedule = async (payload: ReschedulePayload) => {
-    if (!rescheduleTarget) return;
-
-    await fetch(`/api/admin/bookings/${rescheduleTarget.id}/reschedule`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(payload),
-    });
-
-    setRescheduleTarget(null);
-    refresh();
-  };
-
-  const handleAssign = async (payload: AssignPayload) => {
-    if (!assignTarget) return;
-
-    await fetch(`/api/v2/bookings/${assignTarget.id}/assign`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(payload),
-    });
-
-    setAssignTarget(null);
-    refresh();
-  };
-
   return (
-    <div className="max-w-[1400px] mx-auto px-4 py-6 space-y-6">
-      {/* Header */}
+    <div className="mx-auto max-w-[1400px] space-y-6 px-4 py-6">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-primary-500 text-white flex items-center justify-center">
-          <ClipboardList className="w-5 h-5" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-500 text-white">
+          <ClipboardList className="h-5 w-5" />
         </div>
         <div>
           <h5 className="text-2xl font-bold">จัดการคิวการให้คำปรึกษา</h5>
-          <p className="text-sm text-gray-500">
-            เลือกวันที่และตัวกรองเพื่อดูคิว
-          </p>
+          <p className="text-sm text-gray-500">เลือกวันที่และตัวกรองเพื่อดูคิว</p>
         </div>
       </div>
 
-      {/* ✅ Filters + Search */}
       <FilterBar
         defs={ADMIN_BOOKINGS_FILTER_DEFS}
         value={filterValue}
-        dateKey="date" // ✅ เพิ่มบรรทัดนี้ (ปัก date ไว้บนแถบหลัก)
+        dateKey="date"
         searchKey="search"
         searchPlaceholder="ค้นหาชื่อ / LINE ID / ประเภทเรื่อง / รายละเอียด..."
         onChange={(next) => {
-          // date
           const nextDateStr = String((next as any).date ?? "").trim();
           if (nextDateStr) setSelectedDate(fromYMD(nextDateStr));
 
-          // status
-          setStatusFilter(
-            ((next as any).status ?? "ALL") as AdminBookingStatusFilter,
-          );
-
-          // search
+          setStatusFilter(((next as any).status ?? "ALL") as any);
           setSearch(String((next as any).search ?? ""));
         }}
       />
 
-      {/* Dashboard */}
-      {!isLoading && <BookingsDashboard bookings={filteredBookings} />}
-
-      {/* Booking List */}
-      <BookingsListCard
+      <BookingsDashboard
+        selectedDate={selectedDate}
+        onChangeDate={setSelectedDate}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        rows={filteredRows}
         isLoading={isLoading}
-        bookings={filteredBookings}
-        onOpenProblem={setProblemTarget}
-        onOpenReschedule={setRescheduleTarget}
-        onOpenAssign={setAssignTarget}
-      />
-
-      {/* Modals */}
-      <RescheduleBookingModal
-        booking={rescheduleTarget}
-        onClose={() => setRescheduleTarget(null)}
-        onConfirm={handleReschedule}
-      />
-
-      <AssignBookingModal
-        booking={assignTarget}
+        error={error}
         assignees={assignees}
-        onClose={() => setAssignTarget(null)}
-        onConfirm={handleAssign}
-      />
+        isLoadingAssignees={isLoadingAssignees}
+        onRefresh={refresh}
+        onAssign={async (bookingId, consultantId) => {
+          // ✅ เอา universityId จาก row (BookingCore มี universityId)
+          const row = rows.find((r) => r.id === bookingId);
+          if (!row) throw new Error("ไม่พบ booking ในรายการ");
 
-      <ProblemDetailsModal
-        booking={problemTarget}
-        onClose={() => setProblemTarget(null)}
+          await doAssign({
+            universityId: row.universityId,
+            bookingId,
+            consultantId,
+          });
+        }}
+        onReschedule={async (bookingId, isoDateTime) => {
+          // ⚠️ ตอนนี้ hook ต้องการ newTimeSlotId (number)
+          // ถ้า isoDateTime เป็น id จริง ๆ ให้ parse ได้เลย
+          const row = rows.find((r) => r.id === bookingId);
+          if (!row) throw new Error("ไม่พบ booking ในรายการ");
+
+          const newTimeSlotId = Number(isoDateTime);
+          if (!Number.isFinite(newTimeSlotId)) {
+            throw new Error("ค่าเวลาที่ส่งมาไม่ใช่ timeSlotId (ตัวเลข)");
+          }
+
+          await doReschedule({
+            universityId: row.universityId,
+            bookingId,
+            newTimeSlotId,
+          });
+        }}
       />
     </div>
   );

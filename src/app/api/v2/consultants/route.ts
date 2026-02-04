@@ -1,3 +1,5 @@
+// src/app/api/v2/consultants/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
 import { handleListConsultants } from "@/services/consultant/handlers/listConsultants";
@@ -10,7 +12,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const orgIdRaw = searchParams.get("organizationId");
     const organizationId = orgIdRaw ? Number(orgIdRaw) : null;
-
+    
     // ✅ ส่ง ctx ให้ handler
     const ctx = { ...account, activeUniversityId } as any;
     return handleListConsultants(ctx, {
