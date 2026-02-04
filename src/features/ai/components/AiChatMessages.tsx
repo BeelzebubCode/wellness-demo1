@@ -27,7 +27,7 @@ const AiChatMessages = forwardRef<HTMLDivElement, Props>(
         )}
       >
         {messages.length === 0 ? (
-          <div className="mx-auto mt-3 max-w-[520px] rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="mx-auto mt-3 max-w-[520px] rounded-2xl border-0 border-slate-200 bg-white p-4">
             {/* ✅ คุมฟอนต์จาก CSS module */}
             <div className={cn("mb-2 flex items-center gap-2 font-semibold text-slate-800", styles.headerTitle)}>
               <Bot className="h-4 w-4" />

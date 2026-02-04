@@ -58,15 +58,15 @@ export default function AiChatCore({ mode, variant, onModeChange }: Props) {
   if (variant === "modal") return content;
 
   return (
-    <div className="mx-auto max-w-5xl px-2 py-4">
+    <div className="mx-auto max-w-6xl px-4 py-4">
       <Card
-        className="
-          flex h-[75vh] flex-col
-          overflow-hidden
-          rounded-[20px]
-          border border-slate-200
-          bg-white
-        "
+        className="flex  h-[calc(90vh-90px)] 
+        flex-col overflow-hidden 
+        rounded-[16px] 
+        border-0 
+        border-slate-100 
+        bg-white 
+        shadow-none"
       >
         {content}
       </Card>
