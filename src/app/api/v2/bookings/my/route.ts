@@ -10,13 +10,10 @@ export async function GET(req: NextRequest) {
   try {
     const { account, activeUniversityId } = await requireTenant(req);
 
-    // ✅ กัน role อื่นออก และยังคุม runtime เหมือนเดิม
     assertRole(account.role, ALLOWED);
-
-    // ✅ TS ไม่รู้ว่า assertRole narrow ให้แล้ว → ใช้ cast หลัง assert
     const role = account.role as AllowedRole;
 
-    const bookings = await getMyBookings({
+    const items = await getMyBookings({
       accountId: account.accountId,
       activeUniversityId,
       role,
@@ -25,7 +22,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       universityId: activeUniversityId,
-      bookings,
+      items, // ✅ ให้ตรงกับ FE
     });
   } catch (e: any) {
     console.error("[BOOKINGS_MY_V2_GET]", {

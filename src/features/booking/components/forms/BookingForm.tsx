@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
-import { Button } from "@/components/ui";
 import { AlertTriangle } from "lucide-react";
 import { getProblemCategoryUi } from "@/lib/problem-category.config";
 import { AlertBox } from "@/components/notification/AlertBox";
+import { Button } from "@/components/ui";
 
 type ProblemCategory = {
   id: number;
@@ -21,27 +21,45 @@ export interface BookingFormData {
   problemDescription: string;
 }
 
+type FormErrors = {
+  problemCategoryId?: string;
+  problemTypeOther?: string;
+  problemDescription?: string;
+};
+
 export function BookingForm({
   onSubmit,
   isLoading = false,
   error,
   disableSubmit,
+
+  value,
+  onChange,
+  hideSubmit = false,
 }: {
-  onSubmit: (data: BookingFormData) => void | Promise<void>;
+  onSubmit?: (data: BookingFormData) => void | Promise<void>;
   isLoading?: boolean;
   error?: string | null;
   disableSubmit?: boolean;
-}) {
-  const [formData, setFormData] = useState<BookingFormData>({
-    problemCategoryId: 0,
-    problemTypeOther: "",
-    problemDescription: "",
-  });
 
-  type FormErrors = {
-    problemCategoryId?: string;
-    problemTypeOther?: string;
-    problemDescription?: string;
+  value?: BookingFormData;
+  onChange?: (v: BookingFormData) => void;
+  hideSubmit?: boolean;
+}) {
+  const [formData, setFormData] = useState<BookingFormData>(
+    value ?? { problemCategoryId: 0, problemTypeOther: "", problemDescription: "" },
+  );
+
+  useEffect(() => {
+    if (value) setFormData(value);
+  }, [value?.problemCategoryId, value?.problemTypeOther, value?.problemDescription]);
+
+  const update = (patch: Partial<BookingFormData>) => {
+    setFormData((prev) => {
+      const next = { ...prev, ...patch };
+      onChange?.(next);
+      return next;
+    });
   };
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -91,30 +109,33 @@ export function BookingForm({
     [categories, formData.problemCategoryId],
   );
 
-  const isOtherSelected = String(selectedCategory?.code ?? "").trim().toUpperCase() === "OTHER";
+  const isOtherSelected =
+    String(selectedCategory?.code ?? "").trim().toUpperCase() === "OTHER";
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (isLoading || submitLockRef.current) return;
-
-    setHasSubmitted(true);
-
+  const validate = () => {
     const nextErrors: FormErrors = {};
-
     if (!formData.problemCategoryId || formData.problemCategoryId <= 0) {
       nextErrors.problemCategoryId = "กรุณาเลือกประเภทปัญหาที่ต้องการปรึกษา";
     }
-
     if (isOtherSelected && !formData.problemTypeOther?.trim()) {
       nextErrors.problemTypeOther = "กรุณาระบุประเภทปัญหาที่ต้องการปรึกษา";
     }
-
     if (!formData.problemDescription?.trim()) {
       nextErrors.problemDescription = "กรุณากรอกรายละเอียดเพิ่มเติม";
     }
-
     setErrors(nextErrors);
+    return nextErrors;
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    setHasSubmitted(true);
+    const nextErrors = validate();
     if (Object.keys(nextErrors).length > 0) return;
+
+    if (!onSubmit) return;
+    if (isLoading || submitLockRef.current) return;
 
     submitLockRef.current = true;
     try {
@@ -129,7 +150,7 @@ export function BookingForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-5">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-3">
           ประเภทปัญหาที่ต้องการปรึกษา <span className="text-red-500">*</span>
@@ -148,11 +169,11 @@ export function BookingForm({
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))] gap-2">
               {categories.map((c) => {
                 const isSelected = formData.problemCategoryId === c.id;
-
                 const codeUpper = String(c.code ?? "").trim().toUpperCase();
+
                 const config = getProblemCategoryUi(c.code);
                 const Icon = config.icon;
 
@@ -162,13 +183,10 @@ export function BookingForm({
                     type="button"
                     onClick={() => {
                       if (isLoading) return;
-
-                      setFormData((prev) => ({
-                        ...prev,
+                      update({
                         problemCategoryId: c.id,
-                        problemTypeOther: codeUpper === "OTHER" ? prev.problemTypeOther : "",
-                      }));
-
+                        problemTypeOther: codeUpper === "OTHER" ? formData.problemTypeOther : "",
+                      });
                       setErrors((prev) => ({ ...prev, problemCategoryId: undefined }));
                       setHasSubmitted(false);
                     }}
@@ -184,23 +202,22 @@ export function BookingForm({
                     <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50">
                       <Icon className={cn("h-5 w-5", config.color)} />
                     </div>
-
-                    <span className="font-medium leading-snug">{c.nameTh}</span>
+                    <span className="font-medium leading-snug break-words">{c.nameTh}</span>
                   </button>
                 );
               })}
             </div>
 
-            {hasSubmitted && errors.problemCategoryId && (
+            {hasSubmitted && errors.problemCategoryId ? (
               <div className="mt-3">
                 <AlertBox type="error" message={errors.problemCategoryId} />
               </div>
-            )}
+            ) : null}
           </>
         )}
       </div>
 
-      {isOtherSelected && (
+      {isOtherSelected ? (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             กรุณาระบุประเภทปัญหา
@@ -208,28 +225,24 @@ export function BookingForm({
 
           <input
             type="text"
-            value={formData.problemTypeOther}
+            value={formData.problemTypeOther || ""}
             disabled={isLoading}
             onChange={(e) => {
               if (isLoading) return;
-
-              setFormData((prev) => ({ ...prev, problemTypeOther: e.target.value }));
-
-              if (hasSubmitted) {
-                setErrors((prev) => ({ ...prev, problemTypeOther: undefined }));
-              }
+              update({ problemTypeOther: e.target.value });
+              if (hasSubmitted) setErrors((prev) => ({ ...prev, problemTypeOther: undefined }));
             }}
             placeholder="เช่น ปัญหาการปรับตัว ปัญหาสุขภาพ ฯลฯ"
             className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 disabled:opacity-60"
           />
 
-          {hasSubmitted && errors.problemTypeOther && (
+          {hasSubmitted && errors.problemTypeOther ? (
             <div className="mt-2">
               <AlertBox type="error" message={errors.problemTypeOther} />
             </div>
-          )}
+          ) : null}
         </div>
-      )}
+      ) : null}
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -237,51 +250,43 @@ export function BookingForm({
         </label>
 
         <textarea
-          value={formData.problemDescription}
+          value={formData.problemDescription || ""}
           disabled={isLoading}
           onChange={(e) => {
             if (isLoading) return;
-
-            setFormData((prev) => ({ ...prev, problemDescription: e.target.value }));
-            if (hasSubmitted) {
-              setErrors((prev) => ({ ...prev, problemDescription: undefined }));
-            }
+            update({ problemDescription: e.target.value });
+            if (hasSubmitted) setErrors((prev) => ({ ...prev, problemDescription: undefined }));
           }}
           rows={4}
           placeholder="อธิบายปัญหาหรือสิ่งที่ต้องการปรึกษาเพิ่มเติม..."
-          className="
-            w-full resize-none rounded-xl border border-gray-200
-            px-4 py-3 text-sm outline-none transition
-            focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20
-            disabled:opacity-60
-          "
+          className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 disabled:opacity-60"
         />
 
-        {hasSubmitted && errors.problemDescription && (
+        {hasSubmitted && errors.problemDescription ? (
           <div className="mt-3">
             <AlertBox type="error" message={errors.problemDescription} />
           </div>
-        )}
+        ) : null}
 
         <p className="mt-1 text-xs text-gray-400">
           ข้อมูลนี้จะถูกเก็บรักษาเป็นความลับ และใช้เพื่อการเตรียมตัวของผู้ให้คำปรึกษาเท่านั้น
         </p>
       </div>
 
-      {error && <AlertBox type="error" message={error} />}
+      {error ? <AlertBox type="error" message={error} /> : null}
 
-      <Button
-        type="submit"
-        variant="primary"
-        size="lg"
-        className="w-full bg-primary-500 hover:bg-primary-600"
-        isLoading={isLoading}
-        disabled={isLoading || !!disableSubmit}
-        aria-disabled={isLoading || !!disableSubmit} 
-        aria-busy={isLoading}
-      >
-        ยืนยันการจอง
-      </Button>
+      {!hideSubmit ? (
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          className="w-full bg-primary-500 hover:bg-primary-600"
+          isLoading={isLoading}
+          disabled={isLoading || !!disableSubmit}
+        >
+          ยืนยันการจอง
+        </Button>
+      ) : null}
     </form>
   );
 }

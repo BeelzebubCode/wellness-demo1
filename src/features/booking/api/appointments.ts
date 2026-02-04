@@ -1,15 +1,14 @@
 // src/features/booking/api/appointments.ts
 
-import type { MyAppointment, MyAppointmentsResponse } from "../types";
+import type { MyAppointmentsResponse, MyBookingDto } from "../types";
 
 export async function getMyAppointments(
   opts?: { universityId?: number; signal?: AbortSignal },
-): Promise<MyAppointment[]> {
+): Promise<MyBookingDto[]> {
   const headers: Record<string, string> = { Accept: "application/json" };
-  if (opts?.universityId) headers["x-university-id"] = String(opts.universityId);
+  if (opts?.universityId != null) headers["x-university-id"] = String(opts.universityId);
 
-  // ใน tree มี /api/v2/bookings/my/route.ts
-  const res = await fetch(`/api/v2/bookings/my`, {
+  const res = await fetch("/api/v2/bookings/my", {
     method: "GET",
     headers,
     credentials: "include",
@@ -26,7 +25,10 @@ export async function getMyAppointments(
     throw new Error("Invalid JSON response from my appointments API");
   });
 
-  if (!data?.success) throw new Error(data?.error ?? "API returned unsuccessful response");
+  if (!data.success) {
+    throw new Error("error" in data ? data.error : "API returned unsuccessful response");
+  }
 
+  // ✅ v2 ตอบ items
   return Array.isArray(data.items) ? data.items : [];
 }

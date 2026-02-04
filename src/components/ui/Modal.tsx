@@ -1,21 +1,21 @@
+// src/components/ui/Modal.tsx
 "use client";
 
 import React, { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/cn";
 
-/**
- * รองรับ 2 style:
- * 1) isOpen + onClose (ของเดิม)
- * 2) open + onOpenChange (แบบ shadcn / headless)
- */
 type ModalPropsBase = {
   title?: string;
   description?: string;
   size?: "sm" | "md" | "lg" | "xl" | "full";
   children: ReactNode;
+
   showCloseButton?: boolean;
   closeOnOverlayClick?: boolean;
+  className?: string;
+  contentClassName?: string;
+  titleSize?: "sm" | "md" | "lg";
 };
 
 type ModalPropsIsOpen = ModalPropsBase & {
@@ -34,16 +34,12 @@ type ModalPropsOpen = ModalPropsBase & {
 
 export type ModalProps = ModalPropsIsOpen | ModalPropsOpen;
 
-// ✅ Type guard ช่วยให้ TS มั่นใจ 100%
 function isLegacyModalProps(p: ModalProps): p is ModalPropsIsOpen {
   return (p as ModalPropsIsOpen).isOpen !== undefined;
-  // หรือจะใช้: return "isOpen" in p;
-  // แต่แบบนี้ชัวร์กว่าเวลา TS จู้จี้กับ optional never
 }
 
 export function Modal(props: ModalProps) {
   const [mounted, setMounted] = useState(false);
-
   const isOpen = isLegacyModalProps(props) ? props.isOpen : props.open;
 
   const close = () => {
@@ -51,9 +47,7 @@ export function Modal(props: ModalProps) {
     return props.onOpenChange(false);
   };
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (!mounted) return;
@@ -72,73 +66,83 @@ export function Modal(props: ModalProps) {
     children,
     showCloseButton = true,
     closeOnOverlayClick = true,
+    className,
+    contentClassName,
+    titleSize = "md",
   } = props;
 
-  const sizeStyles = {
+  const sizeStyles: Record<NonNullable<ModalPropsBase["size"]>, string> = {
     sm: "max-w-sm",
     md: "max-w-md",
     lg: "max-w-lg",
     xl: "max-w-xl",
-    full: "max-w-4xl",
+    full: "max-w-5xl", // ✅ ขยาย full ให้ใหญ่ขึ้นนิด (เดิม 4xl)
+  };
+
+  const titleStyles: Record<NonNullable<ModalPropsBase["titleSize"]>, string> = {
+    sm: "text-base font-semibold",
+    md: "text-lg font-semibold",
+    lg: "text-xl font-bold",
   };
 
   const handleOverlayClick: React.MouseEventHandler<HTMLDivElement> = (e) => {
-    if (e.target === e.currentTarget && closeOnOverlayClick) {
-      close();
-    }
+    if (e.target === e.currentTarget && closeOnOverlayClick) close();
   };
 
   return createPortal(
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
       onClick={handleOverlayClick}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title ?? "Modal"}
     >
       {/* overlay */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" />
 
-      {/* content */}
+      {/* content container */}
       <div
         className={cn(
           "relative w-full rounded-2xl bg-white shadow-2xl",
           "animate-in zoom-in-95 fade-in duration-200",
           sizeStyles[size],
+
+          // ✅ กันล้นจอ + ทำให้ header/footer อยู่กับที่
+          "max-h-[90vh] overflow-hidden",
+          className,
         )}
+        onClick={(e) => e.stopPropagation()}
       >
         {(title || showCloseButton) && (
-          <div className="flex items-start justify-between p-6 pb-0">
-            <div>
+          <div className="flex items-start justify-between px-5 py-4 border-b border-gray-100">
+            <div className="min-w-0">
               {title && (
-                <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+                <h2 className={cn("text-gray-900 truncate", titleStyles[titleSize])}>
+                  {title}
+                </h2>
               )}
               {description && (
-                <p className="mt-1 text-sm text-gray-500">{description}</p>
+                <p className="mt-1 text-xs text-gray-500">{description}</p>
               )}
             </div>
 
             {showCloseButton && (
               <button
+                type="button"
                 onClick={close}
-                className="ml-4 rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                aria-label="ปิด"
+                className="ml-3 rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
               >
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             )}
           </div>
         )}
 
-        <div className="p-6">{children}</div>
+        {/* ✅ body เป็นส่วน scroll หลัก */}
+        <div className={cn("p-5 overflow-auto", contentClassName)}>{children}</div>
       </div>
     </div>,
     document.body,
@@ -153,12 +157,7 @@ export function ModalFooter({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        "flex items-center justify-end gap-3 border-t border-gray-100 pt-4",
-        className,
-      )}
-    >
+    <div className={cn("flex items-center justify-end gap-3 border-t border-gray-100 pt-4", className)}>
       {children}
     </div>
   );

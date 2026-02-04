@@ -450,13 +450,12 @@ model TimeSlotShift {
 // 📅 BOOKING 
 // ==========================================
 model Booking {
-  booking_id           Int  @default(autoincrement())
-  university_id        Int
-  student_id           Int
-  consultant_id        Int?
-  time_slot_id         Int
-  problem_category_id  Int
-  time_slot_service_id Int
+  booking_id          Int  @default(autoincrement())
+  university_id       Int
+  student_id          Int
+  consultant_id       Int?
+  time_slot_id        Int
+  problem_category_id Int
 
   booking_service_mode   ServiceMode
   booking_online_channel OnlineChannel? // ใช้เมื่อ ONLINE

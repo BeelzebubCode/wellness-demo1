@@ -1,50 +1,29 @@
+// src/features/booking/components/calendar/BookingCalendar.tsx
 "use client";
 
+import { useMemo } from "react";
 import { cn } from "@/lib/cn";
+import {
+  getCalendarDays,
+  formatMonthYear,
+  isSameDay,
+  isToday,
+  isPast,
+  THAI_DAYS_SHORT,
+} from "@/lib/date";
+import { Card } from "@/components/ui";
 
-function startOfDay(d: Date) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
+export interface BookingCalendarProps {
+  selectedDate: Date;
+  onSelectDate: (date: Date) => void;
+  currentMonth: Date;
+  onPreviousMonth: () => void;
+  onNextMonth: () => void;
+  minDate?: Date;
+  maxDate?: Date;
 
-function isSameDay(a: Date, b: Date) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
-function isInRange(d: Date, min?: Date, max?: Date) {
-  const x = startOfDay(d).getTime();
-  const mn = min ? startOfDay(min).getTime() : null;
-  const mx = max ? startOfDay(max).getTime() : null;
-  if (mn !== null && x < mn) return false;
-  if (mx !== null && x > mx) return false;
-  return true;
-}
-
-function daysInMonth(year: number, month0: number) {
-  return new Date(year, month0 + 1, 0).getDate();
-}
-
-function monthLabelTH(d: Date) {
-  const months = [
-    "ม.ค.",
-    "ก.พ.",
-    "มี.ค.",
-    "เม.ย.",
-    "พ.ค.",
-    "มิ.ย.",
-    "ก.ค.",
-    "ส.ค.",
-    "ก.ย.",
-    "ต.ค.",
-    "พ.ย.",
-    "ธ.ค.",
-  ];
-  return `${months[d.getMonth()]} ${d.getFullYear() + 543}`;
+  /** ✅ ถ้า embed ลง card ภายนอก: ไม่ต้องห่อ Card ซ้ำ */
+  embedded?: boolean;
 }
 
 export function BookingCalendar({
@@ -55,97 +34,98 @@ export function BookingCalendar({
   onNextMonth,
   minDate,
   maxDate,
-}: {
-  selectedDate: Date;
-  onSelectDate: (d: Date) => void;
+  embedded = false,
+}: BookingCalendarProps) {
+  const calendarDays = useMemo(() => getCalendarDays(currentMonth), [currentMonth]);
 
-  currentMonth: Date;
-  onPreviousMonth: () => void;
-  onNextMonth: () => void;
+  const isDateDisabled = (date: Date) => {
+    if (minDate && date < minDate) return true;
+    if (maxDate && date > maxDate) return true;
+    return false;
+  };
 
-  minDate?: Date;
-  maxDate?: Date;
-}) {
-  const y = currentMonth.getFullYear();
-  const m = currentMonth.getMonth();
-  const totalDays = daysInMonth(y, m);
+  const isCurrentMonth = (date: Date) => date.getMonth() === currentMonth.getMonth();
 
-  // 0 = Sunday ... 6 = Saturday
-  const firstDay = new Date(y, m, 1).getDay();
-  const padStart = firstDay; // number of empty cells at beginning
-
-  const cells: Array<{ date: Date | null }> = [];
-
-  for (let i = 0; i < padStart; i++) cells.push({ date: null });
-
-  for (let day = 1; day <= totalDays; day++) {
-    cells.push({ date: new Date(y, m, day) });
-  }
-
-  const weekdays = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
+  const body = (
+    <div className={cn(!embedded && "overflow-hidden")}>
+      {/* Header (ให้เหมือนของเก่า) */}
+      <div
+        className={cn(
+          "flex items-center justify-between border-b border-gray-100",
+          embedded ? "px-4 py-4" : "p-4"
+        )}
+      >
         <button
           type="button"
           onClick={onPreviousMonth}
-          className="rounded-full border px-3 py-1 text-xs text-gray-600 hover:bg-gray-50"
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
+          aria-label="เดือนก่อนหน้า"
         >
-          ◀
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
         </button>
 
-        <div className="text-sm font-semibold text-gray-800">
-          {monthLabelTH(currentMonth)}
-        </div>
+        <h3 className="text-xl font-semibold text-gray-800">
+          {formatMonthYear(currentMonth)}
+        </h3>
 
         <button
           type="button"
           onClick={onNextMonth}
-          className="rounded-full border px-3 py-1 text-xs text-gray-600 hover:bg-gray-50"
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
+          aria-label="เดือนถัดไป"
         >
-          ▶
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
         </button>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-500">
-        {weekdays.map((w) => (
-          <div key={w} className="py-1">
-            {w}
-          </div>
-        ))}
-      </div>
+      {/* Calendar Grid */}
+      <div className={cn(embedded ? "px-4 py-4" : "p-4")}>
+        {/* Day Headers */}
+        <div className="grid grid-cols-7 gap-1 mb-2">
+          {THAI_DAYS_SHORT.map((day) => (
+            <div key={day} className="text-center text-sm font-medium text-gray-400 py-2">
+              {day}
+            </div>
+          ))}
+        </div>
 
-      <div className="grid grid-cols-7 gap-1">
-        {cells.map((c, idx) => {
-          if (!c.date) return <div key={idx} className="h-10" />;
+        {/* Date Grid */}
+        <div className="grid grid-cols-7 gap-1">
+          {calendarDays.map((date, index) => {
+            const selected = isSameDay(date, selectedDate);
+            const today = isToday(date);
+            const disabled = isDateDisabled(date) || isPast(date);
+            const inMonth = isCurrentMonth(date);
 
-          const d = c.date;
-          const allowed = isInRange(d, minDate, maxDate);
-          const selected = isSameDay(d, selectedDate);
-
-          return (
-            <button
-              key={idx}
-              type="button"
-              disabled={!allowed}
-              onClick={() => {
-                if (!allowed) return;
-                onSelectDate(d);
-              }}
-              className={cn(
-                "h-10 rounded-xl border text-sm transition",
-                allowed
-                  ? "border-gray-200 bg-white text-gray-700 hover:border-primary-200 hover:bg-primary-50/40"
-                  : "border-transparent bg-transparent text-gray-300 cursor-not-allowed",
-                selected && allowed && "border-primary-500 bg-primary-50 text-primary-800",
-              )}
-            >
-              {d.getDate()}
-            </button>
-          );
-        })}
+            return (
+              <button
+                key={index}
+                type="button"
+                onClick={() => !disabled && onSelectDate(date)}
+                disabled={disabled}
+                className={cn(
+                  "aspect-square flex items-center justify-center rounded-lg text-sm",
+                  "transition-all duration-200",
+                  !inMonth && "text-gray-300",
+                  inMonth && !disabled && "text-gray-700 hover:bg-gray-50",
+                  selected && "bg-primary-500 text-white hover:bg-primary-600 shadow-md",
+                  today && !selected && "ring-2 ring-primary-500 ring-inset font-bold text-primary-600",
+                  disabled && "text-gray-300 cursor-not-allowed hover:bg-transparent",
+                )}
+              >
+                {date.getDate()}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
+
+  if (embedded) return body;
+  return <Card className="overflow-hidden">{body}</Card>;
 }

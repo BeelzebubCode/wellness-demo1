@@ -5,3 +5,4 @@ export * from "./public-nav";
 export * from "./super-admin-nav";
 
 export * from "./app";
+export * from "./booking-service";

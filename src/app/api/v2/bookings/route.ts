@@ -3,7 +3,19 @@ import { NextRequest, NextResponse } from "next/server";
 import type { BookingStatus } from "@prisma/client";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
 import { handleListBookings } from "@/services/booking/handlers/listBookings";
-import { handleCreateBooking } from "@/services/booking/handlers/createBooking"; // ✅ เพิ่ม
+import { handleCreateBooking } from "@/services/booking/handlers/createBooking";
+
+function getIpAddress(req: NextRequest): string | null {
+  // รองรับ proxy หลายชั้น (เอาตัวแรก)
+  const xf = req.headers.get("x-forwarded-for");
+  if (xf) return xf.split(",")[0]?.trim() || null;
+
+  // บาง infra ใช้ header นี้
+  const xr = req.headers.get("x-real-ip");
+  if (xr) return xr.trim() || null;
+
+  return null;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -44,7 +56,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// ✅ เพิ่มตัวนี้เพื่อแก้ 405
 export async function POST(request: NextRequest) {
   try {
     const { account, activeUniversityId } = await requireTenant(request);
@@ -52,9 +63,29 @@ export async function POST(request: NextRequest) {
     // ✅ ให้เฉพาะนักศึกษาจองเอง
     assertRole(account.role, ["STUDENT"]);
 
+    const body = (await request.json().catch(() => ({}))) as any;
+
+    // ✅ map / normalize ให้ตรง handler ใหม่
+    // - FE ใช้ bookingDetailText
+    // - กันพัง ถ้า client เก่าส่ง detailText
+    const bookingDetailText =
+      typeof body.bookingDetailText === "string"
+        ? body.bookingDetailText
+        : typeof body.detailText === "string"
+          ? body.detailText
+          : body.bookingDetailText ?? null;
+
+    const ipAddress = getIpAddress(request);
+    const userAgent = request.headers.get("user-agent");
+
     return await handleCreateBooking(
       { ...(account as any), activeUniversityId },
-      await request.json(),
+      {
+        ...body,
+        bookingDetailText,
+        ipAddress,
+        userAgent: userAgent ?? null,
+      },
     );
   } catch (err: any) {
     console.error("[POST /api/v2/bookings]", err);

@@ -4,6 +4,8 @@ import {
   BookingStatus,
   TimeSlotStatus,
   PointTxnType,
+  ServiceMode,
+  OnlineChannel,
 } from "@prisma/client";
 
 import {
@@ -150,9 +152,21 @@ export async function seedBookings(
     }
 
     // ✅ default bias (ยัง bias NU/CU/KKU ได้ แต่มหาลัยอื่นยังมีโอกาสด้วย)
-    const completedWeights = makeWeightedMap(uniCodes, { NU: 60, CU: 30, KKU: 10 } as any, 1);
-    const cancelledWeights = makeWeightedMap(uniCodes, { KKU: 60, NU: 30, CU: 10 } as any, 1);
-    const neutralWeights = makeWeightedMap(uniCodes, { NU: 34, KKU: 33, CU: 33 } as any, 1);
+    const completedWeights = makeWeightedMap(
+      uniCodes,
+      { NU: 60, CU: 30, KKU: 10 } as any,
+      1,
+    );
+    const cancelledWeights = makeWeightedMap(
+      uniCodes,
+      { KKU: 60, NU: 30, CU: 10 } as any,
+      1,
+    );
+    const neutralWeights = makeWeightedMap(
+      uniCodes,
+      { NU: 34, KKU: 33, CU: 33 } as any,
+      1,
+    );
 
     const uniCode: UniCode =
       status === BookingStatus.COMPLETED
@@ -185,7 +199,8 @@ export async function seedBookings(
 
   // ✅ กันซ้ำ student+slot ในรอบ seed เดียวกัน (ป้องกันชน unique)
   const usedBookingTriples = new Set<string>();
-  const tripleKey = (u: number, s: number, slotId: number) => `${u}:${s}:${slotId}`;
+  const tripleKey = (u: number, s: number, slotId: number) =>
+    `${u}:${s}:${slotId}`;
 
   function pickSlotByStatus(uniId: number, status: BookingStatus) {
     const slots = timeSlotsByUniId.get(uniId) || [];
@@ -196,7 +211,10 @@ export async function seedBookings(
 
       const start = new Date(s.time_slot_start_datetime);
 
-      if (status === BookingStatus.COMPLETED || status === BookingStatus.CANCELLED) {
+      if (
+        status === BookingStatus.COMPLETED ||
+        status === BookingStatus.CANCELLED
+      ) {
         if (!(start >= pastFrom && start < today0)) return false;
       } else if (status === BookingStatus.IN_PROGRESS) {
         if (!(start >= today0 && start < inProgressTo)) return false;
@@ -220,12 +238,18 @@ export async function seedBookings(
     const uni = universities.find((u) => u.university_id === universityId);
     const uniCode = (uni?.university_code ?? "UNKNOWN") as UniCode;
 
-    const mental = problemCategories.find((c) => c.problem_category_code === "MENTAL");
-    const stress = problemCategories.find((c) => c.problem_category_code === "STRESS");
+    const mental = problemCategories.find(
+      (c) => c.problem_category_code === "MENTAL",
+    );
+    const stress = problemCategories.find(
+      (c) => c.problem_category_code === "STRESS",
+    );
 
     if (!mental) return randomItem(problemCategories);
 
-    const byUni: Partial<Record<UniCode, { MENTAL: number; STRESS: number; OTHER: number }>> = {
+    const byUni: Partial<
+      Record<UniCode, { MENTAL: number; STRESS: number; OTHER: number }>
+    > = {
       NU: { MENTAL: 55, STRESS: 20, OTHER: 25 },
       CU: { MENTAL: 35, STRESS: 30, OTHER: 35 },
       KKU: { MENTAL: 25, STRESS: 35, OTHER: 40 },
@@ -238,7 +262,9 @@ export async function seedBookings(
     if (roll < weights.MENTAL + weights.STRESS && stress) return stress;
 
     const others = problemCategories.filter(
-      (c) => c.problem_category_code !== "MENTAL" && c.problem_category_code !== "STRESS",
+      (c) =>
+        c.problem_category_code !== "MENTAL" &&
+        c.problem_category_code !== "STRESS",
     );
     return others.length ? randomItem(others) : randomItem(problemCategories);
   }
@@ -275,14 +301,21 @@ export async function seedBookings(
         slot = pickSlotByStatus(student.university_id, plan.status);
         if (!slot) continue;
 
-        const k = tripleKey(student.university_id, student.student_id, slot.time_slot_id);
+        const k = tripleKey(
+          student.university_id,
+          student.student_id,
+          slot.time_slot_id,
+        );
         if (usedBookingTriples.has(k)) continue;
 
         slotStart = new Date(slot.time_slot_start_datetime);
         slotEnd = new Date(slot.time_slot_end_datetime);
 
         consultantId = null;
-        if (!isCancelledPlan && plan.status !== BookingStatus.PENDING_ASSIGNMENT) {
+        if (
+          !isCancelledPlan &&
+          plan.status !== BookingStatus.PENDING_ASSIGNMENT
+        ) {
           const uniConsultants = consultants.filter(
             (c) => c.university_id === student.university_id,
           );
@@ -306,6 +339,11 @@ export async function seedBookings(
         }
 
         try {
+          const serviceMode =
+            consultantId && plan.status !== BookingStatus.PENDING_ASSIGNMENT
+              ? ServiceMode.ONLINE
+              : ServiceMode.ONSITE;
+
           booking = await prisma.booking.create({
             data: {
               university_id: student.university_id,
@@ -316,6 +354,15 @@ export async function seedBookings(
               booking_detail_text: `รายละเอียดการขอรับคำปรึกษา - ${category.problem_category_name_th}`,
               booking_status: plan.status,
               booking_created_at: bookingCreatedAt,
+
+              // ✅ required ตาม schema ใหม่
+              booking_service_mode: serviceMode,
+
+              // ✅ ใส่ให้ครบเวลาที่ ONLINE (optional แต่แนะนำ)
+              booking_online_channel:
+                serviceMode === ServiceMode.ONLINE
+                  ? OnlineChannel.LINE_CALL
+                  : null,
             },
           });
 
@@ -327,7 +374,14 @@ export async function seedBookings(
         }
       }
 
-      if (!booking || !student || !slot || !slotStart || !slotEnd || !bookingCreatedAt) {
+      if (
+        !booking ||
+        !student ||
+        !slot ||
+        !slotStart ||
+        !slotEnd ||
+        !bookingCreatedAt
+      ) {
         console.log(
           `⚠️  Skip booking: cannot find unique (uni,student,slot) after ${MAX_TRIES} tries. status=${plan.status}`,
         );
@@ -352,7 +406,9 @@ export async function seedBookings(
         const cancelMaxCandidate = addHours(slotStart, -randomInt(1, 48));
         const cancelMaxHard = addMinutes(slotStart, -10);
         const cancelMax =
-          cancelMaxCandidate < cancelMaxHard ? cancelMaxCandidate : cancelMaxHard;
+          cancelMaxCandidate < cancelMaxHard
+            ? cancelMaxCandidate
+            : cancelMaxHard;
 
         const cancelledAt =
           cancelMin < cancelMax
@@ -388,7 +444,10 @@ export async function seedBookings(
             university_id: booking.university_id,
             booking_id: booking.booking_id,
             notification_channel: "LINE",
-            notification_data: { bookingId: booking.booking_id, status: plan.status } as any,
+            notification_data: {
+              bookingId: booking.booking_id,
+              status: plan.status,
+            } as any,
             notification_status: randomBool(0.8) ? "SENT" : "PENDING",
             notification_sent_at: randomBool(0.8)
               ? addMinutes(bookingCreatedAt, randomInt(1, 30))
@@ -409,9 +468,15 @@ export async function seedBookings(
             data: {
               university_id: booking.university_id,
               booking_id: booking.booking_id,
-              booking_assignment_assigned_by_id: headAccountId,
-              booking_assignment_assigned_to_id: consultantId,
-              booking_assignment_note: "มอบหมายผู้ให้คำปรึกษา",
+
+              // ✅ schema ใหม่
+              consultant_id: consultantId,
+              consultant_university_id: booking.university_id, // consultant มาจาก uni เดียวกับ booking ใน seed นี้
+              borrow_assignment_id: null,
+
+              assigned_by_account_id: headAccountId,
+              assigned_note: "มอบหมายผู้ให้คำปรึกษา",
+              assigned_at: addMinutes(bookingCreatedAt, randomInt(1, 30)), // จะ now() ก็ได้
             },
           });
         }
@@ -426,7 +491,9 @@ export async function seedBookings(
             university_id: booking.university_id,
             booking_id: booking.booking_id,
             booking_outcome_consultant_note: `สรุปผล: ${category.problem_category_name_th} ...`,
-            booking_outcome_next_step: randomBool() ? "นัดติดตามผลใน 2 สัปดาห์" : null,
+            booking_outcome_next_step: randomBool()
+              ? "นัดติดตามผลใน 2 สัปดาห์"
+              : null,
             booking_outcome_risk_level: randomInt(1, 3),
           },
         });
@@ -467,9 +534,14 @@ export async function seedBookings(
             feedback_comment_admin_reply: randomBool(0.3)
               ? "ขอบคุณสำหรับความคิดเห็น เรายินดีที่ได้ช่วยเหลือ"
               : null,
-            feedback_comment_replied_by_id: randomBool(0.3) ? headAccountId : null,
+            feedback_comment_replied_by_id: randomBool(0.3)
+              ? headAccountId
+              : null,
             feedback_comment_replied_at: randomBool(0.3)
-              ? randomDateBetween(addMinutes(slotEnd, 10), addHours(slotEnd, 72))
+              ? randomDateBetween(
+                  addMinutes(slotEnd, 10),
+                  addHours(slotEnd, 72),
+                )
               : null,
           },
         });

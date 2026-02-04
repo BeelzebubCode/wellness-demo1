@@ -1,22 +1,15 @@
 // src/features/booking/utils/slotPeriod.ts
-import type { TimeSlot } from "../types";
 
-export type SlotPeriod = "ALL" | "MORNING" | "AFTERNOON" | "EVENING";
+export type SlotPeriod = "MORNING" | "AFTERNOON" | "EVENING";
 
-export function getPeriodLabel(p: SlotPeriod) {
-  if (p === "MORNING") return "เช้า";
-  if (p === "AFTERNOON") return "บ่าย";
-  if (p === "EVENING") return "เย็น";
-  return "ทั้งหมด";
+export function hourOfHHMM(hhmm: string) {
+  return parseInt((hhmm || "0").split(":")[0] || "0", 10);
 }
 
-export function filterSlotsByPeriod(slots: TimeSlot[], period: SlotPeriod) {
-  if (period === "ALL") return slots;
+export function isSlotInPeriod(startTime: string, period: SlotPeriod) {
+  const h = hourOfHHMM(startTime);
 
-  return slots.filter((s) => {
-    const hour = new Date(s.startAt).getHours();
-    if (period === "MORNING") return hour >= 6 && hour < 12;
-    if (period === "AFTERNOON") return hour >= 12 && hour < 17;
-    return hour >= 17 && hour < 22;
-  });
+  if (period === "MORNING") return h < 12;
+  if (period === "AFTERNOON") return h >= 12 && h < 17;
+  return h >= 17; // EVENING
 }

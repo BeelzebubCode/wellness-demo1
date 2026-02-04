@@ -1,67 +1,115 @@
 // src/features/booking/types.ts
 
-// ✅ เลี่ยง underscore ใน FE: ใช้ camelCase
-export type ServiceMode = "ONSITE" | "ONLINE";
-export type OnlineChannel = "LINE_CALL" | "GOOGLE_MEET" | "ZOOM" | "MICROSOFT_TEAMS" | "PHONE" | "OTHER";
+// ==============================
+// re-export shared types (กันพังของเก่าที่ import จาก features)
+// ==============================
+export type { ServiceMode, OnlineChannel } from "@/shared/types/service";
+export type { TimeSlotCore } from "@/shared/types/timeSlot";
+export type {
+  BookingStatus,
+  BookingCore,
+  BookingOutcomeCore,
+  BookingCancellationCore,
+} from "@/shared/types/booking";
 
-// ถ้า backend ส่ง service list ต่อ slot (อนาคต)
-export type TimeSlotService = {
-  id: number;
-  mode: ServiceMode;
-  onlineChannel?: OnlineChannel | null;
-  title?: string | null; // เช่น "Online: LINE Call"
-};
+// ✅ local imports (ใช้ทำ type ในไฟล์นี้)
+import type { ServiceMode, OnlineChannel } from "@/shared/types/service";
+import type { TimeSlotCore } from "@/shared/types/timeSlot";
+import type { BookingStatus } from "@/shared/types/booking";
 
-// ให้เข้ากับของเดิมที่นายมีอยู่
-export type TimeSlot = {
-  time_slot_id: number;
-  university_id: number;
-  time_slot_start_datetime: string;
-  time_slot_end_datetime: string;
-  time_slot_status: "OPEN" | "CLOSED" | "CANCELLED" | "FULL";
-
-  // optional: ถ้าจะรองรับ service ต่อ slot
-  services?: TimeSlotService[];
-};
-
-// ===== Booking payload ที่ส่งไป API =====
-export type BookingPayload = {
-  timeSlotId: number;
-  problemCategoryId: number;
-  bookingDetailText?: string | null;
-
-  // ✅ ส่วนที่เพิ่ม: เลือก ONLINE/ONSITE ตอนกดเลือก
-  serviceMode: ServiceMode;
-  onlineChannel?: OnlineChannel | null;
-  timeSlotServiceId?: number | null;
-
-  // ✅ consent (ถ้ายังไม่ทำจริง ก็ส่งแค่ boolean ก่อน)
-  consentChecked?: boolean;
-};
-
-// response แบบกันพัง
-export type CreateBookingResponse =
-  | { success: true; bookingId: number; universityId: number }
-  | { success: false; error?: string };
-
-// ===== My appointments =====
-export type MyAppointment = {
-  bookingId: number;
-  universityId: number;
-  status: string;
-  startAt: string;
-  endAt: string;
-  serviceMode: ServiceMode;
-  onlineChannel?: OnlineChannel | null;
-  problemCategoryName?: string | null;
-};
-
-export type MyAppointmentsResponse =
-  | { success: true; items: MyAppointment[] }
-  | { success: false; error?: string };
-
-// ===== form state =====
+// ==============================
+// Form state
+// ==============================
 export type BookingFormValues = {
   problemCategoryId: number | null;
   problemDescription: string;
 };
+
+// ==============================
+// Payload: create booking
+// ==============================
+export type BookingPayload = {
+  timeSlotId: number;
+  problemCategoryId: number;
+
+  bookingDetailText?: string | null;
+
+  serviceMode: ServiceMode;
+  onlineChannel?: OnlineChannel | null;
+
+  consentChecked?: boolean;
+  consentSignatureDataUrl?: string | null;
+
+  // compat (โค้ดเก่า)
+  detailText?: string | null;
+};
+
+export type CreateBookingResponse =
+  | { success: true; bookingId: number; universityId?: number }
+  | { success: false; error: string };
+
+// ==============================
+// DB ใหม่: BookingSession
+// ==============================
+export type BookingSessionDto = {
+  mode: ServiceMode;
+  onlineChannel?: OnlineChannel | null;
+
+  joinUrl?: string | null;
+  phoneNumber?: string | null;
+  locationText?: string | null;
+  extraDetail?: string | null;
+
+  providedAt?: string | null;
+  providedByName?: string | null;
+};
+
+// ==============================
+// DB ใหม่: Booking สำหรับหน้า booking / my-appointments
+// ==============================
+export type MyBookingDto = {
+  // 🔑 composite key
+  bookingId: number;
+  universityId: number;
+
+  status: BookingStatus;
+
+  serviceMode: ServiceMode;
+  onlineChannel?: OnlineChannel | null;
+
+  // ⏰ จาก time_slot (timestamptz)
+  startAt: string; // ISO
+  endAt: string; // ISO
+
+  problemCategoryNameTh?: string | null;
+
+  // consultant (optional)
+  consultantId?: number | null;
+  consultantName?: string | null;
+  consultantOrg?: string | null;
+
+  // ONLINE only
+  session?: BookingSessionDto | null;
+};
+
+// ==============================
+// API Response: /api/v2/bookings/my
+// ==============================
+export type MyAppointmentsResponse =
+  | { success: true; universityId?: number; items: MyBookingDto[] }
+  | { success: false; error: string };
+
+// ==============================
+// Action inputs
+// ==============================
+export type CancelBookingInput = {
+  bookingId: number;
+  universityId: number;
+  reason: string;
+};
+
+// ==============================
+// Compat aliases (TimeSlot) — กันไฟล์เก่าพัง
+// ==============================
+export type TimeSlot = TimeSlotCore;
+export type BookingTimeSlot = TimeSlotCore;

@@ -4,23 +4,47 @@ import prisma from "@/lib/prisma";
 import type { AccountContext } from "@/lib/auth/context";
 import { requireUniversity } from "@/lib/auth/guard";
 import { BookingStatus, ServiceMode, OnlineChannel } from "@prisma/client";
+import crypto from "crypto";
 
 type CreateBookingInput = {
   timeSlotId: number;
-  timeSlotServiceId: number;
   serviceMode: ServiceMode; // ONLINE | ONSITE
   onlineChannel?: OnlineChannel | null; // ใช้เมื่อ ONLINE
   problemCategoryId: number;
-  detailText?: string | null;
+
+  bookingDetailText?: string | null;
+
+  // ✅ เพิ่ม: consent + signature
+  consentChecked?: boolean;
+  consentSignatureDataUrl?: string | null;
+
+  // ✅ เก็บ meta (ส่งมาจาก route)
+  ipAddress?: string | null;
+  userAgent?: string | null;
 };
+
+function sha256Hex(s: string) {
+  return crypto.createHash("sha256").update(s, "utf8").digest("hex");
+}
+
+// ✅ ข้อความ consent (ตอนนี้ fix ไว้ก่อน — เดี๋ยวค่อยอัปเกรดเป็นดึงจาก DB/KB)
+const CONSENT_DOC_CODE = "TELEHEALTH_CONSENT";
+const CONSENT_DOC_VERSION = 1;
+const CONSENT_DOC_TEXT =
+  "ข้าพเจ้ายินยอมรับบริการให้คำปรึกษาออนไลน์ และรับทราบเงื่อนไขการให้บริการ รวมถึงการเก็บข้อมูลตามนโยบายความเป็นส่วนตัว";
 
 export async function handleCreateBooking(
   ctx: AccountContext & { activeUniversityId?: number; studentId?: number },
   input: Partial<CreateBookingInput>,
 ) {
-  const activeUniversityId = (ctx as any).activeUniversityId as number | undefined;
+  const activeUniversityId = (ctx as any).activeUniversityId as
+    | number
+    | undefined;
   if (typeof activeUniversityId !== "number") {
-    return NextResponse.json({ error: "activeUniversityId missing" }, { status: 400 });
+    return NextResponse.json(
+      { error: "activeUniversityId missing" },
+      { status: 400 },
+    );
   }
 
   const denied = requireUniversity(ctx as any, activeUniversityId);
@@ -28,31 +52,63 @@ export async function handleCreateBooking(
 
   const studentId = (ctx as any).studentId as number | undefined;
   if (typeof studentId !== "number") {
-    return NextResponse.json({ error: "Student profile not found" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Student profile not found" },
+      { status: 400 },
+    );
   }
 
   const timeSlotId = Number(input.timeSlotId);
   const problemCategoryId = Number(input.problemCategoryId);
-  const timeSlotServiceId = Number(input.timeSlotServiceId);
 
   const serviceMode = input.serviceMode;
   const onlineChannel = input.onlineChannel ?? null;
-  const detailText = input.detailText ? String(input.detailText) : null;
 
-  if (!Number.isFinite(timeSlotId) || !Number.isFinite(problemCategoryId) || !Number.isFinite(timeSlotServiceId)) {
+  const bookingDetailText = input.bookingDetailText
+    ? String(input.bookingDetailText)
+    : null;
+
+  const consentChecked = !!input.consentChecked;
+  const consentSignatureDataUrl = input.consentSignatureDataUrl
+    ? String(input.consentSignatureDataUrl)
+    : null;
+
+  const ipAddress = input.ipAddress ? String(input.ipAddress) : null;
+  const userAgent = input.userAgent ? String(input.userAgent) : null;
+
+  if (!Number.isFinite(timeSlotId) || !Number.isFinite(problemCategoryId)) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
   if (serviceMode !== "ONLINE" && serviceMode !== "ONSITE") {
-    return NextResponse.json({ error: "serviceMode must be ONLINE or ONSITE" }, { status: 400 });
+    return NextResponse.json(
+      { error: "serviceMode must be ONLINE or ONSITE" },
+      { status: 400 },
+    );
   }
 
-  if (serviceMode === "ONLINE" && !onlineChannel) {
-    return NextResponse.json({ error: "onlineChannel is required for ONLINE booking" }, { status: 400 });
+  // ✅ บังคับ consent เสมอ (ตาม UI)
+  if (!consentChecked) {
+    return NextResponse.json({ error: "Consent is required" }, { status: 400 });
+  }
+
+  if (serviceMode === "ONLINE") {
+    if (!onlineChannel) {
+      return NextResponse.json(
+        { error: "onlineChannel is required for ONLINE booking" },
+        { status: 400 },
+      );
+    }
+    if (!consentSignatureDataUrl) {
+      return NextResponse.json(
+        { error: "consentSignatureDataUrl is required for ONLINE booking" },
+        { status: 400 },
+      );
+    }
   }
 
   try {
-    const booking = await prisma.$transaction(async (tx) => {
+    const created = await prisma.$transaction(async (tx) => {
       const slot = await tx.timeSlot.findUnique({
         where: {
           university_id_time_slot_id: {
@@ -68,9 +124,12 @@ export async function handleCreateBooking(
         },
       });
 
-      if (!slot) throw Object.assign(new Error("Time slot not found"), { status: 404 });
+      if (!slot)
+        throw Object.assign(new Error("Time slot not found"), { status: 404 });
       if (slot.time_slot_status !== "OPEN") {
-        throw Object.assign(new Error("Time slot is not open"), { status: 409 });
+        throw Object.assign(new Error("Time slot is not open"), {
+          status: 409,
+        });
       }
 
       const count = await tx.booking.count({
@@ -91,26 +150,6 @@ export async function handleCreateBooking(
         throw Object.assign(new Error("Time slot is full"), { status: 409 });
       }
 
-      const dup = await tx.booking.findFirst({
-        where: {
-          university_id: activeUniversityId,
-          time_slot_id: timeSlotId,
-          student_id: studentId,
-          booking_status: {
-            in: [
-              BookingStatus.PENDING_ASSIGNMENT,
-              BookingStatus.ASSIGNED,
-              BookingStatus.IN_PROGRESS,
-            ],
-          },
-        },
-        select: { booking_id: true },
-      });
-
-      if (dup) {
-        throw Object.assign(new Error("You already booked this slot"), { status: 409 });
-      }
-
       const pending = await tx.booking.findFirst({
         where: {
           student_id: studentId,
@@ -127,31 +166,78 @@ export async function handleCreateBooking(
       });
 
       if (pending) {
-        throw Object.assign(new Error("You already have an active booking"), { status: 409 });
+        throw Object.assign(new Error("You already have an active booking"), {
+          status: 409,
+        });
       }
 
-      return tx.booking.create({
+      const booking = await tx.booking.create({
         data: {
           university_id: activeUniversityId,
           student_id: studentId,
           time_slot_id: timeSlotId,
-          time_slot_service_id: timeSlotServiceId,
+
           booking_service_mode: serviceMode,
-          booking_online_channel: serviceMode === "ONLINE" ? onlineChannel : null,
+          booking_online_channel:
+            serviceMode === "ONLINE" ? onlineChannel : null,
+
           problem_category_id: problemCategoryId,
-          booking_detail_text: detailText,
+          booking_detail_text: bookingDetailText,
           booking_status: BookingStatus.PENDING_ASSIGNMENT,
         },
-        select: { booking_id: true },
+        select: { booking_id: true, university_id: true },
       });
+
+      // ✅ ถ้า ONLINE -> เก็บลายเซ็นลง booking_consent_signature
+      if (serviceMode === "ONLINE") {
+        const consentDocHash = sha256Hex(CONSENT_DOC_TEXT);
+        const signatureHash = sha256Hex(consentSignatureDataUrl!);
+
+        await tx.bookingConsentSignature.create({
+          data: {
+            university_id: booking.university_id,
+            booking_id: booking.booking_id,
+
+            signed_by_account_id:
+              (ctx as any).account_id ?? (ctx as any).accountId ?? null,
+
+            student_id: studentId,
+
+            signature_method: "DRAW",
+            consent_doc_code: CONSENT_DOC_CODE,
+            consent_doc_version: CONSENT_DOC_VERSION,
+            consent_doc_hash: consentDocHash,
+
+            sign_status: "SIGNED",
+            signature_payload: { dataUrl: consentSignatureDataUrl },
+            signature_hash: signatureHash,
+
+            verified_at: new Date(),
+            ip_address: ipAddress,
+            user_agent: userAgent,
+          },
+        });
+      }
+
+      return booking;
     });
 
-    return NextResponse.json({ success: true, bookingId: booking.booking_id });
+    return NextResponse.json({
+      success: true,
+      bookingId: created.booking_id,
+      universityId: created.university_id,
+    });
   } catch (err: any) {
     if (err?.code === "P2002") {
-      return NextResponse.json({ error: "Slot already booked" }, { status: 409 });
+      return NextResponse.json(
+        { error: "Slot already booked" },
+        { status: 409 },
+      );
     }
     const status = err?.status ?? 500;
-    return NextResponse.json({ error: err?.message ?? "Failed to create booking" }, { status });
+    return NextResponse.json(
+      { error: err?.message ?? "Failed to create booking" },
+      { status },
+    );
   }
 }

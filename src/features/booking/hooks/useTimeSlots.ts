@@ -1,15 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+// src/features/booking/hooks/useTimeSlots.ts
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TimeSlot } from "../types";
 import { getTimeSlots } from "../api";
+import { normalizeTimeSlot } from "../utils/normalizeTimeSlot";
+import type { TimeSlotCore } from "@/shared/types/timeSlot";
 
 export function useTimeSlots(date: string, universityId?: number) {
-  const [slots, setSlots] = useState<TimeSlot[]>([]);
+  const [rawSlots, setRawSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
+  const fetchSlots = useCallback(async () => {
     if (!date) return;
 
     abortRef.current?.abort();
@@ -19,21 +23,30 @@ export function useTimeSlots(date: string, universityId?: number) {
     setLoading(true);
     setError(null);
 
-    getTimeSlots(date, { universityId, signal: ac.signal })
-      .then(setSlots)
-      .catch((e) => {
-        if (e?.name === "AbortError") return;
-        setError(e?.message ?? "Failed to load slots");
-      })
-      .finally(() => setLoading(false));
-
-    return () => ac.abort();
+    try {
+      const data = await getTimeSlots(date, { universityId, signal: ac.signal });
+      setRawSlots(Array.isArray(data) ? data : []);
+    } catch (e: any) {
+      if (e?.name === "AbortError") return;
+      setError(e?.message ?? "Failed to load slots");
+    } finally {
+      setLoading(false);
+    }
   }, [date, universityId]);
 
-  const openSlots = useMemo(
-    () => slots.filter((s) => s.time_slot_status === "OPEN"),
-    [slots],
-  );
+  useEffect(() => {
+    fetchSlots();
+    return () => abortRef.current?.abort();
+  }, [fetchSlots]);
 
-  return { slots, openSlots, loading, error, refetch: () => {} };
+  // ✅ แปลงเป็น TimeSlotCore (ให้ตรง src/shared/types/timeSlot.ts)
+  const slots: TimeSlotCore[] = useMemo(() => {
+    const now = new Date();
+    return rawSlots.map((s) => normalizeTimeSlot(s, now));
+  }, [rawSlots]);
+
+  // ✅ Prisma enum ใหม่ใน shared ใช้ field "status"
+  const openSlots = useMemo(() => slots.filter((s) => s.status === "OPEN"), [slots]);
+
+  return { slots, openSlots, loading, error, refetch: fetchSlots };
 }

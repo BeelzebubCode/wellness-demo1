@@ -1,33 +1,41 @@
-// src/features/booking/api/timeSlots.ts
-import type { BookingPayload, CreateBookingResponse } from "../types";
+// src/features/booking/api/bookings.ts
+
+import type { BookingPayload, CreateBookingResponse, CancelBookingInput } from "../types";
+import { apiPost, apiPatch } from "./http";
 
 export async function createBooking(
   payload: BookingPayload,
   opts?: { universityId?: number; signal?: AbortSignal },
 ): Promise<CreateBookingResponse> {
-  const headers: Record<string, string> = {
-    Accept: "application/json",
-    "Content-Type": "application/json",
-  };
-
-  if (opts?.universityId) headers["x-university-id"] = String(opts.universityId);
-
-  const res = await fetch(`/api/v2/bookings`, {
-    method: "POST",
-    headers,
-    credentials: "include",
-    cache: "no-store",
-    body: JSON.stringify(payload),
+  const data = await apiPost<CreateBookingResponse>("/api/v2/bookings", payload, {
+    universityId: opts?.universityId,
     signal: opts?.signal,
   });
 
-  if (!res.ok) {
-    const msg = await res.text().catch(() => "");
-    throw new Error(`Failed to create booking (${res.status}): ${msg}`);
+  if ((data as any)?.success !== true) {
+    const msg = (data as any)?.error ?? "Create booking failed";
+    throw new Error(String(msg));
   }
 
-  const data = (await res.json().catch(() => null)) as CreateBookingResponse | null;
-  if (!data?.success) throw new Error(data?.error ?? "Create booking failed");
+  return data;
+}
+
+export async function cancelBooking(
+  input: CancelBookingInput,
+  opts?: { universityId?: number; signal?: AbortSignal },
+): Promise<{ success: true; status: string } | { success: false; error: string }> {
+  const universityId = opts?.universityId ?? input.universityId;
+
+  const data = await apiPatch<{ success: true; status: string } | { success: false; error: string }>(
+    `/api/v2/bookings/${input.bookingId}/cancel`,
+    { cancelReason: input.reason }, // ✅ ชื่อตรง handler
+    { universityId, signal: opts?.signal },
+  );
+
+  if ((data as any)?.success !== true) {
+    const msg = (data as any)?.error ?? "Cancel booking failed";
+    throw new Error(String(msg));
+  }
 
   return data;
 }

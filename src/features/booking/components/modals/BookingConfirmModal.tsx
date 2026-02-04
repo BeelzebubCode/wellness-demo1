@@ -1,13 +1,27 @@
+// src/features/booking/components/modals/BookingConfirmModal.tsx
 "use client";
 
 import { useMemo, useState } from "react";
-import type { BookingFormValues, TimeSlot } from "../../types";
-import type { OnlineChannel, ServiceMode } from "../../types";
-import { Modal } from "@/components/ui/Modal";
+
+import type { TimeSlotCore } from "@/shared/types/timeSlot";
+import type { OnlineChannel, ServiceMode } from "@/shared/types/service";
+
+import { Modal, Button } from "@/components/ui";
 import { AlertBox } from "@/components/notification/AlertBox";
-import { BookingForm } from "../forms/BookingForm";
-import { ServiceModePicker } from "../forms/ServiceModePicker";
-import { ConsentBlock } from "../forms/ConsentBlock";
+
+import {
+  BookingForm,
+  type BookingFormData,
+} from "@/features/booking/components/forms/BookingForm";
+import { ServiceModePicker } from "@/features/booking/components/forms/ServiceMode";
+
+import { ConsentBlock } from "@/features/booking/components/forms/ConsentBlock";
+import { SignaturePad } from "@/features/booking/components/forms/SignaturePad"; // ✅ เพิ่ม
+
+type ServicePick = {
+  mode: ServiceMode;
+  onlineChannel?: OnlineChannel | null;
+};
 
 export function BookingConfirmModal({
   open,
@@ -19,71 +33,205 @@ export function BookingConfirmModal({
 }: {
   open: boolean;
   onClose: () => void;
-  slot: TimeSlot | null;
+  slot: TimeSlotCore | null;
+
   onSubmit: (payload: {
     timeSlotId: number;
     problemCategoryId: number;
     bookingDetailText: string;
+
     serviceMode: ServiceMode;
     onlineChannel?: OnlineChannel | null;
-    timeSlotServiceId?: number | null;
+
     consentChecked: boolean;
+
+    // ✅ เพิ่ม: ลายเซ็น (เฉพาะ ONLINE)
+    consentSignatureDataUrl?: string | null;
   }) => Promise<void> | void;
+
   isLoading?: boolean;
   error?: string | null;
 }) {
-  const [service, setService] = useState<{ mode: ServiceMode; timeSlotServiceId?: number | null; onlineChannel?: OnlineChannel | null }>({
+  const [service, setService] = useState<ServicePick>({
     mode: "ONSITE",
-    timeSlotServiceId: null,
     onlineChannel: null,
   });
+
   const [consentChecked, setConsentChecked] = useState(false);
 
-  const canSubmit = useMemo(() => !!slot && consentChecked, [slot, consentChecked]);
+  const [consentSignature, setConsentSignature] = useState<string | null>(null); // ✅ เพิ่ม
+
+  const [form, setForm] = useState<BookingFormData>({
+    problemCategoryId: 0,
+    problemTypeOther: "",
+    problemDescription: "",
+  });
+
+  const needsOnlineChannel = service.mode === "ONLINE";
+  const needsSignature = service.mode === "ONLINE"; // ✅ online ต้องเซ็น
+
+  const formOk =
+    !!form.problemCategoryId &&
+    form.problemCategoryId > 0 &&
+    !!form.problemDescription?.trim() &&
+    (!isOther(form) ? true : !!form.problemTypeOther?.trim());
+
+  const canSubmit = useMemo(() => {
+    if (!slot) return false;
+    if (!consentChecked) return false;
+    if (needsOnlineChannel && !service.onlineChannel) return false;
+    if (needsSignature && !consentSignature) return false; // ✅ บังคับเซ็น
+    if (!formOk) return false;
+    return true;
+  }, [
+    slot,
+    consentChecked,
+    needsOnlineChannel,
+    service.onlineChannel,
+    needsSignature,
+    consentSignature,
+    formOk,
+  ]);
 
   return (
-    <Modal open={open} onClose={onClose} title="ยืนยันการจอง">
+    <Modal
+      isOpen={open}
+      onClose={onClose}
+      title="ยืนยันการจอง"
+      size="full"
+      className="max-w-[980px] w-[calc(100vw-24px)]"
+      contentClassName="p-3 md:p-4"
+    >
       {!slot ? (
         <div className="text-sm text-slate-600">ยังไม่ได้เลือกช่วงเวลา</div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {/* ✅ เพิ่ม: เลือก ONLINE/ONSITE ตอนกดเลือก */}
-          <ServiceModePicker
-            services={slot.services}
-            value={service}
-            onChange={(v) => setService(v)}
-          />
+        <div className="flex flex-col max-h-[80vh]">
+          <div className="flex-1 overflow-auto pr-1">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              {/* LEFT */}
+              <div className="min-w-0">
+                <div className="rounded-2xl border border-gray-100 bg-white p-3">
+                  <BookingForm
+                    value={form}
+                    onChange={setForm}
+                    hideSubmit
+                    isLoading={!!isLoading}
+                    error={null}
+                  />
+                </div>
+              </div>
 
-          {/* ✅ เพิ่ม: consent */}
-          <ConsentBlock checked={consentChecked} onChange={setConsentChecked} />
+              {/* RIGHT */}
+              <div className="min-w-0">
+                <div className="rounded-2xl border border-gray-100 bg-white p-3 space-y-3">
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900">
+                      ประเภทการจอง <span className="text-red-500">*</span>
+                    </div>
 
-          {!consentChecked ? (
-            <AlertBox type="warning" message="กรุณายอมรับเงื่อนไขก่อนทำการจอง" />
-          ) : null}
+                    <div className="mt-2">
+                      <ServiceModePicker
+                        value={service}
+                        onChange={(next) => {
+                          setService(next);
 
-          {error ? <AlertBox type="error" message={error} /> : null}
+                          // ✅ ถ้าเปลี่ยนจาก ONLINE -> ONSITE ให้ล้าง signature / onlineChannel
+                          if (next.mode !== "ONLINE") {
+                            setConsentSignature(null);
+                          }
+                        }}
+                      />
+                    </div>
 
-          <BookingForm
-            isLoading={!!isLoading}
-            error={error ?? undefined}
-            onSubmit={async (v: BookingFormValues) => {
-              if (!slot) return;
-              if (!consentChecked) return;
+                    {needsOnlineChannel && !service.onlineChannel ? (
+                      <div className="mt-2">
+                        <AlertBox
+                          type="warning"
+                          message="กรุณาเลือกช่องทางออนไลน์ก่อนทำการจอง"
+                        />
+                      </div>
+                    ) : null}
+                  </div>
 
-              await onSubmit({
-                timeSlotId: slot.time_slot_id,
-                problemCategoryId: Number(v.problemCategoryId),
-                bookingDetailText: v.problemDescription,
-                serviceMode: service.mode,
-                onlineChannel: service.onlineChannel ?? null,
-                timeSlotServiceId: service.timeSlotServiceId ?? null,
-                consentChecked,
-              });
-            }}
-            disableSubmit={!canSubmit || !!isLoading}
-          />
+                  <div>
+                    <div className="mt-2">
+                      <ConsentBlock checked={consentChecked} onChange={setConsentChecked} />
+                    </div>
+
+                    {!consentChecked ? (
+                      <div className="mt-2">
+                        <AlertBox type="warning" message="กรุณายอมรับเงื่อนไขก่อนทำการจอง" />
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {/* ✅ Signature เฉพาะ Online */}
+                  {service.mode === "ONLINE" ? (
+                    <div>
+                      <SignaturePad
+                        value={consentSignature}
+                        onChange={setConsentSignature}
+                        disabled={!!isLoading}
+                      />
+
+                      {!consentSignature ? (
+                        <div className="mt-2">
+                          <AlertBox
+                            type="warning"
+                            message="กรุณาเซ็นลายเซ็นยินยอมก่อนทำการจองออนไลน์"
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {error ? <AlertBox type="error" message={error} /> : null}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* FOOTER */}
+          <div className="shrink-0 mt-3 pt-3 border-t border-gray-100 bg-white">
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              className="w-full bg-primary-500 hover:bg-primary-600 h-11 text-sm"
+              isLoading={!!isLoading}
+              disabled={!canSubmit || !!isLoading}
+              aria-disabled={!canSubmit || !!isLoading}
+              aria-busy={!!isLoading}
+              onClick={async () => {
+                if (!slot) return;
+                if (!canSubmit) return;
+
+                await onSubmit({
+                  timeSlotId: slot.id,
+                  problemCategoryId: Number(form.problemCategoryId),
+                  bookingDetailText: form.problemDescription,
+                  serviceMode: service.mode,
+                  onlineChannel: needsOnlineChannel ? (service.onlineChannel ?? null) : null,
+                  consentChecked,
+                  consentSignatureDataUrl: service.mode === "ONLINE" ? consentSignature : null,
+                });
+              }}
+            >
+              ยืนยันการจอง
+            </Button>
+
+            {!canSubmit ? (
+              <p className="mt-2 text-xs text-gray-400 text-center">
+                กรุณากรอกข้อมูลให้ครบ เลือกช่องทาง/เซ็นลายเซ็น (ถ้าออนไลน์) และยอมรับเงื่อนไขก่อนทำการจอง
+              </p>
+            ) : null}
+          </div>
         </div>
       )}
     </Modal>
   );
+}
+
+function isOther(form: BookingFormData) {
+  return !!form.problemTypeOther?.trim();
 }

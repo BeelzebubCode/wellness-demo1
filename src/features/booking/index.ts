@@ -9,7 +9,7 @@ export * from "./components/slots/TimeSlotCard";
 export * from "./components/calendar/BookingCalendar";
 
 export * from "./components/forms/BookingForm";
-export * from "./components/forms/ServiceModePicker";
+export * from "./components/forms/ServiceMode/ServiceModePicker";
 export * from "./components/forms/ConsentBlock";
 
 export * from "./components/modals/BookingConfirmModal";

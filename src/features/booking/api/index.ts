@@ -2,4 +2,5 @@
 export * from "./timeSlots";
 export * from "./bookings";
 export * from "./appointments";
+export * from "./http";
 
