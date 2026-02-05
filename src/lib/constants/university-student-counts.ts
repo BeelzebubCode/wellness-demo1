@@ -1,5 +1,3 @@
-// prisma/seed-data/university-student-counts.ts
-
 /**
  * กำหนดจำนวนนักศึกษาที่ต้องการ seed สำหรับแต่ละมหาวิทยาลัย
  * 

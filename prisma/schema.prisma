@@ -497,6 +497,7 @@ model Booking {
   @@index([student_id])
   @@index([consultant_id])
   @@index([problem_category_id])
+  @@index([university_id, problem_category_id]) // 🔥 Optimization for Dashboard Maps (Heatmap)
   @@index([student_id, booking_status])
   @@index([university_id, time_slot_id, booking_status])
   @@map("booking")

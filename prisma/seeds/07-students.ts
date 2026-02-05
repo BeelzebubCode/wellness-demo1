@@ -8,7 +8,11 @@ import {
 
 import { randomBool, randomInt, randomItem } from "../seed-utils/rand";
 import { randomPerson } from "../seed-data/people";
-import { getStudentCountForUniversity, DEFAULT_STUDENT_COUNT } from "../seed-data/university-student-counts";
+
+import { getStudentCountForUniversity, DEFAULT_STUDENT_COUNT } from "../../src/lib/constants/university-student-counts";
+
+const MAX_STUDENTS_PER_UNI = 30; // Cap to avoid long seed times
+
 
 export async function seedStudents(
   prisma: PrismaClient,
@@ -104,7 +108,13 @@ export async function seedStudents(
     const uniCodeLower = uniCode.toLowerCase();
 
     // ✅ ดึงจำนวนนักศึกษาที่ต้องการ seed สำหรับมหาวิทยาลัยนี้
-    const PER_UNI = getStudentCountForUniversity(uniCode);
+    const rawCount = getStudentCountForUniversity(uniCode);
+    const PER_UNI = Math.min(rawCount, MAX_STUDENTS_PER_UNI);
+    
+    // Log intent
+    if (rawCount > PER_UNI) {
+       console.log(`   (Capping ${uniCode} from ${rawCount} to ${PER_UNI} for faster seed)`);
+    }
 
     // ถ้ากำหนดเป็น 0 = ไม่ seed นักศึกษาเลย
     if (PER_UNI === 0) {

@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCached, setCache, CacheKeys, CacheTTL } from "@/lib/redis";
+import { universityStudentCounts, DEFAULT_STUDENT_COUNT } from "@/lib/constants/university-student-counts";
 
 
 /**
@@ -166,7 +167,8 @@ export async function GET(req: NextRequest) {
         region: uni.province.region.region_name_en || "Central",
         regionCode: uni.province.region.region_code || "UPPER_CENTRAL",
         province: uni.province.province_name_th || "",
-        students: uni._count.students,
+        // priority: hardcoded CSV data > DB count
+        students: universityStudentCounts[uni.university_code] ?? uni._count.students,
         type: uni.university_type || "PUBLIC",
         logo: `/images/logo/${uni.university_code}_logo.png`,
         // ✨ New field
