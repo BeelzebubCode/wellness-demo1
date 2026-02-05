@@ -12,19 +12,21 @@ export async function platformListBorrowRequests(input: {
   const page = Math.max(1, Number(input.page || 1));
   const pageSize = Math.min(100, Math.max(1, Number(input.pageSize || 20)));
 
-  const where: any = {};
+  // ✅ Super Admin should NOT see DRAFT and CANCELLED
+  const where: any = {
+    borrow_request_status: {
+      notIn: ["DRAFT", "CANCELLED"]
+    }
+  };
 
   // Status filter
   const status = (input.status || "").toUpperCase();
   if (status && status !== "ALL") {
     const allowed = [
-      "DRAFT", 
-      "SUBMITTED", 
-      "APPROVED", 
-      "REJECTED", 
-      "ASSIGNED", 
-      "COMPLETED", 
-      "CANCELLED"
+      "SUBMITTED",
+      "APPROVED",
+      "ASSIGNED",
+      "COMPLETED"
     ];
     if (allowed.includes(status)) {
       where.borrow_request_status = status;
@@ -59,7 +61,7 @@ export async function platformListBorrowRequests(input: {
           orderBy: { borrow_assigned_at: "desc" },
           include: {
             consultant: {
-              include: { 
+              include: {
                 profile: true,
               },
             },
@@ -81,10 +83,10 @@ export async function platformListBorrowRequests(input: {
   // ✅ แปลงข้อมูลผ่าน presenter
   const items = rawItems.map(presentBorrowRequest);
 
-  return { 
-    items, 
-    total, 
-    page, 
-    pageSize 
+  return {
+    items,
+    total,
+    page,
+    pageSize
   };
 }

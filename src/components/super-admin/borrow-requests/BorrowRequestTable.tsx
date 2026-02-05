@@ -3,6 +3,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { MapPin, Users, Eye, CheckCircle, UserPlus } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -14,19 +15,47 @@ import {
 } from "@/features/borrow-requests/filters/defs";
 import type { BorrowRequest } from "@/features/borrow-requests/types";
 
+function getStatusColor(status: string) {
+  switch (status) {
+    case "SUBMITTED":
+      return "bg-blue-100 text-blue-800 border-blue-200";
+    case "APPROVED":
+      return "bg-green-100 text-green-800 border-green-200";
+    case "ASSIGNED":
+      return "bg-purple-100 text-purple-800 border-purple-200";
+    case "COMPLETED":
+      return "bg-gray-100 text-gray-800 border-gray-200";
+    default:
+      return "bg-gray-100 text-gray-600 border-gray-200";
+  }
+}
+
+function getStatusLabel(status: string) {
+  switch (status) {
+    case "SUBMITTED":
+      return "รอดำเนินการ";
+    case "APPROVED":
+      return "อนุมัติแล้ว";
+    case "ASSIGNED":
+      return "มอบหมายแล้ว";
+    case "COMPLETED":
+      return "เสร็จสิ้น";
+    default:
+      return status;
+  }
+}
+
 export function BorrowRequestsTable({
   rows,
   loading,
   onView,
   onApprove,
-  onReject,
   onAssign,
 }: {
   rows: BorrowRequest[];
   loading?: boolean;
   onView: (id: number) => void;
   onApprove: (id: number) => void;
-  onReject: (id: number) => void;
   onAssign: (id: number) => void;
 }) {
   const [filters, setFilters] = useState<BorrowRequestsFilters>({
@@ -68,59 +97,65 @@ export function BorrowRequestsTable({
       />
 
       <div className="overflow-auto">
-        <table className="min-w-[900px] w-full text-sm">
-          <thead className="text-left text-slate-500">
+        <table className="min-w-full w-full text-sm">
+          <thead className="bg-slate-50 border-b-2 border-slate-200">
             <tr>
-              <th className="py-2">ID</th>
-              <th>หัวข้อ</th>
-              <th>ต้องการ</th>
-              <th>สถานะ</th>
-              <th className="text-right">Actions</th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">ID</th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">หัวข้อคำขอ</th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">จำนวน</th>
+              <th className="py-3 px-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">สถานะ</th>
+              <th className="py-3 px-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">การดำเนินการ</th>
             </tr>
           </thead>
 
-          <tbody className="text-slate-700">
+          <tbody className="bg-white divide-y divide-slate-100">
             {filtered.map((r) => {
               const canApprove = r.borrowRequestStatus === "SUBMITTED";
-              const canReject = r.borrowRequestStatus === "SUBMITTED";
               const canAssign = r.borrowRequestStatus === "APPROVED";
 
               return (
-                <tr key={r.borrowRequestId} className="border-t border-slate-100">
-                  <td className="py-3">{r.borrowRequestId}</td>
-                  <td className="py-3">
-                    <div className="font-medium">{r.borrowRequestTitle}</div>
-                    <div className="text-xs text-slate-500 line-clamp-1">
-                      {r.borrowRequestReason}
+                <tr
+                  key={r.borrowRequestId}
+                  className="hover:bg-slate-50 transition-colors cursor-pointer"
+                  onClick={() => onView(r.borrowRequestId)}
+                >
+                  <td className="py-4 px-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <span className="text-sm font-medium text-slate-900">#{r.borrowRequestId}</span>
                     </div>
                   </td>
-                  <td className="py-3">{r.borrowNeededCount} คน</td>
-                  <td className="py-3">
-                    <Badge>{r.borrowRequestStatus}</Badge>
+                  <td className="py-4 px-4">
+                    <div className="max-w-md">
+                      <div className="text-sm font-semibold text-slate-900 mb-1">
+                        {r.borrowRequestTitle}
+                      </div>
+                      <div className="text-xs text-slate-500 line-clamp-2 mb-1">
+                        {r.borrowRequestReason}
+                      </div>
+                    </div>
                   </td>
-                  <td className="py-3">
+                  <td className="py-4 px-4 whitespace-nowrap">
+                    <div className="flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-slate-500" />
+                      <span className="text-sm text-slate-700 font-medium">
+                        {r.borrowNeededCount} คน
+                      </span>
+                    </div>
+                  </td>
+                  <td className="py-4 px-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(r.borrowRequestStatus)}`}>
+                      {getStatusLabel(r.borrowRequestStatus)}
+                    </span>
+                  </td>
+                  <td className="py-4 px-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex gap-2 justify-end">
-                      <Button variant="outline" onClick={() => onView(r.borrowRequestId)}>
-                        ดู
-                      </Button>
                       <Button
-                        disabled={!canApprove}
-                        onClick={() => onApprove(r.borrowRequestId)}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onView(r.borrowRequestId)}
+                        leftIcon={<Eye className="w-4 h-4" />}
                       >
-                        Approve
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        disabled={!canReject}
-                        onClick={() => onReject(r.borrowRequestId)}
-                      >
-                        Reject
-                      </Button>
-                      <Button
-                        disabled={!canAssign}
-                        onClick={() => onAssign(r.borrowRequestId)}
-                      >
-                        Assign
+                        ดูรายละเอียด
                       </Button>
                     </div>
                   </td>

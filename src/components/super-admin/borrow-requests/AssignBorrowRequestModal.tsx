@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { MapPin } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -17,11 +18,20 @@ type AssignItem = {
   note?: string;
 };
 
+type CandidateShift = {
+  shiftId: number;
+  startAt: string;
+  endAt: string;
+  status: string;
+  currentBorrowCount: number;
+};
+
 type CandidateConsultant = {
   consultantId: number;
   fullName: string;
   nickname?: string | null;
   specializations: string[];
+  shifts: CandidateShift[]; // ✅ เพิ่ม shift info
 };
 
 type CandidateUniversityGroup = {
@@ -160,9 +170,7 @@ export function AssignBorrowRequestModal({
         Number.isFinite(it.consultantId) &&
         it.consultantId > 0 &&
         Number.isFinite(it.consultantUniversityId) &&
-        it.consultantUniversityId > 0 &&
-        safeIsoOrEmpty(it.startAt) &&
-        safeIsoOrEmpty(it.endAt)
+        it.consultantUniversityId > 0
       );
     });
   }, [items, needed]);
@@ -198,7 +206,7 @@ export function AssignBorrowRequestModal({
   return (
     <Modal open={open} onOpenChange={onOpenChange} title="Assign Consultants">
       {/* ✅ Modal สูงเท่าจอ และ scroll แค่ตัวเดียว */}
-      <div className="h-[82vh] max-h-[82vh] flex flex-col">
+      <div className="max-h-[75vh] flex flex-col">
         {/* Header */}
         <div className="pb-3">
           <div className="text-sm text-slate-600">
@@ -285,28 +293,68 @@ export function AssignBorrowRequestModal({
                     return (
                       <div
                         key={key}
-                        className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 flex items-start justify-between gap-4 shadow-[0_6px_18px_rgba(0,0,0,0.04)]"
+                        className="rounded-2xl border-2 border-slate-200 bg-white p-5 flex items-start justify-between gap-4 shadow-[0_6px_18px_rgba(0,0,0,0.04)] hover:border-slate-300 transition-colors"
                       >
-                        <div className="min-w-0">
-                          <div className="text-base font-semibold text-slate-900 truncate">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-lg font-bold text-slate-900 truncate mb-1">
                             {c.fullName}
                             {c.nickname ? (
-                              <span className="text-slate-500 font-normal">
-                                {" "}
+                              <span className="text-slate-500 font-normal text-base ml-2">
                                 ({c.nickname})
                               </span>
                             ) : null}
                           </div>
 
-                          <div className="mt-2 flex flex-wrap gap-1.5">
+                          {/* ✅ แสดง shift info */}
+                          {c.shifts && c.shifts.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {c.shifts.map((shift) => {
+                                const start = new Date(shift.startAt);
+                                const end = new Date(shift.endAt);
+                                const isBorrowed = shift.currentBorrowCount > 0;
+
+                                return (
+                                  <div
+                                    key={shift.shiftId}
+                                    className={[
+                                      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium",
+                                      isBorrowed
+                                        ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                        : "bg-emerald-50 text-emerald-700 border border-emerald-200",
+                                    ].join(" ")}
+                                  >
+                                    <span>📅</span>
+                                    <span>
+                                      {start.toLocaleDateString("th-TH", {
+                                        day: "numeric",
+                                        month: "short",
+                                      })}{" "}
+                                      -{" "}
+                                      {end.toLocaleDateString("th-TH", {
+                                        day: "numeric",
+                                        month: "short",
+                                      })}
+                                    </span>
+                                    {isBorrowed && (
+                                      <span className="text-amber-600">
+                                        (ถูกยืม {shift.currentBorrowCount})
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          <div className="mt-2.5 flex flex-wrap gap-2">
                             {(c.specializations || []).length ? (
                               c.specializations.slice(0, 10).map((s) => (
-                                <Badge key={s} variant="outline">
+                                <Badge key={s} variant="outline" className="text-sm">
                                   {s}
                                 </Badge>
                               ))
                             ) : (
-                              <span className="text-xs text-slate-500">
+                              <span className="text-sm text-slate-500">
                                 ไม่ระบุความเชี่ยวชาญ
                               </span>
                             )}
@@ -314,11 +362,8 @@ export function AssignBorrowRequestModal({
                         </div>
 
                         <Button
-                          size="sm"
-                          className={[
-                            "rounded-xl px-4 shadow-sm",
-                            picked ? "opacity-60" : "",
-                          ].join(" ")}
+                          size="md"
+                          className="rounded-xl px-5 shadow-sm shrink-0"
                           disabled={picked}
                           onClick={() => addAssignee(activeGroup, c)}
                         >
@@ -342,7 +387,7 @@ export function AssignBorrowRequestModal({
                   คนที่เลือก ({items.length}/{needed})
                 </div>
                 <div className="text-sm text-slate-600 mt-0.5">
-                  เลื่อนลงมาแก้ช่วงเวลา/หมายเหตุ แล้วค่อยกดยืนยัน
+                  เลือกครบแล้วกดยืนยันได้เลย
                 </div>
               </div>
             </div>
@@ -354,119 +399,68 @@ export function AssignBorrowRequestModal({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {items.map((it, idx) => (
-                    <div
-                      key={`${it.consultantUniversityId}:${it.consultantId}:${idx}`}
-                      className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 space-y-3 shadow-[0_6px_18px_rgba(0,0,0,0.04)]"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="text-sm font-semibold text-slate-900">
-                          consultantId: {it.consultantId} • universityId:{" "}
-                          {it.consultantUniversityId}
+                  {items.map((it, idx) => {
+                    // Find consultant info
+                    const group = groups.find(g => g.universityId === it.consultantUniversityId);
+                    const consultant = group?.consultants.find(c => c.consultantId === it.consultantId);
+
+                    const consultantName = consultant?.fullName || `Consultant #${it.consultantId}`;
+                    const consultantNickname = consultant?.nickname;
+                    const universityName = group?.universityNameTh || `University #${it.consultantUniversityId}`;
+
+                    return (
+                      <div
+                        key={`${it.consultantUniversityId}:${it.consultantId}:${idx}`}
+                        className="rounded-2xl border-2 border-slate-200 bg-white p-5 flex items-center justify-between gap-4 hover:border-primary-300 transition-colors"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="text-lg font-bold text-slate-900 mb-1.5">
+                            {consultantName}
+                            {consultantNickname && (
+                              <span className="text-slate-500 font-normal text-base ml-2">
+                                ({consultantNickname})
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-sm text-slate-600 mt-1">
+                            <MapPin className="w-4 h-4" />
+                            {universityName}
+                          </div>
                         </div>
+
                         <Button
                           variant="outline"
-                          size="sm"
-                          className="rounded-xl"
+                          size="md"
+                          className="rounded-xl shrink-0"
                           onClick={() => removeAssignee(idx)}
                         >
                           ลบ
                         </Button>
                       </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <div>
-                          <div className="text-xs text-slate-500 mb-1">
-                            startAt (ISO)
-                          </div>
-                          <Input
-                            value={it.startAt}
-                            onChange={(e) =>
-                              setItems((p) =>
-                                p.map((x, i) =>
-                                  i === idx ? { ...x, startAt: e.target.value } : x
-                                )
-                              )
-                            }
-                            placeholder="2026-01-26T10:00:00.000Z"
-                          />
-                        </div>
-                        <div>
-                          <div className="text-xs text-slate-500 mb-1">
-                            endAt (ISO)
-                          </div>
-                          <Input
-                            value={it.endAt}
-                            onChange={(e) =>
-                              setItems((p) =>
-                                p.map((x, i) =>
-                                  i === idx ? { ...x, endAt: e.target.value } : x
-                                )
-                              )
-                            }
-                            placeholder="2026-01-26T12:00:00.000Z"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="text-xs text-slate-500 mb-1">note</div>
-                        <Input
-                          value={it.note || ""}
-                          onChange={(e) =>
-                            setItems((p) =>
-                              p.map((x, i) =>
-                                i === idx ? { ...x, note: e.target.value } : x
-                              )
-                            )
-                          }
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
           </div>
 
           {/* กัน footer ทับ */}
-          <div className="h-2" />
+          <div className="h-6" />
         </div>
 
         {/* Footer (sticky) */}
-        <div className="pt-3 border-t border-slate-200 flex items-center justify-between gap-2">
+        <div className="pt-4 pb-2 border-t border-slate-200 bg-white flex items-center justify-between gap-2">
           <Button variant="outline" className="rounded-xl" onClick={() => onOpenChange(false)}>
             ปิด
           </Button>
 
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              className="rounded-xl"
-              onClick={() => {
-                setItems((p) => [
-                  ...p,
-                  {
-                    consultantId: 0,
-                    consultantUniversityId: 0,
-                    startAt: defaultStartAt || "",
-                    endAt: defaultEndAt || "",
-                    note: "",
-                  },
-                ]);
-              }}
-            >
-              + เพิ่มเอง
-            </Button>
-
-            <Button
-              className="rounded-xl px-6 shadow-sm"
-              disabled={!can || loading}
-              onClick={() => onConfirm(items)}
-            >
-              ยืนยัน Assign
-            </Button>
-          </div>
+          <Button
+            className="rounded-xl px-6 shadow-sm"
+            disabled={!can || loading}
+            onClick={() => onConfirm(items)}
+          >
+            ยืนยัน Assign
+          </Button>
         </div>
       </div>
     </Modal>

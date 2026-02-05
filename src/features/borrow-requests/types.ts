@@ -4,7 +4,6 @@ export type BorrowRequestStatus =
   | "DRAFT"
   | "SUBMITTED"
   | "APPROVED"
-  | "REJECTED"
   | "ASSIGNED"
   | "COMPLETED"
   | "CANCELLED";
@@ -23,20 +22,17 @@ export type BorrowRequest = {
   borrowRequestReason: string;
   borrowRequestDetail?: string | null;
 
-  borrowNeededFrom?: string | null; // ISO
-  borrowNeededTo?: string | null; // ISO
+  borrowNeededFrom?: string | null;
+  borrowNeededTo?: string | null;
   borrowNeededCount: number;
 
   borrowRequestStatus: BorrowRequestStatus;
 
   borrowSubmittedAt?: string | null;
   borrowApprovedAt?: string | null;
-  borrowRejectedAt?: string | null;
 
-  borrowRejectReason?: string | null;
-
-  borrowRequestCreatedAt: string; // ISO
-  borrowRequestUpdatedAt: string; // ISO
+  borrowRequestCreatedAt: string;
+  borrowRequestUpdatedAt: string;
 };
 
 export type BorrowAssignment = {
@@ -54,6 +50,13 @@ export type BorrowAssignment = {
   borrowAssignedByAccountId: number;
   borrowAssignedAt: string; // ISO
   borrowAssignmentNote?: string | null;
+
+  consultantUniversity?: {
+    id: number;
+    code: string | null;
+    nameTh: string | null;
+    nameEn?: string | null;
+  };
 };
 
 // ------------------------------
@@ -94,7 +97,21 @@ export type RankedUniversity = {
 export type BorrowRequestDetail = BorrowRequest & {
   assignments: BorrowAssignment[];
 
-  // ✅ platform detail จะมี 2 field นี้เพิ่มมา (my-detail อาจไม่มี ก็ไม่พัง)
+  // ✅ เพิ่มแบบ user-friendly (optional เพื่อไม่พังหน้าอื่น)
+  fromUniversity?: {
+    id: number;
+    code: string | null;
+    nameTh: string | null;
+    nameEn?: string | null;
+  };
+
+  requestedBy?: {
+    accountId: number;
+    username: string | null;
+    role?: string | null;
+  };
+
+  // ✅ platform detail จะมี 2 field นี้เพิ่มมา (my-detail อาจไม่มี)
   parsedDetail?: BorrowRequestDetailJson;
   rankedUniversities?: RankedUniversity[];
 };
@@ -141,10 +158,6 @@ export type AssignBorrowRequestInput = {
   }>;
 };
 
-export type RejectBorrowRequestInput = {
-  reason: string;
-};
-
 // ✅ เพิ่ม type สำหรับ pagination response
 export type PaginatedResponse<T> = {
   items: T[];
@@ -154,3 +167,4 @@ export type PaginatedResponse<T> = {
 };
 
 export type BorrowRequestListResponse = PaginatedResponse<BorrowRequest>;
+

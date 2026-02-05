@@ -7,7 +7,6 @@ import type {
   AssignBorrowRequestInput,
   BorrowRequest,
   BorrowRequestDetail,
-  RejectBorrowRequestInput,
 } from "../types";
 
 export function usePlatformBorrowRequest(id: number | null) {
@@ -38,16 +37,7 @@ export function usePlatformBorrowRequest(id: number | null) {
     return res.data;
   }, [id, refetch]);
 
-  const reject = useCallback(
-    async (input: RejectBorrowRequestInput): Promise<BorrowRequest | null> => {
-      if (!id) return null;
-      setError(null);
-      const res = await platformBorrowRequestsApi.reject(id, input);
-      await refetch();
-      return res.data;
-    },
-    [id, refetch]
-  );
+
 
   const assign = useCallback(
     async (input: AssignBorrowRequestInput): Promise<BorrowRequestDetail | null> => {
@@ -64,5 +54,5 @@ export function usePlatformBorrowRequest(id: number | null) {
     if (id) refetch();
   }, [id, refetch]);
 
-  return { data, loading, error, refetch, approve, reject, assign };
+  return { data, loading, error, refetch, approve, assign };
 }

@@ -29,7 +29,7 @@ export function presentBorrowRequest(
     borrowSubmittedAt: br.borrow_submitted_at?.toISOString() ?? null,
     borrowApprovedAt: br.borrow_approved_at?.toISOString() ?? null,
     borrowRejectedAt: br.borrow_rejected_at?.toISOString() ?? null,
-    
+
     borrowRejectReason: br.borrow_reject_reason ?? null,
 
     // Relations
@@ -49,9 +49,9 @@ export function presentBorrowRequest(
       borrowAssignEndAt: a.borrow_assign_end_at.toISOString(),
       borrowAssignedAt: a.borrow_assigned_at.toISOString(),
       borrowAssignmentNote: a.borrow_assignment_note ?? null,
-      
+
       consultantName: a.consultant?.profile
-        ? `${a.consultant.profile.profile_firstname_th} ${a.consultant.profile.profile_lastname_th}`
+        ? `${a.consultant.profile.consultant_first_name ?? ""} ${a.consultant.profile.consultant_last_name ?? ""}`.trim() || null
         : null,
       consultantUniversityCode: a.consultantUniversity?.university_code ?? null,
     })) ?? [],

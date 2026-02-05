@@ -37,7 +37,6 @@ export default function SuperBorrowRequestsPage() {
         loading={loading}
         onView={(id) => router.push(`/super-admin/borrow-requests/${id}`)}
         onApprove={(id) => router.push(`/super-admin/borrow-requests/${id}`)}
-        onReject={(id) => router.push(`/super-admin/borrow-requests/${id}?action=reject`)}
         onAssign={(id) => router.push(`/super-admin/borrow-requests/${id}?action=assign`)}
       />
     </div>

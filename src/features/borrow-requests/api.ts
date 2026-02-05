@@ -4,10 +4,9 @@ import type {
   BorrowRequest,
   BorrowRequestDetail,
   CreateBorrowRequestInput,
-  BorrowRequestListResponse, 
+  BorrowRequestListResponse,
   PlatformListParams,
   AssignBorrowRequestInput,
-  RejectBorrowRequestInput,
   UpdateBorrowRequestInput,
 } from "./types";
 
@@ -106,12 +105,6 @@ export const platformBorrowRequestsApi = {
     apiFetch<{ ok: true; data: BorrowRequest }>(
       `/api/v2/platform/borrow-requests/${id}/approve`,
       { method: "POST" }
-    ),
-
-  reject: (id: number, input: RejectBorrowRequestInput) =>
-    apiFetch<{ ok: true; data: BorrowRequest }>(
-      `/api/v2/platform/borrow-requests/${id}/reject`,
-      { method: "POST", body: JSON.stringify(input) }
     ),
 
   assign: (id: number, input: AssignBorrowRequestInput) =>

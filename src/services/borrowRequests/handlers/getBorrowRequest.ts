@@ -32,11 +32,27 @@ function mapBorrowRequest(pr: any) {
     fromUniversityCode: pr.fromUniversity?.university_code ?? null,
     fromUniversityNameTh: pr.fromUniversity?.university_name_th ?? null,
 
+    // ✅ object-friendly
+    fromUniversity: pr.fromUniversity
+      ? {
+        id: pr.fromUniversity.university_id,
+        code: pr.fromUniversity.university_code ?? null,
+        nameTh: pr.fromUniversity.university_name_th ?? null,
+        nameEn: pr.fromUniversity.university_name_en ?? null,
+      }
+      : undefined,
+
     requestedByAccountId: pr.requested_by_account_id,
-    requestedByName:
-      pr.requestedBy?.account_display_name ??
-      pr.requestedBy?.account_username ??
-      null,
+    requestedByName: pr.requestedBy?.account_username ?? null,
+
+    // ✅ object-friendly
+    requestedBy: pr.requestedBy
+      ? {
+        accountId: pr.requestedBy.account_id,
+        username: pr.requestedBy.account_username ?? null,
+        role: pr.requestedBy.account_role ?? null,
+      }
+      : undefined,
 
     borrowRequestTitle: pr.borrow_request_title,
     borrowRequestReason: pr.borrow_request_reason,
@@ -50,24 +66,44 @@ function mapBorrowRequest(pr: any) {
 
     borrowSubmittedAt: iso(pr.borrow_submitted_at),
     borrowApprovedAt: iso(pr.borrow_approved_at),
-    borrowRejectedAt: iso(pr.borrow_rejected_at),
 
-    borrowRejectReason: pr.borrow_reject_reason ?? null,
+    // ❌ ลบทิ้ง: borrowRejectedAt, borrowRejectReason
 
-    borrowRequestCreatedAt: iso(pr.borrow_request_created_at)!, // not null in db
-    borrowRequestUpdatedAt: iso(pr.borrow_request_updated_at)!, // not null in db
+    borrowRequestCreatedAt: iso(pr.borrow_request_created_at)!,
+    borrowRequestUpdatedAt: iso(pr.borrow_request_updated_at)!,
   };
 }
 
 function mapAssignment(a: any) {
+  const first = a.consultant?.profile?.consultant_first_name?.trim?.() ?? "";
+  const last = a.consultant?.profile?.consultant_last_name?.trim?.() ?? "";
+  const fullName = `${first} ${last}`.trim() || `Consultant#${a.consultant_id}`;
+  const nickname = a.consultant?.profile?.consultant_nickname ?? null;
+
   return {
     borrowAssignmentId: a.borrow_assignment_id,
     borrowRequestId: a.borrow_request_id,
 
     consultantId: a.consultant_id,
     consultantUniversityId: a.consultant_university_id,
-    consultantName: a.consultantName ?? null,
-    consultantUniversityCode: a.consultantUniversityCode ?? null,
+
+    consultantName: fullName,
+    consultantUniversityCode: a.consultantUniversity?.university_code ?? null,
+
+    // ✅ object-friendly (optional ใช้ทีหลัง)
+    consultant: {
+      id: a.consultant_id,
+      fullName,
+      nickname,
+    },
+    consultantUniversity: a.consultantUniversity
+      ? {
+        id: a.consultantUniversity.university_id,
+        code: a.consultantUniversity.university_code ?? null,
+        nameTh: a.consultantUniversity.university_name_th ?? null,
+        nameEn: a.consultantUniversity.university_name_en ?? null,
+      }
+      : undefined,
 
     borrowAssignStartAt: a.borrow_assign_start_at.toISOString(),
     borrowAssignEndAt: a.borrow_assign_end_at.toISOString(),
@@ -78,6 +114,14 @@ function mapAssignment(a: any) {
       : new Date().toISOString(),
 
     borrowAssignmentNote: a.borrow_assignment_note ?? null,
+
+    // ✅ bonus: ใคร assign (optional)
+    assignedBy: a.assignedBy
+      ? {
+        accountId: a.assignedBy.account_id,
+        username: a.assignedBy.account_username ?? null,
+      }
+      : undefined,
   };
 }
 
@@ -91,9 +135,36 @@ export async function getBorrowRequest(params: {
   const req = await prisma.borrowRequest.findUnique({
     where: { borrow_request_id: params.borrowRequestId },
     include: {
-      fromUniversity: true,
-      requestedBy: true,
-      assignments: true,
+      fromUniversity: {
+        select: {
+          university_id: true,
+          university_code: true,
+          university_name_th: true,
+          university_name_en: true,
+          university_latitude: true,
+          university_longitude: true,
+        },
+      },
+      requestedBy: {
+        select: {
+          account_id: true,
+          account_username: true,
+          account_role: true,
+          // account_display_name ถ้ามีจริงค่อยใส่ (ตอนนี้ใน schema ที่ส่งมาไม่มี)
+        },
+      },
+      assignments: {
+        orderBy: { borrow_assigned_at: "desc" },
+        include: {
+          consultant: {
+            include: {
+              profile: true,
+            },
+          },
+          consultantUniversity: true,
+          assignedBy: true,
+        },
+      },
     },
   });
   if (!req) throw new Error("BorrowRequest not found");
@@ -149,11 +220,11 @@ export async function getBorrowRequest(params: {
       on_call_start_at: { gte: now, lte: windowEnd },
       ...(requestStart && requestEnd
         ? {
-            AND: [
-              { on_call_start_at: { lt: requestEnd } },
-              { on_call_end_at: { gt: requestStart } },
-            ],
-          }
+          AND: [
+            { on_call_start_at: { lt: requestEnd } },
+            { on_call_end_at: { gt: requestStart } },
+          ],
+        }
         : {}),
     },
     include: {
@@ -197,7 +268,7 @@ export async function getBorrowRequest(params: {
       const name =
         profile
           ? `${profile.consultant_first_name ?? ""} ${profile.consultant_last_name ?? ""}`.trim() ||
-            `Consultant#${id}`
+          `Consultant#${id}`
           : `Consultant#${id}`;
 
       const specTopics: string[] = (c.specializations ?? []).map((x: any) =>
@@ -208,8 +279,8 @@ export async function getBorrowRequest(params: {
         requiredTopics.length === 0
           ? []
           : specTopics.filter((t) =>
-              requiredTopics.some((r) => t.includes(r) || r.includes(t))
-            );
+            requiredTopics.some((r) => t.includes(r) || r.includes(t))
+          );
 
       const entry = consultantMap.get(id) ?? {
         consultantId: id,
@@ -241,9 +312,9 @@ export async function getBorrowRequest(params: {
       requiredTopics.length === 0
         ? 10
         : Math.min(
-            80,
-            availableConsultants.reduce((s, c) => s + c.matchedTopics.length, 0) * 20
-          );
+          80,
+          availableConsultants.reduce((s, c) => s + c.matchedTopics.length, 0) * 20
+        );
 
     const matchScore = distanceScore * 1.2 + shiftScore * 1.5 + topicScore * 1.3;
 

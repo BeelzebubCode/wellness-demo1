@@ -38,19 +38,34 @@ export async function platformListBorrowCandidates(input: {
   borrowRequestId: number;
   fromUniversityId?: number;
 }) {
-  // 1) หา borrow request เพื่อรู้ from_university_id (ถ้าไม่ได้ส่งมา)
+  // 1) หา borrow request เพื่อรู้ from_university_id + detail (problem topics) + เวลาที่ต้องการยืม
   const br = await prisma.borrowRequest.findUnique({
     where: { borrow_request_id: input.borrowRequestId },
     select: {
       borrow_request_id: true,
       from_university_id: true,
       borrow_request_status: true,
+      borrow_request_detail: true, // ✅ เพิ่ม detail เพื่อดูหัวข้อปัญหา
+      borrow_needed_from: true, // ✅ เวลาเริ่มต้นที่ต้องการยืม
+      borrow_needed_to: true, // ✅ เวลาสิ้นสุดที่ต้องการยืม
     },
   });
 
   if (!br) throw new Error("NOT_FOUND");
 
   const fromUniversityId = input.fromUniversityId ?? br.from_university_id;
+
+  // ✅ Parse detail JSON เพื่อดูหัวข้อปัญหา (problem topics)
+
+  let problemTopics: string[] = [];
+  try {
+    if (br.borrow_request_detail) {
+      const parsed = JSON.parse(br.borrow_request_detail);
+      problemTopics = (parsed.requiredTopics || []).map((s: string) => s.trim()).filter(Boolean);
+    }
+  } catch (e) {
+    // ถ้า parse ไม่ได้ให้เป็น array ว่าง
+  }
 
   // 2) โหลด coords ของมหาลัยต้นทาง
   const fromUni = await prisma.university.findUnique({
@@ -104,6 +119,51 @@ export async function platformListBorrowCandidates(input: {
     },
   });
 
+  // ✅ 3.5) โหลด BorrowOnCallShift สำหรับ consultant ทั้งหมด (filter ตาม shift overlap)
+  const consultantIds = consultants.map((c) => c.consultant_id);
+
+  const shifts = await prisma.borrowOnCallShift.findMany({
+    where: {
+      consultant_id: { in: consultantIds },
+      on_call_status: { in: ["SCHEDULED", "ACTIVE"] }, // ✅ เฉพาะ shift ที่ active
+      // ✅ Shift overlap logic: shift.start <= borrow.end AND shift.end >= borrow.start
+      ...(br.borrow_needed_from && br.borrow_needed_to
+        ? {
+          on_call_start_at: { lte: br.borrow_needed_to },
+          on_call_end_at: { gte: br.borrow_needed_from },
+        }
+        : {}),
+    },
+    select: {
+      borrow_on_call_shift_id: true,
+      consultant_id: true,
+      on_call_start_at: true,
+      on_call_end_at: true,
+      on_call_status: true,
+      // ✅ ดูว่า shift นี้ถูกยืมไปแล้วหรือยัง
+      borrowAssignments: {
+        select: {
+          borrow_assignment_id: true,
+          borrow_assign_start_at: true,
+          borrow_assign_end_at: true,
+        },
+      },
+    },
+  });
+
+  // ✅ สร้าง Map: consultantId -> shifts[]
+  const shiftsByConsultant = new Map<number, typeof shifts>();
+  for (const shift of shifts) {
+    if (!shiftsByConsultant.has(shift.consultant_id)) {
+      shiftsByConsultant.set(shift.consultant_id, []);
+    }
+    shiftsByConsultant.get(shift.consultant_id)!.push(shift);
+  }
+
+  // ✅ แสดง consultant ทั้งหมด (ไม่กรองตาม shift)
+  // shift info จะแสดงเป็น optional information เท่านั้น
+  const filteredConsultants = consultants;
+
   // 4) group by university
   const map = new Map<
     number,
@@ -117,11 +177,19 @@ export async function platformListBorrowCandidates(input: {
         fullName: string;
         nickname?: string | null;
         specializations: string[];
+        topicMatchCount: number; // ✅ เพิ่ม field นับจำนวน topic ที่ match
+        shifts: Array<{
+          shiftId: number;
+          startAt: string;
+          endAt: string;
+          status: string;
+          currentBorrowCount: number;
+        }>; // ✅ เพิ่ม shift info
       }>;
     }
   >();
 
-  for (const c of consultants) {
+  for (const c of filteredConsultants) { // ✅ ใช้ filtered consultants
     const u = c.university; // ✅ relation จริงชื่อ university
     if (!u) continue;
 
@@ -162,21 +230,45 @@ export async function platformListBorrowCandidates(input: {
         .filter((x): x is string => !!x && !!String(x).trim())
         .slice(0, 12);
 
+    // ✅ นับจำนวน topic ที่ match กับหัวข้อปัญหา
+    const topicMatchCount = problemTopics.length
+      ? specializations.filter((spec) =>
+        problemTopics.some((req) => spec.includes(req) || req.includes(spec))
+      ).length
+      : 0;
+
+    // ✅ ดึง shift info สำหรับ consultant นี้
+    const consultantShifts = shiftsByConsultant.get(c.consultant_id) || [];
+    const shifts = consultantShifts.map((shift) => ({
+      shiftId: shift.borrow_on_call_shift_id,
+      startAt: shift.on_call_start_at.toISOString(),
+      endAt: shift.on_call_end_at.toISOString(),
+      status: shift.on_call_status,
+      currentBorrowCount: shift.borrowAssignments.length, // จำนวนครั้งที่ถูกยืมใน shift นี้
+    }));
+
     map.get(uniId)!.consultants.push({
       consultantId: c.consultant_id,
       fullName,
       nickname,
       specializations,
+      topicMatchCount, // ✅ เก็บจำนวน topic ที่ match
+      shifts, // ✅ เพิ่ม shift info
     });
   }
 
-  // 5) sort: ระยะทางใกล้ก่อน (null ไปท้าย) + ภายในมหาลัย sort ชื่อ
+  // 5) sort: ระยะทางใกล้ก่อน (null ไปท้าย) + ภายในมหาลัย sort ตาม topic match > ชื่อ
   const groups = Array.from(map.values())
     .map((g) => ({
       ...g,
-      consultants: [...g.consultants].sort((a, b) =>
-        a.fullName.localeCompare(b.fullName, "th")
-      ),
+      consultants: [...g.consultants].sort((a, b) => {
+        // ✅ เรียงตามจำนวน topic match ก่อน (มากสุดอยู่บน)
+        if (b.topicMatchCount !== a.topicMatchCount) {
+          return b.topicMatchCount - a.topicMatchCount;
+        }
+        // ถ้าจำนวน topic เท่ากัน ให้เรียงตามชื่อ
+        return a.fullName.localeCompare(b.fullName, "th");
+      }),
     }))
     .sort((a, b) => {
       const ad = a.distanceKm;
