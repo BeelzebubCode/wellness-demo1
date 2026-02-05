@@ -11,11 +11,13 @@ import { seedConsultants } from "./seeds/06-consultants";
 import { seedStudents } from "./seeds/07-students";
 import { seedTimeSlots } from "./seeds/08-timeslots";
 import { seedBookings } from "./seeds/09-bookings";
+import { seedUniversityTypes } from "./seeds/10-university-types";
+import { seedUniversityConnections } from "./seeds/11-university-connections";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🚀 Starting database seeding...\n");
+  console.log("🚀 Starting database seeding...\\n");
 
   await clearDatabase(prisma);
 
@@ -80,10 +82,16 @@ async function main() {
     bookingPlan,
   });
 
+  console.log("\\n🏛️  Seeding university types...");
+  await seedUniversityTypes(prisma);
+
+  console.log("\\n🌐 Seeding university connections...");
+  await seedUniversityConnections(prisma);
+
   // =========================
   // Summary (รองรับทุกมหาลัย)
   // =========================
-  console.log("\n✅ Database seeding completed successfully!\n");
+  console.log("\\n✅ Database seeding completed successfully!\\n");
   console.log("📊 Summary:");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
@@ -102,12 +110,10 @@ async function main() {
   console.log(`💼 Consultants: ${consultantCount} (consultant_{university_code}_1..5)`);
   console.log(`🎓 Students: ${studentCount}`);
 
-  // ...
-
-  // =========================
+  // ...\n\n  // =========================
   // Credentials (รองรับทุกมหาลัย)
   // =========================
-  console.log("\n🔑 Login Credentials:");
+  console.log("\\n🔑 Login Credentials:");
   console.log("   Ministry: ministry_admin");
   console.log("   Head: head_{university_code}");
   console.log("   Rector: rector_{university_code}");
@@ -117,7 +123,7 @@ async function main() {
   console.log("   Student (new): stu_{university_code}_01 .. _30");
   console.log("   Student (old): student1 - student120  (ถ้ายังใช้ seedStudents เวอร์ชันเก่า)");
   console.log(`   Password: ${st.plainPassword}`);
-  console.log("\n💡 Note: Bookings created for ALL students\n");
+  console.log("\\n💡 Note: Bookings created for ALL students\\n");
 
   // silence unused warning
   void accounts.superAccount;

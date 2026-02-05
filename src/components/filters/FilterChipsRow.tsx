@@ -59,10 +59,11 @@ export function FilterChipsRow<TFilters extends Record<string, any>>({
       })}
 
       <button
-        className="text-xs text-gray-500 hover:text-gray-700 underline shrink-0"
+        className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 hover:text-gray-700 rounded-lg transition-colors shrink-0"
         onClick={onClearAll}
         type="button"
       >
+        <X className="w-3 h-3 mr-1" />
         ล้างทั้งหมด
       </button>
     </div>

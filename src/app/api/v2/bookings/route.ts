@@ -34,9 +34,11 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status") as BookingStatus | null;
     const studentUsername = searchParams.get("student");
     const consultantIdRaw = searchParams.get("consultantId");
+    const problemCategoryIdRaw = searchParams.get("problemCategoryId");
     const date = searchParams.get("date"); // yyyy-mm-dd
 
     const consultantId = consultantIdRaw ? Number(consultantIdRaw) : null;
+    const problemCategoryId = problemCategoryIdRaw ? Number(problemCategoryIdRaw) : null;
 
     return await handleListBookings(
       { ...(account as any), activeUniversityId },
@@ -44,6 +46,7 @@ export async function GET(request: NextRequest) {
         status,
         studentUsername,
         consultantId: Number.isFinite(consultantId as any) ? consultantId : null,
+        problemCategoryId: Number.isFinite(problemCategoryId as any) ? problemCategoryId : null,
         date,
       },
     );

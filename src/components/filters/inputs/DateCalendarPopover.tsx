@@ -145,29 +145,42 @@ export function DateCalendarPopover({
             />
           </div>
 
-          <div className="px-4 py-3 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => {
-                const t = atNoon(new Date());
-                onChangeYMD(toYMD(t));
-                setCurrentMonth(startOfMonth(t));
-                if (closeOnSelect) setOpen(false);
-              }}
-              className="text-xs font-semibold text-primary-600 hover:text-primary-700 px-2 py-1.5 rounded-lg hover:bg-primary-50 transition"
-            >
-              กลับมาวันนี้
-            </button>
+            <div className="px-4 py-3 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  onChangeYMD(""); // Clear value
+                  if (closeOnSelect) setOpen(false);
+                }}
+                className="text-xs font-semibold text-red-600 hover:text-red-700 px-2 py-1.5 rounded-lg hover:bg-red-50 transition"
+              >
+                ล้าง
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 text-white text-xs font-semibold rounded-lg hover:bg-primary-700 shadow-sm shadow-primary-200 transition"
-            >
-              <Check className="w-3.5 h-3.5" />
-              เสร็จสิ้น
-            </button>
-          </div>
+              <div className="flex items-center gap-2">
+                <button
+                    type="button"
+                    onClick={() => {
+                    const t = atNoon(new Date());
+                    onChangeYMD(toYMD(t));
+                    setCurrentMonth(startOfMonth(t));
+                    if (closeOnSelect) setOpen(false);
+                    }}
+                    className="text-xs font-semibold text-primary-600 hover:text-primary-700 px-2 py-1.5 rounded-lg hover:bg-primary-50 transition"
+                >
+                    วันนี้
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 text-white text-xs font-semibold rounded-lg hover:bg-primary-700 shadow-sm shadow-primary-200 transition"
+                >
+                    <Check className="w-3.5 h-3.5" />
+                    เสร็จสิ้น
+                </button>
+              </div>
+            </div>
         </div>
       )}
     </div>
