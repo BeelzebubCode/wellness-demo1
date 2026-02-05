@@ -15,7 +15,10 @@ interface Props {
 }
 
 export function StudentDetailView({ studentId }: Props) {
-  const { user } = useRoleAuth({ allowedRoles: ["ADVISOR" as AccountRole] });
+  const { user } = useRoleAuth({
+    allowedRoles: ["ADVISOR" as AccountRole],
+    loginToastKey: "advisor_student_detail_view",
+  });
   const [student, setStudent] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 

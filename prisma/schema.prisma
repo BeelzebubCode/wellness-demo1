@@ -518,6 +518,9 @@ model BookingSession {
   booking_session_location_text String? @db.VarChar(200) // ถ้า onsite
   booking_session_extra_detail  String? @db.Text // note เพิ่มเติม เช่น "ส่งไฟล์ในไลน์"
 
+  // ✅ ควบคุมการแสดงลิงก์ให้นิสิต (default = true)
+  booking_session_is_link_visible Boolean @default(true)
+
   // audit: ใครส่ง/เมื่อไหร่
   provided_by_account_id Int?
   provided_at            DateTime? @db.Timestamptz(3)

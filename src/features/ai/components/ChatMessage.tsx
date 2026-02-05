@@ -4,6 +4,7 @@
 import React, { useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Bot, User } from "lucide-react";
 import { cn } from "@/lib/cn";
 import styles from "./aiChatTheme.module.css";
 
@@ -35,19 +36,29 @@ export default function ChatMessage({
   );
 
   return (
-    <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
+    <div
+      className={cn(
+        styles.slideIn, // Add entrance animation
+        styles.msgContainer,
+        isUser ? styles.userContainer : styles.aiContainer
+      )}
+    >
+      {/* AI Avatar (Left) */}
+      {!isUser && (
+        <div className={cn(styles.avatar, styles.aiAvatar)}>
+          <Bot size={24} />
+        </div>
+      )}
+
+      {/* Message Bubble */}
       <div
         className={cn(
           styles.msg,
-          isUser ? "max-w-[70%]" : "max-w-[80%]",
-          "px-3 py-2 rounded-xl break-words",
-          isUser
-            ? "whitespace-pre-wrap bg-black text-white"
-            : "bg-white text-slate-900 border border-slate-100",
+          isUser ? styles.userMsg : styles.aiMsg
         )}
       >
         {isUser ? (
-          <span className="block">{content}</span>
+          <span className="block whitespace-pre-wrap">{content}</span>
         ) : (
           <div className={styles.md}>
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
@@ -56,6 +67,13 @@ export default function ChatMessage({
           </div>
         )}
       </div>
+
+      {/* User Avatar (Right) - Optional, but adds symmetry */}
+      {isUser && (
+        <div className={cn(styles.avatar, styles.userAvatar)}>
+          <User size={24} />
+        </div>
+      )}
     </div>
   );
 }

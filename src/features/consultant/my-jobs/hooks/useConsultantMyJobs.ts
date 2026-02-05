@@ -195,6 +195,19 @@ export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
     alert("เคสนี้ปิดแล้ว/ยกเลิกแล้ว");
   };
 
+  // ✅ เพิ่ม: สำหรับแก้ไขช่องทางออนไลน์
+  const handleEditChannel = (job: Job) => {
+    if (actionLoadingId) return;
+    if (String(job.serviceMode ?? "").toUpperCase() !== "ONLINE") return;
+
+    // เปิด modal พร้อมข้อมูลเดิม (ถ้ามี)
+    setOnlineDraft({
+      url: job.onlineChannelUrl ?? "",
+      note: job.onlineChannelNote ?? "",
+    });
+    setOnlineModal({ open: true, job });
+  };
+
   const confirmAcceptJob = async () => {
     const job = confirmAccept.job;
     if (!job) return;
@@ -241,13 +254,8 @@ export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
     try {
       await setOnlineChannel(job.id, { url, note: onlineDraft.note?.trim() || "" });
 
-      setJobs((prev) =>
-        prev.map((j) =>
-          j.id === job.id
-            ? { ...j, onlineChannelUrl: url, onlineChannelNote: onlineDraft.note?.trim() || "" }
-            : j,
-        ),
-      );
+      // ✅ Refresh ข้อมูลจาก API เพื่อดึง session ข้อมูลที่บันทึกลง BookingSession
+      triggerRefresh();
 
       setOnlineModal({ open: false, job: null });
     } catch (e: any) {
@@ -319,6 +327,7 @@ export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
     submitOnlineChannel,
 
     handleAction,
+    handleEditChannel,
     triggerRefresh,
   };
 }

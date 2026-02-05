@@ -4,15 +4,7 @@ import { BookingStatus } from "@prisma/client";
 
 type RoleForMyBookings = "STUDENT" | "CONSULTANT" | "HEAD_CONSULTANT";
 
-function toYMD(d?: Date | null) {
-  if (!d) return null;
-  return d.toISOString().slice(0, 10);
-}
 
-function toHHMM(d?: Date | null) {
-  if (!d) return null;
-  return d.toTimeString().slice(0, 5);
-}
 
 export async function getMyBookings(params: {
   accountId: number;
@@ -37,37 +29,45 @@ export async function getMyBookings(params: {
       include: {
         problemCategory: true,
         timeSlot: true,
+        BookingSession: true, // ✅ ตรงตาม Prisma schema
       },
       orderBy: { booking_created_at: "desc" },
     });
 
     return bookings.map((b) => {
       const slot = b.timeSlot;
+      const sess = b.BookingSession;
+
+      // ✅ สร้าง session object จาก BookingSession relation
+      const session = sess ? {
+        mode: sess.booking_session_mode ?? b.booking_service_mode,
+        onlineChannel: sess.booking_session_online_channel ?? b.booking_online_channel ?? null,
+        joinUrl: sess.booking_session_join_url ?? null,
+        extraDetail: sess.booking_session_extra_detail ?? null,
+        providedAt: sess.provided_at?.toISOString() ?? null,
+        providedByName: null,
+      } : null;
 
       return {
-        // ✅ FE expects
-        id: b.booking_id,
+        // ✅ ตรงตาม MyBookingDto type definition
+        bookingId: b.booking_id,
         universityId: b.university_id,
         status: b.booking_status,
 
-        date: toYMD(slot?.time_slot_start_datetime ?? null),
-        startTime: toHHMM(slot?.time_slot_start_datetime ?? null),
-        endTime: toHHMM(slot?.time_slot_end_datetime ?? null),
+        serviceMode: b.booking_service_mode ?? "IN_PERSON",
+        onlineChannel: sess?.booking_session_online_channel ?? b.booking_online_channel ?? null,
 
-        // student มองของตัวเอง ไม่ต้องมี studentName ก็ได้ แต่ใส่ไว้กัน FE ใช้ร่วม
-        studentName: null,
+        // ⏰ ส่งเป็น ISO string timestamp
+        startAt: slot?.time_slot_start_datetime?.toISOString() ?? "",
+        endAt: slot?.time_slot_end_datetime?.toISOString() ?? "",
 
-        problemType: b.problemCategory?.problem_category_name_th ?? null,
-        bookingDetailText: b.booking_detail_text ?? null,
+        problemCategoryNameTh: b.problemCategory?.problem_category_name_th ?? null,
 
-        createdAt: b.booking_created_at.toISOString(),
-        updatedAt: b.booking_updated_at.toISOString(),
+        consultantId: b.consultant_id ?? null,
+        consultantName: null, // student ไม่ต้องเห็นชื่อ consultant
+        consultantOrg: null,
 
-        serviceMode: b.booking_service_mode ?? null,
-
-        // ✅ ปรับชื่อให้ FE ใช้ตรง ๆ
-        onlineChannelUrl: (b as any).booking_online_channel_url ?? b.booking_online_channel ?? null,
-        onlineChannelNote: (b as any).booking_online_channel_note ?? null,
+        session,
       };
     });
   }
@@ -102,6 +102,7 @@ export async function getMyBookings(params: {
       problemCategory: true,
       timeSlot: true,
       student: { include: { profile: true } },
+      BookingSession: true, // ✅ ตรงตาม Prisma schema
     },
     orderBy: { booking_updated_at: "desc" },
   });
@@ -109,34 +110,42 @@ export async function getMyBookings(params: {
   return bookings.map((b) => {
     const slot = b.timeSlot;
     const sp = b.student?.profile;
+    const sess = b.BookingSession;
 
     const studentName = sp
       ? `${sp.student_first_name_th ?? ""} ${sp.student_last_name_th ?? ""}`.trim() || null
       : null;
 
+    // ✅ สร้าง session object จาก BookingSession relation
+    const session = sess ? {
+      mode: sess.booking_session_mode ?? b.booking_service_mode,
+      onlineChannel: sess.booking_session_online_channel ?? b.booking_online_channel ?? null,
+      joinUrl: sess.booking_session_join_url ?? null,
+      extraDetail: sess.booking_session_extra_detail ?? null,
+      providedAt: sess.provided_at?.toISOString() ?? null,
+      providedByName: null,
+    } : null;
+
     return {
-      // ✅ FE expects
-      id: b.booking_id,
+      // ✅ ตรงตาม MyBookingDto type definition
+      bookingId: b.booking_id,
       universityId: b.university_id,
       status: b.booking_status,
 
-      date: toYMD(slot?.time_slot_start_datetime ?? null),
-      startTime: toHHMM(slot?.time_slot_start_datetime ?? null),
-      endTime: toHHMM(slot?.time_slot_end_datetime ?? null),
+      serviceMode: b.booking_service_mode ?? "IN_PERSON",
+      onlineChannel: sess?.booking_session_online_channel ?? b.booking_online_channel ?? null,
 
-      studentName,
+      // ⏰ ส่งเป็น ISO string timestamp
+      startAt: slot?.time_slot_start_datetime?.toISOString() ?? "",
+      endAt: slot?.time_slot_end_datetime?.toISOString() ?? "",
 
-      problemType: b.problemCategory?.problem_category_name_th ?? null,
-      bookingDetailText: b.booking_detail_text ?? null,
+      problemCategoryNameTh: b.problemCategory?.problem_category_name_th ?? null,
 
-      createdAt: b.booking_created_at.toISOString(),
-      updatedAt: b.booking_updated_at.toISOString(),
+      consultantId: b.consultant_id ?? null,
+      consultantName: null, // consultant เห็นของตัวเอง ไม่ต้องการชื่อตัวเอง
+      consultantOrg: null,
 
-      serviceMode: b.booking_service_mode ?? null,
-
-      // ✅ ให้ตรงกับ FE
-      onlineChannelUrl: (b as any).booking_online_channel_url ?? b.booking_online_channel ?? null,
-      onlineChannelNote: (b as any).booking_online_channel_note ?? null,
+      session,
     };
   });
 }

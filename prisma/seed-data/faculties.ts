@@ -213,9 +213,9 @@ export const facultiesData: FacultySeed[] = [
   { university_code: "MSU", faculty_code: "BBA", faculty_name_th: "คณะการบัญชีและการจัดการ", faculty_name_en: "Faculty of Accountancy and Management", isced_broad_field_code: "04" },
 
   // ================= SURO =================
-  { university_code: "SURO", faculty_code: "ENG", faculty_name_th: "สำนักวิชาวิศวกรรมศาสตร์", faculty_name_en: "Institute of Engineering", isced_broad_field_code: "07" },
-  { university_code: "SURO", faculty_code: "SCI", faculty_name_th: "สำนักวิชาวิทยาศาสตร์", faculty_name_en: "Institute of Science", isced_broad_field_code: "05" },
-  { university_code: "SURO", faculty_code: "BBA", faculty_name_th: "สำนักวิชาการจัดการ", faculty_name_en: "Institute of Management", isced_broad_field_code: "04" },
+  { university_code: "SUT", faculty_code: "ENG", faculty_name_th: "สำนักวิชาวิศวกรรมศาสตร์", faculty_name_en: "Institute of Engineering", isced_broad_field_code: "07" },
+  { university_code: "SUT", faculty_code: "SCI", faculty_name_th: "สำนักวิชาวิศวกรรมศาสตร์", faculty_name_en: "Institute of Science", isced_broad_field_code: "05" },
+  { university_code: "SUT", faculty_code: "BBA", faculty_name_th: "สำนักวิชาการจัดการ", faculty_name_en: "Institute of Management", isced_broad_field_code: "04" },
 
   // ================= UBU =================
   { university_code: "UBU", faculty_code: "SCI", faculty_name_th: "คณะวิทยาศาสตร์", faculty_name_en: "Faculty of Science", isced_broad_field_code: "05" },

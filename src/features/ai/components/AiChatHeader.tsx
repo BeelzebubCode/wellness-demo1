@@ -56,8 +56,6 @@ export default function AiChatHeader({
     };
   }, [open]);
 
-  const canSwitch = typeof onModeChange === "function";
-
   return (
     <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
       <div className="flex items-center gap-3">
@@ -72,80 +70,6 @@ export default function AiChatHeader({
           </div>
           <div className={cn("text-slate-400", styles.headerDesc)}>{current.desc}</div>
         </div>
-      </div>
-
-      {/* ✅ wrapper ref */}
-      <div ref={wrapRef} className="relative">
-        <button
-          type="button"
-          disabled={!canSwitch}
-          onClick={() => canSwitch && setOpen((s) => !s)}
-          className={cn(
-            "inline-flex items-center gap-2 rounded-full border px-3 py-1.5",
-            styles.headerBtn, // ✅ คุม font ปุ่มจาก css
-            canSwitch
-              ? "border-slate-200 bg-white hover:bg-slate-50 active:scale-[0.99]"
-              : "border-slate-100 bg-slate-50 text-slate-400",
-          )}
-        >
-          <span className="font-medium">{mode === "help" ? "Help" : "Booking"}</span>
-          <ChevronDown className={"h-4 w-4 transition " + (open ? "rotate-180" : "")} />
-        </button>
-
-        {open && canSwitch && (
-          <div
-            className="
-              absolute right-0 mt-2 w-[320px]
-              rounded-2xl border border-slate-200 bg-white
-              shadow-[0_12px_30px_rgba(0,0,0,0.10)]
-              overflow-hidden
-              z-[999]
-            "
-          >
-            <div className={cn("px-4 py-3 font-semibold text-slate-500", styles.dropdownLabel)}>
-              โหมดแชท
-            </div>
-
-            <div className="p-2">
-              {MODE_OPTIONS.map((opt) => {
-                const active = opt.value === mode;
-
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => {
-                      if (!active) onModeChange?.(opt.value);
-                      setOpen(false);
-                    }}
-                    className={cn(
-                      "w-full text-left rounded-xl px-3 py-2.5 flex items-start gap-3",
-                      active ? "bg-slate-50" : "hover:bg-slate-50 active:bg-slate-100",
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "mt-0.5 h-5 w-5 rounded-full border flex items-center justify-center",
-                        active ? "border-slate-800" : "border-slate-200",
-                      )}
-                    >
-                      {active && <Check className="h-4 w-4" />}
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className={cn("font-semibold text-slate-900", styles.dropdownTitle)}>
-                        {opt.title}
-                      </div>
-                      <div className={cn("text-slate-500 truncate", styles.dropdownDesc)}>
-                        {opt.desc}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

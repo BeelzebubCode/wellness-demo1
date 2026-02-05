@@ -53,8 +53,8 @@ export default function LoginPage() {
     { label: "Consultant (CU #1)", username: "consultant_cu_1", password: "wellness@nu.ac.th_123456!" },
     { label: "Consultant (CU #2)", username: "consultant_cu_2", password: "wellness@nu.ac.th_123456!" },
 
-    { label: "Student (student1)", username: "student1", password: "wellness@nu.ac.th_123456!" },
-    { label: "Student (student10)", username: "student10", password: "wellness@nu.ac.th_123456!" },
+    { label: "stu_nu_01", username: "stu_nu_01", password: "wellness@nu.ac.th_123456!" },
+    { label: "stu_nu_", username: "stu_nu_", password: "wellness@nu.ac.th_123456!" },
 
     { label: "Ministry Admin", username: "ministry_admin", password: "wellness@nu.ac.th_123456!" },
     { label: "Super Admin", username: "superAdmin", password: "wellness@nu.ac.th_123456!" },
@@ -226,8 +226,8 @@ export default function LoginPage() {
                     </optgroup>
 
                     <optgroup label="Student">
-                      <option value="student1">Student (student1)</option>
-                      <option value="student10">Student (student10)</option>
+                      <option value="stu_nu_01">stu_nu_01</option>
+                      <option value="stu_nu_">stu_nu_</option>
                     </optgroup>
 
                     <optgroup label="Platform">

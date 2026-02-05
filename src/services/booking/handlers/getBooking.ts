@@ -45,7 +45,6 @@ export async function handleGetBooking(
         include: {
           profile: true,
           academic: { include: { faculty: true, department: true } },
-          account: true, // owner check
         },
       },
       consultant: { include: { profile: true } },
@@ -53,10 +52,10 @@ export async function handleGetBooking(
       timeSlot: true,
       assignments: {
         include: {
-          assignedBy: { include: { profile: true } },
-          assignedTo: { include: { profile: true } },
+          assignedBy: true,
+          consultant: { include: { profile: true } },
         },
-        orderBy: { booking_assignment_assigned_at: "desc" },
+        orderBy: { assigned_at: "desc" },
       },
       outcome: true,
       cancellation: { include: { cancelledBy: true } },
@@ -77,7 +76,8 @@ export async function handleGetBooking(
   const role = ctx.role as AccountRole;
 
   if (role === "STUDENT") {
-    if (booking.student.account.account_id !== (ctx as any).accountId) {
+    const studentId = (ctx as any).studentId as number | undefined;
+    if (!studentId || booking.student_id !== studentId) {
       return NextResponse.json({ error: "Permission denied" }, { status: 403 });
     }
   } else if (role === "CONSULTANT") {
@@ -131,8 +131,6 @@ export async function handleGetBooking(
 
       faculty: booking.student.academic?.faculty?.faculty_name_th ?? null,
       department: booking.student.academic?.department?.department_name_th ?? null,
-
-      lineUserId: booking.student.account.account_line_id ?? null,
     },
 
     consultant: booking.consultant
@@ -148,14 +146,12 @@ export async function handleGetBooking(
 
     assignments: booking.assignments.map((a) => ({
       id: a.booking_assignment_id,
-      assignedBy: a.assignedBy.profile
-        ? `${a.assignedBy.profile.consultant_first_name} ${a.assignedBy.profile.consultant_last_name}`
+      assignedBy: a.assignedBy.account_username,
+      assignedTo: a.consultant.profile
+        ? `${a.consultant.profile.consultant_first_name} ${a.consultant.profile.consultant_last_name}`
         : null,
-      assignedTo: a.assignedTo.profile
-        ? `${a.assignedTo.profile.consultant_first_name} ${a.assignedTo.profile.consultant_last_name}`
-        : null,
-      note: a.booking_assignment_note,
-      assignedAt: a.booking_assignment_assigned_at.toISOString(),
+      note: a.assigned_note,
+      assignedAt: a.assigned_at.toISOString(),
     })),
 
     outcome: booking.outcome

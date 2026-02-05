@@ -2,6 +2,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { useAiWidget } from "@/features/ai/widget/useAiWidget";
 import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
 
@@ -21,8 +22,12 @@ export default function FloatingAiButton() {
     openChat("booking_agent");
   }, [isOpen, openChat]);
 
+  const pathname = usePathname();
+
   if (isLoading) return null;
   if (!user || user.role !== "STUDENT") return null;
+  // Hide on AI chat page to avoid duplication
+  if (pathname?.includes("/help/ai")) return null;
 
   return (
     <button

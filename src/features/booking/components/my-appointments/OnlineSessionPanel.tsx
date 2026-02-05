@@ -7,10 +7,11 @@ import type { MyBookingDto } from "@/features/booking/types";
 import { ONLINE_CHANNEL_META } from "@/lib/constants/booking-service";
 
 export function OnlineSessionPanel({ booking }: { booking: MyBookingDto }) {
-  // ✅ ปรับ field ตรงนี้ให้ตรงกับของจริงใน MyBookingDto ของคุณ
-  const channel = (booking as any).onlineChannel ?? null;          // เช่น "GOOGLE_MEET"
-  const meetingUrl = (booking as any).onlineMeetingUrl ?? null;    // ลิงก์ที่ consultant ส่งมา
-  const meetingNote = (booking as any).onlineMeetingNote ?? null;  // note เพิ่มเติม (ถ้ามี)
+  // ✅ อ่านข้อมูลจาก booking.session ตาม type definition
+  const session = booking.session;
+  const channel = booking.onlineChannel ?? session?.onlineChannel ?? null;
+  const meetingUrl = session?.joinUrl ?? null;    // ลิงก์ที่ consultant ส่งมา
+  const meetingNote = session?.extraDetail ?? null;  // note เพิ่มเติม (ถ้ามี)
 
   // ถ้าไม่ได้เป็นออนไลน์ ไม่ต้องโชว์
   if (booking.serviceMode !== "ONLINE") return null;

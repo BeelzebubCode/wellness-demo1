@@ -457,12 +457,12 @@ export const departmentsData: DepartmentSeed[] = [
   // =========================================================
   //  SURO — Suranaree University of Technology
   // =========================================================
-  { university_code: "SURO", faculty_code: "ENG", department_code: "ENG_CPE", department_name_th: "วิศวกรรมคอมพิวเตอร์", department_name_en: "Computer Engineering" },
-  { university_code: "SURO", faculty_code: "ENG", department_code: "ENG_ELE", department_name_th: "วิศวกรรมไฟฟ้า", department_name_en: "Electrical Engineering" },
-  { university_code: "SURO", faculty_code: "ENG", department_code: "ENG_MEC", department_name_th: "วิศวกรรมเครื่องกล", department_name_en: "Mechanical Engineering" },
-  { university_code: "SURO", faculty_code: "SCI", department_code: "SCI_CS", department_name_th: "วิทยาการคอมพิวเตอร์", department_name_en: "Computer Science" },
-  { university_code: "SURO", faculty_code: "SCI", department_code: "SCI_DS", department_name_th: "วิทยาการข้อมูล", department_name_en: "Data Science" },
-  { university_code: "SURO", faculty_code: "BBA", department_code: "BBA_MGT", department_name_th: "การจัดการเทคโนโลยี/บริหารธุรกิจ", department_name_en: "Technology Management / Business" },
+  { university_code: "SUT", faculty_code: "ENG", department_code: "ENG_CPE", department_name_th: "วิศวกรรมคอมพิวเตอร์", department_name_en: "Computer Engineering" },
+  { university_code: "SUT", faculty_code: "ENG", department_code: "ENG_ELE", department_name_th: "วิศวกรรมไฟฟ้า", department_name_en: "Electrical Engineering" },
+  { university_code: "SUT", faculty_code: "ENG", department_code: "ENG_MEC", department_name_th: "วิศวกรรมเครื่องกล", department_name_en: "Mechanical Engineering" },
+  { university_code: "SUT", faculty_code: "SCI", department_code: "SCI_CS", department_name_th: "วิทยาการคอมพิวเตอร์", department_name_en: "Computer Science" },
+  { university_code: "SUT", faculty_code: "SCI", department_code: "SCI_DS", department_name_th: "วิทยาการข้อมูล", department_name_en: "Data Science" },
+  { university_code: "SUT", faculty_code: "BBA", department_code: "BBA_MGT", department_name_th: "การจัดการเทคโนโลยี/บริหารธุรกิจ", department_name_en: "Technology Management / Business" },
 
   // =========================================================
   //  UBU — Ubon Ratchathani University

@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useAiChat } from "@/features/ai/hooks/useAiChat";
 import { Card } from "@/components/ui/Card";
 
-import AiChatHeader from "./AiChatHeader";
+
 import AiChatMessages from "./AiChatMessages";
 import AiChatInput from "./AiChatInput";
 
@@ -41,7 +41,7 @@ export default function AiChatCore({ mode, variant, onModeChange }: Props) {
   const content = (
     // ✅ ครอบ root แค่ตรงนี้พอ (ทั้ง chat)
     <div className={cn(styles.root, "flex h-full min-h-0 flex-col")}>
-      <AiChatHeader mode={mode} onModeChange={onModeChange} />
+      {/* Header removed to avoid duplication with main dashboard header */}
 
       {/* ✅ min-h-0 ช่วยให้ส่วน messages scroll ถูก */}
       <AiChatMessages
@@ -51,25 +51,15 @@ export default function AiChatCore({ mode, variant, onModeChange }: Props) {
         isLoading={chat.isLoading}
       />
 
-      <AiChatInput mode={mode} chat={chat} />
+      <AiChatInput mode={mode} chat={chat} onModeChange={onModeChange} />
     </div>
   );
 
   if (variant === "modal") return content;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-4">
-      <Card
-        className="flex  h-[calc(90vh-90px)] 
-        flex-col overflow-hidden 
-        rounded-[16px] 
-        border-0 
-        border-slate-100 
-        bg-white 
-        shadow-none"
-      >
-        {content}
-      </Card>
+    <div className="relative h-[calc(100vh-64px)] w-full overflow-hidden bg-white">
+      {content}
     </div>
   );
 }
