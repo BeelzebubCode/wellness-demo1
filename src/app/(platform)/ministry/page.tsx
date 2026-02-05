@@ -1,6 +1,6 @@
 // src/app/(platform)/ministry/page.tsx
-import { MinistryDashboard } from "@/features/dashboard/ministry/components/MinistryDashboard";
+import { MinistryMapDashboard } from "@/features/dashboard/ministry/components/MinistryMapDashboard";
 
 export default function MinistryPage() {
-  return <MinistryDashboard />;
+  return <MinistryMapDashboard />;
 }

@@ -8,6 +8,7 @@ import {
 
 import { randomBool, randomInt, randomItem } from "../seed-utils/rand";
 import { randomPerson } from "../seed-data/people";
+import { getStudentCountForUniversity, DEFAULT_STUDENT_COUNT } from "../seed-data/university-student-counts";
 
 export async function seedStudents(
   prisma: PrismaClient,
@@ -34,19 +35,28 @@ export async function seedStudents(
   // =========================
   // Config
   // =========================
-  const PER_UNI = 120;
-  console.log(`🎓 Upserting students (${PER_UNI} per university)...`);
+  console.log(`🎓 Seeding students with custom counts per university...`);
+  console.log(`   Default count: ${DEFAULT_STUDENT_COUNT} students`);
 
-  const YEAR_BUCKETS: Array<{ year: number; count: number }> = [
-    { year: 2568, count: 30 },
-    { year: 2567, count: 30 },
-    { year: 2566, count: 30 },
-    { year: 2565, count: 30 }, // รวม = 120
-  ];
+  function generateYearBuckets(totalCount: number): Array<{ year: number; count: number }> {
+    // แบ่งนักศึกษาเป็น 4 ปี (equal distribution)
+    const perYear = Math.floor(totalCount / 4);
+    const remainder = totalCount % 4;
+    
+    return [
+      { year: 2568, count: perYear + (remainder > 0 ? 1 : 0) },  // ปี 1
+      { year: 2567, count: perYear + (remainder > 1 ? 1 : 0) },  // ปี 2
+      { year: 2566, count: perYear + (remainder > 2 ? 1 : 0) },  // ปี 3
+      { year: 2565, count: perYear },                             // ปี 4
+    ];
+  }
 
-  function admitYearForIdx(idx0: number) {
+  // This will be defined per university in the loop
+  let YEAR_BUCKETS: Array<{ year: number; count: number }>;
+
+  function admitYearForIdx(idx0: number, yearBuckets: Array<{ year: number; count: number }>) {
     let acc = 0;
-    for (const b of YEAR_BUCKETS) {
+    for (const b of yearBuckets) {
       acc += b.count;
       if (idx0 < acc) return b.year;
     }
@@ -84,12 +94,26 @@ export async function seedStudents(
   // =========================
   const sortedUnis = [...universities].sort((a, b) => a.university_id - b.university_id);
 
+  let totalStudentsSeeded = 0;
+
   for (let uIdx = 0; uIdx < sortedUnis.length; uIdx++) {
     const uni = sortedUnis[uIdx];
     const uniIndex1based = uIdx + 1;
 
     const uniCode = String(uni.university_code);
     const uniCodeLower = uniCode.toLowerCase();
+
+    // ✅ ดึงจำนวนนักศึกษาที่ต้องการ seed สำหรับมหาวิทยาลัยนี้
+    const PER_UNI = getStudentCountForUniversity(uniCode);
+
+    // ถ้ากำหนดเป็น 0 = ไม่ seed นักศึกษาเลย
+    if (PER_UNI === 0) {
+      console.log(`⏭️  Skip ${uniCode}: configured to seed 0 students`);
+      continue;
+    }
+
+    // ✅ สร้าง year buckets สำหรับมหาวิทยาลัยนี้
+    const YEAR_BUCKETS = generateYearBuckets(PER_UNI);
 
     // ✅ pool ต่อมหาลัย
     const uniDeptList = deptList.filter((d) => d.university_id === uni.university_id);
@@ -121,7 +145,7 @@ export async function seedStudents(
       const gender = randomItem(Object.values(StudentGender));
 
       const lineId = `U_${uniCode}_${uni.university_id}_${String(j).padStart(2, "0")}`;
-      const admitYear = admitYearForIdx(idx0);
+      const admitYear = admitYearForIdx(idx0, YEAR_BUCKETS);
 
       const acc = await prisma.account.upsert({
         where: { account_username: username },

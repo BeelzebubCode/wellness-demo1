@@ -51,6 +51,7 @@ export async function handleListBookings(
     studentUsername?: string | null;
     consultantId?: number | null;
     date?: string | null; // yyyy-mm-dd
+    problemCategoryId?: number | null;
   },
 ) {
   const role = ctx.role as AccountRole;
@@ -77,6 +78,7 @@ export async function handleListBookings(
     status: input.status ?? null,
     date: input.date ?? null,
     consultantId: staff ? input.consultantId ?? null : null,
+    problemCategoryId: staff ? input.problemCategoryId ?? null : null,
     studentUsername: staff ? (input.studentUsername?.trim() || null) : null,
   };
 
@@ -86,6 +88,7 @@ export async function handleListBookings(
   };
 
   if (safeInput.status) where.booking_status = safeInput.status;
+  if (safeInput.problemCategoryId) where.problem_category_id = safeInput.problemCategoryId;
 
   if (safeInput.date) {
     const range = buildDayRangeBkk(safeInput.date);

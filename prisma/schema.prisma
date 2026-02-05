@@ -33,13 +33,14 @@ model Province {
 }
 
 model University {
-  university_id         Int      @id @default(autoincrement())
-  university_code       String   @unique @db.VarChar(20)
-  university_name_th    String   @db.VarChar(200)
-  university_name_en    String?  @db.VarChar(200)
+  university_id         Int             @id @default(autoincrement())
+  university_code       String          @unique @db.VarChar(20)
+  university_name_th    String          @db.VarChar(200)
+  university_name_en    String?         @db.VarChar(200)
   province_id           Int
-  university_is_active  Boolean  @default(true)
-  university_created_at DateTime @default(now())
+  university_is_active  Boolean         @default(true)
+  university_created_at DateTime        @default(now())
+  university_type       UniversityType? @default(PUBLIC)
 
   province             Province @relation(fields: [province_id], references: [province_id])
   university_latitude  Decimal? @db.Decimal(9, 6)
@@ -64,6 +65,9 @@ model University {
   borrowWindowPolicies                    BorrowWindowPolicy[]
   BookingAssignment                       BookingAssignment[]
   BorrowOnCallShift                       BorrowOnCallShift[]
+
+  connectionsFrom UniversityConnection[] @relation("SourceUniversity")
+  connectionsTo   UniversityConnection[] @relation("TargetUniversity")
 
   @@index([province_id])
   @@index([university_is_active])
@@ -1083,12 +1087,15 @@ enum UniversityAccessRole {
 }
 
 enum RegionCode {
-  NORTH
-  NORTHEAST
-  CENTRAL
-  EAST
-  WEST
-  SOUTH
+  UPPER_NORTH // ภาคเหนือตอนบน
+  LOWER_NORTH // ภาคเหนือตอนล่าง
+  UPPER_NORTHEAST // ภาคตะวันออกเฉียงเหนือตอนบน
+  LOWER_NORTHEAST // ภาคตะวันออกเฉียงเหนือตอนล่าง
+  UPPER_CENTRAL // ภาคกลางตอนบน
+  LOWER_CENTRAL // ภาคกลางตอนล่าง
+  EAST // ภาคตะวันออก
+  UPPER_SOUTH // ภาคใต้ตอนบน
+  LOWER_SOUTH // ภาคใต้ตอนล่าง
 }
 
 enum StudentGender {
@@ -1208,4 +1215,28 @@ enum ConsentSignatureMethod {
   CHECKBOX
   DRAW
   UPLOAD
+}
+
+// University Network Connections (for proximity visualization)
+model UniversityConnection {
+  connection_id         Int      @id @default(autoincrement())
+  source_university_id  Int
+  target_university_id  Int
+  distance_km           Decimal  @db.Decimal(8, 2)
+  connection_rank       Int // 1 = closest, 2 = 2nd closest, 3 = 3rd closest
+  connection_created_at DateTime @default(now())
+
+  sourceUniversity University @relation("SourceUniversity", fields: [source_university_id], references: [university_id], onDelete: Cascade)
+  targetUniversity University @relation("TargetUniversity", fields: [target_university_id], references: [university_id], onDelete: Cascade)
+
+  @@unique([source_university_id, target_university_id])
+  @@index([source_university_id])
+  @@index([target_university_id])
+  @@map("university_connection")
+}
+
+enum UniversityType {
+  SUPERVISED //มหาวิทยาลัยในกำกับ (26 แห่ง)
+  PUBLIC // มหาวิทยาลัยรัฐ (57 แห่ง)
+  PRIVATE // มหาวิทยาลัยเอกชน (72 แห่ง)
 }

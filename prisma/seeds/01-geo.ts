@@ -14,11 +14,15 @@ export async function seedGeo(prisma: PrismaClient) {
   const regionsMap = new Map<RegionCode, number>();
 
   for (const r of [
-    { code: RegionCode.NORTH, th: "ภาคเหนือ", en: "North" },
-    { code: RegionCode.CENTRAL, th: "ภาคกลาง", en: "Central" },
-    { code: RegionCode.NORTHEAST, th: "ภาคตะวันออกเฉียงเหนือ", en: "Northeast" },
+    { code: RegionCode.UPPER_NORTH, th: "ภาคเหนือตอนบน", en: "Upper North" },
+    { code: RegionCode.LOWER_NORTH, th: "ภาคเหนือตอนล่าง", en: "Lower North" },
+    { code: RegionCode.UPPER_NORTHEAST, th: "ภาคตะวันออกเฉียงเหนือตอนบน", en: "Upper Northeast" },
+    { code: RegionCode.LOWER_NORTHEAST, th: "ภาคตะวันออกเฉียงเหนือตอนล่าง", en: "Lower Northeast" },
+    { code: RegionCode.UPPER_CENTRAL, th: "ภาคกลางตอนบน", en: "Upper Central" },
+    { code: RegionCode.LOWER_CENTRAL, th: "ภาคกลางตอนล่าง", en: "Lower Central" },
     { code: RegionCode.EAST, th: "ภาคตะวันออก", en: "East" },
-    { code: RegionCode.SOUTH, th: "ภาคใต้", en: "South" },
+    { code: RegionCode.UPPER_SOUTH, th: "ภาคใต้ตอนบน", en: "Upper South" },
+    { code: RegionCode.LOWER_SOUTH, th: "ภาคใต้ตอนล่าง", en: "Lower South" },
   ]) {
     const region = await prisma.region.upsert({
       where: { region_code: r.code },

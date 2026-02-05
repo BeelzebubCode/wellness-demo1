@@ -1,50 +1,47 @@
-// src/app/(platform)/ministry/layout.tsx
+// app/(tenant)/(university)/head-consultant/layout.tsx
 "use client";
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { AdminHeader } from "@/components/layout";
-import { MinistrySidebar } from "@/components/layout/sidebar/MinistrySidebar";
+
+import { AdminHeader, AdminSidebar } from "@/components/layout";
 import { LoadingSpinner } from "@/components/ui";
 import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
 
-export default function MinistryLayout({ children }: { children: React.ReactNode }) {
+export default function HeadConsultantLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const isLoginPage = pathname === "/login";
 
-  const { isLoading, isAuthenticated, user } = useRoleAuth({
+  // ✅ counseling admin = พวกดูแล/จัดการงานให้คำปรึกษา
+  // ปรับ roles ตามที่นายต้องการได้เลย
+  const { user, isLoading, isAuthenticated } = useRoleAuth({
     redirectTo: "/login",
-    allowedRoles: ["MINISTRY"], // Only Ministry role allowed
-    loginToastKey: "toast_login_required_ministry",
+    allowedRoles: ["HEAD_CONSULTANT", "SUPER_ADMIN", "RECTOR"] as const,
+    loginToastKey: "toast_login_required_head_consultant",
     guard: !isLoginPage,
-    requireTenant: false,
   });
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-  // ✅ Check if we are on the main dashboard (3D Map)
-  const is3DDashboard = pathname === "/ministry";
-
+  // ✅ หน้า login ก็ปล่อยผ่าน
   if (isLoginPage) return <>{children}</>;
 
   if (isLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <LoadingSpinner size="xl" label="Checking ministry access..." />
+        <LoadingSpinner size="xl" label="กำลังตรวจสอบสิทธิ์..." />
       </div>
     );
   }
 
-  // ✅ Immersive Layout for 3D Dashboard
-  if (is3DDashboard) {
-    return <>{children}</>;
-  }
-
-  // Standard Layout for other pages
   return (
     <div className="min-h-screen bg-gray-50 flex font-sans">
-      <MinistrySidebar
+      <AdminSidebar
         isOpen={isMobileMenuOpen}
         isCollapsed={isSidebarCollapsed}
         onCloseMobile={() => setIsMobileMenuOpen(false)}
@@ -53,8 +50,8 @@ export default function MinistryLayout({ children }: { children: React.ReactNode
 
       <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
         <AdminHeader
-          adminName={(user as any)?.name || "ท่านรัฐมนตรี"}
-          adminRole="Ministry of Higher Education"
+          adminName={(user as any)?.name}
+          adminRole={user?.role}
           onMenuClick={() => setIsMobileMenuOpen(true)}
         />
 

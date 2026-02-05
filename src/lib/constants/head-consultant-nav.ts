@@ -4,29 +4,29 @@ import type { NavItem } from "@/components/layout/sidebar/types";
 
 export const HEAD_CONSULTANT_NAV: NavItem[] = [
   {
-    href: "/counseling-admin",
+    href: "/head-consultant",
     label: "Dashboard",
     icon: LayoutDashboard,
     exact: true,
   },
 
   {
-    href: "/counseling-admin/borrow-consultants",
+    href: "/head-consultant/borrow-consultants",
     label: "ยืมที่ปรึกษา",
     icon: UsersRound,
   },
   {
-    href: "/counseling-admin/bookings",
+    href: "/head-consultant/bookings",
     label: "มอบหมายงาน",
     icon: CalendarDays,
   },
   {
-    href: "/counseling-admin/schedule",
+    href: "/head-consultant/schedule",
     label: "จัดการตารางเวลา",
     icon: Clock,
   },
   {
-    href: "/counseling-admin/my-jobs",
+    href: "/head-consultant/my-jobs",
     label: "งานของฉัน",
     icon: BookCheck,
   },

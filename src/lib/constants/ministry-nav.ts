@@ -11,7 +11,7 @@ export const MINISTRY_NAV: NavItem[] = [
   },
   {
     href: "/ministry/universities",
-    label: "มหาวิทยาลัยทั้งหมด",
+    label: "มหาวิทยาลัย",
     icon: Building2,
   },
   {

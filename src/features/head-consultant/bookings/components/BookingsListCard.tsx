@@ -1,0 +1,269 @@
+// src/features/head-consultant/bookings/components/BookingsListCard.tsx
+
+"use client";
+
+import React from "react";
+import { Card } from "@/components/ui/Card";
+import { cn } from "@/lib/cn";
+import {
+  Clock3,
+  User2,
+  ArrowRightLeft,
+  UserCheck,
+  ChevronRight,
+  FileText,
+} from "lucide-react";
+
+import type { AdminBookingRow } from "../types";
+
+/* -------------------- small ui helpers -------------------- */
+
+function StatusBadge({ status }: { status?: string | null }) {
+  const s = (status ?? "PENDING_ASSIGNMENT").toUpperCase();
+
+  const map: Record<string, { label: string; cls: string; dot: string }> = {
+    PENDING_ASSIGNMENT: {
+      label: "รอมอบหมาย",
+      cls: "bg-amber-50 text-amber-700 border-amber-200",
+      dot: "bg-amber-600",
+    },
+    ASSIGNED: {
+      label: "มอบหมายแล้ว",
+      cls: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      dot: "bg-emerald-600",
+    },
+    IN_PROGRESS: {
+      label: "กำลังให้คำปรึกษา",
+      cls: "bg-sky-50 text-sky-700 border-sky-200",
+      dot: "bg-sky-600",
+    },
+    COMPLETED: {
+      label: "เสร็จสิ้น",
+      cls: "bg-gray-100 text-gray-700 border-gray-200",
+      dot: "bg-gray-500",
+    },
+    CANCELLED: {
+      label: "ยกเลิก",
+      cls: "bg-rose-50 text-rose-700 border-rose-200",
+      dot: "bg-rose-600",
+    },
+  };
+
+  const cfg = map[s] ?? map.PENDING_ASSIGNMENT;
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-semibold",
+        "text-[11px] sm:text-xs whitespace-nowrap",
+        cfg.cls,
+      )}
+    >
+      <span className={cn("h-1.5 w-1.5 rounded-full", cfg.dot)} />
+      {cfg.label}
+    </span>
+  );
+}
+
+function Chip({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-gray-700">
+      {children}
+    </span>
+  );
+}
+
+function IconAction({
+  icon: Icon,
+  label,
+  tone,
+  disabled,
+  title,
+  onClick,
+}: {
+  icon: React.ElementType;
+  label: string;
+  tone: "amber" | "emerald" | "slate";
+  disabled?: boolean;
+  title?: string;
+  onClick: () => void;
+}) {
+  const base =
+    "inline-flex items-center justify-center gap-2 rounded-full border px-3 h-9 text-xs font-bold whitespace-nowrap transition";
+
+  const style =
+    tone === "amber"
+      ? "border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100"
+      : tone === "emerald"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
+      : "border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100";
+
+  return (
+    <button
+      type="button"
+      title={title}
+      disabled={disabled}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!disabled) onClick();
+      }}
+      className={cn(
+        base,
+        style,
+        "shadow-[0_1px_0_rgba(0,0,0,0.04)]",
+        disabled && "cursor-not-allowed opacity-60 hover:bg-inherit",
+      )}
+    >
+      <Icon className="h-4 w-4" />
+      <span className="hidden lg:inline">{label}</span>
+    </button>
+  );
+}
+
+/* -------------------- rules -------------------- */
+
+function getAssignState(b: AdminBookingRow) {
+  if (b.status === "CANCELLED") return { can: false, reason: "รายการนี้ถูกยกเลิกแล้ว" };
+  if (b.status === "COMPLETED") return { can: false, reason: "รายการนี้เสร็จสิ้นแล้ว" };
+  if (b.status !== "PENDING_ASSIGNMENT")
+    return { can: false, reason: "สถานะไม่อนุญาตให้แจกงาน" };
+
+  // BookingCore มี consultantId: number | null
+  if (b.consultantId != null) return { can: false, reason: "รายการนี้ถูกมอบหมายไปแล้ว" };
+
+  return { can: true, reason: null as string | null };
+}
+
+function assignLabel(assign: { can: boolean }, status?: string) {
+  if (assign.can) return "แจกงาน";
+  switch (status) {
+    case "ASSIGNED":
+      return "แจกงานแล้ว";
+    case "COMPLETED":
+      return "เสร็จสิ้นแล้ว";
+    case "CANCELLED":
+      return "ยกเลิกแล้ว";
+    default:
+      return "ไม่สามารถแจกงาน";
+  }
+}
+
+/* -------------------- component -------------------- */
+
+export function BookingsListCard({
+  row,
+  onClickDetails,
+  onClickAssign,
+  onClickReschedule,
+}: {
+  row: AdminBookingRow;
+  onClickDetails: () => void;
+  onClickAssign: () => void;
+  onClickReschedule: () => void;
+}) {
+  const studentName = row.student?.name ?? row.student?.username ?? "ไม่ทราบชื่อ";
+  const assign = getAssignState(row);
+
+  const timeLabel =
+    row.startTime && row.endTime ? `${row.startTime}–${row.endTime} น.` : "-";
+
+  const consultantLabel = row.consultant?.name
+    ? `consultant: ${row.consultant.name}`
+    : "ยังไม่ assign";
+
+  return (
+    <Card className="rounded-2xl border border-gray-100 bg-white shadow-sm">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onClickDetails}
+        className={cn(
+          "group rounded-2xl border border-transparent",
+          "hover:border-gray-200 hover:shadow-md transition-all",
+          "cursor-pointer",
+        )}
+      >
+        {/* Top row */}
+        <div className="flex items-start justify-between gap-3 p-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-primary-100 bg-primary-50">
+              <User2 className="h-5 w-5 text-primary-600" />
+            </div>
+
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="truncate text-sm font-extrabold text-gray-900">
+                  {studentName}
+                </p>
+                <StatusBadge status={row.status ?? null} />
+              </div>
+
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                <span className="truncate">
+                  booking_id: <span className="font-mono">{row.id}</span>
+                </span>
+                <span className="text-gray-300">•</span>
+                <span className="inline-flex items-center gap-1.5 font-bold text-gray-800">
+                  <Clock3 className="h-4 w-4 text-primary-500" />
+                  {timeLabel}
+                </span>
+                <span className="text-gray-300">•</span>
+                <span className={cn("text-xs", row.consultant?.name ? "text-gray-600" : "text-gray-400")}>
+                  {consultantLabel}
+                </span>
+              </div>
+
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Chip>
+                  <FileText className="mr-1 h-3.5 w-3.5" />
+                  {row.problemType ?? "-"}
+                </Chip>
+
+                {row.problemDescription ? (
+                  <span className="line-clamp-1 text-xs text-gray-600">
+                    {row.problemDescription}
+                  </span>
+                ) : (
+                  <span className="text-xs text-gray-400">ไม่มีรายละเอียด</span>
+                )}
+
+                {row.problemCategoryCode ? (
+                  <span className="font-mono text-[11px] text-gray-400">
+                    ({row.problemCategoryCode})
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-gray-300 transition-colors group-hover:text-primary-500" />
+        </div>
+
+        {/* Actions row */}
+        <div className="flex justify-between gap-2 border-t border-gray-100 px-4 py-3">
+          <div className="self-center text-[11px] text-gray-500">
+            คลิกแถวเพื่อดูรายละเอียด
+          </div>
+
+          <div className="flex items-end gap-2">
+            <IconAction
+              tone="amber"
+              icon={ArrowRightLeft}
+              label="เลื่อนเวลา"
+              onClick={onClickReschedule}
+            />
+
+            <IconAction
+              tone={assign.can ? "emerald" : "slate"}
+              icon={UserCheck}
+              label={assignLabel(assign, row.status)}
+              disabled={!assign.can}
+              title={assign.reason ?? undefined}
+              onClick={onClickAssign}
+            />
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
