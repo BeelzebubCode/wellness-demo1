@@ -21,9 +21,9 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
 
   const { user, isLoading, isAuthenticated } = useRoleAuth({
     redirectTo: "/login",
-    allowedRoles: ["STUDENT", "CONSULTANT", "HEAD_CONSULTANT", "RECTOR", "SUPER_ADMIN"] as const,
+    allowedRoles: ["STUDENT", "CONSULTANT", "HEAD_CONSULTANT", "RECTOR", "SUPER_ADMIN", "MINISTRY", "ADVISOR"] as const,
     loginToastKey: "toast_public_layout_auth_check",
-    guard: false,
+    guard: true, // User requested: "Bounce to login" if not authenticated
     requireTenant: false,
   });
 
@@ -33,9 +33,15 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
     if (!isAuthenticated) return;
     if (!user) return;
 
-    if (user.role !== "STUDENT" && user.role !== "SUPER_ADMIN") {
+    // ✅ Redirect authorized users to their dashboard (except STUDENT who belongs here)
+    // SUPER_ADMIN might want to see public page sometimes, but typically should go to dashboard.
+    // User said "Public only for students". So we redirect others.
+    if (user.role !== "STUDENT") {
       const target = roleDefaultPath(user.role);
-      if (target && target !== pathname) router.replace(target);
+      // Prevent infinite redirect if default path is current path (unlikely for public /)
+      if (target && target !== pathname) {
+        router.replace(target);
+      }
     }
   }, [mounted, isLoading, isAuthenticated, user, router, pathname]);
 

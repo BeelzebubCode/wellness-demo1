@@ -156,13 +156,17 @@ export function useRoleAuth<TUser extends AuthUser = AuthUser>({
 
     // role guard
     if (!allowedRoleSet.has(acc.role as Role)) {
+      console.log("[useRoleAuth] Guard FORBIDDEN:", { role: acc.role, allowed: Array.from(allowedRoleSet) });
       return { ok: false, reason: "FORBIDDEN" };
     }
 
     // tenant required
     if (requireTenant) {
       const activeUni = (acc as any).activeUniversityId as number | null | undefined;
-      if (!activeUni) return { ok: false, reason: "NO_TENANT" };
+      if (!activeUni) {
+        console.log("[useRoleAuth] Guard NO_TENANT:", { activeUni, requireTenant });
+        return { ok: false, reason: "NO_TENANT" };
+      }
     }
 
     // optional allowed university restriction
@@ -176,7 +180,10 @@ export function useRoleAuth<TUser extends AuthUser = AuthUser>({
         (activeUni != null && allowedUniSet.has(activeUni)) ||
         allowedUnis.some((u) => allowedUniSet.has(u));
 
-      if (!ok) return { ok: false, reason: "UNI_NOT_ALLOWED" };
+      if (!ok) {
+         console.log("[useRoleAuth] Guard UNI_NOT_ALLOWED:", { activeUni, allowedUnis, allowedSet: Array.from(allowedUniSet) });
+         return { ok: false, reason: "UNI_NOT_ALLOWED" };
+      }
     }
 
     return { ok: true, user: acc };

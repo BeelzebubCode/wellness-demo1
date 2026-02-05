@@ -56,7 +56,11 @@ export default function LoginPage() {
     { label: "Student (student1)", username: "student1", password: "wellness@nu.ac.th_123456!" },
     { label: "Student (student10)", username: "student10", password: "wellness@nu.ac.th_123456!" },
 
+    { label: "Ministry Admin", username: "ministry_admin", password: "wellness@nu.ac.th_123456!" },
     { label: "Super Admin", username: "superAdmin", password: "wellness@nu.ac.th_123456!" },
+
+    // Advisor
+    { label: "Advisor (NU)", username: "advisor_nu_sci_math", password: "wellness@nu.ac.th_123456!" },
   ] as const;
 
   // ✅ FIX: demoKey + demoSelected (ของเดิมนายยังไม่ได้ประกาศ)
@@ -227,7 +231,12 @@ export default function LoginPage() {
                     </optgroup>
 
                     <optgroup label="Platform">
+                      <option value="ministry_admin">Ministry Admin</option>
                       <option value="superAdmin">Super Admin</option>
+                    </optgroup>
+                    
+                    <optgroup label="Advisor">
+                      <option value="advisor_nu_sci_math">Advisor (NU Computer Science)</option>
                     </optgroup>
                   </select>
 

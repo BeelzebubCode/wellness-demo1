@@ -30,6 +30,7 @@ async function main() {
     universities: geo.universities,
     facultyByUniAndCode: acad.facultyByUniAndCode,
     deptByUniAndCode: acad.deptByUniAndCode,
+    passwordHash: st.passwordHash,
   });
 
   const accounts = await seedAccounts(prisma, {
@@ -95,46 +96,23 @@ async function main() {
   console.log(`🏫 Universities: ${uniCount}`);
   console.log(`👑 Head Consultants: ${headCount} (head_{university_code})`);
   console.log(`🏛️ Rectors: ${rectorCount} (rector_{university_code})`);
+  console.log(`🏛️ Ministry: 1 (ministry_admin)`);
   console.log(`🛡️ Super Admin: 1 (superAdmin)`);
+  console.log(`👨‍🏫 Advisors: ${advisors.length} (advisor_{uni}_{dept})`);
   console.log(`💼 Consultants: ${consultantCount} (consultant_{university_code}_1..5)`);
   console.log(`🎓 Students: ${studentCount}`);
 
-  // distribution: นับนิสิตต่อมหาลัย (top 5)
-  const uniById = new Map<number, any>(geo.universities.map((u) => [u.university_id, u]));
-
-  const countByUniId = new Map<number, number>();
-  for (const s of students) {
-    countByUniId.set(s.university_id, (countByUniId.get(s.university_id) ?? 0) + 1);
-  }
-
-  const top = [...countByUniId.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([uniId, cnt]) => {
-      const u = uniById.get(uniId);
-      const code = u?.university_code ?? `ID:${uniId}`;
-      return `${code}=${cnt}`;
-    })
-    .join(", ");
-
-  console.log(`🎓 Students per uni (top5): ${top || "-"}`);
-
-  console.log(`⏰ Time Slots: ${timeSlots.totalTimeSlots}`);
-  console.log(`📅 Bookings: ${bookingPlan.reduce((sum, p) => sum + p.count, 0)}`);
-  console.log(`   - Completed: ${bookingPlan.find((p) => p.status === BookingStatus.COMPLETED)?.count || 0}`);
-  console.log(`   - In Progress: ${bookingPlan.find((p) => p.status === BookingStatus.IN_PROGRESS)?.count || 0}`);
-  console.log(`   - Pending: ${bookingPlan.find((p) => p.status === BookingStatus.PENDING_ASSIGNMENT)?.count || 0}`);
-  console.log(`   - Cancelled: ${bookingPlan.find((p) => p.status === BookingStatus.CANCELLED)?.count || 0}`);
-
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  // ...
 
   // =========================
   // Credentials (รองรับทุกมหาลัย)
   // =========================
   console.log("\n🔑 Login Credentials:");
+  console.log("   Ministry: ministry_admin");
   console.log("   Head: head_{university_code}");
   console.log("   Rector: rector_{university_code}");
   console.log("   Super: superAdmin");
+  console.log("   Advisor: advisor_{uni}_{dept} (e.g. advisor_cu_cse)");
   console.log("   Consultant: consultant_{university_code}_1 .. _5");
   console.log("   Student (new): stu_{university_code}_01 .. _30");
   console.log("   Student (old): student1 - student120  (ถ้ายังใช้ seedStudents เวอร์ชันเก่า)");

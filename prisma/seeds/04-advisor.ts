@@ -1,8 +1,9 @@
 // prisma/seeds/04-advisor.ts
-import { PrismaClient, type Advisor } from "@prisma/client";
+import { PrismaClient, type Advisor, AccountRole } from "@prisma/client";
 import { departmentsData } from "../seed-data/departments";
 import { firstNames, lastNames } from "../seed-data/people";
 
+// ... (helper functions keep same)
 function hash32(str: string) {
   let h = 2166136261;
   for (let i = 0; i < str.length; i++) {
@@ -33,11 +34,12 @@ export async function seedAdvisors(
     universities: any[];
     facultyByUniAndCode: Map<string, any>;
     deptByUniAndCode: Map<string, any>;
+    passwordHash: string;
   },
 ) {
   console.log("👨‍🏫 Upserting advisors...");
 
-  const { universities, facultyByUniAndCode, deptByUniAndCode } = args;
+  const { universities, facultyByUniAndCode, deptByUniAndCode, passwordHash } = args;
 
   const advisors: Advisor[] = [];
 
@@ -67,6 +69,22 @@ export async function seedAdvisors(
       if (!fac || !dep) continue;
 
       const email = `advisor_${uniCodeLower}_${String(d.department_code).toLowerCase()}@${uniCodeLower}.ac.th`;
+      const username = email.split("@")[0]; // Use prefix as username
+
+      // 1. Create Account
+      const account = await prisma.account.upsert({
+        where: { account_username: username },
+        create: {
+          account_username: username,
+          account_password: passwordHash,
+          account_role: AccountRole.ADVISOR,
+          account_home_university_id: uni.university_id,
+        },
+        update: {
+            account_password: passwordHash,
+            account_role: AccountRole.ADVISOR,
+        }
+      });
 
       // deterministic fields (rerun แล้วเหมือนเดิม)
       const advisor_academic_rank = pickDeterministic(ranks, email, "rank");
@@ -96,6 +114,7 @@ export async function seedAdvisors(
         advisor_email: email,
         advisor_phone_number,
         advisor_office_location,
+        account_id: account.account_id, // Link to Account
       };
 
       const createdOrUpdated = await prisma.advisor.upsert({
@@ -110,6 +129,7 @@ export async function seedAdvisors(
           university_id: data.university_id,
           faculty_id: data.faculty_id,
           department_id: data.department_id,
+          account_id: data.account_id,
         },
       });
 

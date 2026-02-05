@@ -24,12 +24,6 @@ function isLocalHostLike(domain: string) {
   );
 }
 
-/**
- * ✅ normalize base domain for cookie sharing across subdomains
- * - wellness.local  -> wellness.local
- * - nu.wellness.local -> wellness.local (handled by parseHost)
- * - localhost -> localhost (no domain attr)
- */
 function normalizeRootDomain(baseDomain: string) {
   const d = String(baseDomain || "").toLowerCase().trim();
   // remove any port if somehow included
@@ -147,15 +141,14 @@ export async function POST(request: NextRequest) {
         data: { account_last_login_at: new Date() },
       })
       .catch(() => {});
-
     /* =========================================================
-      ✅ SUPER_ADMIN: platform-level (ไม่ต้องผูกมหาลัย)
+      ✅ SUPER_ADMIN / MINISTRY: platform-level (ไม่ต้องผูกมหาลัย)
       - login ได้ที่ wellness.local (ไม่มี subdomain)
       - activeUniversityId = null
       - allowedUniversityIds = []
       - tenant_code = PLATFORM
     ========================================================= */
-    if (account.account_role === "SUPER_ADMIN") {
+    if (account.account_role === "SUPER_ADMIN" || account.account_role === "MINISTRY") {
       const token = await generateToken({
         accountId: account.account_id,
         username: account.account_username,

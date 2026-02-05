@@ -110,6 +110,7 @@ model Account {
 
   bookingCancellations   BookingCancellation[]
   consultant             Consultant?
+  advisor                Advisor? // [NEW] Link to Advisor
   feedbackCommentReplies FeedbackComment[]     @relation("FeedbackCommentRepliedBy")
   notifications          Notification[]
   student                Student?
@@ -314,6 +315,10 @@ model Advisor {
   advisor_email           String? @unique @db.VarChar(100)
   advisor_phone_number    String? @db.VarChar(50)
   advisor_office_location String? @db.VarChar(100)
+
+  // [NEW] Account Relation
+  account_id Int?     @unique // Optional initially to avoid migration issues with existing data, but logically should be required later
+  account    Account? @relation(fields: [account_id], references: [account_id])
 
   university       University        @relation(fields: [university_id], references: [university_id])
   faculty          Faculty           @relation(fields: [university_id, faculty_id], references: [university_id, faculty_id])
@@ -1062,14 +1067,17 @@ enum AccountRole {
   STUDENT
   CONSULTANT
   HEAD_CONSULTANT
+  ADVISOR // [NEW]
   RECTOR
   SUPER_ADMIN
+  MINISTRY
 }
 
 enum UniversityAccessRole {
   STUDENT
   CONSULTANT
   HEAD_CONSULTANT
+  ADVISOR // [NEW]
   RECTOR
   ADMIN
 }

@@ -140,6 +140,23 @@ export async function seedAccounts(
     console.log(`✅ Upserted ${username} for ${uniCode} (uni_id=${uni.university_id})`);
   }
 
+  console.log("🏛️ Upserting ministry account...");
+  
+  await prisma.account.upsert({
+    where: { account_username: "ministry_admin" },
+    create: {
+      account_username: "ministry_admin",
+      account_password: passwordHash,
+      account_role: AccountRole.MINISTRY,
+      account_home_university_id: null,
+    },
+    update: {
+      account_password: passwordHash,
+      account_role: AccountRole.MINISTRY,
+      account_home_university_id: null,
+    },
+  });
+
   console.log("🛡️ Upserting super admin account...");
 
   const superAccount = await prisma.account.upsert({

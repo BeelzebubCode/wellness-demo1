@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import { HeadConsultantDashboard } from "@/features/dashboard/head-consultant/components/HeadConsultantDashboard";
 
-export default function AdminPage() {
-  redirect('/counseling-admin/data-center');
+export default function HeadConsultantDashboardPage() {
+  return <HeadConsultantDashboard />;
 }

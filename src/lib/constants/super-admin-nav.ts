@@ -1,8 +1,14 @@
 // src/lib/constants/super-admin-nav.ts
-import { BookOpen, Shield, Building2, Settings, Handshake } from "lucide-react";
+import { BookOpen, Shield, Building2, Settings, Handshake, LayoutDashboard } from "lucide-react";
 import type { NavItem } from "@/components/layout/sidebar/types";
 
 export const SUPER_ADMIN_NAV: NavItem[] = [
+  {
+    href: "/super-admin",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    exact: true,
+  },
   {
     href: "/super-admin/ai-kb",
     label: "AI Knowledge Base",
@@ -15,7 +21,7 @@ export const SUPER_ADMIN_NAV: NavItem[] = [
   },
   {
     href: "/super-admin/universities",
-    label: "มหาลัย (Tenants)",
+    label: "มหาลัย",
     icon: Building2,
   },
   {
