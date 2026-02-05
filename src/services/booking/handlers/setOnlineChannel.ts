@@ -79,14 +79,10 @@ export async function handleSetOnlineChannel(
     return NextResponse.json({ error: "เคสนี้ไม่ใช่ ONLINE" }, { status: 409 });
   }
 
-  // ✅ อนุญาตให้ตั้งค่าช่องทางได้ตั้งแต่ ASSIGNED (รับเคสแล้ว) หรือ IN_PROGRESS (กำลังทำงาน)
-  // สามารถแก้ไขช่องทางได้ตลอด
-  if (
-    booking.booking_status !== BookingStatus.ASSIGNED &&
-    booking.booking_status !== BookingStatus.IN_PROGRESS
-  ) {
+  // flow: ต้อง start ก่อน = IN_PROGRESS
+  if (booking.booking_status !== BookingStatus.IN_PROGRESS) {
     return NextResponse.json(
-      { error: `ต้องรับเคสก่อนจึงจะตั้งค่าช่องทางได้ (ตอนนี้: ${booking.booking_status})` },
+      { error: `ต้องเป็น IN_PROGRESS ก่อนตั้งค่าช่องทาง (ตอนนี้: ${booking.booking_status})` },
       { status: 409 },
     );
   }

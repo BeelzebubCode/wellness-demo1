@@ -1,17 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 import { Card, LoadingSpinner } from "@/components/ui";
 import { History, Inbox } from "lucide-react";
-import { MyAppointmentCard } from "@/components/booking";
+import { MyAppointmentCard } from "@/features/booking/components/shared/MyAppointmentCard";
 
-import type { MyBooking } from "@/features/booking/types";
+import type { MyBookingDto } from "@/features/booking/types";
 
 export default function ConsultantHistoryPage() {
-  const [bookings, setBookings] = useState<MyBooking[]>([]);
+  const [bookings, setBookings] = useState<MyBookingDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
@@ -35,7 +34,7 @@ export default function ConsultantHistoryPage() {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data?.error ?? "โหลดข้อมูลไม่สำเร็จ");
 
-        const rows = (data.bookings ?? []) as MyBooking[];
+        const rows = (data.bookings ?? []) as MyBookingDto[];
 
         const completed = rows.filter(
           (b) => b.status === "COMPLETED"
@@ -120,16 +119,16 @@ export default function ConsultantHistoryPage() {
 
             <div className="space-y-4">
               {bookings.map((booking) => {
-                const isExpanded = expandedId === booking.id;
+                const isExpanded = expandedId === booking.bookingId;
 
                 return (
-                  <div key={booking.id} className="relative">
+                  <div key={booking.bookingId} className="relative">
                     <div className="absolute -left-[2px] top-5 h-3 w-3 rounded-full bg-primary-500 ring-4 ring-white" />
                     <MyAppointmentCard
                       booking={booking}
                       isCompact
                       isExpanded={isExpanded}
-                      onToggle={() => setExpandedId(isExpanded ? null : booking.id)}
+                      onToggle={() => setExpandedId(isExpanded ? null : booking.bookingId)}
                     />
                   </div>
                 );

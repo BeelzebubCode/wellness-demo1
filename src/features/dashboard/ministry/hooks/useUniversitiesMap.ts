@@ -12,8 +12,10 @@ export interface UniversityMapData {
   regionCode: string;
   province: string;
   students: number;
-  type: string; // Added for university type
+  type: string;
   logo: string;
+  dominantProblem?: string | null;
+  dominantProblemTH?: string | null;
 }
 
 export function useUniversitiesMap() {
@@ -25,7 +27,7 @@ export function useUniversitiesMap() {
     async function fetchUniversities() {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/v2/ministry/universities");
+        const response = await fetch("/api/v2/ministry/universities?pageSize=500");
         
         if (!response.ok) {
           throw new Error("Failed to fetch universities");

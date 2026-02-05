@@ -48,7 +48,6 @@ export async function GET(req: NextRequest) {
     const skip = page * pageSize;
 
     // 🚀 Performance: Use select instead of loading full models
-    // ... (query remains the same)
     const universities = await prisma.university.findMany({
       where: {
         university_is_active: true,
@@ -78,7 +77,6 @@ export async function GET(req: NextRequest) {
             },
           },
         },
-        // 🔥 _count is optimized by idx_student_university_id
         _count: {
           select: {
             students: true,
@@ -92,6 +90,61 @@ export async function GET(req: NextRequest) {
       take: pageSize,
     });
 
+    // 🔥 Aggergate Dominant Problem Category
+    const universityIds = universities.map(u => u.university_id);
+    
+    // 1. Get counts by (uni, category)
+    const categoryStats = await prisma.booking.groupBy({
+      by: ["university_id", "problem_category_id"],
+      where: {
+        university_id: { in: universityIds },
+      },
+      _count: {
+        _all: true,
+      },
+    });
+
+    // 2. Get category details (cacheable)
+    // In a real app we might cache this separately, but it's small enough to fetch
+    const categories = await prisma.problemCategory.findMany({
+      select: {
+        problem_category_id: true,
+        problem_category_name_en: true,
+        problem_category_name_th: true,
+      }
+    });
+    const categoryMap = new Map(categories.map(c => [c.problem_category_id, c]));
+
+    // 3. Find top category per university
+    const topCategoryByUni = new Map<number, any>(); // uniId -> { categoryName, count }
+    
+    // Group stats by university first
+    const statsByUni: Record<number, typeof categoryStats> = {};
+    for (const stat of categoryStats) {
+      if (!statsByUni[stat.university_id]) statsByUni[stat.university_id] = [];
+      statsByUni[stat.university_id].push(stat);
+    }
+
+    // Determine max for each
+    for (const uniId of universityIds) {
+      const stats = statsByUni[uniId];
+      if (!stats || stats.length === 0) continue;
+
+      // Find max count
+      const top = stats.reduce((prev, current) => 
+        (current._count._all > prev._count._all) ? current : prev
+      );
+
+      const catInfo = categoryMap.get(top.problem_category_id);
+      if (catInfo) {
+        topCategoryByUni.set(uniId, {
+          name: catInfo.problem_category_name_en || "Unknown", // Prefer EN for variable consistency or TH if needed
+          nameTH: catInfo.problem_category_name_th,
+          count: top._count._all,
+        });
+      }
+    }
+
     const elapsed = Date.now() - startTime;
     
     // 🔍 Log slow queries (>100ms) without PII
@@ -100,20 +153,27 @@ export async function GET(req: NextRequest) {
     }
 
     // Transform data for the map
-    const mapData = universities.map((uni) => ({
-      id: uni.university_code,
-      code: uni.university_code,
-      name: uni.university_name_th,
-      nameEn: uni.university_name_en,
-      lat: Number(uni.university_latitude),
-      lng: Number(uni.university_longitude),
-      region: uni.province.region.region_name_en || "Central",
-      regionCode: uni.province.region.region_code || "UPPER_CENTRAL",
-      province: uni.province.province_name_th || "",
-      students: uni._count.students,
-      type: uni.university_type || "PUBLIC",
-      logo: `/images/logo/${uni.university_code}_logo.png`,
-    }));
+    const mapData = universities.map((uni) => {
+      const topIssue = topCategoryByUni.get(uni.university_id);
+      
+      return {
+        id: uni.university_code,
+        code: uni.university_code,
+        name: uni.university_name_th,
+        nameEn: uni.university_name_en,
+        lat: Number(uni.university_latitude),
+        lng: Number(uni.university_longitude),
+        region: uni.province.region.region_name_en || "Central",
+        regionCode: uni.province.region.region_code || "UPPER_CENTRAL",
+        province: uni.province.province_name_th || "",
+        students: uni._count.students,
+        type: uni.university_type || "PUBLIC",
+        logo: `/images/logo/${uni.university_code}_logo.png`,
+        // ✨ New field
+        dominantProblem: topIssue ? topIssue.name : null,
+        dominantProblemTH: topIssue ? topIssue.nameTH : null,
+      };
+    });
 
     const response = {
       success: true,
@@ -129,6 +189,8 @@ export async function GET(req: NextRequest) {
             },
           }
         : {}),
+      // Cache metadata
+      generatedAt: new Date().toISOString(),
     };
 
     // 💾 CACHE SET: Save to Redis background

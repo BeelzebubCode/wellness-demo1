@@ -7,7 +7,7 @@ import { Card, Button } from "@/components/ui";
 import { Inbox, CalendarPlus, Clock3 } from "lucide-react";
 
 import type { MyBookingDto } from "@/features/booking/types";
-import { MyAppointmentCard } from "./MyAppointmentCard";
+import { MyAppointmentCard } from "@/features/booking/components/shared/MyAppointmentCard";
 
 export function ActiveBookingPanel({
   booking,

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Polyline, ZoomControl } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Polyline, ZoomControl, useMap } from "react-leaflet";
 import { divIcon } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Network, X, Trophy, Medal, Award } from "lucide-react";
@@ -142,6 +142,19 @@ export function UniversityNetworkMap({
     return 0.4;
   };
 
+  // ✅ Map Controller to handle flying to location
+  function MapController({ center }: { center: [number, number] | null }) {
+    const map = useMap(); // Correctly imported from react-leaflet
+    useEffect(() => {
+      if (center) {
+        map.flyTo(center, 12, { duration: 1.5 });
+      }
+    }, [center, map]);
+    return null;
+  }
+
+  const [focusedLocation, setFocusedLocation] = useState<[number, number] | null>(null);
+
   if (!isMounted) {
     return <div className="w-full h-full bg-blue-50 animate-pulse" />;
   }
@@ -188,7 +201,9 @@ export function UniversityNetworkMap({
             {top10.map((uni, idx) => (
               <div
                 key={idx}
-                className={`flex items-center gap-3 p-2 rounded-lg transition-all ${
+                // ✅ Click to focus
+                onClick={() => setFocusedLocation([uni.lat, uni.lng])}
+                className={`flex items-center gap-3 p-2 rounded-lg transition-all cursor-pointer ${
                   idx < 3 ? getRankBadgeClass(idx) : "hover:bg-gray-50"
                 }`}
               >
@@ -210,6 +225,18 @@ export function UniversityNetworkMap({
                     {getMetricDisplay(uni)}
                   </div>
                 </div>
+                
+                {/* View Button (Propagation Stop) */}
+                <a
+                    href={`/ministry/universities/${uni.universityCode}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()} // Prevent focus when clicking link
+                    className="p-1.5 rounded-lg hover:bg-indigo-50 text-gray-400 hover:text-indigo-600 transition-colors"
+                    title="Open Dashboard"
+                >
+                    <Award className="w-4 h-4" />
+                </a>
               </div>
             ))}
           </div>
@@ -225,6 +252,8 @@ export function UniversityNetworkMap({
         zoomControl={false}
         className="w-full h-full"
       >
+        <MapController center={focusedLocation} />
+
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         <TileLayer url="https://stamen-tiles-{s}.a.ssl.fastly.net/terrain-lines/{z}/{x}/{y}.png" opacity={0.3} />
         <ZoomControl position="bottomright" />
@@ -260,6 +289,10 @@ export function UniversityNetworkMap({
               <Marker
                 position={[conn.lat, conn.lng]}
                 icon={createLogoIcon(`/images/logo/${conn.universityCode}_logo.png`, conn.universityCode)}
+                // ✅ Allow clicking marker to set focus too (optional)
+                eventHandlers={{
+                    click: () => setFocusedLocation([conn.lat, conn.lng]),
+                }}
               >
                 <Popup>
                   <div className="text-sm">
@@ -275,6 +308,12 @@ export function UniversityNetworkMap({
                     <div className="text-xs text-indigo-600 font-semibold mt-1">
                       Rank #{conn.rank || idx + 1}
                     </div>
+                    <a
+                      href={`/ministry/universities/${conn.universityCode}`}
+                      className="block mt-2 text-center w-full px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      View Dashboard
+                    </a>
                   </div>
                 </Popup>
               </Marker>

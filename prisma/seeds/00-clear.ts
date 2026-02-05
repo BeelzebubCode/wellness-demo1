@@ -24,6 +24,10 @@ export async function clearDatabase(prisma: PrismaClient) {
   await prisma.studentPointWallet.deleteMany();
   await prisma.pointRule.deleteMany();
 
+  // ✅✅✅ ADD: Borrow system (must be before consultant delete)
+  await prisma.borrowAssignment.deleteMany();
+  await prisma.borrowRequest.deleteMany();
+
   await prisma.consultantSpecialization.deleteMany();
   await prisma.consultantLanguage.deleteMany();
   await prisma.consultantProfile.deleteMany();
@@ -38,9 +42,6 @@ export async function clearDatabase(prisma: PrismaClient) {
   await prisma.department.deleteMany();
   await prisma.faculty.deleteMany();
 
-  // ✅✅✅ ADD: Borrow system (must be before university delete)
-  await prisma.borrowAssignment.deleteMany();
-  await prisma.borrowRequest.deleteMany();
 
   await prisma.accountUniversityAccess.deleteMany();
 

@@ -11,14 +11,14 @@ type Criterion = {
   evaluation_criterion_weight: any;
 };
 
-type Props = {
+export interface BookingFeedbackModalProps {
   isOpen: boolean;
   bookingId: number | null;
   onClose: () => void;
   onSuccess: () => void;
-};
+}
 
-export function BookingFeedbackModal({ isOpen, bookingId, onClose, onSuccess }: Props) {
+export function BookingFeedbackModal({ isOpen, bookingId, onClose, onSuccess }: BookingFeedbackModalProps) {
   const [criteria, setCriteria] = useState<Criterion[]>([]);
   const [scores, setScores] = useState<Record<number, number>>({});
   const [comment, setComment] = useState("");
@@ -45,7 +45,7 @@ export function BookingFeedbackModal({ isOpen, bookingId, onClose, onSuccess }: 
         const list = (json.criteria ?? []) as Criterion[];
         setCriteria(list);
 
-        // ✅ default score = 1 (เริ่มที่ 1)
+        // ✅ default score = 1
         const init: Record<number, number> = {};
         list.forEach((c) => (init[c.evaluation_criterion_id] = 1));
         setScores(init);
@@ -99,7 +99,10 @@ export function BookingFeedbackModal({ isOpen, bookingId, onClose, onSuccess }: 
       const json = await res.json();
       if (!res.ok || !json?.success) throw new Error(json?.error ?? "submit failed");
 
-      window.dispatchEvent(new Event("points-changed"));
+      // Dispatch event to update points if needed
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event("points-changed"));
+      }
 
       onSuccess();
       onClose();
@@ -128,7 +131,6 @@ export function BookingFeedbackModal({ isOpen, bookingId, onClose, onSuccess }: 
           <>
             <div className="space-y-3">
               {criteria.map((c) => {
-                // ✅ fallback เป็น 1 (กันกรณี scores ยังไม่ set)
                 const current = scores[c.evaluation_criterion_id] ?? 1;
 
                 return (
@@ -141,7 +143,6 @@ export function BookingFeedbackModal({ isOpen, bookingId, onClose, onSuccess }: 
                         <p className="text-xs text-gray-500">ให้คะแนน 1–5</p>
                       </div>
 
-                      {/* ✅ ดาวล้วน ๆ ไม่มีกรอบ */}
                       <div className="flex items-center gap-2">
                         {[1, 2, 3, 4, 5].map((s) => {
                           const filled = s <= current;
@@ -219,5 +220,3 @@ export function BookingFeedbackModal({ isOpen, bookingId, onClose, onSuccess }: 
     </Modal>
   );
 }
-
-export default BookingFeedbackModal;

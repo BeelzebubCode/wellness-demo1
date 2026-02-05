@@ -491,7 +491,7 @@ model Booking {
   BookingSession          BookingSession?
 
   @@id([university_id, booking_id])
-  @@unique([university_id, student_id, time_slot_id])
+  // @@unique([university_id, student_id, time_slot_id]) -- Removed to allow re-booking after cancellation
   @@index([university_id, time_slot_id])
   @@index([booking_status])
   @@index([student_id])

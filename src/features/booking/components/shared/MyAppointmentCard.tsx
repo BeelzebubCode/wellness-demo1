@@ -1,5 +1,3 @@
-//src\components\booking\MyAppointmentCard.tsx
-
 "use client";
 
 import { cn } from "@/lib/cn";
@@ -11,17 +9,27 @@ import {
 } from "@/shared/constants/booking-status";
 
 import { Card, Button } from "@/components/ui";
-import type { MyBooking } from "@/features/booking/types";
-import {
-  Clock,
-  XCircle,
-  Star,
-  ChevronDown,
-  MessageSquarePlus,
-} from "lucide-react";
+import { Clock, XCircle, Star, ChevronDown, MessageSquarePlus } from "lucide-react";
+import type { MyBookingDto } from "@/features/booking/types";
+import { OnlineSessionPanel } from "./OnlineSessionPanel";
+
+// Utility to derive view data from DTO
+function getDisplayData(b: MyBookingDto) {
+  const start = b.startAt ? new Date(b.startAt) : null;
+  const end = b.endAt ? new Date(b.endAt) : null;
+  
+  return {
+    id: b.bookingId,
+    date: start ? start.toISOString().slice(0, 10) : null,
+    dateObj: start,
+    startTime: start ? start.toTimeString().slice(0, 5) : null,
+    endTime: end ? end.toTimeString().slice(0, 5) : null,
+    problemType: b.problemCategoryNameTh ?? null,
+  };
+}
 
 export interface MyAppointmentCardProps {
-  booking: MyBooking;
+  booking: MyBookingDto;
   onCancel?: () => void;
   isCompact?: boolean;
   isExpanded?: boolean;
@@ -37,44 +45,33 @@ export function MyAppointmentCard({
   onToggle,
   onFeedback,
 }: MyAppointmentCardProps) {
-  // ✅ ใช้ helper ให้ชัวร์ (กัน status เพี้ยนจาก backend)
+  const view = getDisplayData(booking);
+  
   const normalized = normalizeBookingStatus((booking as any).status);
 
-  // ✅ status config ปลอดภัย 100%
   const statusConfig =
     normalized === "UNKNOWN"
-      ? {
-          ...BOOKING_STATUS_FALLBACK,
-          label: String((booking as any).status ?? "UNKNOWN"),
-        }
+      ? { ...BOOKING_STATUS_FALLBACK, label: String((booking as any).status ?? "UNKNOWN") }
       : BOOKING_STATUS[normalized];
 
   const StatusIcon = statusConfig.icon;
-
-  // ✅ Completed แบบ robust
   const isCompleted = normalized === "COMPLETED";
 
-  const hasDate = Boolean(booking.date && booking.startTime && booking.endTime);
-  const dateObj = booking.date ? new Date(booking.date) : null;
+  const hasDate = Boolean(view.dateObj && view.startTime && view.endTime);
 
-  // ✅ hasFeedback แบบ robust (กัน string/number/field คนละชื่อ)
   const hasFeedback =
     Boolean((booking as any).outcome) ||
     Boolean((booking as any).hasFeedback) ||
     Boolean((booking as any).feedbackId) ||
     Boolean((booking as any).feedbackSubmitted) ||
-    (Array.isArray((booking as any).feedbacks) &&
-      (booking as any).feedbacks.length > 0);
+    (Array.isArray((booking as any).feedbacks) && (booking as any).feedbacks.length > 0);
 
-  // ✅ ปุ่ม Feedback แสดงเมื่อ: จบงาน + ยังไม่เคยประเมิน + มี callback
-  const showFeedbackAction =
-    isCompleted && !hasFeedback && typeof onFeedback === "function";
-  /* ======================================================
-     ✅ COMPACT MODE (History) — Enhanced UI
-  ====================================================== */
+  const showFeedbackAction = isCompleted && !hasFeedback && typeof onFeedback === "function";
+
+  // ---------------- COMPACT (History) ----------------
   if (isCompact) {
-    const fullDate = dateObj
-      ? dateObj.toLocaleDateString("th-TH", {
+    const fullDate = view.dateObj
+      ? view.dateObj.toLocaleDateString("th-TH", {
           weekday: "long",
           year: "numeric",
           month: "long",
@@ -82,20 +79,11 @@ export function MyAppointmentCard({
         })
       : null;
 
-    const bookingIdText = `#${String(booking.id).padStart(6, "0")}`;
+    const bookingIdText = `#${String(view.id).padStart(6, "0")}`;
 
-    const problemDesc =
-      (booking as any).problemDescription ??
-      (booking as any).description ??
-      null;
-
+    const consultantName = booking.consultantName ?? null;
     const cancelReason = (booking as any).cancelReason ?? null;
-
-    const consultantName =
-      (booking as any).consultantName ??
-      (booking as any).consultant?.displayName ??
-      (booking as any).consultant?.name ??
-      null;
+    const problemDesc = (booking as any).problemDescription ?? (booking as any).description ?? null;
 
     return (
       <div
@@ -105,7 +93,7 @@ export function MyAppointmentCard({
           isExpanded ? "shadow-md border-blue-200 ring-1 ring-blue-100" : "",
         )}
       >
-        {/* === HEADER ROW (Always Visible) === */}
+        {/* header */}
         <div
           role="button"
           tabIndex={0}
@@ -118,8 +106,8 @@ export function MyAppointmentCard({
             isExpanded ? "bg-blue-50/30" : "bg-white group-hover:bg-gray-50/50",
           )}
         >
-          {/* 1. DATE BOX */}
-          {dateObj ? (
+          {/* date box */}
+          {view.dateObj ? (
             <div
               className={cn(
                 "shrink-0 w-[52px] flex flex-col items-center rounded-lg border bg-white overflow-hidden shadow-sm",
@@ -127,17 +115,15 @@ export function MyAppointmentCard({
               )}
             >
               <div className="w-full bg-gray-100 text-[10px] font-medium text-gray-500 text-center py-0.5 border-b border-gray-100">
-                {dateObj.toLocaleDateString("th-TH", { weekday: "short" })}
+                {view.dateObj.toLocaleDateString("th-TH", { weekday: "short" })}
               </div>
-              <div className="text-xl font-bold text-gray-800 py-1">
-                {dateObj.getDate()}
-              </div>
+              <div className="text-xl font-bold text-gray-800 py-1">{view.dateObj.getDate()}</div>
             </div>
           ) : (
             <div className="w-[52px] shrink-0" />
           )}
 
-          {/* 2. MAIN CONTENT */}
+          {/* main */}
           <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
             <div className="flex items-center gap-2 flex-wrap">
               <span
@@ -155,19 +141,18 @@ export function MyAppointmentCard({
               {hasDate && (
                 <span className="text-xs text-gray-500 flex items-center gap-1">
                   <Clock className="w-3 h-3" />
-                  {booking.startTime}-{booking.endTime}
+                  {view.startTime}-{view.endTime}
                 </span>
               )}
             </div>
 
             <div className="font-medium text-sm text-gray-900 truncate pr-2">
-              {booking.problemType ?? "ไม่ระบุหัวข้อปัญหา"}
+              {view.problemType ?? "ไม่ระบุหัวข้อปัญหา"}
             </div>
           </div>
 
-          {/* 3. ACTION AREA */}
+          {/* actions */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* ✅ FEEDBACK BUTTON */}
             {showFeedbackAction && (
               <Button
                 size="sm"
@@ -184,7 +169,6 @@ export function MyAppointmentCard({
               </Button>
             )}
 
-            {/* CHEVRON */}
             {onToggle && (
               <div
                 className={cn(
@@ -198,26 +182,22 @@ export function MyAppointmentCard({
           </div>
         </div>
 
-        {/* === EXPANDED DETAIL === */}
+        {/* expanded */}
         <div
           className={cn(
             "transition-all duration-300 ease-in-out",
-            isExpanded ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0",
+            isExpanded ? "max-h-[1400px] opacity-100" : "max-h-0 opacity-0",
           )}
         >
-          <div className="border-t border-gray-100 bg-gray-50/50 px-4 py-4 sm:px-5">
-            {/* Meta Header */}
-            <div className="flex justify-between items-start mb-4">
+          <div className="border-t border-gray-100 bg-gray-50/50 px-4 py-4 sm:px-5 space-y-4">
+            <div className="flex justify-between items-start">
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">
                   Booking ID
                 </p>
-                <p className="text-sm font-mono text-gray-600 select-all">
-                  {bookingIdText}
-                </p>
+                <p className="text-sm font-mono text-gray-600 select-all">{bookingIdText}</p>
               </div>
 
-              {/* Mobile hint */}
               {showFeedbackAction && (
                 <div className="sm:hidden text-xs text-amber-600 font-medium flex items-center animate-pulse">
                   <MessageSquarePlus className="w-3 h-3 mr-1" />
@@ -226,55 +206,47 @@ export function MyAppointmentCard({
               )}
             </div>
 
+            {/* ✅ Online session panel */}
+            <OnlineSessionPanel booking={booking} />
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              {/* Consultant */}
               {consultantName && (
                 <div className="col-span-1 sm:col-span-2 bg-white border rounded-lg p-3 shadow-sm">
                   <p className="text-xs text-gray-400 mb-1">ผู้ให้คำปรึกษา</p>
-                  <p className="text-sm font-semibold text-gray-800">
-                    {consultantName}
-                  </p>
+                  <p className="text-sm font-semibold text-gray-800">{consultantName}</p>
                 </div>
               )}
 
-              {/* Date */}
               <div className="bg-white border rounded-lg p-3">
                 <p className="text-xs text-gray-400 mb-1">วันที่นัดหมาย</p>
                 <p className="text-sm text-gray-700">{fullDate || "-"}</p>
               </div>
 
-              {/* Time */}
               <div className="bg-white border rounded-lg p-3">
                 <p className="text-xs text-gray-400 mb-1">เวลา</p>
                 <p className="text-sm text-gray-700">
-                  {booking.startTime ?? "-"} – {booking.endTime ?? "-"} น.
+                  {view.startTime ?? "-"} – {view.endTime ?? "-"} น.
                 </p>
               </div>
 
-              {/* Details */}
               {problemDesc && (
                 <div className="sm:col-span-2 bg-white border rounded-lg p-3">
-                  <p className="text-xs text-gray-400 mb-2">
-                    รายละเอียดเพิ่มเติม
-                  </p>
+                  <p className="text-xs text-gray-400 mb-2">รายละเอียดเพิ่มเติม</p>
                   <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
                     {problemDesc}
                   </p>
                 </div>
               )}
 
-              {/* Cancel Reason */}
               {cancelReason && (
                 <div className="sm:col-span-2 bg-red-50 border border-red-100 rounded-lg p-3">
-                  <p className="text-xs text-red-500 font-semibold mb-1">
-                    เหตุผลการยกเลิก
-                  </p>
+                  <p className="text-xs text-red-500 font-semibold mb-1">เหตุผลการยกเลิก</p>
                   <p className="text-sm text-red-700">{cancelReason}</p>
                 </div>
               )}
             </div>
 
-            <div className="mt-4 text-center">
+            <div className="text-center">
               <span
                 onClick={onToggle}
                 className="text-[11px] text-gray-400 cursor-pointer hover:text-gray-600 underline decoration-dotted underline-offset-2"
@@ -288,61 +260,41 @@ export function MyAppointmentCard({
     );
   }
 
-  /* ======================================================
-     ✅ NORMAL MODE (Active booking) — Card Style
-  ====================================================== */
+  // ---------------- NORMAL (Active booking) ----------------
   return (
-    <Card
-      className="overflow-hidden border shadow-sm hover:shadow-md transition-shadow duration-200"
-      padding="none"
-    >
-      <div
-        className={cn(
-          "px-4 py-3 border-b flex items-center justify-between",
-          statusConfig.bgColor,
-        )}
-      >
-        <span
-          className={cn(
-            "text-sm font-semibold flex items-center gap-2",
-            statusConfig.textColor,
-          )}
-        >
+    <Card className="overflow-hidden border shadow-sm hover:shadow-md transition-shadow duration-200" padding="none">
+      <div className={cn("px-4 py-3 border-b flex items-center justify-between", statusConfig.bgColor)}>
+        <span className={cn("text-sm font-semibold flex items-center gap-2", statusConfig.textColor)}>
           <StatusIcon className="w-4 h-4" />
           {statusConfig.label}
         </span>
-        <span className="text-xs font-mono opacity-60">
-          #{String(booking.id).padStart(6, "0")}
-        </span>
+        <span className="text-xs font-mono opacity-60">#{String(view.id).padStart(6, "0")}</span>
       </div>
 
       <div className="p-5 space-y-4">
-        {dateObj && booking.startTime && booking.endTime && (
+        {view.dateObj && view.startTime && view.endTime && (
           <div className="flex items-start gap-3">
             <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
               <Clock className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-base font-semibold text-gray-900">
-                {formatThaiDate(dateObj)}
-              </p>
+              <p className="text-base font-semibold text-gray-900">{formatThaiDate(view.dateObj)}</p>
               <p className="text-sm text-gray-500 mt-0.5">
-                เวลา {booking.startTime} – {booking.endTime} น.
+                เวลา {view.startTime} – {view.endTime} น.
               </p>
             </div>
           </div>
         )}
 
-        {booking.problemType ? (
+        {view.problemType ? (
           <div className="bg-gray-50 border border-gray-100 rounded-lg p-3">
-            <p className="text-xs text-gray-400 mb-1 uppercase tracking-wide">
-              หัวข้อปัญหา
-            </p>
-            <p className="text-sm font-medium text-gray-700">
-              {booking.problemType}
-            </p>
+            <p className="text-xs text-gray-400 mb-1 uppercase tracking-wide">หัวข้อปัญหา</p>
+            <p className="text-sm font-medium text-gray-700">{view.problemType}</p>
           </div>
         ) : null}
+
+        {/* ✅ Online session panel (normal mode) */}
+        <OnlineSessionPanel booking={booking} />
 
         {onCancel && (
           <div className="pt-2">

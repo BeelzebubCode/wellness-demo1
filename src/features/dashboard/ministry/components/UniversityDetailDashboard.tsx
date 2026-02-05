@@ -204,7 +204,7 @@ export function UniversityDetailDashboard({ universityCode }: UniversityDetailPr
                 Explore nearby universities and their connections. Toggle "Show Network" to visualize proximity relationships.
               </p>
 
-              <div className="h-[600px] rounded-2xl overflow-hidden border border-gray-200">
+              <div className="h-[800px] rounded-2xl overflow-hidden border border-gray-200">
                 <UniversityNetworkMap
                   universityCode={universityCode}
                   centerLat={university.lat}

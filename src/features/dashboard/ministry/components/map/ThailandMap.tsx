@@ -1,7 +1,7 @@
 // src/features/dashboard/ministry/components/map/ThailandMap.tsx
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import { divIcon } from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -21,6 +21,20 @@ function UniversityPin({ data }: { data: any }) {
   // Use correct logo path
   const logoUrl = `/images/logo/${data.code}_logo.png`;
 
+  // Color mapping for problems
+  const getProblemColor = (problem: string) => {
+    if (!problem) return "#6366f1"; // Default Indigo
+    const p = problem.toLowerCase();
+    if (p.includes("depression") || p.includes("ซึมเศร้า")) return "#ef4444"; // Red
+    if (p.includes("anxiety") || p.includes("วิตกกังวล")) return "#f97316"; // Orange
+    if (p.includes("stress") || p.includes("เครียด")) return "#eab308"; // Yellow
+    if (p.includes("relationship") || p.includes("ความสัมพันธ์")) return "#ec4899"; // Pink
+    if (p.includes("burnout") || p.includes("หมดไฟ")) return "#8b5cf6"; // Purple
+    return "#3b82f6"; // Blue default
+  };
+
+  const problemColor = getProblemColor(data.dominantProblem);
+
   const customIcon = divIcon({
     className: "custom-marker",
     html: renderToString(
@@ -31,8 +45,8 @@ function UniversityPin({ data }: { data: any }) {
             height: "50px",
             borderRadius: "50%",
             background: "white",
-            border: "3px solid #6366f1",
-            boxShadow: "0 4px 16px rgba(99, 102, 241, 0.5)",
+            border: `3px solid ${problemColor}`,
+            boxShadow: `0 4px 16px ${problemColor}80`, // Hex opacity 50%
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -54,11 +68,30 @@ function UniversityPin({ data }: { data: any }) {
               (e.target as HTMLImageElement).style.display = "none";
               const parent = (e.target as HTMLImageElement).parentElement;
               if (parent) {
-                parent.innerHTML = `<div style="font-size: 12px; font-weight: 700; color: #6366f1;">${data.code}</div>`;
+                parent.innerHTML = `<div style="font-size: 12px; font-weight: 700; color: ${problemColor};">${data.code}</div>`;
               }
             }}
           />
         </div>
+        {data.dominantProblem && (
+           <div style={{
+             position: "absolute",
+             bottom: "-6px",
+             left: "50%",
+             transform: "translateX(-50%)",
+             background: problemColor,
+             color: "white",
+             fontSize: "8px",
+             padding: "2px 6px",
+             borderRadius: "10px",
+             whiteSpace: "nowrap",
+             fontWeight: 700,
+             boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+             zIndex: 10
+           }}>
+             !
+           </div>
+        )}
       </div>
     ),
     iconSize: [50, 50],
@@ -84,15 +117,17 @@ function UniversityPin({ data }: { data: any }) {
               </div>
             </div>
             <div>
-              <div style={{ fontSize: "10px", color: "#9ca3af", textTransform: "uppercase" }}>Type</div>
-              <div style={{ fontWeight: 600, fontSize: "13px", color: "#10b981" }}>{data.type}</div>
+              <div style={{ fontSize: "10px", color: "#9ca3af", textTransform: "uppercase" }}>Top Issue</div>
+              <div style={{ fontWeight: 600, fontSize: "12px", color: problemColor }}>
+                 {data.dominantProblemTH || "N/A"}
+              </div>
             </div>
           </div>
           <a
             href={`/ministry/universities/${data.code}`}
             style={{
               display: "block",
-              background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+              background: `linear-gradient(135deg, ${problemColor} 0%, ${problemColor}dd 100%)`, // Use problem color for button
               color: "white",
               textAlign: "center",
               padding: "8px 12px",
@@ -128,13 +163,33 @@ function MapStyleController({ mapStyle }: { mapStyle: string }) {
   );
 }
 
+// ✅ Auto-fit bounds when data changes
+function MapBoundsController({ data }: { data: any[] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (data.length > 0) {
+      try {
+        const bounds = L.latLngBounds(data.map((u) => [u.lat, u.lng]));
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 10 });
+      } catch (e) {
+        console.warn("Failed to fit bounds:", e);
+      }
+    } else {
+        // Reset to Thailand view if no data (or keep current)
+        // map.setView([13.7563, 100.5018], 6); 
+    }
+  }, [data, map]);
+
+  return null;
+}
+
 export function ThailandMap() {
   const [filter, setFilter] = useState<MapFilterState>({
     search: "",
     region: "",
     type: "",
     stress: "",
-    studentRange: "",
   });
   const [mapStyle, setMapStyle] = useState<"street" | "satellite" | "terrain">("street");
 
@@ -181,11 +236,102 @@ export function ThailandMap() {
         scrollWheelZoom={true}
       >
         <MapStyleController mapStyle={mapStyle} />
+        <MapBoundsController data={filteredData} />
 
         {filteredData.map((uni) => (
           <UniversityPin key={uni.id} data={uni} />
         ))}
       </MapContainer>
+
+      {/* National Insights Overlay */}
+      <div className="absolute top-6 right-6 z-[1000] w-[280px] bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 p-4 animate-in fade-in slide-in-from-right-4">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+          <h3 className="text-sm font-bold text-gray-800">Thailand Overview</h3>
+        </div>
+        
+        <div className="space-y-3">
+          <div className="p-3 bg-red-50 rounded-xl border border-red-100">
+            <div className="text-[10px] text-red-600 font-semibold uppercase tracking-wider mb-1">Top Concern</div>
+            <div className="flex items-center justify-between">
+              <span className="text-red-700 font-bold text-sm">Depression (35%)</span>
+              <span className="text-[10px] text-red-500 bg-white px-1.5 py-0.5 rounded-md shadow-sm">High Risk</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="p-2 bg-blue-50 rounded-lg border border-blue-100">
+              <div className="text-[10px] text-blue-500 uppercase">Consultants</div>
+              <div className="text-lg font-bold text-blue-700">1,240</div>
+            </div>
+            <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-100">
+              <div className="text-[10px] text-indigo-500 uppercase">Total Cases</div>
+              <div className="text-lg font-bold text-indigo-700">8.5k</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 pt-3 border-t border-gray-100">
+             <div className="text-[10px] font-semibold text-gray-500 mb-2">Issue Distribution</div>
+             <div className="flex h-1.5 w-full rounded-full overflow-hidden">
+                <div className="bg-red-500 w-[35%]" />
+                <div className="bg-orange-500 w-[25%]" />
+                <div className="bg-yellow-500 w-[20%]" />
+                <div className="bg-gray-200 w-[20%]" />
+             </div>
+             <div className="flex justify-between mt-1 text-[8px] text-gray-400">
+                <span>Depress</span>
+                <span>Anxiety</span>
+                <span>Stress</span>
+                <span>Other</span>
+             </div>
+        </div>
+      </div>
+
+      {/* National Insights Overlay */}
+      <div className="absolute top-6 right-6 z-[1000] w-[280px] bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 p-4 animate-in fade-in slide-in-from-right-4 pointer-events-auto">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+          <h3 className="text-sm font-bold text-gray-800">Thailand Overview</h3>
+        </div>
+        
+        <div className="space-y-3">
+          <div className="p-3 bg-red-50 rounded-xl border border-red-100">
+            <div className="text-[10px] text-red-600 font-semibold uppercase tracking-wider mb-1">Top Concern</div>
+            <div className="flex items-center justify-between">
+              <span className="text-red-700 font-bold text-sm">Depression (35%)</span>
+              <span className="text-[10px] text-red-500 bg-white px-1.5 py-0.5 rounded-md shadow-sm">High Risk</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="p-2 bg-blue-50 rounded-lg border border-blue-100">
+              <div className="text-[10px] text-blue-500 uppercase">Consultants</div>
+              <div className="text-lg font-bold text-blue-700">1,240</div>
+            </div>
+            <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-100">
+              <div className="text-[10px] text-indigo-500 uppercase">Total Cases</div>
+              <div className="text-lg font-bold text-indigo-700">8.5k</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 pt-3 border-t border-gray-100">
+             <div className="text-[10px] font-semibold text-gray-500 mb-2">Issue Distribution</div>
+             <div className="flex h-1.5 w-full rounded-full overflow-hidden">
+                <div className="bg-red-500 w-[35%]" />
+                <div className="bg-orange-500 w-[25%]" />
+                <div className="bg-yellow-500 w-[20%]" />
+                <div className="bg-gray-200 w-[20%]" />
+             </div>
+             <div className="flex justify-between mt-1 text-[8px] text-gray-400">
+                <span>Depress</span>
+                <span>Anxiety</span>
+                <span>Stress</span>
+                <span>Other</span>
+             </div>
+        </div>
+      </div>
 
       {/* Map Style Switcher */}
       <div className="absolute bottom-4 right-4 z-[1000] bg-white/95 backdrop-blur-md rounded-xl shadow-lg border border-gray-200 p-3">

@@ -29,7 +29,8 @@ export async function getMyBookings(params: {
       include: {
         problemCategory: true,
         timeSlot: true,
-        BookingSession: true, // ✅ ตรงตาม Prisma schema
+        BookingSession: true,
+        feedback: { select: { feedback_id: true } }, // ✅ Check if feedback exists
       },
       orderBy: { booking_created_at: "desc" },
     });
@@ -68,6 +69,7 @@ export async function getMyBookings(params: {
         consultantOrg: null,
 
         session,
+        hasFeedback: !!(b as any).feedback,
       };
     });
   }
