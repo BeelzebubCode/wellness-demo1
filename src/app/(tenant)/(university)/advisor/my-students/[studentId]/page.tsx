@@ -1,3 +1,4 @@
+//C:\wellness-demo1\src\app\(tenant)\(university)\advisor\my-students\[studentId]\page.tsx
 import { StudentDetailView } from "@/features/dashboard/advisor/components/StudentDetailView";
 
 export const metadata = {
