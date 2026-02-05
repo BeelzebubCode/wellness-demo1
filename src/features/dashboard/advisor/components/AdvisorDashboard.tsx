@@ -1,10 +1,10 @@
-// features/dashboard/advisor/components/AdvisorDashboard.tsx
 "use client";
 
 import { useAdvisorStats } from "../hooks/useAdvisorStats";
 import { AdvisorStatsCards } from "./AdvisorStatsCards";
 import { StudentListTable } from "./StudentListTable";
 import { AdvisorRiskChart } from "./AdvisorRiskChart";
+import { AdvisorAnalyticsCharts } from "./AdvisorAnalyticsCharts";
 import { LoadingSpinner } from "@/components/ui";
 
 import { FilterBar } from "@/components/filters/FilterBar";
@@ -27,7 +27,7 @@ const FILTER_DEFS: FilterDef<any>[] = [
 ];
 
 export function AdvisorDashboard() {
-  const { stats, students, riskTrends, isLoading, filters, setFilters } = useAdvisorStats();
+  const { stats, students, riskTrends, analytics, isLoading, filters, setFilters } = useAdvisorStats();
 
   if (isLoading || !stats) {
     return (
@@ -45,9 +45,13 @@ export function AdvisorDashboard() {
       </div>
 
       <AdvisorStatsCards stats={stats} />
+
+      {/* Analytics Charts */}
+      {analytics && <AdvisorAnalyticsCharts analytics={analytics} />}
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
+            <h2 className="text-lg font-bold text-gray-900">รายชื่อนิสิตในที่ปรึกษา</h2>
             <FilterBar 
                 defs={FILTER_DEFS}
                 value={filters}
@@ -58,6 +62,7 @@ export function AdvisorDashboard() {
             <StudentListTable students={students} />
         </div>
         <div className="lg:col-span-1">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">แนวโน้มความเสี่ยง</h2>
             <AdvisorRiskChart data={riskTrends} />
         </div>
       </div>

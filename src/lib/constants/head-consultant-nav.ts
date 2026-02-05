@@ -25,9 +25,4 @@ export const HEAD_CONSULTANT_NAV: NavItem[] = [
     label: "จัดการตารางเวลา",
     icon: Clock,
   },
-  {
-    href: "/head-consultant/my-jobs",
-    label: "งานของฉัน",
-    icon: BookCheck,
-  },
 ];

@@ -185,5 +185,168 @@ export const AdvisorService = {
         month,
         averageRisk: data.count > 0 ? Number((data.totalRisk / data.count).toFixed(2)) : 0
     }));
+  },
+
+  /**
+   * Get comprehensive analytics for advisor dashboard
+   */
+  async getAdvisorAnalytics(advisorAccountId: number) {
+    const advisor = await prisma.advisor.findUnique({
+      where: { account_id: advisorAccountId },
+    });
+
+    if (!advisor) return null; // Or throw error
+
+    // Fetch ALL relevant bookings for analysis
+    const bookings = await prisma.booking.findMany({
+      where: {
+        student: {
+          academic: {
+            advisor_id: advisor.advisor_id,
+          },
+        },
+        booking_status: { in: ["COMPLETED", "IN_PROGRESS", "ASSIGNED"] }, // Focus on active/done cases? Or all? User said "Consulted", so mostly COMPLETED/IN_PROGRESS.
+        // Let's include all to see demand as well, maybe filter locally.
+      },
+      include: {
+        problemCategory: true,
+        student: {
+          include: {
+            profile: true,
+          },
+        },
+        timeSlot: true,
+        outcome: true,
+      },
+      orderBy: { booking_created_at: "desc" },
+    });
+
+    // 1. Problem Types Breakdown
+    const problemStats: Record<string, number> = {};
+    
+    // 2. Gender vs Problem
+    const genderProblemStats: Record<string, Record<string, number>> = {
+      Male: {},
+      Female: {},
+      Other: {},
+    };
+
+    // 3. Time Analysis (Week, Month) - Count visits
+    const visitsByMonth: Record<string, number> = {};
+    const visitsByDayOfWeek: Record<number, number> = {}; // 0-6
+
+    // 4. Repeat Consultations
+    const studentVisitCounts: Record<string, number> = {};
+
+    // 5. Risk Distribution
+    const riskDistribution = { HIGH: 0, MEDIUM: 0, LOW: 0, NORMAL: 0 };
+
+    bookings.forEach((booking) => {
+      // Problem Stats
+      const problemName = booking.problemCategory?.problem_category_name_th || "ไม่ระบุ";
+      problemStats[problemName] = (problemStats[problemName] || 0) + 1;
+
+      // Gender Stats
+      let gender = "Other";
+      // Check StudentGender enum or string? Schema says StudentGender?
+      // prisma schema: student_gender StudentGender?
+      // Need to check what StudentGender values are. Assuming MALE/FEMALE or similar.
+      // If it's a relation/enum, we treat as string.
+      const g = booking.student?.profile?.student_gender;
+      if (g === "MALE" || (g as any) === "ชาย") gender = "Male";
+      else if (g === "FEMALE" || (g as any) === "หญิง") gender = "Female";
+      
+      if (!genderProblemStats[gender]) genderProblemStats[gender] = {};
+      genderProblemStats[gender][problemName] = (genderProblemStats[gender][problemName] || 0) + 1;
+
+      // Time Stats
+      const date = booking.timeSlot?.time_slot_start_datetime || booking.booking_created_at;
+      const monthKey = date.toISOString().slice(0, 7); // YYYY-MM
+      visitsByMonth[monthKey] = (visitsByMonth[monthKey] || 0) + 1;
+      
+      const day = date.getDay();
+      visitsByDayOfWeek[day] = (visitsByDayOfWeek[day] || 0) + 1;
+
+      // Repeat Stats
+      const studentId = booking.student_id.toString();
+      studentVisitCounts[studentId] = (studentVisitCounts[studentId] || 0) + 1;
+
+      // Risk Distribution
+      // Use Outcome if available, else 0
+      const risk = booking.outcome?.booking_outcome_risk_level || 0;
+      if (risk >= 4) riskDistribution.HIGH++;
+      else if (risk === 3) riskDistribution.MEDIUM++;
+      else if (risk > 0) riskDistribution.LOW++;
+      else riskDistribution.NORMAL++;
+    });
+
+    // Process Repeat Stats
+    let repeatCount = 0;
+    let singleCount = 0;
+    Object.values(studentVisitCounts).forEach(c => {
+      if (c > 1) repeatCount++;
+      else singleCount++;
+    });
+
+    // ... inside getAdvisorAnalytics ...
+    return {
+      problemStats,
+      genderProblemStats,
+      visitsByMonth,     // For trend/exam analysis
+      visitsByDayOfWeek, // For weekly patterns
+      repeatStats: { repeat: repeatCount, single: singleCount },
+      riskDistribution
+    };
+  },
+
+  /**
+   * Get detailed student info for advisor view
+   */
+  async getStudentDetail(advisorAccountId: number, studentId: number) {
+     const advisor = await prisma.advisor.findUnique({
+      where: { account_id: advisorAccountId },
+    });
+
+    if (!advisor) return null;
+
+    // Verify student belongs to this advisor
+    const student = await prisma.student.findFirst({
+        where: {
+            student_id: studentId,
+            academic: {
+                advisor_id: advisor.advisor_id
+            }
+        },
+        include: {
+            profile: true,
+            academic: {
+                include: {
+                    faculty: true,
+                    department: true
+                }
+            },
+            addresses: {
+                include: {
+                    province: true
+                }
+            },
+            // Get all bookings history
+            bookings: {
+                orderBy: { booking_created_at: 'desc' },
+                include: {
+                    problemCategory: true,
+                    timeSlot: true,
+                    outcome: true,
+                    consultant: {
+                        include: {
+                            profile: true
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    return student;
   }
 };

@@ -1,7 +1,10 @@
 // features/dashboard/advisor/components/StudentListTable.tsx
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { StudentListItem } from "../hooks/useAdvisorStats";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { Button } from "@/components/ui/Button";
+import { Eye } from "lucide-react";
 
 interface Props {
   students: StudentListItem[];
@@ -24,18 +27,19 @@ export function StudentListTable({ students }: Props) {
                 <th className="px-4 py-3">คณะ</th>
                 <th className="px-4 py-3">ความเสี่ยงล่าสุด</th>
                 <th className="px-4 py-3">ความเคลื่อนไหวล่าสุด</th>
+                <th className="px-4 py-3 text-right">ดำเนินการ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {students.length === 0 ? (
                 <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                         ไม่พบข้อมูลนิสิต
                     </td>
                 </tr>
               ) : (
                 students.map((student) => (
-                    <tr key={student.id} className="bg-white hover:bg-gray-50">
+                    <tr key={student.id} className="bg-white hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 font-medium text-gray-900">{student.code || "-"}</td>
                     <td className="px-4 py-3">{student.name}</td>
                     <td className="px-4 py-3 text-gray-500">{student.faculty || "-"}</td>
@@ -48,6 +52,14 @@ export function StudentListTable({ students }: Props) {
                                 day: 'numeric', month: 'short', year: 'numeric'
                             }) 
                             : "ยังไม่มีกิจกรรม"}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                        <Link href={`/advisor/my-students/${student.id}`}>
+                            <Button variant="outline" size="sm" className="h-8 gap-2">
+                                <Eye className="w-3.5 h-3.5" />
+                                ดูข้อมูล
+                            </Button>
+                        </Link>
                     </td>
                     </tr>
                 ))

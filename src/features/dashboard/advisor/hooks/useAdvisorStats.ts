@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getAdviseeStats, getMyStudents, getAdvisorRiskTrends } from "../actions";
+import { getAdviseeStats, getMyStudents, getAdvisorRiskTrends, getAdvisorAnalytics } from "../actions";
 import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
 
 export interface AdvisorStats {
@@ -36,9 +36,11 @@ export function useAdvisorStats() {
     loginToastKey: "advisor_login_toast"
   });
   
+  // ... inside useAdvisorStats ...
   const [stats, setStats] = useState<AdvisorStats | null>(null);
   const [students, setStudents] = useState<StudentListItem[]>([]);
   const [riskTrends, setRiskTrends] = useState<RiskTrendItem[]>([]);
+  const [analytics, setAnalytics] = useState<any>(null); // [NEW] Store comprehensive analytics
   const [isLoading, setIsLoading] = useState(true);
 
   // Filter state
@@ -50,23 +52,17 @@ export function useAdvisorStats() {
     async function fetchData() {
         setIsLoading(true);
         try {
-            // Fetch basic stats and trends once or always? 
-            // Trends usually don't change with search filters unless we filter trends too.
-            // Requirement said "Update students list". 
-            // Let's refetch everything to be safe or optimize later.
-            // Stats (active cases) might be affected by search? PROBABLY NOT.
-            // Let's assume KPI cards are global for advisor, but Table is filtered.
-            // We will fetch everything for simplicity, but only pass filters to getMyStudents.
-            
-            const [s, st, rt] = await Promise.all([
+            const [s, st, rt, an] = await Promise.all([
                 getAdviseeStats(user!),
                 getMyStudents(user!, filters),
-                getAdvisorRiskTrends(user!)
+                getAdvisorRiskTrends(user!),
+                getAdvisorAnalytics(user!) // [NEW] Fetch analytics
             ]);
             
             if (s) setStats(s);
             setStudents(st);
             setRiskTrends(rt);
+            if (an) setAnalytics(an);
         } catch (err) {
             console.error(err);
         } finally {
@@ -74,16 +70,12 @@ export function useAdvisorStats() {
         }
     }
 
-    // Debounce search slightly if we were doing generic input, 
-    // but FilterBar usually controls "apply". 
-    // If FilterBar updates state instantly, we might need debounce. 
-    // For now, simple effect dependency.
     const timer = setTimeout(() => {
         fetchData();
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [user, filters]); // depend on filters
+  }, [user, filters]);
 
-  return { stats, students, riskTrends, isLoading, filters, setFilters };
+  return { stats, students, riskTrends, analytics, isLoading, filters, setFilters };
 }

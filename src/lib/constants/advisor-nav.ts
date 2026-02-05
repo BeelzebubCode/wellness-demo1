@@ -7,15 +7,11 @@ export const ADVISOR_NAV: NavItem[] = [
     href: "/advisor",
     label: "หน้าแรก",
     icon: LayoutDashboard,
+    exact: true,
   },
   {
     href: "/advisor/my-students",
     label: "นิสิตในที่ปรึกษา",
     icon: Users,
-  },
-  {
-    href: "/advisor/appointments",
-    label: "นัดหมาย",
-    icon: Calendar,
   },
 ];

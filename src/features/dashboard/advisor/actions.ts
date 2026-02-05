@@ -29,3 +29,21 @@ export async function getAdvisorRiskTrends(user: AuthUser) {
         return [];
     }
 }
+
+export async function getAdvisorAnalytics(user: AuthUser) {
+    try {
+        return await AdvisorService.getAdvisorAnalytics(user.id);
+    } catch (error) {
+        console.error("Failed to fetch advisor analytics:", error);
+        return null;
+    }
+}
+
+export async function getStudentDetail(user: AuthUser, studentId: number) {
+    try {
+        return await AdvisorService.getStudentDetail(user.id, studentId);
+    } catch (error) {
+        console.error("Failed to fetch student detail:", error);
+        return null;
+    }
+}
