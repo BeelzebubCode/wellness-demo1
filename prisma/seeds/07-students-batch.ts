@@ -1,4 +1,4 @@
-// prisma/seeds/07-students.ts
+// prisma/seeds/07-students-batch.ts
 // 🚀 OPTIMIZED VERSION: Uses batch inserts instead of individual upserts
 // Expected performance: ~5-10 minutes for 2M records (vs hours with upserts)
 
@@ -14,24 +14,8 @@ import { randomPerson } from "../seed-data/people";
 
 import { getStudentCountForUniversity, DEFAULT_STUDENT_COUNT } from "../../src/lib/constants/university-student-counts";
 
-// =============================================================================
-// 🔧 SEED CONFIGURATION (แก้ตรงนี้ง่ายๆ)
-// =============================================================================
-// วิธีใช้:
-// 1. Development Mode (เร็ว - 30 คนต่อมหาลัย): 
-//    → ตั้งค่า: SEED_DEV_MODE=true npx prisma db seed
-//
-// 2. Full Scale Mode (เต็มจำนวนตามไฟล์จริง):
-//    → ตั้งค่า: npx prisma db seed
-//    → หรือจะใส่: SEED_DEV_MODE=false npx prisma db seed
-//
-// เปลี่ยน Batch Size (ถ้าต้องการเร็วขึ้น):
-//    → เพิ่ม BATCH_SIZE เป็น 5000 หรือ 10000 (เสี่ยง timeout ถ้ามากเกินไป)
-// =============================================================================
-
 const MAX_STUDENTS_PER_UNI = process.env.SEED_DEV_MODE === "true" ? 30 : 999999;
-const BATCH_SIZE = 5000; // เพิ่มจาก 1000 → 5000 เพื่อความเร็ว (แต่ยังปลอดภัย)
-
+const BATCH_SIZE = 1000; // Insert 1000 records at a time
 
 export async function seedStudents(
   prisma: PrismaClient,

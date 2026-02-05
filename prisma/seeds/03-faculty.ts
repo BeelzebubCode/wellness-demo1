@@ -117,6 +117,36 @@ export async function seedFacultiesDepartments(
     for (const dep of depts) {
       deptByUniAndCode.set(`${uni.university_id}:${dep.department_code}`, dep);
     }
+
+    // ✅ FIX: สร้าง default department ถ้ามหาลัยไม่มีสาขาเลย
+    if (depts.length === 0) {
+      console.log(`   ⚠️  ${uni.university_code} has no departments. Creating default department...`);
+      
+      // สร้าง default faculty ก่อน
+      const defaultFaculty = await prisma.faculty.create({
+        data: {
+          university_id: uni.university_id,
+          faculty_code: "GEN",
+          faculty_name_th: "คณะทั่วไป",
+          faculty_name_en: "General Faculty",
+          education_field_group_id: null,
+        },
+      });
+
+      // สร้าง default department
+      const defaultDept = await prisma.department.create({
+        data: {
+          university_id: uni.university_id,
+          faculty_id: defaultFaculty.faculty_id,
+          department_code: "GEN",
+          department_name_th: "สาขาทั่วไป",
+          department_name_en: "General Department",
+        },
+      });
+
+      deptByUniAndCode.set(`${uni.university_id}:GEN`, defaultDept);
+      facultyByUniAndCode.set(`${uni.university_id}:GEN`, defaultFaculty);
+    }
   }
 
   return { facultyByUniAndCode, deptByUniAndCode };
