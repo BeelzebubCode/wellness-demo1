@@ -15,7 +15,10 @@ export interface UniversityMapData {
   type: string;
   logo: string;
   dominantProblem?: string | null;
+  dominantProblemCode?: string | null;
   dominantProblemTH?: string | null;
+  dominantProblemCount: number;
+  problemBreakdown: Record<string, number>;
 }
 
 export function useUniversitiesMap() {

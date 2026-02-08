@@ -296,6 +296,8 @@ export async function seedBookings(
       // ✅ retry เพื่อเลี่ยงชน unique (u, student, slot)
       for (let attempt = 0; attempt < MAX_TRIES; attempt++) {
         student = pickStudentForStatus(plan.status);
+        if (!student) continue; // ✅ Prevent crash if no student found
+
         category = pickCategoryForUni(student.university_id);
 
         slot = pickSlotByStatus(student.university_id, plan.status);

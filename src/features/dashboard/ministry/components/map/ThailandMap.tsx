@@ -1,102 +1,104 @@
 // src/features/dashboard/ministry/components/map/ThailandMap.tsx
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import { divIcon } from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { MapFilters, type MapFilterState } from "./MapFilters";
+import L from "leaflet";
+import ReactDOMServer from "react-dom/server";
+
+import { MapLeftSidebar, MapFilterState } from "./MapLeftSidebar";
 import { useUniversitiesMap } from "../../hooks/useUniversitiesMap";
+import type { UniversityMapData } from "../../hooks/useUniversitiesMap";
 import { Layers, Map as MapIcon } from "lucide-react";
-import { renderToString } from "react-dom/server";
+import { UniversityRankings } from "./UniversityRankings";
 
 // Fix Leaflet default icon
-import L from "leaflet";
 const iconRetinaUrl = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png";
 const iconUrl = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png";
 const shadowUrl = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png";
 L.Icon.Default.mergeOptions({ iconRetinaUrl, iconUrl, shadowUrl });
 
-function UniversityPin({ data }: { data: any }) {
-  // Use correct logo path
-  const logoUrl = `/images/logo/${data.code}_logo.png`;
+// University Marker Component with Opacity support
+function UniversityPin({ data, opacity = 1 }: { data: UniversityMapData; opacity?: number }) {
+  const logoUrl = data.logo;
 
-  // Color mapping for problems
-  const getProblemColor = (problem: string) => {
-    if (!problem) return "#6366f1"; // Default Indigo
-    const p = problem.toLowerCase();
-    if (p.includes("depression") || p.includes("ซึมเศร้า")) return "#ef4444"; // Red
-    if (p.includes("anxiety") || p.includes("วิตกกังวล")) return "#f97316"; // Orange
-    if (p.includes("stress") || p.includes("เครียด")) return "#eab308"; // Yellow
-    if (p.includes("relationship") || p.includes("ความสัมพันธ์")) return "#ec4899"; // Pink
-    if (p.includes("burnout") || p.includes("หมดไฟ")) return "#8b5cf6"; // Purple
-    return "#3b82f6"; // Blue default
-  };
-
-  const problemColor = getProblemColor(data.dominantProblem);
+  // Determine priority color based on dominant problem
+  const problemColor = (() => {
+    if (!data.dominantProblemTH) return "#6366f1";
+    const problem = data.dominantProblemTH.toLowerCase();
+    if (problem.includes("เครียด")) return "#f59e0b";
+    if (problem.includes("ซึมเศร้า")) return "#ef4444";
+    if (problem.includes("วิตกกังวล")) return "#8b5cf6";
+    return "#6366f1";
+  })();
 
   const customIcon = divIcon({
-    className: "custom-marker",
-    html: renderToString(
-      <div style={{ position: "relative" }}>
-        <div
+    html: ReactDOMServer.renderToString(
+      <div
+        style={{
+          width: "48px",
+          height: "48px",
+          borderRadius: "50%",
+          backgroundColor: "#fff",
+          border: "2px solid #e5e7eb",  // 🔥 Subtle gray border for pure circular look
+          boxShadow: `0 2px 8px rgba(0,0,0,0.12), 0 0 0 2px ${problemColor}20`,  // Subtle shadow + problem glow
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          overflow: "hidden",
+          position: "relative",
+          opacity: opacity,
+        }}
+        className="university-pin"
+      >
+        <img
+          src={logoUrl}
+          alt={data.code}
           style={{
-            width: "50px",
-            height: "50px",
+            width: "40px",
+            height: "40px",
+            objectFit: "contain",
             borderRadius: "50%",
-            background: "white",
-            border: `3px solid ${problemColor}`,
-            boxShadow: `0 4px 16px ${problemColor}80`, // Hex opacity 50%
+          }}
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = "none";
+            const parent = (e.target as HTMLImageElement).parentElement;
+            if (parent) {
+              parent.innerHTML = `<div style="font-weight: 700; font-size: 10px; color: #6b7280">${data.code}</div>`;
+            }
+          }}
+        />
+        
+        {data.dominantProblemCount > 0 && data.dominantProblemCount >= 50 && (
+         <div style={{
+            position: "absolute",
+            top: -2,
+            right: -2,
+            background: problemColor,
+            color: "#fff",
+            fontSize: "9px",
+            fontWeight: 700,
+            width: "16px",
+            height: "16px",
+            borderRadius: "50%",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            overflow: "hidden",
-            transition: "all 0.3s ease",
-            position: "relative",
-          }}
-          className="university-pin"
-        >
-          <img
-            src={logoUrl}
-            alt={data.code}
-            style={{
-              width: "44px",
-              height: "44px",
-              objectFit: "contain",
-            }}
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
-              const parent = (e.target as HTMLImageElement).parentElement;
-              if (parent) {
-                parent.innerHTML = `<div style="font-size: 12px; font-weight: 700; color: ${problemColor};">${data.code}</div>`;
-              }
-            }}
-          />
-        </div>
-        {data.dominantProblem && (
-           <div style={{
-             position: "absolute",
-             bottom: "-6px",
-             left: "50%",
-             transform: "translateX(-50%)",
-             background: problemColor,
-             color: "white",
-             fontSize: "8px",
-             padding: "2px 6px",
-             borderRadius: "10px",
-             whiteSpace: "nowrap",
-             fontWeight: 700,
-             boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
-             zIndex: 10
-           }}>
-             !
-           </div>
-        )}
+            boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+            border: "2px solid #fff",
+            zIndex: 10
+          }}>
+            !
+          </div>
+       )}
       </div>
     ),
-    iconSize: [50, 50],
-    iconAnchor: [25, 50],
-    popupAnchor: [0, -50],
+    iconSize: [48, 48],
+    iconAnchor: [24, 48],
+    popupAnchor: [0, -48],
+    className: '',
   });
 
   return (
@@ -111,13 +113,13 @@ function UniversityPin({ data }: { data: any }) {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "10px" }}>
             <div>
-              <div style={{ fontSize: "10px", color: "#9ca3af", textTransform: "uppercase" }}>Students</div>
+              <div style={{ fontSize: "10px", color: "#9ca3af", textTransform: "uppercase" }}>นักศึกษา</div>
               <div style={{ fontWeight: 600, fontSize: "13px", color: "#6366f1" }}>
                 {data.students.toLocaleString()}
               </div>
             </div>
             <div>
-              <div style={{ fontSize: "10px", color: "#9ca3af", textTransform: "uppercase" }}>Top Issue</div>
+              <div style={{ fontSize: "10px", color: "#9ca3af", textTransform: "uppercase" }}>ปัญหาหลัก</div>
               <div style={{ fontWeight: 600, fontSize: "12px", color: problemColor }}>
                  {data.dominantProblemTH || "N/A"}
               </div>
@@ -127,17 +129,17 @@ function UniversityPin({ data }: { data: any }) {
             href={`/ministry/universities/${data.code}`}
             style={{
               display: "block",
-              background: `linear-gradient(135deg, ${problemColor} 0%, ${problemColor}dd 100%)`, // Use problem color for button
-              color: "white",
               textAlign: "center",
               padding: "8px 12px",
+              background: "#6366f1",
+              color: "#fff",
               borderRadius: "8px",
               fontSize: "13px",
               fontWeight: 600,
               textDecoration: "none",
             }}
           >
-            View Dashboard →
+            ดูแดชบอร์ด →
           </a>
         </div>
       </Popup>
@@ -163,23 +165,36 @@ function MapStyleController({ mapStyle }: { mapStyle: string }) {
   );
 }
 
-// ✅ Auto-fit bounds when data changes
-function MapBoundsController({ data }: { data: any[] }) {
+// ✅ Auto-fit bounds when data changes (with initial Thailand view + reset support)
+function MapBoundsController({ data, resetZoom = false }: { data: any[]; resetZoom?: boolean }) {
   const map = useMap();
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
-    if (data.length > 0) {
+    // On first load, always center on Thailand
+    if (!hasInitialized.current) {
+      map.setView([13.7563, 100.5018], 6);
+      hasInitialized.current = true;
+      return;
+    }
+
+    // 🔥 NEW: Reset to Thailand view when "ทั้งหมด" is selected
+    if (resetZoom) {
+      map.setView([13.7563, 100.5018], 6);
+      return;
+    }
+
+    // After initial load, fit bounds only if there's filtered data
+    if (data.length > 0 && data.length < 100) {
+      // Only fit bounds if it's a filtered subset (not all universities)
       try {
         const bounds = L.latLngBounds(data.map((u) => [u.lat, u.lng]));
         map.fitBounds(bounds, { padding: [50, 50], maxZoom: 10 });
       } catch (e) {
         console.warn("Failed to fit bounds:", e);
       }
-    } else {
-        // Reset to Thailand view if no data (or keep current)
-        // map.setView([13.7563, 100.5018], 6); 
     }
-  }, [data, map]);
+  }, [data, map, resetZoom]);
 
   return null;
 }
@@ -190,23 +205,48 @@ export function ThailandMap() {
     region: "",
     type: "",
     stress: "",
+    problemCategories: [], // 🔥 Ensure initialized
   });
   const [mapStyle, setMapStyle] = useState<"street" | "satellite" | "terrain">("street");
 
   const { universities, isLoading, error } = useUniversitiesMap();
 
-  // Filter universities
-  const filteredData = useMemo(() => {
-    if (!universities) return [];
+  // 🔥 NEW: Separate all data from filtered data
+  const allData = useMemo(() => {
+    if (!universities || universities.length === 0) return [];
 
     return universities.filter((uni) => {
-      if (filter.search && !uni.name.toLowerCase().includes(filter.search.toLowerCase())) return false;
-      // ✅ Compare with region name (English), not regionCode
-      if (filter.region && uni.region !== filter.region) return false;
-      if (filter.type && uni.type !== filter.type) return false;
+      // Search filter
+      if (filter.search && !uni.name.toLowerCase().includes(filter.search.toLowerCase())) {
+        return false;
+      }
+
+      // Type filter
+      if (filter.type && uni.type !== filter.type) {
+        return false;
+      }
+
+      // Stress filter (stub)
+      // if (filter.stress) { ... }
+
       return true;
     });
-  }, [universities, filter]);
+  }, [universities, filter.search, filter.type, filter.stress]);
+
+  // Selected region universities (fully visible)
+  const selectedRegionData = useMemo(() => {
+    if (!filter.region) return allData; // No region filter
+    return allData.filter((uni) => uni.regionCode === filter.region); // 🔥 Fixed: use regionCode
+  }, [allData, filter.region]);
+
+  // Other region universities (dimmed)
+  const otherRegionData = useMemo(() => {
+    if (!filter.region) return []; // No dimming if no region selected
+    return allData.filter((uni) => uni.regionCode !== filter.region); // 🔥 Fixed: use regionCode
+  }, [allData, filter.region]);
+
+  // For sidebar display (only selected region)
+  const filteredData = selectedRegionData;
 
   if (isLoading) {
     return (
@@ -225,8 +265,14 @@ export function ThailandMap() {
   }
 
   return (
-    <div className="relative w-full h-full overflow-hidden shadow-2xl border-0">
-      <MapFilters filter={filter} onChange={setFilter} />
+    <div className="flex h-[calc(100vh-4rem)] w-full overflow-hidden bg-gray-50">
+      {/* Left Sidebar - Filters */}
+      <div className="w-[320px] h-full flex-shrink-0 overflow-y-auto border-r border-gray-200 bg-white">
+        <MapLeftSidebar filter={filter} onChange={setFilter} />
+      </div>
+
+      {/* Center - Map */}
+      <div className="flex-1 relative h-full overflow-hidden">
 
       <MapContainer
         center={[13.7563, 100.5018]}
@@ -236,110 +282,21 @@ export function ThailandMap() {
         scrollWheelZoom={true}
       >
         <MapStyleController mapStyle={mapStyle} />
-        <MapBoundsController data={filteredData} />
+       <MapBoundsController data={filteredData} resetZoom={!filter.region} />
 
-        {filteredData.map((uni) => (
-          <UniversityPin key={uni.id} data={uni} />
+        {/* Selected region universities (fully visible) */}
+        {selectedRegionData.map((uni) => (
+          <UniversityPin key={uni.id} data={uni} opacity={1} />
+        ))}
+
+        {/* Other region universities (dimmed) */}
+        {otherRegionData.map((uni) => (
+          <UniversityPin key={`dimmed-${uni.id}`} data={uni} opacity={0.3} />
         ))}
       </MapContainer>
 
-      {/* National Insights Overlay */}
-      <div className="absolute top-6 right-6 z-[1000] w-[280px] bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 p-4 animate-in fade-in slide-in-from-right-4">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          <h3 className="text-sm font-bold text-gray-800">Thailand Overview</h3>
-        </div>
-        
-        <div className="space-y-3">
-          <div className="p-3 bg-red-50 rounded-xl border border-red-100">
-            <div className="text-[10px] text-red-600 font-semibold uppercase tracking-wider mb-1">Top Concern</div>
-            <div className="flex items-center justify-between">
-              <span className="text-red-700 font-bold text-sm">Depression (35%)</span>
-              <span className="text-[10px] text-red-500 bg-white px-1.5 py-0.5 rounded-md shadow-sm">High Risk</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div className="p-2 bg-blue-50 rounded-lg border border-blue-100">
-              <div className="text-[10px] text-blue-500 uppercase">Consultants</div>
-              <div className="text-lg font-bold text-blue-700">1,240</div>
-            </div>
-            <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-100">
-              <div className="text-[10px] text-indigo-500 uppercase">Total Cases</div>
-              <div className="text-lg font-bold text-indigo-700">8.5k</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-3 pt-3 border-t border-gray-100">
-             <div className="text-[10px] font-semibold text-gray-500 mb-2">Issue Distribution</div>
-             <div className="flex h-1.5 w-full rounded-full overflow-hidden">
-                <div className="bg-red-500 w-[35%]" />
-                <div className="bg-orange-500 w-[25%]" />
-                <div className="bg-yellow-500 w-[20%]" />
-                <div className="bg-gray-200 w-[20%]" />
-             </div>
-             <div className="flex justify-between mt-1 text-[8px] text-gray-400">
-                <span>Depress</span>
-                <span>Anxiety</span>
-                <span>Stress</span>
-                <span>Other</span>
-             </div>
-        </div>
-      </div>
-
-      {/* National Insights Overlay */}
-      <div className="absolute top-6 right-6 z-[1000] w-[280px] bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 p-4 animate-in fade-in slide-in-from-right-4 pointer-events-auto">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          <h3 className="text-sm font-bold text-gray-800">Thailand Overview</h3>
-        </div>
-        
-        <div className="space-y-3">
-          <div className="p-3 bg-red-50 rounded-xl border border-red-100">
-            <div className="text-[10px] text-red-600 font-semibold uppercase tracking-wider mb-1">Top Concern</div>
-            <div className="flex items-center justify-between">
-              <span className="text-red-700 font-bold text-sm">Depression (35%)</span>
-              <span className="text-[10px] text-red-500 bg-white px-1.5 py-0.5 rounded-md shadow-sm">High Risk</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div className="p-2 bg-blue-50 rounded-lg border border-blue-100">
-              <div className="text-[10px] text-blue-500 uppercase">Consultants</div>
-              <div className="text-lg font-bold text-blue-700">1,240</div>
-            </div>
-            <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-100">
-              <div className="text-[10px] text-indigo-500 uppercase">Total Cases</div>
-              <div className="text-lg font-bold text-indigo-700">8.5k</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-3 pt-3 border-t border-gray-100">
-             <div className="text-[10px] font-semibold text-gray-500 mb-2">Issue Distribution</div>
-             <div className="flex h-1.5 w-full rounded-full overflow-hidden">
-                <div className="bg-red-500 w-[35%]" />
-                <div className="bg-orange-500 w-[25%]" />
-                <div className="bg-yellow-500 w-[20%]" />
-                <div className="bg-gray-200 w-[20%]" />
-             </div>
-             <div className="flex justify-between mt-1 text-[8px] text-gray-400">
-                <span>Depress</span>
-                <span>Anxiety</span>
-                <span>Stress</span>
-                <span>Other</span>
-             </div>
-        </div>
-      </div>
-
-      {/* Map Style Switcher */}
-      <div className="absolute bottom-4 right-4 z-[1000] bg-white/95 backdrop-blur-md rounded-xl shadow-lg border border-gray-200 p-3">
-        <div className="text-xs font-bold text-gray-800 mb-2 flex items-center gap-2">
-          <Layers className="w-3.5 h-3.5" />
-          Map Style
-        </div>
-        <div className="flex gap-2">
+      {/* Map Style Controls */}
+      <div className="absolute bottom-6 right-6 z-[1000] flex gap-2 bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-gray-200 p-2 animate-in fade-in slide-in-from-right-4 pointer-events-auto">
           <button
             onClick={() => setMapStyle("street")}
             className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
@@ -348,7 +305,7 @@ export function ThailandMap() {
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            <MapIcon className="w-4 h-4" />
+            🗺️
           </button>
           <button
             onClick={() => setMapStyle("satellite")}
@@ -371,7 +328,6 @@ export function ThailandMap() {
             🏔️
           </button>
         </div>
-      </div>
 
       {/* CSS 3D Effect */}
       <style jsx global>{`
@@ -389,6 +345,18 @@ export function ThailandMap() {
           background: #f1f5f9;
         }
       `}</style>
+      </div>
+
+      {/* Right Sidebar - University Rankings */}
+      <div className="w-[380px] h-full flex-shrink-0 border-l border-gray-200 bg-white">
+        <UniversityRankings 
+          universities={filteredData}
+          problemCategories={filter.problemCategories}
+          onSelect={(code) => {
+            window.location.href = `/ministry/universities/${code}`;
+          }}
+        />
+      </div>
     </div>
   );
 }

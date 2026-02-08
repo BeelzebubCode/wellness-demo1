@@ -41,6 +41,8 @@ interface UniversityNetworkMapProps {
   universityCode: string;
   centerLat: number;
   centerLng: number;
+  connections?: any[]; // Allow external connections
+  hideInternalPanel?: boolean; // Allow hiding the floating panel
 }
 
 type RankingType = "proximity" | "students" | "connections";
@@ -49,30 +51,35 @@ export function UniversityNetworkMap({
   universityCode,
   centerLat,
   centerLng,
+  connections: externalConnections,
+  hideInternalPanel = false,
 }: UniversityNetworkMapProps) {
   const [isMounted, setIsMounted] = useState(false);
-  const [showNetwork, setShowNetwork] = useState(false);
-  const [connections, setConnections] = useState<any[]>([]);
+  const [showNetwork, setShowNetwork] = useState(true); // Default to true if panel is hidden
+  const [internalConnections, setInternalConnections] = useState<any[]>([]);
   const [rankingType, setRankingType] = useState<RankingType>("proximity");
+
+  const connections = externalConnections || internalConnections;
 
   useEffect(() => {
     setIsMounted(true);
 
-    // Fetch connections
-    async function fetchConnections() {
-      try {
-        const response = await fetch(`/api/v2/ministry/universities/${universityCode}`);
-        if (response.ok) {
-          const data = await response.json();
-          setConnections(data.university.connections || []);
+    // Only fetch if external connections are not provided
+    if (!externalConnections) {
+        async function fetchConnections() {
+        try {
+            const response = await fetch(`/api/v2/ministry/universities/${universityCode}`);
+            if (response.ok) {
+            const data = await response.json();
+            setInternalConnections(data.university.connections || []);
+            }
+        } catch (error) {
+            console.error("Error fetching connections:", error);
         }
-      } catch (error) {
-        console.error("Error fetching connections:", error);
-      }
+        }
+        fetchConnections();
     }
-
-    fetchConnections();
-  }, [universityCode]);
+  }, [universityCode, externalConnections]);
 
   // Calculate Top 10 based on ranking type
   const top10 = useMemo(() => {
@@ -174,8 +181,8 @@ export function UniversityNetworkMap({
         {showNetwork ? "Hide Network" : "Show Network"}
       </button>
 
-      {/* Top 10 Rankings Panel */}
-      {showNetwork && connections.length > 0 && (
+      {/* Top 10 Rankings Panel - Only if not hidden */}
+      {!hideInternalPanel && showNetwork && connections.length > 0 && (
         <div className="absolute top-4 left-4 z-[1000] bg-white/95 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200 w-80">
           {/* Header with Selector */}
           <div className="px-4 py-3 border-b border-gray-200">

@@ -23,8 +23,12 @@ export default function MinistryLayout({ children }: { children: React.ReactNode
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-  // ✅ Check if we are on the main dashboard (3D Map)
+  // ✅ Check if we are on the main dashboard (3D Map) OR University Detail (Immersive)
   const is3DDashboard = pathname === "/ministry";
+  const isUniversityDetail = pathname.startsWith("/ministry/universities/");
+  
+  // Immersive Pages disable default container/padding
+  const isImmersive = is3DDashboard || isUniversityDetail; 
 
   if (isLoginPage) return <>{children}</>;
 
@@ -36,12 +40,37 @@ export default function MinistryLayout({ children }: { children: React.ReactNode
     );
   }
 
-  // ✅ Immersive Layout for 3D Dashboard
-  if (is3DDashboard) {
-    return <>{children}</>;
+  // ✅ Immersive Layout (No default padding/constraints)
+  if (isImmersive) {
+     if (is3DDashboard) return <>{children}</>; // 3D Map often handles its own layout entirely
+     
+     // University Detail uses Sidebar/Header but needs full width content area
+     return (
+        <div className="min-h-screen bg-gray-50 flex font-sans">
+          <MinistrySidebar
+            isOpen={isMobileMenuOpen}
+            isCollapsed={isSidebarCollapsed}
+            onCloseMobile={() => setIsMobileMenuOpen(false)}
+            onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+          />
+    
+          <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
+            <AdminHeader
+              adminName={(user as any)?.name || "ท่านรัฐมนตรี"}
+              adminRole="Ministry of Higher Education"
+              onMenuClick={() => setIsMobileMenuOpen(true)}
+            />
+    
+            <main className="flex-1 overflow-x-hidden overflow-y-auto p-0"> 
+               {/* 🚀 No Padding, No Max-Width for Immersive Detail Page */}
+               {children}
+            </main>
+          </div>
+        </div>
+     );
   }
 
-  // Standard Layout for other pages
+  // Standard Layout for other pages (Tables, Settings, etc.)
   return (
     <div className="min-h-screen bg-gray-50 flex font-sans">
       <MinistrySidebar

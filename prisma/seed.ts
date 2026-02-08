@@ -13,6 +13,7 @@ import { seedTimeSlots } from "./seeds/08-timeslots";
 import { seedBookings } from "./seeds/09-bookings";
 import { seedUniversityTypes } from "./seeds/10-university-types";
 import { seedUniversityConnections } from "./seeds/11-university-connections";
+import { seedManualConnections } from "./seeds/12-manual-connections";
 
 const prisma = new PrismaClient();
 

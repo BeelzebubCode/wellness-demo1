@@ -26,6 +26,10 @@ export async function GET(req: NextRequest) {
     const pageSizeRaw = parseInt(searchParams.get("pageSize") || "100");
     const pageSize = Math.min(500, Math.max(1, pageSizeRaw)); // cap at 500 for map view
     
+    // 🎯 NEW: Filtering & sorting
+    const problemCategory = searchParams.get("problemCategory") || ""; // Filter by problem code
+    const sortBy = searchParams.get("sortBy") || ""; // "problemCount" to sort by problem frequency
+    
     // 🚀 CACHE STRATEGY: Check Redis first
     // Cache key includes pagination to avoid incorrect data
     const cacheKey = `${CacheKeys.universities()}:p${page}:s${pageSize}`;
@@ -110,14 +114,16 @@ export async function GET(req: NextRequest) {
     const categories = await prisma.problemCategory.findMany({
       select: {
         problem_category_id: true,
+        problem_category_code: true,
         problem_category_name_en: true,
         problem_category_name_th: true,
       }
     });
     const categoryMap = new Map(categories.map(c => [c.problem_category_id, c]));
 
-    // 3. Find top category per university
+    // 3. Find top category per university AND build full breakdown
     const topCategoryByUni = new Map<number, any>(); // uniId -> { categoryName, count }
+    const problemBreakdownByUni = new Map<number, Record<string, number>>(); // uniId -> { STRESS: 10, ANXIETY: 5 }
     
     // Group stats by university first
     const statsByUni: Record<number, typeof categoryStats> = {};
@@ -126,12 +132,22 @@ export async function GET(req: NextRequest) {
       statsByUni[stat.university_id].push(stat);
     }
 
-    // Determine max for each
+    // Determine max for each AND build full breakdown
     for (const uniId of universityIds) {
       const stats = statsByUni[uniId];
       if (!stats || stats.length === 0) continue;
 
-      // Find max count
+      // Build full problem breakdown
+      const breakdown: Record<string, number> = {};
+      for (const stat of stats) {
+        const catInfo = categoryMap.get(stat.problem_category_id);
+        if (catInfo && catInfo.problem_category_code) {
+          breakdown[catInfo.problem_category_code] = stat._count._all;
+        }
+      }
+      problemBreakdownByUni.set(uniId, breakdown);
+
+      // Find max count (dominant problem)
       const top = stats.reduce((prev, current) => 
         (current._count._all > prev._count._all) ? current : prev
       );
@@ -139,7 +155,8 @@ export async function GET(req: NextRequest) {
       const catInfo = categoryMap.get(top.problem_category_id);
       if (catInfo) {
         topCategoryByUni.set(uniId, {
-          name: catInfo.problem_category_name_en || "Unknown", // Prefer EN for variable consistency or TH if needed
+          code: catInfo.problem_category_code || "UNKNOWN",
+          name: catInfo.problem_category_name_en || "Unknown",
           nameTH: catInfo.problem_category_name_th,
           count: top._count._all,
         });
@@ -154,8 +171,9 @@ export async function GET(req: NextRequest) {
     }
 
     // Transform data for the map
-    const mapData = universities.map((uni) => {
+    let mapData = universities.map((uni) => {
       const topIssue = topCategoryByUni.get(uni.university_id);
+      const problemBreakdown = problemBreakdownByUni.get(uni.university_id) || {};
       
       return {
         id: uni.university_code,
@@ -171,11 +189,28 @@ export async function GET(req: NextRequest) {
         students: universityStudentCounts[uni.university_code] ?? uni._count.students,
         type: uni.university_type || "PUBLIC",
         logo: `/images/logo/${uni.university_code}_logo.png`,
-        // ✨ New field
+        // ✨ Problem statistics
         dominantProblem: topIssue ? topIssue.name : null,
+        dominantProblemCode: topIssue ? topIssue.code : null,
         dominantProblemTH: topIssue ? topIssue.nameTH : null,
+        dominantProblemCount: topIssue ? topIssue.count : 0,
+        problemBreakdown, // Full breakdown: { STRESS: 10, ANXIETY: 5, ... }
       };
     });
+
+    // 🎯 Apply problem category filter
+    if (problemCategory) {
+      mapData = mapData.filter(uni => 
+        uni.problemBreakdown[problemCategory] && uni.problemBreakdown[problemCategory] > 0
+      );
+    }
+
+    // 🎯 Apply sorting
+    if (sortBy === "problemCount") {
+      mapData.sort((a, b) => b.dominantProblemCount - a.dominantProblemCount);
+    } else if (sortBy === "students") {
+      mapData.sort((a, b) => b.students - a.students);
+    }
 
     const response = {
       success: true,
