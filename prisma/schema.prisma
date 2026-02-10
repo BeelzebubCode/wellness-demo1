@@ -66,8 +66,10 @@ model University {
   BookingAssignment                       BookingAssignment[]
   BorrowOnCallShift                       BorrowOnCallShift[]
 
-  connectionsFrom UniversityConnection[] @relation("SourceUniversity")
-  connectionsTo   UniversityConnection[] @relation("TargetUniversity")
+  connectionsFrom    UniversityConnection[] @relation("SourceUniversity")
+  connectionsTo      UniversityConnection[] @relation("TargetUniversity")
+  consultantShifts   ConsultantShift[]
+  shiftBorrowPeriods ShiftBorrowPeriod[]
 
   @@index([province_id])
   @@index([university_is_active])
@@ -368,6 +370,7 @@ model Consultant {
   borrowAssignments BorrowAssignment[]
   timeSlotShifts    TimeSlotShift[]
   BookingAssignment BookingAssignment[]
+  shifts            ConsultantShift[] // [NEW] 14-day shifts
 
   @@unique([university_id, consultant_id])
   @@index([organization_id])
@@ -1025,6 +1028,7 @@ model BorrowAssignment {
 
   onCallShift       BorrowOnCallShift?  @relation(fields: [borrow_on_call_shift_id], references: [borrow_on_call_shift_id])
   BookingAssignment BookingAssignment[]
+  shiftBorrowPeriod ShiftBorrowPeriod? // [NEW] Optional link from shift borrow period
 
   @@unique([borrow_request_id, consultant_id])
   @@index([consultant_id, borrow_assign_start_at])
@@ -1058,6 +1062,63 @@ model BorrowOnCallShift {
   @@index([consultant_university_id, on_call_start_at])
   @@index([consultant_id, on_call_start_at])
   @@map("borrow_on_call_shift")
+}
+
+// [NEW] Consultant 14-day shift tracking
+model ConsultantShift {
+  shift_id      Int @id @default(autoincrement())
+  consultant_id Int
+  university_id Int // Home university
+
+  // 14-day shift period
+  shift_start_date DateTime @db.Date
+  shift_end_date   DateTime @db.Date
+
+  // Progress tracking
+  days_worked    Int @default(0) // 0-14
+  days_remaining Int @default(14) // 14-0
+
+  // Status
+  status ConsultantShiftStatus @default(ACTIVE)
+
+  // Timestamps
+  created_at   DateTime  @default(now()) @db.Timestamptz(3)
+  completed_at DateTime? @db.Timestamptz(3)
+
+  consultant    Consultant          @relation(fields: [consultant_id], references: [consultant_id])
+  university    University          @relation(fields: [university_id], references: [university_id])
+  borrowPeriods ShiftBorrowPeriod[]
+
+  @@index([consultant_id, status])
+  @@index([shift_start_date, shift_end_date])
+  @@map("consultant_shift")
+}
+
+// [NEW] Borrow periods within a shift
+model ShiftBorrowPeriod {
+  period_id            Int  @id @default(autoincrement())
+  shift_id             Int
+  borrow_assignment_id Int? @unique // Optional link to existing BorrowAssignment
+
+  // Borrowing details
+  borrowed_to_university_id Int // Which university borrowed them
+  borrow_start_date         DateTime  @db.Date
+  borrow_end_date           DateTime  @db.Date
+  actual_return_date        DateTime? @db.Date
+
+  // Status
+  status BorrowPeriodStatus @default(ACTIVE)
+
+  // Timestamps
+  created_at DateTime @default(now()) @db.Timestamptz(3)
+
+  shift                ConsultantShift   @relation(fields: [shift_id], references: [shift_id])
+  borrowedToUniversity University        @relation(fields: [borrowed_to_university_id], references: [university_id])
+  borrowAssignment     BorrowAssignment? @relation(fields: [borrow_assignment_id], references: [borrow_assignment_id])
+
+  @@index([shift_id])
+  @@index([status])
+  @@map("shift_borrow_period")
 }
 
 model BorrowWindowPolicy {
@@ -1117,6 +1178,22 @@ enum StudentGender {
   FEMALE
   LGBTQ_PLUS
   PREFER_NOT_TO_SAY
+}
+
+// [NEW] Shift status for consultant 14-day shifts
+enum ConsultantShiftStatus {
+  ACTIVE // Currently working at home university
+  ON_LOAN // Borrowed to another university
+  PAUSED // Temporarily paused
+  COMPLETED // Finished all 14 days
+  CANCELLED // Shift cancelled
+}
+
+// [NEW] Borrow period status
+enum BorrowPeriodStatus {
+  ACTIVE //Currently borrowed
+  RETURNED // Returned to home university
+  CANCELLED // Borrow cancelled
 }
 
 enum StudentAddressType {

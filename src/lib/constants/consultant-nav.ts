@@ -1,5 +1,5 @@
 // lib/constants/consultant-nav.ts
-import { CalendarCheck, ClipboardList, UserCircle, History, Briefcase } from 'lucide-react';
+import { CalendarCheck, ClipboardList, UserCircle, History, Briefcase, Calendar } from 'lucide-react';
 import type { NavItem } from '@/components/layout/sidebar/types';
 
 export const CONSULTANT_NAV: NavItem[] = [
@@ -18,6 +18,11 @@ export const CONSULTANT_NAV: NavItem[] = [
     href: '/consultant/schedule',
     label: 'ตารางนัดหมาย',
     icon: CalendarCheck,
+  },
+  {
+    href: '/consultant/shifts',
+    label: 'ตารางเวร',
+    icon: Calendar,
   },
   {
     href: '/consultant/borrowed-work',
