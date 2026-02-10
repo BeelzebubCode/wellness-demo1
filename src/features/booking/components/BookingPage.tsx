@@ -6,6 +6,7 @@ import type { TimeSlotCore } from "@/shared/types/timeSlot";
 
 import { useTimeSlots } from "../hooks/useTimeSlots";
 import { useBooking } from "../hooks/useBooking";
+import { useMyAppointments } from "../hooks/useMyAppointments";
 
 import { BookingCalendar } from "./calendar/BookingCalendar";
 import { TimePeriodTabs } from "./slots/TimePeriodTabs";
@@ -97,7 +98,14 @@ export function BookingPage({ universityId }: { universityId?: number }) {
   const { submitBooking, loading: bookingLoading, error: bookingError } =
     useBooking(universityId);
 
+  // ✅ Load existing appointments to check for active booking
+  const { activeBooking: existingActiveBooking, isLoading: appointmentsLoading } = useMyAppointments(universityId);
+
   const hasActiveBooking = useMemo(() => {
+    // 1. Check loaded data
+    if (existingActiveBooking) return true;
+
+    // 2. Check error from recent submission (fallback)
     const t = String(bookingError ?? "");
     return (
       t.includes("active booking") ||
@@ -105,7 +113,7 @@ export function BookingPage({ universityId }: { universityId?: number }) {
       t.includes("กำลังดำเนินการอยู่") ||
       t.includes("ไม่สามารถจองเพิ่มได้")
     );
-  }, [bookingError]);
+  }, [existingActiveBooking, bookingError]);
 
   const filtered = useMemo(() => {
     return (slots ?? []).filter((s) =>
@@ -230,9 +238,9 @@ export function BookingPage({ universityId }: { universityId?: number }) {
           <span className="text-sm font-semibold text-gray-900">
             ปฏิทินการจอง
           </span>
-          {isPending ? (
-            <span className="ml-2 text-[11px] text-gray-400">
-              กำลังอัปเดต…
+          {isPending || appointmentsLoading ? (
+            <span className="ml-2 text-[11px] text-gray-400 animate-pulse">
+              กำลังตรวจสอบสถานะ...
             </span>
           ) : null}
         </div>

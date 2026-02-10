@@ -117,7 +117,7 @@ export const universitiesData = [
   { code: "TNI", th: "สถาบันเทคโนโลยีไทย-ญี่ปุ่น", en: "Thai-Nichi Institute of Technology", province_code: "BKK", is_active: true },
   { code: "MATI", th: "สถาบันเทคโนโลยียานยนต์มหาชัย", en: "Mahachai Automotive Technology Institute", province_code: "SMK", is_active: true }, // SKN -> SMK
   { code: "IST", th: "สถาบันเทคโนโลยีแห่งสุวรรณภูมิ", en: "Suvarnabhumi Institute of Technology", province_code: "SPK", is_active: true },
-  { code: "AIE", th: "สถาบันวิทยาการประกอบการแห่งอโยธยา", en: "Ayothaya Institute", province_code: "AYA", is_active: true }, // AYT -> AYA
+  { code: "IESA", th: "สถาบันวิทยาการประกอบการแห่งอโยธยา", en: "Ayothaya Institute", province_code: "AYA", is_active: true }, // AYT -> AYA
   { code: "RBAC", th: "สถาบันรัชต์ภาคย์", en: "Rajapark Institute", province_code: "BKK", is_active: true },
   { code: "VISTEC", th: "สถาบันวิทยสิริเมธี", en: "Vidyasirimedhi Institute of Science and Technology", province_code: "RYG", is_active: true },
   { code: "ARSOM", th: "สถาบันอาศรมศิลป์", en: "Arsom Silp Institute of the Arts", province_code: "BKK", is_active: true },

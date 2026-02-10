@@ -141,6 +141,9 @@ export async function POST(request: NextRequest) {
         data: { account_last_login_at: new Date() },
       })
       .catch(() => {});
+
+    console.log(`[LOGIN_DEBUG] Login success step 1: ${username} (role=${account.account_role})`);
+    
     /* =========================================================
       ✅ SUPER_ADMIN / MINISTRY: platform-level (ไม่ต้องผูกมหาลัย)
       - login ได้ที่ wellness.local (ไม่มี subdomain)
@@ -233,18 +236,26 @@ export async function POST(request: NextRequest) {
     const studentUniId = account.student?.university_id ?? null;
     const consultantUniId = account.consultant?.university_id ?? null;
 
-    const grantedUniversityIds = account.universityAccesses.map((x) => x.university_id);
-
-    const allowedUniversityIds = Array.from(
-      new Set(
-        [
-          ...(homeUniversityId ? [homeUniversityId] : []),
-          ...(studentUniId ? [studentUniId] : []),
-          ...(consultantUniId ? [consultantUniId] : []),
-          ...grantedUniversityIds,
-        ].filter(Boolean)
-      )
-    ).sort((a, b) => a - b);
+    let allowedUniversityIds: number[] = [];
+    try {
+      const grantedUniversityIds = account.universityAccesses.map((x) => x.university_id);
+      
+      allowedUniversityIds = Array.from(
+        new Set(
+          [
+            ...(homeUniversityId ? [homeUniversityId] : []),
+            ...(studentUniId ? [studentUniId] : []),
+            ...(consultantUniId ? [consultantUniId] : []),
+            ...grantedUniversityIds,
+          ].filter(Boolean)
+        )
+      ).sort((a, b) => a - b);
+      
+      console.log(`[LOGIN_DEBUG] Allowed IDs resolved: ${JSON.stringify(allowedUniversityIds)}`);
+    } catch (err) {
+      console.error("[LOGIN_DEBUG] Error resolving allowedUniversityIds:", err);
+      throw err;
+    }
 
     if (!allowedUniversityIds.length) {
       return NextResponse.json(
@@ -260,6 +271,7 @@ export async function POST(request: NextRequest) {
     // 4) domain lock: if login from uni subdomain -> must have access
     if (requestedUni) {
       if (!allowedUniversityIds.includes(requestedUni.university_id)) {
+        console.log(`[LOGIN_DEBUG] Domain mismatched: requested ${requestedUni.university_id} but allowed ${JSON.stringify(allowedUniversityIds)}`);
         return NextResponse.json(
           {
             success: false,
@@ -313,6 +325,8 @@ export async function POST(request: NextRequest) {
       activeUniversityId: activeUniId ?? undefined,
       allowedUniversityIds: allowedUniversityIds,
     });
+
+    console.log(`[LOGIN_DEBUG] Token generated for ${username}`);
 
     // 7) display name
     let displayName = account.account_username;
@@ -402,6 +416,9 @@ export async function POST(request: NextRequest) {
     return res;
   } catch (e) {
     console.error("[LOGIN_API_ERROR]", e);
+    // Write error to file for debugging
+    const fs = require("fs");
+    fs.writeFileSync("login_error.log", String(e) + "\n" + (e instanceof Error ? e.stack : ""));
     return NextResponse.json(
       { success: false, error: "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์" },
       { status: 500 }

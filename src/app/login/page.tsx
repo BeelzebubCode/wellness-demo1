@@ -38,29 +38,44 @@ export default function LoginPage() {
 
   // ✅ demo accounts (stable list)
   const DEMO_ACCOUNTS = [
-    { label: "Head Consultant (NU)", username: "head_nu", password: "wellness@nu.ac.th_123456!" },
-    { label: "Head Consultant (KKU)", username: "head_kku", password: "wellness@nu.ac.th_123456!" },
-    { label: "Head Consultant (CU)", username: "head_cu", password: "wellness@nu.ac.th_123456!" },
+    // --- Platform ---
+    { group: "Platform", label: "Ministry Admin", username: "ministry_admin", password: "wellness@nu.ac.th_123456!" },
+    { group: "Platform", label: "Super Admin", username: "superAdmin", password: "wellness@nu.ac.th_123456!" },
 
-    { label: "Rector (NU)", username: "rector_nu", password: "wellness@nu.ac.th_123456!" },
-    { label: "Rector (KKU)", username: "rector_kku", password: "wellness@nu.ac.th_123456!" },
-    { label: "Rector (CU)", username: "rector_cu", password: "wellness@nu.ac.th_123456!" },
+    // --- Rectors (Verified: rector_{uni_code_lower}) ---
+    { group: "Rector", label: "Rector (NU)", username: "rector_nu", password: "wellness@nu.ac.th_123456!" },
+    { group: "Rector", label: "Rector (CU)", username: "rector_cu", password: "wellness@nu.ac.th_123456!" },
+    { group: "Rector", label: "Rector (KKU)", username: "rector_kku", password: "wellness@nu.ac.th_123456!" },
+    { group: "Rector", label: "Rector (CMU)", username: "rector_cmu", password: "wellness@nu.ac.th_123456!" },
+    { group: "Rector", label: "Rector (MU)", username: "rector_mu", password: "wellness@nu.ac.th_123456!" },
+    { group: "Rector", label: "Rector (PSU)", username: "rector_psu", password: "wellness@nu.ac.th_123456!" },
+    { group: "Rector", label: "Rector (ABAC)", username: "rector_abac", password: "wellness@nu.ac.th_123456!" },
 
-    { label: "Consultant (NU #1)", username: "consultant_nu_1", password: "wellness@nu.ac.th_123456!" },
-    { label: "Consultant (NU #2)", username: "consultant_nu_2", password: "wellness@nu.ac.th_123456!" },
-    { label: "Consultant (KKU #1)", username: "consultant_kku_1", password: "wellness@nu.ac.th_123456!" },
-    { label: "Consultant (KKU #2)", username: "consultant_kku_2", password: "wellness@nu.ac.th_123456!" },
-    { label: "Consultant (CU #1)", username: "consultant_cu_1", password: "wellness@nu.ac.th_123456!" },
-    { label: "Consultant (CU #2)", username: "consultant_cu_2", password: "wellness@nu.ac.th_123456!" },
+    // --- Deans (Verified: dean_{uni}_{faculty}) ---
+    { group: "Dean", label: "Dean (CU Engineering)", username: "dean_cu_eng", password: "wellness@nu.ac.th_123456!" },
+    { group: "Dean", label: "Dean (CU Medicine)", username: "dean_cu_med", password: "wellness@nu.ac.th_123456!" },
+    { group: "Dean", label: "Dean (MU Medicine)", username: "dean_mu_med", password: "wellness@nu.ac.th_123456!" },
+    { group: "Dean", label: "Dean (NU Science)", username: "dean_nu_sci", password: "wellness@nu.ac.th_123456!" },
+    { group: "Dean", label: "Dean (KKU Agriculture)", username: "dean_kku_agr", password: "wellness@nu.ac.th_123456!" },
+    { group: "Dean", label: "Dean (ABAC Business)", username: "dean_abac_bus", password: "wellness@nu.ac.th_123456!" },
 
-    { label: "stu_nu_01", username: "stu_nu_01", password: "wellness@nu.ac.th_123456!" },
-    { label: "stu_nu_", username: "stu_nu_", password: "wellness@nu.ac.th_123456!" },
+    // --- Head Consultants (Verified: head_{uni_code_lower}) ---
+    { group: "Head Consultant", label: "Head Consultant (NU)", username: "head_nu", password: "wellness@nu.ac.th_123456!" },
+    { group: "Head Consultant", label: "Head Consultant (CU)", username: "head_cu", password: "wellness@nu.ac.th_123456!" },
+    { group: "Head Consultant", label: "Head Consultant (KKU)", username: "head_kku", password: "wellness@nu.ac.th_123456!" },
+    { group: "Head Consultant", label: "Head Consultant (ABAC)", username: "head_abac", password: "wellness@nu.ac.th_123456!" },
 
-    { label: "Ministry Admin", username: "ministry_admin", password: "wellness@nu.ac.th_123456!" },
-    { label: "Super Admin", username: "superAdmin", password: "wellness@nu.ac.th_123456!" },
+    // --- Consultants (Verified: consultant_{uni_code_lower}_N) ---
+    { group: "Consultant", label: "Consultant (NU #1)", username: "consultant_nu_1", password: "wellness@nu.ac.th_123456!" },
+    { group: "Consultant", label: "Consultant (CU #1)", username: "consultant_cu_1", password: "wellness@nu.ac.th_123456!" },
+    { group: "Consultant", label: "Consultant (KKU #1)", username: "consultant_kku_1", password: "wellness@nu.ac.th_123456!" },
+    { group: "Consultant", label: "Consultant (ABAC #1)", username: "consultant_abac_1", password: "wellness@nu.ac.th_123456!" },
 
-    // Advisor
-    { label: "Advisor (NU)", username: "advisor_nu_sci_math", password: "wellness@nu.ac.th_123456!" },
+    // --- Students (Verified: stu_{uni_code_lower}_0001) ---
+    { group: "Student", label: "Student (NU)", username: "stu_nu_0001", password: "wellness@nu.ac.th_123456!" },
+    { group: "Student", label: "Student (CU)", username: "stu_cu_0001", password: "wellness@nu.ac.th_123456!" },
+    { group: "Student", label: "Student (KKU)", username: "stu_kku_0001", password: "wellness@nu.ac.th_123456!" },
+    { group: "Student", label: "Student (ABAC)", username: "stu_abac_0001", password: "wellness@nu.ac.th_123456!" },
   ] as const;
 
   // ✅ FIX: demoKey + demoSelected (ของเดิมนายยังไม่ได้ประกาศ)
@@ -69,6 +84,16 @@ export default function LoginPage() {
   const demoSelected = React.useMemo(() => {
     return DEMO_ACCOUNTS.find((x) => x.username === demoKey) ?? DEMO_ACCOUNTS[0];
   }, [demoKey]);
+
+  // Grouping for Select
+  const groupedAccounts = React.useMemo(() => {
+    const groups: Record<string, typeof DEMO_ACCOUNTS[number][]> = {};
+    DEMO_ACCOUNTS.forEach((acc) => {
+      if (!groups[acc.group]) groups[acc.group] = [];
+      groups[acc.group].push(acc);
+    });
+    return groups;
+  }, []);
 
   return (
     <div
@@ -204,40 +229,15 @@ export default function LoginPage() {
                                focus:outline-none focus:ring-2 focus:ring-[rgba(var(--ring),0.20)] focus:border-[rgb(var(--ring))]
                                disabled:opacity-70"
                   >
-                    <optgroup label="Rector">
-                      <option value="rector_nu">Rector (NU)</option>
-                      <option value="rector_kku">Rector (KKU)</option>
-                      <option value="rector_cu">Rector (CU)</option>
-                    </optgroup>
-
-                    <optgroup label="Head Consultant">
-                      <option value="head_nu">Head Consultant (NU)</option>
-                      <option value="head_kku">Head Consultant (KKU)</option>
-                      <option value="head_cu">Head Consultant (CU)</option>
-                    </optgroup>
-
-                    <optgroup label="Consultant">
-                      <option value="consultant_nu_1">Consultant (NU #1)</option>
-                      <option value="consultant_nu_2">Consultant (NU #2)</option>
-                      <option value="consultant_kku_1">Consultant (KKU #1)</option>
-                      <option value="consultant_kku_2">Consultant (KKU #2)</option>
-                      <option value="consultant_cu_1">Consultant (CU #1)</option>
-                      <option value="consultant_cu_2">Consultant (CU #2)</option>
-                    </optgroup>
-
-                    <optgroup label="Student">
-                      <option value="stu_nu_01">stu_nu_01</option>
-                      <option value="stu_nu_">stu_nu_</option>
-                    </optgroup>
-
-                    <optgroup label="Platform">
-                      <option value="ministry_admin">Ministry Admin</option>
-                      <option value="superAdmin">Super Admin</option>
-                    </optgroup>
-                    
-                    <optgroup label="Advisor">
-                      <option value="advisor_nu_sci_math">Advisor (NU Computer Science)</option>
-                    </optgroup>
+                    {Object.entries(groupedAccounts).map(([group, accounts]) => (
+                      <optgroup key={group} label={group}>
+                        {accounts.map((acc) => (
+                          <option key={acc.username} value={acc.username}>
+                            {acc.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
                   </select>
 
                   <button

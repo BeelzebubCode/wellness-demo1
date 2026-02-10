@@ -14,6 +14,7 @@ import { seedBookings } from "./seeds/09-bookings";
 import { seedUniversityTypes } from "./seeds/10-university-types";
 import { seedUniversityConnections } from "./seeds/11-university-connections";
 import { seedManualConnections } from "./seeds/12-manual-connections";
+import { seedDeans } from "./seeds/13-deans";
 
 const prisma = new PrismaClient();
 
@@ -33,6 +34,12 @@ async function main() {
     universities: geo.universities,
     facultyByUniAndCode: acad.facultyByUniAndCode,
     deptByUniAndCode: acad.deptByUniAndCode,
+    passwordHash: st.passwordHash,
+  });
+
+  const deans = await seedDeans(prisma, {
+    universities: geo.universities,
+    facultyByUniAndCode: acad.facultyByUniAndCode,
     passwordHash: st.passwordHash,
   });
 
@@ -108,18 +115,25 @@ async function main() {
   console.log(`🏛️ Ministry: 1 (ministry_admin)`);
   console.log(`🛡️ Super Admin: 1 (superAdmin)`);
   console.log(`👨‍🏫 Advisors: ${advisors.length} (advisor_{uni}_{dept})`);
+  console.log(`👔 Deans: ${deans.length} (dean_{uni}_{faculty})`);
   console.log(`💼 Consultants: ${consultantCount} (consultant_{university_code}_1..5)`);
-  console.log(`🎓 Students: ${studentCount}`);
+  const isDevMode = process.env.SEED_DEV_MODE === "true";
+  const studentCountLog = isDevMode 
+    ? `${geo.universities.length * 30} (Dev Mode: 30/uni)` 
+    : `~1.8M (Full Scale)`;
 
-  // ...\n\n  // =========================
+  console.log(`🎓 Students: ${studentCountLog}`);
+
+  // =========================
   // Credentials (รองรับทุกมหาลัย)
   // =========================
-  console.log("\\n🔑 Login Credentials:");
+  console.log("\n🔑 Login Credentials:");
   console.log("   Ministry: ministry_admin");
   console.log("   Head: head_{university_code}");
   console.log("   Rector: rector_{university_code}");
   console.log("   Super: superAdmin");
   console.log("   Advisor: advisor_{uni}_{dept} (e.g. advisor_cu_cse)");
+  console.log("   Dean: dean_{uni}_{faculty} (e.g. dean_cu_eng)");
   console.log("   Consultant: consultant_{university_code}_1 .. _5");
   console.log("   Student (new): stu_{university_code}_01 .. _30");
   console.log("   Student (old): student1 - student120  (ถ้ายังใช้ seedStudents เวอร์ชันเก่า)");

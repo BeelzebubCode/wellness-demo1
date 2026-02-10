@@ -6,8 +6,7 @@ import {
 } from "@prisma/client";
 
 import { educationFieldGroupsData } from "../seed-data/education-field-groups";
-import { facultiesData } from "../seed-data/faculties";
-import { departmentsData } from "../seed-data/departments";
+import { defaultFaculties, defaultDepartments } from "../seed-data/default-faculties";
 
 type UniLite = { university_id: number; university_code: string };
 
@@ -16,6 +15,7 @@ export async function seedFacultiesDepartments(
   args: { universities: UniLite[] }
 ) {
   console.log("🏛️  Creating education field groups, faculties and departments...");
+  console.log("   📌 Using DEFAULT faculty structure for ALL universities");
 
   const { universities } = args;
 
@@ -37,17 +37,17 @@ export async function seedFacultiesDepartments(
   );
 
   // =========================
-  // 1) FACULTIES (per-university, rerun-safe)
+  // 1) FACULTIES (DEFAULT for ALL universities)
   // =========================
   const facultyByUniAndCode = new Map<string, Faculty>();
+  let totalFacultiesCreated = 0;
+
+  console.log(`   🏛️  Applying ${defaultFaculties.length} default faculties to ${universities.length} universities...`);
 
   for (const uni of universities) {
-    const facSeeds = facultiesData.filter(
-      (f) => f.university_code === uni.university_code
-    );
-
+    // Create all default faculties for this university
     await prisma.faculty.createMany({
-      data: facSeeds.map((f) => ({
+      data: defaultFaculties.map((f) => ({
         university_id: uni.university_id,
         faculty_code: f.faculty_code,
         faculty_name_th: f.faculty_name_th,
@@ -59,28 +59,33 @@ export async function seedFacultiesDepartments(
       skipDuplicates: true,
     });
 
+    // Fetch created faculties
     const facs = await prisma.faculty.findMany({
       where: {
         university_id: uni.university_id,
-        faculty_code: { in: facSeeds.map((x) => x.faculty_code) },
+        faculty_code: { in: defaultFaculties.map((x) => x.faculty_code) },
       },
     });
 
+    // Index them
     for (const fac of facs) {
-      facultyByUniAndCode.set(`${uni.university_id}:${fac.faculty_code}`, fac);
+      facultyByUniAndCode.set(`${uni.university_code}_${fac.faculty_code}`, fac);
     }
+
+    totalFacultiesCreated += facs.length;
   }
 
+  console.log(`   ✅ Created ${totalFacultiesCreated} faculties (${defaultFaculties.length} per university)`);
+
   // =========================
-  // 2) DEPARTMENTS (per-university, rerun-safe)
+  // 2) DEPARTMENTS (DEFAULT for ALL universities)
   // =========================
   const deptByUniAndCode = new Map<string, Department>();
+  let totalDepartmentsCreated = 0;
+
+  console.log(`   📚 Applying ${defaultDepartments.length} default departments to ${universities.length} universities...`);
 
   for (const uni of universities) {
-    const deptSeeds = departmentsData.filter(
-      (d) => d.university_code === uni.university_code
-    );
-
     const data: Array<{
       university_id: number;
       faculty_id: number;
@@ -89,9 +94,12 @@ export async function seedFacultiesDepartments(
       department_name_en?: string | null;
     }> = [];
 
-    for (const d of deptSeeds) {
-      const fac = facultyByUniAndCode.get(`${uni.university_id}:${d.faculty_code}`);
-      if (!fac) continue;
+    for (const d of defaultDepartments) {
+      const fac = facultyByUniAndCode.get(`${uni.university_code}_${d.faculty_code}`);
+      if (!fac) {
+        console.warn(`   ⚠️  Faculty ${d.faculty_code} not found for ${uni.university_code}`);
+        continue;
+      }
 
       data.push({
         university_id: uni.university_id,
@@ -110,44 +118,19 @@ export async function seedFacultiesDepartments(
     const depts = await prisma.department.findMany({
       where: {
         university_id: uni.university_id,
-        department_code: { in: deptSeeds.map((x) => x.department_code) },
+        department_code: { in: defaultDepartments.map((x) => x.department_code) },
       },
     });
 
     for (const dep of depts) {
-      deptByUniAndCode.set(`${uni.university_id}:${dep.department_code}`, dep);
+      deptByUniAndCode.set(`${uni.university_code}_${dep.department_code}`, dep);
     }
 
-    // ✅ FIX: สร้าง default department ถ้ามหาลัยไม่มีสาขาเลย
-    if (depts.length === 0) {
-      console.log(`   ⚠️  ${uni.university_code} has no departments. Creating default department...`);
-      
-      // สร้าง default faculty ก่อน
-      const defaultFaculty = await prisma.faculty.create({
-        data: {
-          university_id: uni.university_id,
-          faculty_code: "GEN",
-          faculty_name_th: "คณะทั่วไป",
-          faculty_name_en: "General Faculty",
-          education_field_group_id: null,
-        },
-      });
-
-      // สร้าง default department
-      const defaultDept = await prisma.department.create({
-        data: {
-          university_id: uni.university_id,
-          faculty_id: defaultFaculty.faculty_id,
-          department_code: "GEN",
-          department_name_th: "สาขาทั่วไป",
-          department_name_en: "General Department",
-        },
-      });
-
-      deptByUniAndCode.set(`${uni.university_id}:GEN`, defaultDept);
-      facultyByUniAndCode.set(`${uni.university_id}:GEN`, defaultFaculty);
-    }
+    totalDepartmentsCreated += depts.length;
   }
+
+  console.log(`   ✅ Created ${totalDepartmentsCreated} departments (${defaultDepartments.length} per university)`);
+  console.log(`   🎓 Summary: ${universities.length} universities × ${defaultFaculties.length} faculties × ~${Math.round(defaultDepartments.length / defaultFaculties.length)} depts/faculty`);
 
   return { facultyByUniAndCode, deptByUniAndCode };
 }

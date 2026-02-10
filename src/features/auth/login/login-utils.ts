@@ -51,6 +51,7 @@ export const ROLE_CONFIG: Record<
   MINISTRY: { defaultPath: "/ministry", isAdmin: true },
   RECTOR: { defaultPath: "/rector", isAdmin: true },
   HEAD_CONSULTANT: { defaultPath: "/head-consultant", isAdmin: true },
+  DEAN: { defaultPath: "/dean", isAdmin: true },
 
   ADVISOR: { defaultPath: "/advisor", isAdmin: false },
   CONSULTANT: { defaultPath: "/consultant/my-jobs" },

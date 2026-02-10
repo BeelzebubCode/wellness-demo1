@@ -2,7 +2,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { ArrowUp, RotateCcw, ChevronDown, Bot, Calendar, CheckCircle2 } from "lucide-react";
+import { ArrowUp, RotateCcw, ChevronDown, Bot, Calendar, CheckCircle2, CalendarCheck, XCircle } from "lucide-react";
 import type { useAiChat } from "@/features/ai/hooks/useAiChat";
 import { cn } from "@/lib/cn";
 import styles from "./aiChatTheme.module.css";
@@ -54,6 +54,66 @@ export default function AiChatInput({
       {/* Container */}
       <div className="mx-auto max-w-4xl px-6">
         
+        {/* ✅ Confirmation Card (Floating above input) */}
+        {mode === "booking_agent" && chat.agent?.confirmToken && (
+          <div className="mb-4 animate-in slide-in-from-bottom-5 fade-in zoom-in-95">
+            <div className="relative overflow-hidden rounded-2xl border border-indigo-100 bg-white p-4 shadow-xl">
+              <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-indigo-500 to-purple-500" />
+              
+              <div className="flex items-start gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+                  <CalendarCheck className="h-6 w-6" />
+                </div>
+                
+                <div className="flex-1">
+                  <h3 className="text-base font-semibold text-slate-900">
+                    ยืนยันการจองคิว?
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-600">
+                    ระบบได้เตรียมข้อมูลการจองของคุณแล้ว กรุณาตรวจสอบและกดยืนยัน
+                  </p>
+                  
+                  {/* Optional: Show Plan Details if available */}
+                  {chat.agent.plan && (
+                    <div className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+                      <div className="font-medium text-slate-900 mb-1">รายละเอียด:</div>
+                      <pre className="whitespace-pre-wrap font-sans text-xs text-slate-600">
+                        {JSON.stringify(chat.agent.plan, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={() => chat.confirmAgentAction()}
+                      disabled={isLoading}
+                      className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                    >
+                      {isLoading ? (
+                        <>กำลังยืนยัน...</>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="h-4 w-4" />
+                          ยืนยันการจอง
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => chat.reset()} // Or specialized cancel
+                      className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-red-600 transition-colors"
+                    >
+                      ยกเลิก
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col gap-3">
           {/* Input Box (Top) - Transparent background */}
           <div className="relative flex items-end gap-3 rounded-[28px] bg-transparent border-2 border-slate-200 px-4 py-3 shadow-sm focus-within:border-indigo-400 focus-within:shadow-md transition-all">

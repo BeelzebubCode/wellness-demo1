@@ -119,6 +119,7 @@ model Account {
   notifications          Notification[]
   student                Student?
   aiFeedbackEvents       AiFeedbackEvent[]
+  facultiesDean          Faculty[]             @relation("FacultyDean") // [NEW] Faculties where this account is Dean
 
   borrowRequestsRequested BorrowRequest[] @relation("BorrowRequestedBy")
   borrowRequestsSubmitted BorrowRequest[] @relation("BorrowSubmittedBy")
@@ -130,6 +131,7 @@ model Account {
   BookingConsentSignature BookingConsentSignature[]
   BorrowOnCallShift       BorrowOnCallShift[]
   BookingSession          BookingSession[]
+  faculties               Faculty[]
 
   @@index([account_role])
   @@index([account_home_university_id])
@@ -265,19 +267,25 @@ model Faculty {
   faculty_name_th String  @db.VarChar(100)
   faculty_name_en String? @db.VarChar(100)
 
+  dean_account_id Int? // [NEW] Link to Dean account
+
   education_field_group_id Int?
   educationFieldGroup      EducationFieldGroup? @relation(fields: [education_field_group_id], references: [education_field_group_id])
 
   university University @relation(fields: [university_id], references: [university_id])
+  dean       Account?   @relation("FacultyDean", fields: [dean_account_id], references: [account_id])
 
-  advisors         Advisor[]
-  departments      Department[]
-  studentAcademics StudentAcademic[]
+  advisors          Advisor[]
+  departments       Department[]
+  studentAcademics  StudentAcademic[]
+  account           Account?          @relation(fields: [accountAccount_id], references: [account_id])
+  accountAccount_id Int?
 
   @@unique([university_id, faculty_id])
   @@unique([university_id, faculty_code])
   @@index([university_id])
   @@index([education_field_group_id])
+  @@index([dean_account_id])
   @@map("faculty")
 }
 
@@ -1076,6 +1084,7 @@ enum AccountRole {
   CONSULTANT
   HEAD_CONSULTANT
   ADVISOR // [NEW]
+  DEAN // [NEW] Faculty Dean role
   RECTOR
   SUPER_ADMIN
   MINISTRY
@@ -1086,6 +1095,7 @@ enum UniversityAccessRole {
   CONSULTANT
   HEAD_CONSULTANT
   ADVISOR // [NEW]
+  DEAN // [NEW] Faculty Dean role
   RECTOR
   ADMIN
 }

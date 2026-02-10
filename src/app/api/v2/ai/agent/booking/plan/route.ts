@@ -1,6 +1,7 @@
 // src/app/api/v2/ai/agent/booking/plan/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
+import prisma from "@/lib/prisma";
 
 // ✅ เปลี่ยนมาใช้ของใหม่
 import { runBookingPlan } from "@/services/aiAgent/booking/plan";
@@ -20,6 +21,28 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => ({} as any));
+
+    // ✅ Check for existing active booking
+    const activeBooking = await prisma.booking.findFirst({
+      where: {
+        university_id: activeUniversityId!,
+        student_id: account.studentId,
+        booking_status: { in: ["PENDING_ASSIGNMENT", "ASSIGNED", "IN_PROGRESS"] },
+      },
+      include: {
+        timeSlot: true,
+      },
+    });
+
+    if (activeBooking) {
+      const date = new Date(activeBooking.timeSlot.time_slot_start_datetime).toLocaleDateString("th-TH");
+      const time = new Date(activeBooking.timeSlot.time_slot_start_datetime).toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit' });
+      return NextResponse.json({
+        reply: `คุณมีรายการจองค้างอยู่แล้วครับ (วันที่ ${date} เวลา ${time})\nต้องยกเลิกคิวเดิมก่อน หรือรอให้เสร็จสิ้นจึงจะจองใหม่ได้`,
+        state: { activeBooking }, // Send details for UI to potentially use
+        suggested: ["ยกเลิกคิวเดิม", "ตรวจสอบสถานะ"],
+      }, { status: 200 });
+    }
 
     const result = await runBookingPlan({
       activeUniversityId,
