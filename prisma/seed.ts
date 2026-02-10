@@ -33,14 +33,12 @@ async function main() {
 
   const advisors = await seedAdvisors(prisma, {
     universities: geo.universities,
-    facultyByUniAndCode: acad.facultyByUniAndCode,
-    deptByUniAndCode: acad.deptByUniAndCode,
     passwordHash: st.passwordHash,
   });
 
   const deans = await seedDeans(prisma, {
     universities: geo.universities,
-    facultyByUniAndCode: acad.facultyByUniAndCode,
+    
     passwordHash: st.passwordHash,
   });
 
@@ -68,11 +66,12 @@ async function main() {
 
   const timeSlots = await seedTimeSlots(prisma, { universities: geo.universities });
 
+  const isQuickMode = process.env.SEED_QUICK_MODE === "true";
   const bookingPlan: { status: BookingStatus; count: number }[] = [
-    { status: BookingStatus.COMPLETED, count: 100000 },
+    { status: BookingStatus.COMPLETED, count: isQuickMode ? 5000 : 100000 },
     { status: BookingStatus.IN_PROGRESS, count: 0 },
     { status: BookingStatus.PENDING_ASSIGNMENT, count: 0 },
-    { status: BookingStatus.CANCELLED, count: 50000 },
+    { status: BookingStatus.CANCELLED, count: isQuickMode ? 500 : 50000 },
   ];
 
   await seedBookings(prisma, {

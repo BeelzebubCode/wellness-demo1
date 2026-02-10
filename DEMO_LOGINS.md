@@ -6,7 +6,29 @@
 
 ---
 
-## 📋 บัญชีผู้ใช้งานทั้งหมด
+## 📋 บัญชีสำคัญ (Recommended)
+
+### 💼 Consultant (ระบบเวร)
+Format: `consultant_{university}_1`
+- **ABAC:** `consultant_abac_1`
+- **Mahidol (MU):** `consultant_mu_1`
+- **Chula (CU):** `consultant_cu_1`
+
+### 👨‍🏫 Advisor (อาจารย์ที่ปรึกษา)
+Format: `advisor_{university}_{department}`
+- **ABAC:** `advisor_abac_edu_ele`
+- **Mahidol:** `advisor_mu_med_nu`
+- **Chula:** `advisor_cu_eng_cp`
+
+### 👔 Dean (คณบดี)
+Format: `dean_{university}_{faculty}`
+- **ABAC:** `dean_abac_edu`
+- **Mahidol:** `dean_mu_med`
+- **Chula:** `dean_cu_eng`
+
+---
+
+## 📋 บัญชีอื่นๆ
 
 ### 🏛️ Ministry & Super Admin
 - **Ministry:** `ministry_admin`
@@ -14,147 +36,47 @@
 
 ### 👑 Head Consultants (1 per university)
 Format: `head_{university_code}`
-- Example: `head_cu`, `head_tu`, `head_mu`, etc.
+- Example: `head_abac`, `head_cu`, `head_mu`
 
 ### 🏫 Rectors (1 per university)
 Format: `rector_{university_code}`
-- Example: `rector_cu`, `rector_tu`, `rector_mu`, etc.
-
-### 👔 Deans (1 per faculty)
-Format: `dean_{university}_{faculty_code}`
-- Example: `dean_cu_eng`, `dean_cu_sci`, etc.
-
-### 👨‍🏫 Advisors (1 per department)
-Format: `advisor_{university}_{department_code}`
-- Example: 
-  - `advisor_cu_cse` (Computer Science @ CU)
-  - `advisor_cu_ee` (Electrical Engineering @ CU)
-  - `advisor_tu_arch` (Architecture @ TU)
-
-### 💼 Consultants (5 per university)
-Format: `consultant_{university_code}_{1-5}`
-- Example: 
-  - `consultant_cu_1` to `consultant_cu_5`
-  - `consultant_tu_1` to `consultant_tu_5`
-  - `consultant_mu_1` to `consultant_mu_5`
+- Example: `rector_abac`, `rector_cu`
 
 ### 🎓 Students
-
-#### Quick Mode (100 students):
 Format: `stu_{university_code}_{01-25}`
-- Example: `stu_cu_01` to `stu_cu_25` (~4 universities)
-
-#### Dev Mode (30 per university):
-Format: `stu_{university_code}_{01-30}`
-- Example: `stu_cu_01` to `stu_cu_30`
+- Example: `stu_abac_01`, `stu_cu_01`
 
 ---
 
-## 🚀 ทดสอบ Features ต่างๆ
+## 🚀 ทดสอบ Features
 
-### ✅ Consultant 14-Day Shift System
-**Login:** `consultant_cu_1` | **Password:** `password123`
+### ✅ Consultant Shifts (ตารางเวร)
+**Login:** `consultant_abac_1` (Password: `password123`)
 **Page:** `/consultant/shifts`
-
-**Features to test:**
-- ✅ View current 14-day shift calendar
-- ✅ See days worked and days remaining
-- ✅ View borrowing periods (ON_LOAN status)
-- ✅ See timeline with color-coded days
-- ✅ View completed shift history
-
-**Demo Data:**
-- Consultant 1: Has a RETURNED borrow period (days 2-3)
-- Consultant 2: Currently ON_LOAN to another university (days 5-7)
-
-### ✅ Student Booking System
-**Login:** `stu_cu_01` | **Password:** `password123`
-**Page:** `/student/dashboard`
+- ดูตารางเวรแบบ Timeline Calendar
+- ดูเวรที่ถูกยืมตัว (สีเหลือง/ม่วง)
 
 ### ✅ Advisor Dashboard
-**Login:** `advisor_cu_cse` | **Password:** `password123`
+**Login:** `advisor_abac_edu_ele` (Password: `password123`)
 **Page:** `/advisor/dashboard`
+- ดูรายชื่อนักศึกษาในที่ปรึกษา
+- อนุมัติการลา/การนัดหมาย
 
 ### ✅ Dean Dashboard
-**Login:** `dean_cu_eng` | **Password:** `password123`
+**Login:** `dean_abac_edu` (Password: `password123`)
 **Page:** `/dean/dashboard`
+- ดูภาพรวมคณะ
+- สถิติการให้บริการ
 
 ---
 
-## 🎯 Seed Data Modes
+## 📌 Helper Scripts
 
-### 1️⃣ Quick Mode (Recommended for Development)
-**Purpose:** รวดเร็ว ทดสอบ features
-**Students:** ~100 total (25 per university, ~4 universities)
-**Time:** ~5-10 seconds
-
+**Seed Data:**
 ```bash
+# Quick Mode (แนะนำ)
 SEED_QUICK_MODE=true npx prisma db seed
-```
 
-### 2️⃣ Dev Mode
-**Purpose:** ทดสอบแบบกลางๆ
-**Students:** 30 per university (~4,650 total)
-**Time:** ~1-2 minutes
-
-```bash
-SEED_DEV_MODE=true npx prisma db seed
-```
-
-### 3️⃣ Full Scale Mode
-**Purpose:** Production-like data
-**Students:** ~1.8M total (based on real university enrollment)
-**Time:** ~5-10 minutes
-
-```bash
+# Full Mode
 npx prisma db seed
 ```
-
----
-
-## 📌 Seed Consultant Shifts (After Main Seed)
-
-After running the main seed, populate shift data:
-
-```bash
-npx tsx scripts/seed-consultant-shifts.ts
-```
-
-This creates:
-- ✅ Current active shifts (day 4/14)
-- ✅ Completed shifts (1 month ago)
-- ✅ Upcoming shifts (starts in 10 days)
-- ✅ Demo borrow periods (ACTIVE and RETURNED)
-
----
-
-## 🔍 Verify Seed Data
-
-Check seeded accounts and data:
-
-```bash
-# List all account types
-npx tsx scripts/list-all-accounts.ts
-
-# List students
-npx tsx scripts/list-students.ts
-
-# List deans
-npx tsx scripts/list-deans.ts
-
-# Verify all seed data
-npx tsx scripts/verify-seed-data.ts
-```
-
----
-
-## 💡 Tips
-
-1. **Quick Testing:** Use `SEED_QUICK_MODE=true` for fast iteration
-2. **Full Features:** Use `SEED_DEV_MODE=true` for comprehensive testing
-3. **Production Simulation:** Use full seed mode (no flags)
-4. **Shift System:** Remember to run `seed-consultant-shifts.ts` separately
-
----
-
-**Last Updated:** 2026-02-11

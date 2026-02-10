@@ -58,6 +58,11 @@ export default function LoginPage() {
     { group: "Dean", label: "Dean (NU Science)", username: "dean_nu_sci", password: "wellness@nu.ac.th_123456!" },
     { group: "Dean", label: "Dean (KKU Agriculture)", username: "dean_kku_agr", password: "wellness@nu.ac.th_123456!" },
     { group: "Dean", label: "Dean (ABAC Business)", username: "dean_abac_bus", password: "wellness@nu.ac.th_123456!" },
+    
+    // --- Advisors (Verified: advisor_{uni}_{dept}) ---
+    { group: "Advisor", label: "Advisor (ABAC Elementary Edu)", username: "advisor_abac_edu_ele", password: "wellness@nu.ac.th_123456!" },
+    { group: "Advisor", label: "Advisor (ABAC English)", username: "advisor_abac_art_eng", password: "wellness@nu.ac.th_123456!" },
+
 
     // --- Head Consultants (Verified: head_{uni_code_lower}) ---
     { group: "Head Consultant", label: "Head Consultant (NU)", username: "head_nu", password: "wellness@nu.ac.th_123456!" },

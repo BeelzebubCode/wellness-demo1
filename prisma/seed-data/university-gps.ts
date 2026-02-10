@@ -1,7 +1,7 @@
 // prisma/seed-data/university-gps.ts
 export const universityGpsByCode = {
   "ABAC": { lat: 13.75316408, lon: 100.6278686 },
-  "AIE": { lat: 14.39947661, lon: 100.5289454 },
+  "IESA": { lat: 14.39947661, lon: 100.5289454 },
   "AIU": { lat: 14.67366676, lon: 101.1767874 },
   "ARSOM": { lat: 13.65688869, lon: 100.4650446 },
   "BAC": { lat: 16.43479866, lon: 102.860731 },
@@ -153,5 +153,6 @@ export const universityGpsByCode = {
   "WUVC": { lat: 15.00238564, lon: 102.1175928 },
   "WUWEST": { lat: 14.34493952, lon: 99.80371329 },
   "YRU": { lat: 6.548768769, lon: 101.2896599 },
+  "CKRY": { lat: 12.7662751, lon: 101.6288013 },
 } as const;
 

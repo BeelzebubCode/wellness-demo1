@@ -34,7 +34,7 @@ import { getStudentCountForUniversity, DEFAULT_STUDENT_COUNT } from "../../src/l
 const IS_QUICK_MODE = process.env.SEED_QUICK_MODE === "true";
 const IS_DEV_MODE = process.env.SEED_DEV_MODE === "true";
 
-const MAX_STUDENTS_PER_UNI = IS_QUICK_MODE ? 25 : (IS_DEV_MODE ? 30 : 999999);
+const MAX_STUDENTS_PER_UNI = IS_QUICK_MODE ? 100 : (IS_DEV_MODE ? 30 : 999999);
 const BATCH_SIZE = 5000; // เพิ่มจาก 1000 → 5000 เพื่อความเร็ว (แต่ยังปลอดภัย)
 
 
