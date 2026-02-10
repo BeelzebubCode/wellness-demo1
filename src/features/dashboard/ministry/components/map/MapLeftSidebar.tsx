@@ -104,18 +104,18 @@ export function MapLeftSidebar({
         {/* Advanced Filters Toggle - Thai */}
         <button
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className="w-full flex items-center justify-between py-2 text-[10px] xl:text-xs font-bold text-gray-500 hover:text-gray-900 transition-colors border-t border-gray-100 pt-4 uppercase tracking-wider"
+          className="w-full flex items-center justify-between py-1 text-[10px] xl:text-xs font-bold text-gray-500 hover:text-gray-900 transition-colors border-t border-gray-100 pt-4 uppercase tracking-wider"
         >
           <span className="flex items-center gap-1.5">
-            <Filter className="w-4 h-4" />
+            <Filter className="w-3 h-3" />
             ตัวกรองเพิ่มเติม
           </span>
-          <ChevronDown className={`w-4 h-4 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
+          <ChevronDown className={`w-3 h-3 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
         </button>
 
         {/* Advanced Filters - Thai */}
         {showAdvanced && (
-          <div className="space-y-4 pt-2">
+          <div className="space-y-3 pt-0">
             {/* Institution Type */}
             <div>
               <label className="text-xs font-bold text-gray-500 mb-2 block uppercase tracking-wider">

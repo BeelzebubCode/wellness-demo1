@@ -95,7 +95,7 @@ export function ProblemCategoryFilter({ selected, onChange }: ProblemCategoryFil
   return (
     <div className="relative" ref={dropdownRef}>
       <label className="text-xs font-bold text-gray-500 mb-2 flex items-center gap-1.5 uppercase tracking-wider">
-        <Brain className="w-4 h-4" />
+        <Brain className="w-3 h-3" />
         ประเภทปัญหา
       </label>
 
