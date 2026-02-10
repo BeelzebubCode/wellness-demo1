@@ -15,6 +15,7 @@ import { seedUniversityTypes } from "./seeds/10-university-types";
 import { seedUniversityConnections } from "./seeds/11-university-connections";
 import { seedManualConnections } from "./seeds/12-manual-connections";
 import { seedDeans } from "./seeds/13-deans";
+import { seedConsultantShifts } from "./seeds/14-consultant-shifts";
 
 const prisma = new PrismaClient();
 
@@ -95,6 +96,12 @@ async function main() {
 
   console.log("\\n🌐 Seeding university connections...");
   await seedUniversityConnections(prisma);
+
+  // Seed consultant shifts
+  await seedConsultantShifts(prisma, {
+    consultants: consultants.consultants,
+    universities: geo.universities,
+  });
 
   // =========================
   // Summary (รองรับทุกมหาลัย)

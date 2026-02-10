@@ -1,6 +1,6 @@
 // prisma/seeds/04-advisor.ts
 import { PrismaClient, type Advisor, AccountRole } from "@prisma/client";
-import { departmentsData } from "../seed-data/departments";
+import { defaultDepartments } from "../seed-data/default-faculties";
 import { firstNames, lastNames } from "../seed-data/people";
 
 // ... (helper functions keep same)
@@ -37,7 +37,7 @@ export async function seedAdvisors(
     passwordHash: string;
   },
 ) {
-  console.log("👨‍🏫 Upserting advisors...");
+  console.log("👨‍🏫 Seeding advisors...");
 
   const { universities, facultyByUniAndCode, deptByUniAndCode, passwordHash } = args;
 
@@ -48,27 +48,31 @@ export async function seedAdvisors(
   const prefixes = ["ดร.", "ผศ.ดร.", "อ."] as const;
   const buildings = ["A", "B", "C", "D"] as const;
 
-  for (const uni of universities) {
+  // Take only first 4 universities for quick demo
+  const selectedUniversities = universities.slice(0, 4);
+
+  for (const uni of selectedUniversities) {
     const uniCode = String(uni.university_code);
     const uniCodeLower = uniCode.toLowerCase();
 
-    // ✅ ใช้ departmentsData ของใหม่ (กรองตามมหาลัย)
-    const deptSeeds = departmentsData.filter(
-      (d) => String(d.university_code).toUpperCase() === uniCode.toUpperCase(),
-    );
+    // Get first 3 faculties for this university from database
+    const faculties = await prisma.faculty.findMany({
+      where: { university_id: uni.university_id },
+      take: 3,
+    });
 
-    for (const d of deptSeeds) {
-      // ✅ key ต้องตรงกับที่ 03-faculty.ts set ไว้
-      const fac = facultyByUniAndCode.get(
-        `${uni.university_id}:${d.faculty_code}`,
-      );
-      const dep = deptByUniAndCode.get(
-        `${uni.university_id}:${d.department_code}`,
-      );
+    for (const fac of faculties) {
+      // Get first department for this faculty
+      const dept = await prisma.department.findFirst({
+        where: {
+          university_id: uni.university_id,
+          faculty_id: fac.faculty_id,
+        },
+      });
 
-      if (!fac || !dep) continue;
+      if (!dept) continue;
 
-      const email = `advisor_${uniCodeLower}_${String(d.department_code).toLowerCase()}@${uniCodeLower}.ac.th`;
+      const email = `advisor_${uniCodeLower}_${dept.department_code.toLowerCase()}@${uniCodeLower}.ac.th`;
       const username = email.split("@")[0]; // Use prefix as username
 
       // 1. Create Account
@@ -106,7 +110,7 @@ export async function seedAdvisors(
       const data = {
         university_id: uni.university_id,
         faculty_id: fac.faculty_id,
-        department_id: dep.department_id,
+        department_id: dept.department_id,
         advisor_academic_rank,
         advisor_prefix,
         advisor_first_name,
@@ -118,7 +122,7 @@ export async function seedAdvisors(
       };
 
       const createdOrUpdated = await prisma.advisor.upsert({
-        where: { advisor_email: email }, // ต้องมี advisor_email @unique (ของคุณมีแล้ว)
+        where: { advisor_email: email },
         create: data,
         update: {
           advisor_academic_rank: data.advisor_academic_rank,
@@ -137,5 +141,6 @@ export async function seedAdvisors(
     }
   }
 
+  console.log(`✅ Created ${advisors.length} advisors`);
   return advisors;
 }

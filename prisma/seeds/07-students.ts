@@ -18,18 +18,23 @@ import { getStudentCountForUniversity, DEFAULT_STUDENT_COUNT } from "../../src/l
 // 🔧 SEED CONFIGURATION (แก้ตรงนี้ง่ายๆ)
 // =============================================================================
 // วิธีใช้:
-// 1. Development Mode (เร็ว - 30 คนต่อมหาลัย): 
+// 1. Quick Mode (เร็วมาก - 100 คนรวม~4 มหาลัย): 
+//    → ตั้งค่า: SEED_QUICK_MODE=true npx prisma db seed
+//
+// 2. Development Mode (เร็ว - 30 คนต่อมหาลัย): 
 //    → ตั้งค่า: SEED_DEV_MODE=true npx prisma db seed
 //
-// 2. Full Scale Mode (เต็มจำนวนตามไฟล์จริง):
+// 3. Full Scale Mode (เต็มจำนวนตามไฟล์จริง ~1.8M):
 //    → ตั้งค่า: npx prisma db seed
-//    → หรือจะใส่: SEED_DEV_MODE=false npx prisma db seed
 //
 // เปลี่ยน Batch Size (ถ้าต้องการเร็วขึ้น):
 //    → เพิ่ม BATCH_SIZE เป็น 5000 หรือ 10000 (เสี่ยง timeout ถ้ามากเกินไป)
 // =============================================================================
 
-const MAX_STUDENTS_PER_UNI = process.env.SEED_DEV_MODE === "true" ? 30 : 999999;
+const IS_QUICK_MODE = process.env.SEED_QUICK_MODE === "true";
+const IS_DEV_MODE = process.env.SEED_DEV_MODE === "true";
+
+const MAX_STUDENTS_PER_UNI = IS_QUICK_MODE ? 25 : (IS_DEV_MODE ? 30 : 999999);
 const BATCH_SIZE = 5000; // เพิ่มจาก 1000 → 5000 เพื่อความเร็ว (แต่ยังปลอดภัย)
 
 

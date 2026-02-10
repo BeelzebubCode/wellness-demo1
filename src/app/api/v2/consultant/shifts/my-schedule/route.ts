@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
               select: {
                 university_name_th: true,
                 university_name_en: true,
-                university_short_name_th: true,
+                university_code: true,
               },
             },
           },
@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
         borrowedToUniversity: {
           nameTh: bp.borrowedToUniversity.university_name_th,
           nameEn: bp.borrowedToUniversity.university_name_en,
-          shortNameTh: bp.borrowedToUniversity.university_short_name_th,
+          code: bp.borrowedToUniversity.university_code,
         },
         startDate: bp.borrow_start_date.toISOString().split("T")[0],
         endDate: bp.borrow_end_date.toISOString().split("T")[0],

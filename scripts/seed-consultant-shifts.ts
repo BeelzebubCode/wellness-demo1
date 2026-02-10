@@ -6,37 +6,31 @@ async function seedConsultantShifts() {
   console.log("🔄 Seeding consultant shifts...");
 
   try {
-    // 1. Find demo consultant accounts first
-    const accounts = await prisma.account.findMany({
-      where: {
-        account_username: {
-          in: ["c1_cu", "c2_nu", "c1_tu"], // Demo consultant accounts
-        },
-        consultant: {
-          isNot: null,
-        },
-      },
+    // 1. Find actual consultants from database
+    const consultants = await prisma.consultant.findMany({
+      take: 5, // Just 5 consultants for demo
       include: {
-        consultant: true,
+        account: {
+          select: {
+            account_username: true,
+          },
+        },
       },
     });
 
-    const consultants = accounts
-      .map((a) => a.consultant)
-      .filter((c): c is NonNullable<typeof c> => c !== null);
-
     if (consultants.length === 0) {
-      console.log("⚠️  No consultants found for seeding");
+      console.log("⚠️  No consultants found. Please run main seed first: npx prisma db seed");
       return;
     }
 
     console.log(`Found ${consultants.length} consultants to seed shifts for`);
 
-    for (const consultant of consultants) {
-      console.log(`\n📋 Creating shifts for ${consultant.account.username}...`);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+    for (let i = 0; i < consultants.length; i++) {
+      const consultant = consultants[i];
+      console.log(`\n📋 Creating shifts for ${consultant.account.account_username}...`);
 
       // Create a current active shift (started 4 days ago, 10 days remaining)
       const currentShiftStart = new Date(today);
@@ -59,8 +53,8 @@ async function seedConsultantShifts() {
 
       console.log(`✅ Created current shift: ${currentShift.shift_id}`);
 
-      // Create a borrow period for consultant c1_cu (days 2-3, already returned)
-      if (account.account_username === "c1_cu") {
+      // For first consultant: add a RETURNED borrow period (days 2-3)
+      if (i === 0) {
         const borrowStart = new Date(currentShiftStart);
         borrowStart.setDate(currentShiftStart.getDate() + 1); // Day 2
 
@@ -88,15 +82,15 @@ async function seedConsultantShifts() {
             },
           });
 
-          console.log(`✅ Created RETURNED borrow period`);
+          console.log(`✅ Created RETURNED borrow period (days 2-3)`);
         }
       }
 
-      // Create a borrow period for consultant c2_nu (currently on loan, days 4-6)
-      if (account.account_username === "c2_nu") {
+      // For second consultant: add ACTIVE borrow period (currently on loan, days 4-6)
+      if (i === 1) {
         const borrowStart = new Date(today); // Today
         const borrowEnd = new Date(today);
-        borrowEnd.setDate(today.getDate() + 2); // 3 days from start (days 4-6)
+        borrowEnd.setDate(today.getDate() + 2); // 3 days from start (days 5-7)
 
         const otherUniversity = await prisma.university.findFirst({
           where: {
@@ -172,6 +166,10 @@ async function seedConsultantShifts() {
     }
 
     console.log("\n✅ Consultant shifts seeded successfully!");
+    console.log("\n📌 Demo Login Credentials:");
+    console.log("   Username: consultant_cu_1 (or any consultant account)");
+    console.log("   Password: password123");
+    console.log("   Page: /consultant/shifts");
   } catch (error) {
     console.error("❌ Error seeding consultant shifts:", error);
     throw error;
