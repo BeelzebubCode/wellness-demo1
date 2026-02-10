@@ -2,13 +2,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth/jwt";
+import { DeanService } from "@/services/dean/dean-service";
 
 export async function GET(req: NextRequest) {
   try {
     // 0. Extract token
     const tokenCookie = req.cookies.get("auth_token");
     if (!tokenCookie) {
-        return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const token = await verifyToken(tokenCookie.value);
@@ -35,50 +36,31 @@ export async function GET(req: NextRequest) {
     // 2. Get Faculty Data (Assume single faculty for now, or take the first one)
     const faculty = account.facultiesDean[0];
 
-    // 3. Get Student Metrics for this Faculty
-    // Fetch all departments in this faculty
-    const departments = await prisma.department.findMany({
-      where: { faculty_id: faculty.faculty_id },
-      include: {
-        _count: {
-          select: { students: true },
-        },
-      },
-    });
+    // 3. Get Student Metrics for this Faculty using DeanService
+    // This service handles all the complex logic for fetching stats, including problem breakdown
+    // which was missing in the previous implementation causing client-side errors.
 
-    // Mock risk calculation for now (since real risk calculation is complex)
-    // In production, this would query aggregated risk tables or student assessments
-    const departmentStats = departments.map((dept) => {
-      // @ts-ignore: _count property is valid in Prisma include but TS might complain if types aren't fully generated
-      const studentCount = dept._count?.students || 0;
-      // Mocking ~5% critical risk for demo
-      const criticalRisk = Math.floor(studentCount * 0.05); 
-      return {
-        departmentCode: dept.department_code,
-        departmentName: dept.department_name_en || dept.department_name_th,
-        studentCount: studentCount,
-        criticalRiskDetails: criticalRisk,
-      };
-    });
+    // We need the university ID, which should be on the account or the faculty
+    const universityId = account.account_home_university_id || faculty.university_id;
 
-    const totalStudents = departmentStats.reduce((acc, curr) => acc + curr.studentCount, 0);
-    const totalCritical = departmentStats.reduce((acc, curr) => acc + curr.criticalRiskDetails, 0);
+    if (!universityId) {
+      return NextResponse.json({ success: false, error: "University context missing" }, { status: 500 });
+    }
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        facultyName: faculty.faculty_name_en || faculty.faculty_name_th,
-        totalStudents,
-        riskDistribution: {
-          critical: totalCritical,
-          high: Math.floor(totalStudents * 0.1),
-          moderate: Math.floor(totalStudents * 0.2),
-          normal: totalStudents - totalCritical - Math.floor(totalStudents * 0.3),
-        },
-        departmentStats,
-      },
-    });
+    try {
+      const stats = await DeanService.getFacultyStats(faculty.faculty_id, universityId);
 
+      return NextResponse.json({
+        success: true,
+        data: stats,
+      });
+    } catch (serviceError: any) {
+      console.error("DeanService Error:", serviceError);
+      return NextResponse.json(
+        { success: false, error: serviceError.message || "Failed to fetch faculty statistics" },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error("[DEAN_DASHBOARD_ERROR]", error);
     return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });

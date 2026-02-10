@@ -3,24 +3,15 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Search, Building2, Users, GraduationCap, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { useFaculties } from "../hooks/useFaculties";
 import type { Faculty } from "../types";
 
 export function FacultySelectionPage() {
-    const router = useRouter();
     const { faculties, isLoading, error } = useFaculties();
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 12; // Show 12 faculties per page
-
-    // Auto-redirect if only one faculty
-    useEffect(() => {
-        if (!isLoading && faculties.length === 1) {
-            router.push(`/dean/faculties/${faculties[0].code}`);
-        }
-    }, [isLoading, faculties, router]);
 
     // Filter faculties
     const filteredFaculties = faculties.filter((faculty) => {
@@ -78,7 +69,7 @@ export function FacultySelectionPage() {
                         placeholder="Search by faculty name or code..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[rgb(var(--primary))] focus:border-transparent"
+                        className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     />
                 </div>
             </div>
@@ -87,10 +78,10 @@ export function FacultySelectionPage() {
             <div className="max-w-7xl mx-auto mb-4 flex justify-between items-center">
                 <p className="text-gray-600">
                     Showing{" "}
-                    <span className="font-semibold text-[rgb(var(--primary))]">
+                    <span className="font-semibold text-indigo-600">
                         {startIndex + 1}-{Math.min(endIndex, filteredFaculties.length)}
                     </span>{" "}
-                    of <span className="font-semibold text-[rgb(var(--primary))]">{filteredFaculties.length}</span>{" "}
+                    of <span className="font-semibold text-indigo-600">{filteredFaculties.length}</span>{" "}
                     faculties
                 </p>
                 {totalPages > 1 && (
@@ -109,10 +100,10 @@ export function FacultySelectionPage() {
                         <Link
                             key={faculty.id}
                             href={`/dean/faculties/${faculty.code}`}
-                            className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-200 hover:border-[rgb(var(--primary))]"
+                            className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-200 hover:border-indigo-400"
                         >
                             {/* Logo Header */}
-                            <div className="bg-[rgba(var(--primary),0.05)] p-6 flex items-center justify-center border-b border-gray-100">
+                            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 flex items-center justify-center border-b border-gray-100">
                                 <div className="w-24 h-24 bg-white rounded-full shadow-lg flex items-center justify-center p-2">
                                     <img
                                         src={logoUrl}
@@ -131,7 +122,7 @@ export function FacultySelectionPage() {
 
                             {/* Content */}
                             <div className="p-6">
-                                <h3 className="font-bold text-lg text-gray-900 mb-2 group-hover:text-[rgb(var(--primary))] transition-colors line-clamp-2">
+                                <h3 className="font-bold text-lg text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors line-clamp-2">
                                     {faculty.name}
                                 </h3>
 
@@ -152,14 +143,14 @@ export function FacultySelectionPage() {
 
                                 {faculty.educationFieldGroup && (
                                     <div className="mb-4">
-                                        <span className="text-xs font-semibold text-[rgb(var(--primary))] uppercase tracking-wide bg-[rgba(var(--primary),0.1)] px-2 py-1 rounded">
+                                        <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wide bg-indigo-50 px-2 py-1 rounded">
                                             {faculty.educationFieldGroup}
                                         </span>
                                     </div>
                                 )}
 
                                 <div className="flex items-center justify-end pt-4 border-t border-gray-100">
-                                    <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-[rgb(var(--primary))] group-hover:translate-x-1 transition-all" />
+                                    <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" />
                                 </div>
                             </div>
                         </Link>
@@ -176,8 +167,8 @@ export function FacultySelectionPage() {
                             onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                             disabled={currentPage === 1}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${currentPage === 1
-                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                : "bg-[rgb(var(--primary))] text-white hover:bg-[rgb(var(--primary-600))] shadow-lg"
+                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                    : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg"
                                 }`}
                         >
                             <ChevronLeft className="w-4 h-4" />
@@ -214,8 +205,8 @@ export function FacultySelectionPage() {
                                         key={page}
                                         onClick={() => setCurrentPage(page)}
                                         className={`w-10 h-10 rounded-lg font-semibold transition-all ${currentPage === page
-                                            ? "bg-[rgb(var(--primary))] text-white shadow-lg"
-                                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                                ? "bg-indigo-600 text-white shadow-lg"
+                                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                                             }`}
                                     >
                                         {page}
@@ -229,8 +220,8 @@ export function FacultySelectionPage() {
                             onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                             disabled={currentPage === totalPages}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${currentPage === totalPages
-                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg"
+                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                    : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg"
                                 }`}
                         >
                             Next

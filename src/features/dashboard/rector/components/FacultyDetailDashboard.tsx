@@ -7,7 +7,7 @@ import Link from "next/link";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 
 interface Props {
-    facultyCode?: string;
+    facultyCode: string;
 }
 
 export function FacultyDetailDashboard({ facultyCode }: Props) {
@@ -55,19 +55,17 @@ export function FacultyDetailDashboard({ facultyCode }: Props) {
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
             {/* Header */}
             <div className="max-w-7xl mx-auto mb-8">
-                {/* {facultyCode && (
-                    <Link
-                        href="/dean/faculties"
-                        className="inline-flex items-center gap-2 text-[rgb(var(--primary))] hover:text-[rgb(var(--primary-600))] mb-4 font-medium transition-colors"
-                    >
-                        <ArrowLeft className="w-4 h-4" />
-                        Back to Faculties
-                    </Link>
-                )} */}
+                <Link
+                    href="/dean/faculties"
+                    className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700 mb-4 font-medium"
+                >
+                    <ArrowLeft className="w-4 h-4" />
+                    Back to Faculties
+                </Link>
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">{stats.facultyName}</h1>
                 <p className="text-gray-600">{stats.universityName}</p>
                 {stats.educationFieldGroup && (
-                    <span className="inline-block mt-2 text-sm font-semibold text-[rgb(var(--primary))] uppercase tracking-wide bg-[rgba(var(--primary),0.1)] px-3 py-1 rounded-lg">
+                    <span className="inline-block mt-2 text-sm font-semibold text-indigo-600 uppercase tracking-wide bg-indigo-50 px-3 py-1 rounded-lg">
                         {stats.educationFieldGroup}
                     </span>
                 )}
@@ -156,7 +154,7 @@ export function FacultyDetailDashboard({ facultyCode }: Props) {
                             <XAxis dataKey="name" />
                             <YAxis />
                             <Tooltip />
-                            <Bar dataKey="count" fill="rgb(var(--primary))" />
+                            <Bar dataKey="count" fill="#6366f1" />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
