@@ -7,6 +7,7 @@ export const RECTOR_NAV: NavItem[] = [
     href: "/rector",
     label: "Dashboard",
     icon: LayoutDashboard,
+    exact: true,
   },
   {
     href: "/rector/faculties",
