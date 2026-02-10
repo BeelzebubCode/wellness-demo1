@@ -1,8 +1,83 @@
 // src/app/not-found.tsx
+"use client";
+
 import Link from "next/link";
 import { ArrowLeft, Home, HeartPulse } from "lucide-react";
+import { useEffect, useState } from "react";
+import { authApi } from "@/features/auth/api";
 
 export default function NotFound() {
+  const [homeHref, setHomeHref] = useState("/");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function determineHome() {
+      // 1. Helper to read cookies
+      const getCookie = (name: string) => {
+        const matches = document.cookie.match(new RegExp(
+          "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
+        ));
+        return matches ? decodeURIComponent(matches[1]) : undefined;
+      };
+
+      const token = getCookie("auth_token");
+      if (!token) {
+        setLoading(false);
+        return; // Guest -> "/"
+      }
+
+      try {
+        // 2. Fetch User Role
+        const { valid, account } = await authApi.me();
+        if (!valid || !account) {
+            setLoading(false);
+            return;
+        }
+
+        // 3. Get Tenant Code
+        const tenantCode = getCookie("tenant_code") || "DEFAULT";
+        const role = account.role;
+
+        // 4. Determine Path based on Role
+        let path = "/";
+
+        switch (role) {
+          case "MINISTRY":
+            path = "/ministry";
+            break;
+          case "SUPER_ADMIN":
+            path = "/super-admin";
+            break;
+          case "STUDENT":
+            path = "/"; // Public Dashboard (Booking)
+            break;
+          case "CONSULTANT":
+            path = `/${tenantCode}/consultant`;
+            break;
+          case "HEAD_CONSULTANT":
+            path = `/${tenantCode}/head-consultant`;
+            break;
+          case "ADVISOR":
+            path = `/${tenantCode}/advisor`;
+            break;
+          case "RECTOR":
+            path = `/${tenantCode}/rector`;
+            break;
+          default:
+            path = "/";
+        }
+
+        setHomeHref(path);
+      } catch (error) {
+        console.error("Failed to determine home path:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    determineHome();
+  }, []);
+
   return (
     <div className="min-h-screen w-full bg-slate-50/50 relative flex flex-col items-center justify-center p-4 sm:p-6 overflow-hidden font-sans">
       
@@ -75,13 +150,13 @@ export default function NotFound() {
             {/* Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto pt-2">
               <Link
-                href="/"
+                href={homeHref}
                 className="group h-12 px-8 rounded-full font-bold text-white shadow-[0_4px_14px_0_rgba(255,158,136,0.39)]
                            bg-gradient-to-r from-[#ff9e88] to-[#ff8a70] hover:scale-105 hover:shadow-[0_6px_20px_rgba(255,158,136,0.23)]
                            transition-all duration-300 flex items-center justify-center gap-2"
               >
                 <Home className="w-4 h-4" />
-                <span>กลับหน้าแรก</span>
+                <span>{loading ? "กำลังโหลด..." : "กลับหน้าหลัก"}</span>
               </Link>
 
               <Link
