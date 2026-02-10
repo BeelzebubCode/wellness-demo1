@@ -1,3 +1,4 @@
+// path: C:\wellness-demo1\src\components\super-admin\ai-kb\AiKbManagerPage.tsx
 "use client";
 
 import { useMemo, useState } from "react";
@@ -116,18 +117,20 @@ export default function AiKbManagerPage() {
         </Button>
       </div>
 
-      {/* Filters */}
+      {/* Filters (ลดขนาดตัวอักษร) */}
       <div className="grid grid-cols-1 gap-3 rounded-xl border bg-white p-4 md:grid-cols-4">
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="ค้นหา..."
           leftIcon={<Search className="h-4 w-4 text-slate-400" />}
+          className="text-sm"
         />
+
         <Select
           value={scope}
           onValueChange={(v) => setScope(v as any)}
-          className="h-9 px-3 text-sm"
+          className="text-xs"
           options={[
             { value: "ALL", label: "Scope ทั้งหมด" },
             { value: "GLOBAL", label: "Global Only" },
@@ -138,7 +141,7 @@ export default function AiKbManagerPage() {
         <Select
           value={active}
           onValueChange={(v) => setActive(v as any)}
-          className="h-9 px-3 text-sm"
+          className="text-xs"
           options={[
             { value: "ALL", label: "ทุกสถานะ" },
             { value: "ACTIVE", label: "Active" },
@@ -149,10 +152,9 @@ export default function AiKbManagerPage() {
         <Select
           value={universityId}
           onValueChange={setUniversityId}
-          className="h-9 px-3 text-sm"
+          className="text-xs"
           options={universityOptions}
         />
-
       </div>
 
       {/* List */}
@@ -204,16 +206,16 @@ export default function AiKbManagerPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1">
-                    {/* View */}
                     <Button
                       size="icon"
                       variant="ghost"
-                      onClick={() => router.push(`/super-admin/ai-kb/${d.id}`)}
+                      onClick={() =>
+                        router.push(`/super-admin/ai-kb/${d.id}`)
+                      }
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
 
-                    {/* Delete (ต้องอยู่กลาง) */}
                     <Button
                       size="icon"
                       variant="ghost"
@@ -226,7 +228,6 @@ export default function AiKbManagerPage() {
                       <Trash2 className="h-4 w-4" />
                     </Button>
 
-                    {/* Power (อยู่ท้ายสุด) */}
                     <Button
                       size="icon"
                       variant="ghost"
