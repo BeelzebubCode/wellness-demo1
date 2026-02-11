@@ -34,14 +34,14 @@ export function FacultyDetailDashboard({ facultyCode }: Props) {
 
     // Prepare data for risk distribution chart
     const riskData = [
-        { name: "Critical", value: stats.riskDistribution.critical, color: "#dc2626" },
-        { name: "High", value: stats.riskDistribution.high, color: "#f97316" },
-        { name: "Moderate", value: stats.riskDistribution.moderate, color: "#fbbf24" },
-        { name: "Normal", value: stats.riskDistribution.normal, color: "#22c55e" },
+        { name: "Critical", value: stats.riskDistribution.HIGH, color: "#dc2626" },
+        { name: "High", value: stats.riskDistribution.MEDIUM, color: "#f97316" },
+        { name: "Moderate", value: stats.riskDistribution.LOW, color: "#fbbf24" },
+        { name: "Normal", value: stats.riskDistribution.NORMAL, color: "#22c55e" },
     ];
 
     // Prepare data for problem breakdown chart
-    const problemData = Object.entries(stats.problemBreakdown)
+    const problemData = Object.entries(stats.problemStats)
         .map(([code, count]) => ({
             name: code,
             count,
@@ -49,7 +49,7 @@ export function FacultyDetailDashboard({ facultyCode }: Props) {
         .sort((a, b) => b.count - a.count)
         .slice(0, 10); // Top 10 problems
 
-    const totalRisk = stats.riskDistribution.critical + stats.riskDistribution.high;
+    const totalRisk = stats.riskDistribution.HIGH + stats.riskDistribution.MEDIUM;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
@@ -133,7 +133,7 @@ export function FacultyDetailDashboard({ facultyCode }: Props) {
                                 cx="50%"
                                 cy="50%"
                                 labelLine={false}
-                                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                                label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`}
                                 outerRadius={80}
                                 fill="#8884d8"
                                 dataKey="value"

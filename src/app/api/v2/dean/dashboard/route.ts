@@ -33,9 +33,21 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: "No faculty assigned to this Dean account" }, { status: 404 });
     }
 
-    // 2. Get Faculty Data (Assume single faculty for now, or take the first one)
-    const faculty = account.facultiesDean[0];
+    // 2. Get Faculty Data
+    const searchParams = req.nextUrl.searchParams;
+    const facultyCode = searchParams.get("facultyCode");
 
+    let faculty;
+    if (facultyCode) {
+      faculty = account.facultiesDean.find((f) => f.faculty_code === facultyCode);
+      if (!faculty) {
+        return NextResponse.json({ success: false, error: "Faculty not found or not assigned to you" }, { status: 404 });
+      }
+    } else {
+      // Default to first faculty if no code provided
+      faculty = account.facultiesDean[0];
+    }
+    
     // 3. Get Student Metrics for this Faculty using DeanService
     // This service handles all the complex logic for fetching stats, including problem breakdown
     // which was missing in the previous implementation causing client-side errors.

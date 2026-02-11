@@ -8,6 +8,15 @@ interface FacultyStats {
     facultyName: string;
     facultyCode: string;
     universityName: string;
+    totalDepartments: number;
+    educationFieldGroup: string | null;
+    departmentStats: Array<{
+        departmentId: number;
+        departmentCode: string;
+        departmentName: string;
+        studentCount: number;
+        bookingCount: number;
+    }>;
     riskDistribution: {
         HIGH: number;
         MEDIUM: number;
@@ -67,9 +76,12 @@ export function useFacultyStats(facultyCode?: string) {
                     setStats({
                         totalStudents: data.totalStudents,
                         totalBookings: data.totalBookings,
+                        totalDepartments: data.totalDepartments,
                         facultyName: data.facultyName,
                         facultyCode: data.facultyCode,
                         universityName: data.universityName,
+                        educationFieldGroup: data.educationFieldGroup,
+                        departmentStats: data.departmentStats,
                         riskDistribution: data.riskDistribution,
                         problemStats: data.problemStats,
                         genderProblemStats: data.genderProblemStats,
