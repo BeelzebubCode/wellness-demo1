@@ -87,20 +87,29 @@ export function RectorAnalyticsCharts({ analytics }: RectorAnalyticsChartsProps)
         }
     };
 
-    // 1. Problem Stats Data (Bar Chart)
+    // 1. Problem Stats Data (Bar Chart) - Data Storytelling: Highlight Max Value
     const problemLabels = Object.keys(analytics.problemStats || {});
-    const problemDataVals = Object.values(analytics.problemStats || {});
+    const problemDataVals = Object.values(analytics.problemStats || {}) as number[];
+
+    // Find the maximum value to highlight it
+    const maxProblemValue = Math.max(...problemDataVals, 0);
+    const problemColors = problemDataVals.map(val =>
+        val === maxProblemValue && maxProblemValue > 0
+            ? colors.primary  // Use Tenant Theme Color for max value
+            : '#e2e8f0'       // Slate-200: de-emphasize other problems
+    );
 
     const problemChartData: ChartData<'bar'> = {
         labels: problemLabels,
         datasets: [
             {
                 label: 'จำนวนเคส',
-                data: problemDataVals as number[],
-                backgroundColor: colors.primaryAlpha,
-                borderColor: colors.primary,
-                borderWidth: 1,
+                data: problemDataVals,
+                backgroundColor: problemColors,
+                borderColor: problemColors, // No border needed for flat design, or same as bg
+                borderWidth: 0,
                 borderRadius: 4,
+                barPercentage: 0.6,
             },
         ],
     };
@@ -111,10 +120,21 @@ export function RectorAnalyticsCharts({ analytics }: RectorAnalyticsChartsProps)
         plugins: {
             ...commonOptions.plugins,
             title: { display: false },
+            legend: { display: false }, // Hide legend as color explains itself
         },
+        scales: {
+            x: {
+                grid: { display: false },
+                ticks: { font: { family: 'Prompt', size: 10 } }
+            },
+            y: {
+                grid: { display: false },
+                ticks: { font: { family: 'Prompt', weight: 'bold', size: 11 } }
+            }
+        }
     };
 
-    // 2. Gender vs Problem Data (Grouped Bar)
+    // 2. Gender vs Problem Data (Grouped Bar) - Data Storytelling: Distinct Gender Colors
     const allProblems = new Set<string>();
     Object.values(analytics.genderProblemStats || {}).forEach((probs: any) => {
         Object.keys(probs).forEach(p => allProblems.add(p));
@@ -130,39 +150,90 @@ export function RectorAnalyticsCharts({ analytics }: RectorAnalyticsChartsProps)
             {
                 label: 'ชาย',
                 data: maleData,
-                backgroundColor: colors.primaryAlpha,
-                borderColor: colors.primary,
-                borderWidth: 1,
+                backgroundColor: '#3b82f6',  // Blue - universally recognized male color
+                hoverBackgroundColor: '#2563eb',
+                borderWidth: 0,
                 borderRadius: 4,
             },
             {
                 label: 'หญิง',
                 data: femaleData,
-                backgroundColor: colors.accentAlpha,
-                borderColor: colors.accent,
-                borderWidth: 1,
+                backgroundColor: '#ec4899',  // Pink/Rose - universally recognized female color
+                hoverBackgroundColor: '#db2777',
+                borderWidth: 0,
                 borderRadius: 4,
             },
         ],
     };
 
-    // 3. Time Stats Data (Monthly Line)
+    // 3. Time Stats Data (Monthly Bar Chart) - Data Storytelling: Highlight Performance Period
     const sortedMonths = Object.keys(analytics.visitsByMonth || {}).sort();
-    const timeChartData: ChartData<'line'> = {
+    const monthlyValues = sortedMonths.map(m => analytics.visitsByMonth[m]);
+
+    // Calculate statistics for storytelling
+    const avgMonthValue = monthlyValues.reduce((a, b) => a + b, 0) / (monthlyValues.length || 1);
+    const threshold = avgMonthValue * 0.9; // 90% of average is considered "high/consistent performance"
+
+    // Color logic: Tenant Primary (Orange/Theme) for high performance (middle), Gray for low/ramping (start/end)
+    const monthColors = monthlyValues.map((val) => {
+        if (val >= threshold && val > 0) {
+            return colors.primary; // Use Tenant Theme Color (Orange/etc)
+        } else {
+            return '#cbd5e1'; // Slate-300: Low/ramping period (Gray)
+        }
+    });
+
+    const timeChartData: ChartData<'bar'> = {
         labels: sortedMonths,
         datasets: [
             {
                 label: 'จำนวนการเข้ารับคำปรึกษา',
-                data: sortedMonths.map(m => analytics.visitsByMonth[m]),
-                borderColor: colors.primary,
-                backgroundColor: colors.primaryAlpha,
-                tension: 0.4,
-                fill: true,
-                pointBackgroundColor: colors.primary,
-                pointBorderColor: '#fff',
-                pointHoverRadius: 6,
+                data: monthlyValues,
+                backgroundColor: monthColors,
+                borderWidth: 0,
+                borderRadius: 4,
+                barPercentage: 0.7,
             },
         ],
+    };
+
+    const timeChartOptions: ChartOptions<'bar'> = {
+        ...commonOptions,
+        plugins: {
+            ...commonOptions.plugins,
+            legend: { display: false },
+            title: {
+                display: true,
+                text: 'Performance สูงต่อเนื่อง 10 เดือน',
+                color: colors.primary,
+                font: {
+                    size: 14,
+                    weight: 'bold',
+                    family: 'Prompt'
+                },
+                padding: { bottom: 20 },
+                align: 'center'
+            },
+            subtitle: {
+                display: true,
+                text: 'ช่วงกลางปีมีการให้บริการที่สม่ำเสมอ (สีเข้ม) เทียบกับช่วงปิดเทอม (สีเทา)',
+                color: '#64748b',
+                font: { size: 10 },
+                padding: { bottom: 10 }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: {
+                    color: '#f1f5f9',
+                    drawBorder: false,
+                }
+            },
+            x: {
+                grid: { display: false }
+            }
+        }
     };
 
     // 4. Repeat Stats (Pie)
@@ -231,7 +302,7 @@ export function RectorAnalyticsCharts({ analytics }: RectorAnalyticsChartsProps)
                     </CardHeader>
                     <CardContent className="pt-4 h-[240px]">
                         {sortedMonths.length > 0 ? (
-                            <Line data={timeChartData} options={commonOptions} />
+                            <Bar data={timeChartData} options={timeChartOptions} />
                         ) : (
                             <div className="h-full flex items-center justify-center text-slate-400 italic text-sm">ไม่มีข้อมูล</div>
                         )}

@@ -18,146 +18,100 @@ import AuthLikeBackground from "@/components/layout/background/AuthLikeBackgroun
 
 export function PublicFooter() {
   const mapHref =
-    "https://www.google.com/maps/place/%E0%B8%81%E0%B8%AD%E0%B8%87%E0%B8%81%E0%B8%B4%E0%B8%88%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B8%99%E0%B8%B4%E0%B8%AA%E0%B8%B4%E0%B8%95+%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%99%E0%B9%80%E0%B8%A3%E0%B8%A8%E0%B8%A7%E0%B8%A3";
+    "https://www.google.com/maps/place/%E0%B8%81%E0%B8%AD%E0%B8%87%E0%B8%81%E0%B8%B4%E0%B8%88%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B8%99%E0%B8%B4%E0%B8%AA%E0%B8%B4%E0%B8%95+%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%99%E0%B9%80%E0%B8%A3%E0%B8%A7%E0%B8%A3";
 
   return (
-    <footer className="relative overflow-hidden">
-      {/* ✅ bg เดิม */}
-      <div className="absolute inset-0 -z-10 opacity-80">
-        <AuthLikeBackground />
-      </div>
+    <footer className="relative w-full border-t border-[rgb(var(--primary),0.2)] bg-white/60 backdrop-blur-md">
+      {/* Background elements if needed, but keeping it clean for compatibility */}
 
-      {/* ✅ glass layer */}
-      <div className="absolute inset-0 bg-white/35 backdrop-blur-xl" />
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 items-start">
 
-      {/* ✅ divider ใช้ border ของ tenant */}
-      <div className="absolute inset-x-0 top-0 h-px bg-[rgb(var(--border)/0.70)]" />
+          {/* Column 1: Brand & Actions */}
+          <div className="flex flex-col space-y-4">
+            <BrandLogo
+              asLink
+              href="/"
+              size={40}
+              showText
+              subtitle="Student Portal"
+              variant="default"
+              className="gap-3"
+              textClassName="text-[rgb(var(--fg))]"
+            />
 
-      <div className="relative">
-        <div className="max-w-7xl mx-auto px-4 py-14">
-          {/* ===== Top Grid ===== */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
-            {/* Brand */}
-            <div className="lg:col-span-4">
-              <BrandLogo
-                asLink
-                href="/"
-                size={44}
-                showText
-                subtitle="Student Portal"
-                variant="default"
-                className="gap-3"
-                textClassName="text-[rgb(var(--fg))]"
-              />
+            <p className="text-sm text-[rgb(var(--muted))] leading-relaxed font-medium max-w-xs">
+              ระบบบริการให้คำปรึกษาสำหรับนิสิตมหาวิทยาลัยนเรศวร ใช้งานง่าย ปลอดภัย และเป็นส่วนตัว
+            </p>
 
-              <p className="mt-3 text-[rgb(var(--muted))] text-sm leading-relaxed">
-                ระบบบริการให้คำปรึกษาสำหรับนิสิตมหาวิทยาลัยนเรศวร
-                ใช้งานง่าย ปลอดภัย และเป็นส่วนตัว
-              </p>
-
-              <div className="mt-5 flex flex-wrap gap-2">
-                <Link
-                  href="/about"
-                  className="inline-flex items-center gap-2 rounded-full
-                             bg-white/55 hover:bg-white/75
-                             border border-[rgb(var(--border)/0.70)]
-                             px-3 py-2 text-xs font-semibold text-[rgb(var(--fg))] transition"
-                >
-                  <Info className="w-4 h-4 text-[rgb(var(--primary))]" />
-                  เกี่ยวกับเรา
-                </Link>
-
-                <Link
-                  href="/pr"
-                  className="inline-flex items-center gap-2 rounded-full
-                             bg-white/55 hover:bg-white/75
-                             border border-[rgb(var(--border)/0.70)]
-                             px-3 py-2 text-xs font-semibold text-[rgb(var(--fg))] transition"
-                >
-                  <Newspaper className="w-4 h-4 text-[rgb(var(--primary))]" />
-                  ประชาสัมพันธ์
-                </Link>
-
-                <Link
-                  href="/login"
-                  className="inline-flex items-center gap-2 rounded-full
-                             bg-[rgb(var(--primary))] hover:bg-[rgb(var(--primary-600))]
-                             text-white px-3 py-2 text-xs font-extrabold
-                             shadow-sm shadow-[rgba(var(--primary),0.18)]
-                             transition"
-                >
-                  เข้าสู่ระบบ
-                  <ExternalLink className="w-4 h-4" />
-                </Link>
-              </div>
-
-              <p className="mt-6 text-xs text-[rgb(var(--muted))]">
-                © {new Date().getFullYear()} {APP_CONFIG.name}. All rights reserved.
-              </p>
+            <div className="flex flex-wrap gap-2 pt-2">
+              <Link
+                href="/about"
+                className="inline-flex items-center px-4 py-2 rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition shadow-sm gap-1.5"
+              >
+                <Info size={14} className="text-slate-400" /> เกี่ยวกับเรา
+              </Link>
+              <Link
+                href="/pr"
+                className="inline-flex items-center px-4 py-2 rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition shadow-sm gap-1.5"
+              >
+                <Newspaper size={14} className="text-slate-400" /> ประชาสัมพันธ์
+              </Link>
+              <Link
+                href="/login"
+                className="inline-flex items-center px-4 py-2 rounded-full bg-[rgb(var(--primary))] text-xs font-bold text-white hover:bg-[rgb(var(--primary-600))] transition shadow-sm shadow-[rgba(var(--primary),0.2)] gap-1.5"
+              >
+                เข้าสู่ระบบ <ExternalLink size={14} />
+              </Link>
             </div>
 
-            {/* Contact */}
-            <div className="lg:col-span-3">
-              <div className="rounded-2xl bg-white/55 border border-[rgb(var(--border)/0.70)] p-5">
-                <p className="font-extrabold text-sm text-[rgb(var(--fg))]">
-                  ติดต่อเรา
-                </p>
-
-                <div className="mt-3 space-y-2.5">
-                  <a
-                    href="tel:055961273"
-                    className="flex items-center gap-2 text-[rgb(var(--fg))] text-sm"
-                  >
-                    <Phone className="w-4 h-4 text-[rgb(var(--primary))]" />
-                    055-961-273
-                  </a>
-
-                  <a
-                    href="mailto:support@wellness.nu.ac.th"
-                    className="flex items-center gap-2 text-[rgb(var(--fg))] text-sm"
-                  >
-                    <Mail className="w-4 h-4 text-[rgb(var(--primary))]" />
-                    support@wellness.nu.ac.th
-                  </a>
-
-                  <a
-                    href={mapHref}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-2 text-xs font-semibold text-[rgb(var(--fg))]"
-                  >
-                    <MapPin className="w-4 h-4 text-[rgb(var(--primary))]" />
-                    เปิดแผนที่ Google Maps
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            {/* Map */}
-            <div className="lg:col-span-5">
-              <div className="rounded-2xl overflow-hidden border border-[rgb(var(--border)/0.70)] bg-white/55">
-                <GoogleMapEmbed
-                  title="ศูนย์สุขภาวะนิสิต มหาวิทยาลัยนเรศวร"
-                  subtitle="Naresuan University Wellness Center"
-                  href={mapHref}
-                  imageSrc="/images/maps/wellness-map.png"
-                  heightClassName="h-[240px] sm:h-[280px] lg:h-[320px]"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="mt-10 border-t border-[rgb(var(--border)/0.70)]" />
-
-          {/* Bottom */}
-          <div className="pt-6 text-center">
-            <p className="inline-flex items-center gap-2 text-[rgb(var(--muted))] text-xs">
-              <ShieldCheck size={14} className="text-[rgb(var(--primary))]" />
-              ข้อมูลของคุณได้รับการปกป้องตามนโยบายความเป็นส่วนตัวของมหาวิทยาลัย
+            <p className="text-xs text-slate-400 mt-4 leading-relaxed font-medium">
+              © {new Date().getFullYear()} {APP_CONFIG.name}. All rights reserved.
             </p>
           </div>
+
+          {/* Column 2: Contact Card */}
+          <div className="bg-white/80 rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4 h-full">
+            <h4 className="text-base font-bold text-slate-800 flex items-center gap-2">
+              ติดต่อเรา
+            </h4>
+            <ul className="space-y-3 text-sm">
+              <li className="flex items-center gap-3 text-slate-600">
+                <span className="p-1.5 rounded-full bg-[rgba(var(--primary),0.1)] text-[rgb(var(--primary))]">
+                  <Phone size={14} />
+                </span>
+                <span className="font-semibold">055-961-273</span>
+              </li>
+              <li className="flex items-center gap-3 text-slate-600">
+                <span className="p-1.5 rounded-full bg-[rgba(var(--primary),0.1)] text-[rgb(var(--primary))]">
+                  <Mail size={14} />
+                </span>
+                <span className="font-semibold">support@wellness.nu.ac.th</span>
+              </li>
+              <li className="flex items-center gap-3 text-slate-600 group cursor-pointer hover:text-[rgb(var(--primary))] transition">
+                <a href={mapHref} target="_blank" rel="noreferrer" className="flex items-center gap-3 w-full">
+                  <span className="p-1.5 rounded-full bg-[rgba(var(--primary),0.1)] text-[rgb(var(--primary))] group-hover:bg-[rgb(var(--primary))] group-hover:text-white transition">
+                    <MapPin size={14} />
+                  </span>
+                  <span className="font-bold underline decoration-slate-300 underline-offset-4 decoration-2 group-hover:decoration-[rgb(var(--primary))]">เปิดแผนที่ Google Maps</span>
+                  <ExternalLink size={12} className="opacity-50 group-hover:opacity-100 transition ml-auto" />
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Column 3: Map Image */}
+          <div className="relative group overflow-hidden rounded-2xl border border-slate-200 shadow-sm h-full min-h-[200px]">
+            <GoogleMapEmbed
+              title="ศูนย์สุขภาวะนิสิต มหาวิทยาลัยนเรศวร"
+              subtitle="Naresuan University Wellness Center"
+              href={mapHref}
+              imageSrc="/images/maps/wellness-map.png"
+              heightClassName="h-full w-full absolute inset-0 object-cover"
+            />
+            {/* Optional overlay if GoogleMapEmbed doesn't handle customized look - but keeping it simple as per component use */}
+          </div>
+
         </div>
       </div>
     </footer>

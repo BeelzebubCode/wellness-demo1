@@ -21,9 +21,9 @@ export const RectorService = {
             WHERE "university_id" = ${universityId}
         `;
         const totalBookings = Number(totalBookingsQuery[0]?.count || 0);
-        
+
         if (totalBookings === 0 && totalStudents === 0) {
-             return {
+            return {
                 totalStudents: 0,
                 totalBookings: 0,
                 universityId,
@@ -99,10 +99,10 @@ export const RectorService = {
             WHERE university_id = ${universityId}
             GROUP BY TO_CHAR(booking_created_at, 'YYYY-MM')
         `;
-        
+
         const visitsByMonth: Record<string, number> = {};
         visitsQuery.forEach(v => {
-            if(v.month) visitsByMonth[v.month] = Number(v.count);
+            if (v.month) visitsByMonth[v.month] = Number(v.count);
         });
 
         // 7. Repeat Visits (SQL Count Group By Student)
@@ -129,13 +129,13 @@ export const RectorService = {
 
         // 8. Faculty Breakdown (Combined SQL)
         // Ensure to count risks from bookings associated with students in that faculty
-        const facultyStats = await prisma.$queryRaw<{ 
-            faculty_id: number, 
+        const facultyStats = await prisma.$queryRaw<{
+            faculty_id: number,
             faculty_name: string,
             student_count: bigint,
             high_risk: bigint,
             medium_risk: bigint,
-            low_risk: bigint 
+            low_risk: bigint
         }[]>`
             SELECT 
                 f.faculty_id,
