@@ -27,6 +27,8 @@ export function DateCalendarPopover({
   maxDate,
   disablePast,
   closeOnSelect = false,
+  placeholder,
+  align = "left",
 }: {
   valueYMD?: string;
   onChangeYMD: (ymd: string) => void;
@@ -34,9 +36,13 @@ export function DateCalendarPopover({
   maxDate?: Date;
   disablePast?: boolean;
   closeOnSelect?: boolean;
+  placeholder?: string;
+  align?: "left" | "right";
 }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
+
+  // ... (rest of logic) ...
 
   // ✅ parse ค่าเข้ามาแบบรองรับ พ.ศ. และไม่เพี้ยนวัน
   const selectedDate = useMemo(() => {
@@ -74,7 +80,7 @@ export function DateCalendarPopover({
   }, [open]);
 
   // ✅ label ควรใช้ค่าที่ normalize แล้ว (กัน พ.ศ.)
-  const label = valueYMD ? formatDateDMY(normalizeYMD(valueYMD)) : "เลือกวันที่";
+  const label = valueYMD ? formatDateDMY(normalizeYMD(valueYMD)) : (placeholder || "เลือกวันที่");
   const hasValue = !!valueYMD;
 
   // ✅ min/max ก็ normalize กันไว้ (เผื่อใครส่ง date ที่มีเวลาแปลก ๆ)
@@ -107,10 +113,11 @@ export function DateCalendarPopover({
       {open && (
         <div
           className={cn(
-            "absolute top-full left-0 mt-2 z-50",
+            "absolute top-full mt-2 z-50",
+            align === "right" ? "right-0" : "left-0",
             "w-[360px] max-w-[95vw]",
             "bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100",
-            "flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 origin-top-left"
+            "flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 origin-top"
           )}
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100/80 bg-white">
@@ -145,42 +152,42 @@ export function DateCalendarPopover({
             />
           </div>
 
-            <div className="px-4 py-3 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between">
+          <div className="px-4 py-3 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => {
+                onChangeYMD(""); // Clear value
+                if (closeOnSelect) setOpen(false);
+              }}
+              className="text-xs font-semibold text-red-600 hover:text-red-700 px-2 py-1.5 rounded-lg hover:bg-red-50 transition"
+            >
+              ล้าง
+            </button>
+
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => {
-                  onChangeYMD(""); // Clear value
+                  const t = atNoon(new Date());
+                  onChangeYMD(toYMD(t));
+                  setCurrentMonth(startOfMonth(t));
                   if (closeOnSelect) setOpen(false);
                 }}
-                className="text-xs font-semibold text-red-600 hover:text-red-700 px-2 py-1.5 rounded-lg hover:bg-red-50 transition"
+                className="text-xs font-semibold text-primary-600 hover:text-primary-700 px-2 py-1.5 rounded-lg hover:bg-primary-50 transition"
               >
-                ล้าง
+                วันนี้
               </button>
 
-              <div className="flex items-center gap-2">
-                <button
-                    type="button"
-                    onClick={() => {
-                    const t = atNoon(new Date());
-                    onChangeYMD(toYMD(t));
-                    setCurrentMonth(startOfMonth(t));
-                    if (closeOnSelect) setOpen(false);
-                    }}
-                    className="text-xs font-semibold text-primary-600 hover:text-primary-700 px-2 py-1.5 rounded-lg hover:bg-primary-50 transition"
-                >
-                    วันนี้
-                </button>
-
-                <button
-                    type="button"
-                    onClick={() => setOpen(false)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 text-white text-xs font-semibold rounded-lg hover:bg-primary-700 shadow-sm shadow-primary-200 transition"
-                >
-                    <Check className="w-3.5 h-3.5" />
-                    เสร็จสิ้น
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 text-white text-xs font-semibold rounded-lg hover:bg-primary-700 shadow-sm shadow-primary-200 transition"
+              >
+                <Check className="w-3.5 h-3.5" />
+                เสร็จสิ้น
+              </button>
             </div>
+          </div>
         </div>
       )}
     </div>

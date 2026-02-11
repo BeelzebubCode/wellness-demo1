@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { AdminHeader } from "@/components/layout";
+import { AdminHeader } from "@/components/layout/header/AdminHeader";
 import { DeanSidebar } from "@/components/layout/sidebar/DeanSidebar";
 import { LoadingSpinner } from "@/components/ui";
 import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";

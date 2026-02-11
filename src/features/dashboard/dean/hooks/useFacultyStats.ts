@@ -8,6 +8,7 @@ interface FacultyStats {
     facultyName: string;
     facultyCode: string;
     universityName: string;
+    academicYear: string;
     totalDepartments: number;
     educationFieldGroup: string | null;
     departmentStats: Array<{
@@ -23,6 +24,14 @@ interface FacultyStats {
         LOW: number;
         NORMAL: number;
     };
+    yearLevelDistribution: {
+        YEAR_1: number;
+        YEAR_2: number;
+        YEAR_3: number;
+        YEAR_4: number;
+        YEAR_5_PLUS: number;
+        UNKNOWN: number;
+    };
     problemStats: Record<string, number>;
     genderProblemStats: Record<string, Record<string, number>>;
     visitsByMonth: Record<string, number>;
@@ -30,6 +39,13 @@ interface FacultyStats {
         single: number;
         repeat: number;
     };
+    consultantStats: Array<{
+        id: number;
+        name: string;
+        count: number;
+    }>;
+    activeCases: number;
+    visitTrend: string;
 }
 
 interface StudentListItem {
@@ -46,7 +62,7 @@ interface RiskTrendItem {
     averageRisk: number;
 }
 
-export function useFacultyStats(facultyCode?: string) {
+export function useFacultyStats(facultyCode?: string, dateRange?: { from: Date; to: Date }) {
     const [stats, setStats] = useState<FacultyStats | null>(null);
     const [analytics, setAnalytics] = useState<any>(null);
     const [students, setStudents] = useState<StudentListItem[]>([]);
@@ -59,19 +75,28 @@ export function useFacultyStats(facultyCode?: string) {
         async function fetchData() {
             setIsLoading(true);
             try {
-                const url = facultyCode
-                    ? `/api/v2/dean/dashboard?facultyCode=${encodeURIComponent(facultyCode)}`
-                    : "/api/v2/dean/dashboard";
+                const params = new URLSearchParams();
+                if (facultyCode) params.append("facultyCode", facultyCode);
+
+                if (dateRange?.from && dateRange?.to) {
+                    // Format as YYYY-MM-DD
+                    const startDate = dateRange.from.toISOString().split('T')[0];
+                    const endDate = dateRange.to.toISOString().split('T')[0];
+                    params.append("startDate", startDate);
+                    params.append("endDate", endDate);
+                    console.log('[useFacultyStats] Date range:', startDate, 'to', endDate);
+                }
+
+                const url = `/api/v2/dean/dashboard?${params.toString()}`;
+                console.log('[useFacultyStats] Fetching URL:', url);
 
                 let response = await fetch(url);
-                
+
                 // If Forbidden (403), it might be a Rector trying to view a faculty.
                 // Try the Rector-specific endpoint instead.
                 if (response.status === 403) {
-                    const rectorUrl = facultyCode
-                        ? `/api/v2/rector/dashboard?facultyCode=${encodeURIComponent(facultyCode)}`
-                        : "/api/v2/rector/dashboard";
-                    
+                    const rectorUrl = `/api/v2/rector/dashboard?${params.toString()}`;
+
                     console.log("Dean access forbidden, trying Rector access:", rectorUrl);
                     response = await fetch(rectorUrl);
                 }
@@ -85,6 +110,8 @@ export function useFacultyStats(facultyCode?: string) {
                 if (result.success) {
                     const data = result.data;
 
+                    console.log('[useFacultyStats] Received problemStats:', data.problemStats);
+
                     setStats({
                         totalStudents: data.totalStudents,
                         totalBookings: data.totalBookings,
@@ -92,13 +119,18 @@ export function useFacultyStats(facultyCode?: string) {
                         facultyName: data.facultyName,
                         facultyCode: data.facultyCode,
                         universityName: data.universityName,
+                        academicYear: data.academicYear || '',
                         educationFieldGroup: data.educationFieldGroup,
                         departmentStats: data.departmentStats,
                         riskDistribution: data.riskDistribution,
+                        yearLevelDistribution: data.yearLevelDistribution,
                         problemStats: data.problemStats,
                         genderProblemStats: data.genderProblemStats,
                         visitsByMonth: data.visitsByMonth,
                         repeatStats: data.repeatStats,
+                        consultantStats: data.consultantStats,
+                        activeCases: data.activeCases,
+                        visitTrend: data.visitTrend,
                     });
 
                     setAnalytics({
@@ -126,7 +158,7 @@ export function useFacultyStats(facultyCode?: string) {
         }
 
         fetchData();
-    }, [facultyCode, filters]);
+    }, [facultyCode, filters, dateRange]);
 
     return { stats, analytics, students, riskTrends, isLoading, filters, setFilters, error };
 }
