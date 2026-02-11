@@ -16,7 +16,7 @@ export const HEAD_CONSULTANT_NAV: NavItem[] = [
   },
   {
     href: "/head-consultant/borrow-consultants",
-    label: "ยืมที่ปรึกษา",
+    label: "ยืมตัวนักจิตบำบัด",
     icon: UsersRound,
   },
   {

@@ -184,6 +184,11 @@ export function AssignBorrowRequestModal({
   }, [groups, activeUniversityId]);
 
   const addAssignee = (u: CandidateUniversityGroup, c: CandidateConsultant) => {
+    if (items.length >= needed) {
+      alert(`เลือกได้สูงสุด ${needed} คนเท่านั้น`);
+      return;
+    }
+
     const key = `${u.universityId}:${c.consultantId}`;
     if (selectedKeySet.has(key)) return;
 
