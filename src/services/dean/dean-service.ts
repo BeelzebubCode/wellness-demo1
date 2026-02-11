@@ -59,7 +59,7 @@ export const DeanService = {
    * Get detailed statistics for a specific faculty
    */
   async getFacultyStats(facultyId: number, universityId: number) {
-    // Get faculty info
+    // 1. Get faculty info
     const faculty = await prisma.faculty.findFirst({
       where: {
         faculty_id: facultyId,
@@ -70,6 +70,7 @@ export const DeanService = {
           select: {
             university_code: true,
             university_name_th: true,
+            university_name_en: true,
           },
         },
         educationFieldGroup: {
@@ -85,174 +86,156 @@ export const DeanService = {
       throw new Error("Faculty not found");
     }
 
-    // Get department statistics
-    const departments = await prisma.department.findMany({
-      where: {
-        faculty_id: facultyId,
-        university_id: universityId,
-      },
-      include: {
-        _count: {
-          select: {
-            studentAcademics: true,
-          },
-        },
-      },
+    // 2. Total Students in Faculty (SQL)
+    const totalStudentsQuery = await prisma.$queryRaw<{ count: bigint }[]>`
+        SELECT COUNT(*)::int as count
+        FROM "student_academic"
+        WHERE "university_id" = ${universityId}
+        AND "faculty_id" = ${facultyId}
+    `;
+    const totalStudents = Number(totalStudentsQuery[0]?.count || 0);
+
+    // 3. Total Bookings for Faculty Students (SQL)
+    // We join booking -> student_academic to filter by faculty
+    const totalBookingsQuery = await prisma.$queryRaw<{ count: bigint }[]>`
+        SELECT COUNT(b.booking_id)::int as count
+        FROM "booking" b
+        JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
+        WHERE b.university_id = ${universityId}
+        AND sa.faculty_id = ${facultyId}
+    `;
+    const totalBookings = Number(totalBookingsQuery[0]?.count || 0);
+
+    // 4. Risk Distribution (SQL)
+    const riskStats = await prisma.$queryRaw<{ risk: number, count: bigint }[]>`
+        SELECT 
+            bo.booking_outcome_risk_level as risk,
+            COUNT(*)::int as count
+        FROM "booking" b
+        JOIN "booking_outcome" bo ON b.booking_id = bo.booking_id
+        JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
+        WHERE b.university_id = ${universityId}
+        AND sa.faculty_id = ${facultyId}
+        GROUP BY bo.booking_outcome_risk_level
+    `;
+
+    const riskDistribution = { HIGH: 0, MEDIUM: 0, LOW: 0, NORMAL: 0 };
+    riskStats.forEach(r => {
+        if (r.risk >= 4) riskDistribution.HIGH += Number(r.count);
+        else if (r.risk === 3) riskDistribution.MEDIUM += Number(r.count);
+        else if (r.risk === 2) riskDistribution.LOW += Number(r.count);
+        else riskDistribution.NORMAL += Number(r.count);
     });
 
-    // Get all student IDs in this faculty for booking queries
-    const studentAcademics = await prisma.studentAcademic.findMany({
-      where: {
-        faculty_id: facultyId,
-        university_id: universityId,
-      },
-      select: {
-        student_id: true,
-      },
-    });
+    // 5. Problem Stats & Gender (SQL)
+    const problemGenderStats = await prisma.$queryRaw<{ name: string, gender: string, count: bigint }[]>`
+        SELECT 
+            COALESCE(pc.problem_category_name_th, 'อื่นๆ') as name,
+            sp.student_gender as gender,
+            COUNT(*)::int as count
+        FROM "booking" b
+        LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
+        JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
+        LEFT JOIN "student_profile" sp ON b.student_id = sp.student_id AND b.university_id = sp.university_id
+        WHERE b.university_id = ${universityId}
+        AND sa.faculty_id = ${facultyId}
+        GROUP BY pc.problem_category_name_th, sp.student_gender
+    `;
 
-    const studentIds = studentAcademics.map((sa) => sa.student_id);
-
-    // Get booking statistics for students in this faculty
-    const bookings = await prisma.booking.findMany({
-      where: {
-        university_id: universityId,
-        student_id: { in: studentIds },
-      },
-      include: {
-        outcome: true,
-        problemCategory: {
-          select: {
-            problem_category_code: true,
-            problem_category_name_th: true,
-            problem_category_name_en: true,
-          },
-        },
-        student: {
-          select: {
-            profile: {
-              select: {
-                student_gender: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    // Calculate risk distribution
-    const riskDistribution = {
-      HIGH: 0,
-      MEDIUM: 0,
-      LOW: 0,
-      NORMAL: 0,
-    };
-
-    bookings.forEach((booking) => {
-      const riskLevel = booking.outcome?.booking_outcome_risk_level || 0;
-      if (riskLevel >= 5) {
-        riskDistribution.HIGH++;
-      } else if (riskLevel === 4) {
-        riskDistribution.MEDIUM++;
-      } else if (riskLevel === 3) {
-        riskDistribution.LOW++;
-      } else {
-        riskDistribution.NORMAL++;
-      }
-    });
-
-    // Calculate problem breakdown
     const problemStats: Record<string, number> = {};
-    bookings.forEach((booking) => {
-      const code = booking.problemCategory?.problem_category_code;
-      if (code) {
-        problemStats[code] = (problemStats[code] || 0) + 1;
-      }
-    });
+    const genderProblemStats: Record<string, Record<string, number>> = { Male: {}, Female: {} };
 
-    // Calculate gender vs problem stats
-    const genderProblemStats: Record<string, Record<string, number>> = {
-      Male: {},
-      Female: {},
-    };
-
-    bookings.forEach((booking) => {
-      const gender = booking.student?.profile?.student_gender;
-      const code = booking.problemCategory?.problem_category_code;
-
-      if (code && gender && (gender === "MALE" || gender === "FEMALE")) {
-        const genderKey = gender === "MALE" ? "Male" : "Female";
-        if (!genderProblemStats[genderKey][code]) {
-          genderProblemStats[genderKey][code] = 0;
+    problemGenderStats.forEach(row => {
+        const count = Number(row.count);
+        problemStats[row.name] = (problemStats[row.name] || 0) + count;
+        if (row.gender === 'MALE') {
+             genderProblemStats.Male[row.name] = (genderProblemStats.Male[row.name] || 0) + count;
+        } else if (row.gender === 'FEMALE') {
+             genderProblemStats.Female[row.name] = (genderProblemStats.Female[row.name] || 0) + count;
         }
-        genderProblemStats[genderKey][code]++;
-      }
     });
 
-    // Calculate visits by month
+    // 6. Visits by Month (SQL)
+    const visitsQuery = await prisma.$queryRaw<{ month: string, count: bigint }[]>`
+        SELECT 
+            TO_CHAR(booking_created_at, 'YYYY-MM') as month,
+            COUNT(*)::int as count
+        FROM "booking" b
+        JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
+        WHERE b.university_id = ${universityId}
+        AND sa.faculty_id = ${facultyId}
+        GROUP BY TO_CHAR(booking_created_at, 'YYYY-MM')
+    `;
     const visitsByMonth: Record<string, number> = {};
-    bookings.forEach((booking) => {
-      const createdAt = booking.booking_created_at;
-      if (createdAt) {
-        const monthKey = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, '0')}`;
-        visitsByMonth[monthKey] = (visitsByMonth[monthKey] || 0) + 1;
-      }
+    visitsQuery.forEach(v => {
+         if(v.month) visitsByMonth[v.month] = Number(v.count);
     });
 
-    // Calculate repeat consultation stats
-    const studentVisitCounts: Record<number, number> = {};
-    bookings.forEach((booking) => {
-      const studentId = booking.student_id;
-      studentVisitCounts[studentId] = (studentVisitCounts[studentId] || 0) + 1;
+    // 7. Repeat Visits (SQL)
+    const repeatQuery = await prisma.$queryRaw<{ visit_count: number, student_count: bigint }[]>`
+        SELECT 
+            visit_count,
+            COUNT(*)::int as student_count
+        FROM (
+            SELECT b.student_id, COUNT(*) as visit_count
+            FROM "booking" b
+            JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
+            WHERE b.university_id = ${universityId}
+            AND sa.faculty_id = ${facultyId}
+            GROUP BY b.student_id
+        ) as sub
+        GROUP BY visit_count
+    `;
+    const repeatStats = { single: 0, repeat: 0 };
+    repeatQuery.forEach(r => {
+        if (r.visit_count === 1) repeatStats.single += Number(r.student_count);
+        else repeatStats.repeat += Number(r.student_count);
     });
 
-    const repeatStats = {
-      single: 0,
-      repeat: 0,
-    };
+    // 8. Department Stats (SQL)
+    const deptStatsQuery = await prisma.$queryRaw<{ 
+        department_id: number, 
+        department_code: string,
+        department_name_th: string, 
+        department_name_en: string,
+        student_count: bigint, 
+        booking_count: bigint 
+    }[]>`
+        SELECT 
+            d.department_id,
+            d.department_code,
+            d.department_name_th,
+            d.department_name_en,
+            (
+                SELECT COUNT(*)::int
+                FROM "student_academic" sa
+                WHERE sa.department_id = d.department_id AND sa.university_id = ${universityId}
+            ) as student_count,
+            (
+                SELECT COUNT(*)::int
+                FROM "booking" b
+                JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
+                WHERE sa.department_id = d.department_id AND b.university_id = ${universityId}
+            ) as booking_count
+        FROM "department" d
+        WHERE d.faculty_id = ${facultyId} AND d.university_id = ${universityId}
+    `;
 
-    Object.values(studentVisitCounts).forEach((count) => {
-      if (count === 1) {
-        repeatStats.single++;
-      } else if (count > 1) {
-        repeatStats.repeat++;
-      }
-    });
-
-    // Department stats with booking counts
-    const departmentStats = await Promise.all(
-      departments.map(async (dept) => {
-        // Get students in this department
-        const deptStudents = await prisma.studentAcademic.findMany({
-          where: {
-            department_id: dept.department_id,
-            university_id: universityId,
-          },
-          select: {
-            student_id: true,
-          },
-        });
-
-        const deptStudentIds = deptStudents.map((s) => s.student_id);
-
-        // Count bookings for this department
-        const bookingCount = await prisma.booking.count({
-          where: {
-            university_id: universityId,
-            student_id: { in: deptStudentIds },
-          },
-        });
-
-        return {
-          departmentId: dept.department_id,
-          departmentCode: dept.department_code,
-          departmentName: dept.department_name_th,
-          departmentNameEn: dept.department_name_en,
-          studentCount: dept._count.studentAcademics,
-          bookingCount,
-        };
-      })
-    );
+    const departmentStats = deptStatsQuery.map(d => ({
+        departmentId: d.department_id,
+        departmentCode: d.department_code,
+        departmentName: d.department_name_th,
+        departmentNameEn: d.department_name_en,
+        studentCount: Number(d.student_count),
+        bookingCount: Number(d.booking_count)
+    }));
+    
+    // Total Departments
+    const totalDepartmentsQuery = await prisma.$queryRaw<{ count: bigint }[]>`
+        SELECT COUNT(*)::int as count FROM "department" 
+        WHERE "faculty_id" = ${facultyId} AND "university_id" = ${universityId}
+    `;
+    const totalDepartments = Number(totalDepartmentsQuery[0]?.count || 0);
 
     return {
       facultyId: faculty.faculty_id,
@@ -262,9 +245,9 @@ export const DeanService = {
       universityCode: faculty.university.university_code,
       universityName: faculty.university.university_name_th,
       educationFieldGroup: faculty.educationFieldGroup?.field_group_name_en || null,
-      totalStudents: studentAcademics.length,
-      totalDepartments: departments.length,
-      totalBookings: bookings.length,
+      totalStudents,
+      totalDepartments,
+      totalBookings,
       riskDistribution,
       problemStats,
       genderProblemStats,
