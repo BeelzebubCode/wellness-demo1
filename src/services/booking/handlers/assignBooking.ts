@@ -57,10 +57,7 @@ export async function handleAssignBooking(
     return NextResponse.json({ error: "ไม่พบรายการจอง" }, { status: 404 });
   }
 
-  // ✅ กันแจกซ้ำ
-  if (booking.consultant_id !== null) {
-    return NextResponse.json({ error: "รายการนี้ถูกมอบหมายไปแล้ว" }, { status: 409 });
-  }
+  // ✅ Re-assignment allowed (schema v2)
 
   // ✅ อนุญาตแจกเฉพาะสถานะนี้
   if (booking.booking_status !== BookingStatus.PENDING_ASSIGNMENT) {
@@ -169,8 +166,7 @@ export async function handleAssignBooking(
         where: {
           university_id: activeUniversityId,
           booking_id: bookingId,
-          consultant_id: null,
-          booking_status: BookingStatus.PENDING_ASSIGNMENT,
+          booking_status: { in: [BookingStatus.PENDING_ASSIGNMENT, BookingStatus.ASSIGNED] },
         },
         data: {
           booking_status: BookingStatus.ASSIGNED,

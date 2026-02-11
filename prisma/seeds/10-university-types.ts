@@ -10,76 +10,65 @@ import { PrismaClient, UniversityType } from "@prisma/client";
 
 // SUPERVISED Universities (26 institutions)
 const SUPERVISED_UNIVERSITIES = [
-  "CU",     // จุฬาลงกรณ์มหาวิทยาลัย
-  "KU",     // มหาวิทยาลัยเกษตรศาสตร์
-  "KKU",    // มหาวิทยาลัยขอนแก่น
-  "CMU",    // มหาวิทยาลัยเชียงใหม่
-  "TSU",    // มหาวิทยาลัยทักษิณ
-  "KMUTT",  // มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าธนบุรี
-  "KMUTNB", // มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ
-  "SUT",    // มหาวิทยาลัยเทคโนโลยีสุรนารี
-  "TU",     // มหาวิทยาลัยธรรมศาสตร์
-  "BUU",    // มหาวิทยาลัยบูรพา
-  "UP",     // มหาวิทยาลัยพะเยา
-  "MCU",    // มหาวิทยาลัยมหาจุฬาลงกรณราชวิทยาลัย
-  "MBU",    // มหาวิทยาลัยมหามกุฏราชวิทยาลัย
-  "MU",     // มหาวิทยาลัยมหิดล
-  "MFU",    // มหาวิทยาลัยแม่ฟ้าหลวง
-  "WU",     // มหาวิทยาลัยวลัยลักษณ์
-  "SWU",    // มหาวิทยาลัยศรีนครินทรวิโรฒ
-  "SU",     // มหาวิทยาลัยศิลปากร
-  "DRU",    // มหาวิทยาลัยสวนดุสิต
-  "PSU",    // มหาวิทยาลัยสงขลานครินทร์
-  "MJU",    // มหาวิทยาลัยแม่โจ้
-  "PGVIM",  // สถาบันดนตรีกัลยาณิวัฒนา
-  "KMITL",  // สถาบันเทคโนโลยีพระจอมเกล้าเจ้าคุณทหารลาดกระบัง
-  "STIN",   // สถาบันการพยาบาลศรีสวรินทรา สภากาชาดไทย
-  "CDI",    // สถาบันเทคโนโลยีจิตรลดา
-  "NIDA",   // สถาบันบัณฑิตพัฒนบริหารศาสตร์
+  "CU", "KU", "KKU", "CMU", "TSU", "KMUTT", "KMUTNB", "SUT", "TU", "BUU",
+  "UP", "MCU", "MBU", "MU", "MFU", "WU", "SWU", "SU", "SDU", "PSU", "MJU",
+  "PGVIM", "KMITL", "SNC", "CDTI", "NIDA", // Corrected codes (SNC instead of STIN, CDTI instead of CDI)
+];
+
+// PUBLIC Universities (Rajabhat, Rajamangala, and others)
+const PUBLIC_UNIVERSITIES = [
+  "KSU", "NARU", "STOU", "PTIT", "IICC",
+  // Rajabhat
+  "KRU", "KPRU", "CRU", "CPRU", "CRRU", "CMRU", "TSRU", "DRU", "NPRU", "NRRU",
+  "NSTRU", "NSRU", "BSRU", "BRU", "PNRU", "PRU", "PSRU", "PBRU", "PBRU-PH",
+  "PKRU", "MSRU", "YRU", "RERU", "RRU", "RBRU", "LPRU", "LPRU-LY", "VRU",
+  "SSRU", "SNKRU", "SKRU", "SSRU-SUAN", "SRU", "SRRU", "MCRU", "UDRU", "URU", "UBRU",
+  // Rajamangala
+  "RMUTK", "RMUTTO", "RMUTT", "RMUTP", "RMUTR", "RMUTL", "RMUTSV", "RMUTSB", "RMUTI",
+  // Other Public
+  "RU", "NU", "MSU", "UBU", "NPU", 
+];
+
+// PRIVATE Universities
+const PRIVATE_UNIVERSITIES = [
+  "BUI", "BUS", "EUMT", "KRIRK", "KBU", "CUT", "CPU", "CUK", "SIU", "SJU",
+  "TAPU", "MUT", "TBAC", "DPU", "NBU", "NCU", "STIU", "AIU", "NATIONU", "PTU",
+  "PYU", "PLU", "FTU", "FEU", "CUI", "NEU", "RBU", "RTU", "RPU", "WUVC", "WUT",
+  "WUWEST", "SIAMU", "HCU", "HATYAIU", "EAU", "SAU", "KANTANA", "PIM", "PULINET",
+  "TNI", "MATI", "IST", "IESA", "RBAC", "VISTEC", "ARSOM", "CKRY", "CRC", "SLC",
+  "SEBU", "DTC", "TSK", "PWT", "STC", "SIT", "NMC", "RIC", "STIC", "BAC", "PBC",
+  "IBSC", "NC", "SANTAPOL", "SDC", "INTERTECH",
+  // Additional Private
+  "BU", "SPU", "UTCC", "RSU", "ABAC",
 ];
 
 // Map university codes to their types
 const universityTypeMap: Record<string, UniversityType> = {};
 
-// Initialize SUPERVISED universities
-SUPERVISED_UNIVERSITIES.forEach(code => {
-  universityTypeMap[code] = "SUPERVISED";
-});
+// Initialize mapping
+SUPERVISED_UNIVERSITIES.forEach(code => universityTypeMap[code] = "SUPERVISED");
+PUBLIC_UNIVERSITIES.forEach(code => universityTypeMap[code] = "PUBLIC");
+PRIVATE_UNIVERSITIES.forEach(code => universityTypeMap[code] = "PRIVATE");
 
 // Classification function
 function classifyUniversityByName(name: string, code: string): UniversityType {
-  const nameLower = name.toLowerCase();
-  
-  // Check code map first
+  // Direct match by code
   if (universityTypeMap[code]) {
     return universityTypeMap[code];
   }
   
-  // PRIVATE universities patterns
+  // Fallback for any missing ones (SAFE DEFAULT)
+  // Check common Private keywords just in case
+  const nameLower = name.toLowerCase();
   if (
-    nameLower.includes("เอกชน") ||
-    code.includes("AU") ||
-    code.includes("ABAC") ||
-    code.includes("DPU") ||
-    code.includes("BU") ||
-    code.includes("RSU") ||
-    code.includes("SPU") ||
-    nameLower.includes("กรุงเทพ") && !code.includes("KMUTT") ||
-    nameLower.includes("assumption") ||
-    nameLower.includes("หอการค้า") ||
-    nameLower.includes("ธุรกิจบัณฑิต") ||
-    nameLower.includes("รังสิต") ||
-    nameLower.includes("ศรีปทุม") ||
-    nameLower.includes("สยาม") ||
-    nameLower.includes("webster") ||
-    nameLower.includes("stamford") ||
-    nameLower.includes("huachiew")
+    nameLower.includes("college") || 
+    nameLower.includes("international") || 
+    nameLower.includes("วิทยาลัย") // Generic college match
   ) {
-    return "PRIVATE";
+    // Check if it's NOT a known public college (like Community Colleges IICC)
+    if (!nameLower.includes("ชุมชน")) return "PRIVATE";
   }
-  
-  // All others are PUBLIC (including Rajabhat & Rajamangala)
-  // PUBLIC หมายถึง: มหาวิทยาลัยรัฐทั่วไป + ราชภัฏ + ราชมงคล
+
   return "PUBLIC";
 }
 

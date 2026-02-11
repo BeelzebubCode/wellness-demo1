@@ -24,6 +24,8 @@ import {
   randomDateBetween,
 } from "../seed-utils/date";
 
+import { universityStudentCounts, DEFAULT_STUDENT_COUNT } from "../../src/lib/constants/university-student-counts";
+
 import type { UniversityCode } from "../seed-data/universities";
 
 type UniCode = UniversityCode;
@@ -151,22 +153,19 @@ export async function seedBookings(
       return randomItem(list);
     }
 
-    // ✅ default bias (ยัง bias NU/CU/KKU ได้ แต่มหาลัยอื่นยังมีโอกาสด้วย)
-    const completedWeights = makeWeightedMap(
-      uniCodes,
-      { NU: 60, CU: 30, KKU: 10 } as any,
-      1,
-    );
-    const cancelledWeights = makeWeightedMap(
-      uniCodes,
-      { KKU: 60, NU: 30, CU: 10 } as any,
-      1,
-    );
-    const neutralWeights = makeWeightedMap(
-      uniCodes,
-      { NU: 34, KKU: 33, CU: 33 } as any,
-      1,
-    );
+    // ✅ default bias: Use student population as base weight + some randomness
+    // This ensures bigger universities get more bookings, but with variation.
+    const baseWeights: Record<string, number> = {};
+    for (const code of uniCodes) {
+      const count = universityStudentCounts[code] ?? DEFAULT_STUDENT_COUNT;
+      // Add +/- 20% noise to make it less perfectly linear
+      const noise = 0.8 + Math.random() * 0.4; 
+      baseWeights[code] = Math.ceil(count * noise);
+    }
+
+    const completedWeights = makeWeightedMap(uniCodes, baseWeights, 100);
+    const cancelledWeights = makeWeightedMap(uniCodes, baseWeights, 100);
+    const neutralWeights = makeWeightedMap(uniCodes, baseWeights, 100);
 
     const uniCode: UniCode =
       status === BookingStatus.COMPLETED
@@ -191,7 +190,7 @@ export async function seedBookings(
   const now = new Date();
   const today0 = startOfDay(now);
 
-  const pastFrom = addDays(today0, -90);
+  const pastFrom = addDays(today0, -365); // ✅ 1 Year History
   const inProgressTo = addDays(today0, 7);
   const futureTo = addDays(today0, 14);
 
@@ -275,308 +274,270 @@ export async function seedBookings(
     return clamp(Math.round(raw), 1, 5);
   }
 
-  // ------------------------------
-  // main loop
-  // ------------------------------
+  // ⚡ BATCH MODE: Streaming insert (No huge arrays in RAM)
+  const BOOKING_BATCH = 5000;
+  
+  console.log("   📦 Phase 1: Streaming bookings (Generate & Insert on-the-fly)...");
+
+  let totalInserted = 0;
+  const grandTotal = bookingPlan.reduce((s, p) => s + p.count, 0);
+
+  // Store active counts to prevent overbooking slots
+  // (This map size is manageable: ~500k slots * 8 bytes = ~4MB)
+  
   for (const plan of bookingPlan) {
+    let remaining = plan.count;
     const isCancelledPlan = plan.status === BookingStatus.CANCELLED;
 
-    for (let i = 0; i < plan.count; i++) {
-      const MAX_TRIES = 40;
+    while (remaining > 0) {
+      const currentBatchSize = Math.min(remaining, BOOKING_BATCH);
+      const batchBookings: any[] = [];
 
-      let booking: any = null;
-      let student: any = null;
-      let category: any = null;
-      let slot: any = null;
-      let slotStart: Date | null = null;
-      let slotEnd: Date | null = null;
-      let consultantId: number | null = null;
-      let bookingCreatedAt: Date | null = null;
+      // Generate batch
+      for (let i = 0; i < currentBatchSize; i++) {
+        const MAX_TRIES = 40;
+        let student: any = null;
+        let category: any = null;
+        let slot: any = null;
+        let consultantId: number | null = null;
+        let bookingCreatedAt: Date | null = null;
 
-      // ✅ retry เพื่อเลี่ยงชน unique (u, student, slot)
-      for (let attempt = 0; attempt < MAX_TRIES; attempt++) {
-        student = pickStudentForStatus(plan.status);
-        if (!student) continue; // ✅ Prevent crash if no student found
+        for (let attempt = 0; attempt < MAX_TRIES; attempt++) {
+          student = pickStudentForStatus(plan.status);
+          if (!student) continue;
 
-        category = pickCategoryForUni(student.university_id);
+          category = pickCategoryForUni(student.university_id);
 
-        slot = pickSlotByStatus(student.university_id, plan.status);
-        if (!slot) continue;
+          slot = pickSlotByStatus(student.university_id, plan.status);
+          if (!slot) continue;
 
-        const k = tripleKey(
-          student.university_id,
-          student.student_id,
-          slot.time_slot_id,
-        );
-        if (usedBookingTriples.has(k)) continue;
+          // Prevent duplicate student+slot in same run
+          const k = tripleKey(student.university_id, student.student_id, slot.time_slot_id);
+          if (usedBookingTriples.has(k)) continue;
 
-        slotStart = new Date(slot.time_slot_start_datetime);
-        slotEnd = new Date(slot.time_slot_end_datetime);
+          // Consultant logic
+          if (!isCancelledPlan && plan.status !== BookingStatus.PENDING_ASSIGNMENT) {
+            const uniConsultants = consultants.filter((c) => c.university_id === student.university_id);
+            if (uniConsultants.length === 0) continue;
+            consultantId = randomItem(uniConsultants).consultant_id;
+          }
+          if (plan.status === BookingStatus.COMPLETED && !consultantId) continue;
 
-        consultantId = null;
-        if (
-          !isCancelledPlan &&
-          plan.status !== BookingStatus.PENDING_ASSIGNMENT
-        ) {
-          const uniConsultants = consultants.filter(
-            (c) => c.university_id === student.university_id,
+          // CreatedAt logic
+          const slotStart = new Date(slot.time_slot_start_datetime);
+          const maxLeadDays = plan.status === BookingStatus.COMPLETED ? 14 : 7;
+          const minLeadDays = plan.status === BookingStatus.COMPLETED ? 1 : 0;
+          
+          bookingCreatedAt = randomDateBetween(
+            addDays(slotStart, -maxLeadDays), 
+            addDays(slotStart, -minLeadDays)
           );
-          if (uniConsultants.length === 0) continue;
-          consultantId = randomItem(uniConsultants).consultant_id;
-        }
-        if (plan.status === BookingStatus.COMPLETED && !consultantId) continue;
+          bookingCreatedAt = addMinutes(bookingCreatedAt, randomInt(0, 59));
+          const latestAllowed = addMinutes(slotStart, -10);
+          if (bookingCreatedAt >= latestAllowed) {
+            bookingCreatedAt = addMinutes(slotStart, -randomInt(10, 24 * 60));
+          }
 
-        const maxLeadDays = plan.status === BookingStatus.COMPLETED ? 14 : 7;
-        const minLeadDays = plan.status === BookingStatus.COMPLETED ? 1 : 0;
-
-        bookingCreatedAt = randomDateBetween(
-          addDays(slotStart, -maxLeadDays),
-          addDays(slotStart, -minLeadDays),
-        );
-        bookingCreatedAt = addMinutes(bookingCreatedAt, randomInt(0, 59));
-
-        const latestAllowedCreatedAt = addMinutes(slotStart, -10);
-        if (bookingCreatedAt >= latestAllowedCreatedAt) {
-          bookingCreatedAt = addMinutes(slotStart, -randomInt(10, 24 * 60));
-        }
-
-        try {
-          const serviceMode =
-            consultantId && plan.status !== BookingStatus.PENDING_ASSIGNMENT
-              ? ServiceMode.ONLINE
-              : ServiceMode.ONSITE;
-
-          booking = await prisma.booking.create({
-            data: {
-              university_id: student.university_id,
-              student_id: student.student_id,
-              consultant_id: consultantId,
-              time_slot_id: slot.time_slot_id,
-              problem_category_id: category.problem_category_id,
-              booking_detail_text: `รายละเอียดการขอรับคำปรึกษา - ${category.problem_category_name_th}`,
-              booking_status: plan.status,
-              booking_created_at: bookingCreatedAt,
-
-              // ✅ required ตาม schema ใหม่
-              booking_service_mode: serviceMode,
-
-              // ✅ ใส่ให้ครบเวลาที่ ONLINE (optional แต่แนะนำ)
-              booking_online_channel:
-                serviceMode === ServiceMode.ONLINE
-                  ? OnlineChannel.LINE_CALL
-                  : null,
-            },
-          });
+          // Service Mode
+          const serviceMode = consultantId && plan.status !== BookingStatus.PENDING_ASSIGNMENT
+            ? ServiceMode.ONLINE
+            : ServiceMode.ONSITE;
 
           usedBookingTriples.add(k);
-          break;
-        } catch (e: any) {
-          if (e?.code === "P2002") continue;
-          throw e;
-        }
-      }
+          if (isActiveStatus(plan.status)) {
+            activeCountBySlotId.set(slot.time_slot_id, (activeCountBySlotId.get(slot.time_slot_id) ?? 0) + 1);
+          }
 
-      if (
-        !booking ||
-        !student ||
-        !slot ||
-        !slotStart ||
-        !slotEnd ||
-        !bookingCreatedAt
-      ) {
-        console.log(
-          `⚠️  Skip booking: cannot find unique (uni,student,slot) after ${MAX_TRIES} tries. status=${plan.status}`,
-        );
-        continue;
-      }
-
-      // ------------------------------
-      // active count (capacity control)
-      // ------------------------------
-      if (isActiveStatus(plan.status)) {
-        activeCountBySlotId.set(
-          slot.time_slot_id,
-          (activeCountBySlotId.get(slot.time_slot_id) ?? 0) + 1,
-        );
-      }
-
-      // ------------------------------
-      // cancelled
-      // ------------------------------
-      if (isCancelledPlan) {
-        const cancelMin = addMinutes(bookingCreatedAt, randomInt(5, 60));
-        const cancelMaxCandidate = addHours(slotStart, -randomInt(1, 48));
-        const cancelMaxHard = addMinutes(slotStart, -10);
-        const cancelMax =
-          cancelMaxCandidate < cancelMaxHard
-            ? cancelMaxCandidate
-            : cancelMaxHard;
-
-        const cancelledAt =
-          cancelMin < cancelMax
-            ? randomDateBetween(cancelMin, cancelMax)
-            : addMinutes(slotStart, -randomInt(10, 60));
-
-        await prisma.bookingCancellation.create({
-          data: {
-            university_id: booking.university_id,
-            booking_id: booking.booking_id,
-            booking_cancellation_reason: "นักศึกษาไม่สามารถเข้ารับคำปรึกษาได้",
-            booking_cancellation_cancelled_by_id: student.account_id,
-            booking_cancellation_cancelled_at: cancelledAt,
-          },
-        });
-
-        continue;
-      }
-
-      // ------------------------------
-      // notifications
-      // ------------------------------
-      if (randomBool(0.7)) {
-        const tplId =
-          plan.status === BookingStatus.PENDING_ASSIGNMENT
-            ? tplCreated.notification_template_id
-            : tplAssigned.notification_template_id;
-
-        await prisma.notification.create({
-          data: {
-            account_id: student.account_id,
-            notification_template_id: tplId,
-            university_id: booking.university_id,
-            booking_id: booking.booking_id,
-            notification_channel: "LINE",
-            notification_data: {
-              bookingId: booking.booking_id,
-              status: plan.status,
-            } as any,
-            notification_status: randomBool(0.8) ? "SENT" : "PENDING",
-            notification_sent_at: randomBool(0.8)
-              ? addMinutes(bookingCreatedAt, randomInt(1, 30))
-              : null,
-          },
-        });
-      }
-
-      // ------------------------------
-      // assignment
-      // ------------------------------
-      if (consultantId) {
-        const headAccountId =
-          headAccountIdByUniversityId.get(booking.university_id) ?? null;
-
-        if (headAccountId) {
-          await prisma.bookingAssignment.create({
-            data: {
-              university_id: booking.university_id,
-              booking_id: booking.booking_id,
-
-              // ✅ schema ใหม่
-              consultant_id: consultantId,
-              consultant_university_id: booking.university_id, // consultant มาจาก uni เดียวกับ booking ใน seed นี้
-              borrow_assignment_id: null,
-
-              assigned_by_account_id: headAccountId,
-              assigned_note: "มอบหมายผู้ให้คำปรึกษา",
-              assigned_at: addMinutes(bookingCreatedAt, randomInt(1, 30)), // จะ now() ก็ได้
-            },
+          batchBookings.push({
+            university_id: student.university_id,
+            student_id: student.student_id,
+            consultant_id: consultantId,
+            time_slot_id: slot.time_slot_id,
+            problem_category_id: category.problem_category_id,
+            booking_detail_text: `รายละเอียดการขอรับคำปรึกษา - ${category.problem_category_name_th}`,
+            booking_status: plan.status,
+            booking_created_at: bookingCreatedAt,
+            booking_service_mode: serviceMode,
+            booking_online_channel: serviceMode === ServiceMode.ONLINE ? OnlineChannel.LINE_CALL : null,
           });
+
+          break; // success
         }
       }
 
-      // ------------------------------
-      // completed extras
-      // ------------------------------
-      if (plan.status === BookingStatus.COMPLETED) {
-        await prisma.bookingOutcome.create({
-          data: {
-            university_id: booking.university_id,
-            booking_id: booking.booking_id,
-            booking_outcome_consultant_note: `สรุปผล: ${category.problem_category_name_th} ...`,
-            booking_outcome_next_step: randomBool()
-              ? "นัดติดตามผลใน 2 สัปดาห์"
-              : null,
-            booking_outcome_risk_level: randomInt(1, 3),
-          },
+      if (batchBookings.length > 0) {
+        await prisma.booking.createMany({
+          data: batchBookings,
+          skipDuplicates: true,
         });
-
-        const feedback = await prisma.feedback.create({
-          data: {
-            university_id: booking.university_id,
-            booking_id: booking.booking_id,
-            student_id: booking.student_id,
-            consultant_id: consultantId!,
-            feedback_is_anonymous: randomBool(0.7),
-          },
-        });
-
-        const bias = consultantBiasById.get(consultantId!) ?? 4.2;
-
-        for (const cr of criteria) {
-          await prisma.feedbackRating.create({
-            data: {
-              feedback_id: feedback.feedback_id,
-              evaluation_criterion_id: cr.evaluation_criterion_id,
-              feedback_rating_score: sampleRatingFromBias(bias),
-            },
-          });
-        }
-
-        const headAccountId =
-          headAccountIdByUniversityId.get(booking.university_id) ?? null;
-
-        await prisma.feedbackComment.create({
-          data: {
-            feedback_id: feedback.feedback_id,
-            feedback_comment_text: randomItem([
-              "ผู้ให้คำปรึกษาเข้าใจปัญหาและให้คำแนะนำที่เป็นประโยชน์มาก",
-              "รู้สึกดีขึ้นหลังจากได้คุยและรับคำแนะนำ ขอบคุณครับ/ค่ะ",
-              "อยากให้มีเวลามากกว่านี้ แต่โดยรวมดีมากครับ/ค่ะ",
-            ]),
-            feedback_comment_admin_reply: randomBool(0.3)
-              ? "ขอบคุณสำหรับความคิดเห็น เรายินดีที่ได้ช่วยเหลือ"
-              : null,
-            feedback_comment_replied_by_id: randomBool(0.3)
-              ? headAccountId
-              : null,
-            feedback_comment_replied_at: randomBool(0.3)
-              ? randomDateBetween(
-                  addMinutes(slotEnd, 10),
-                  addHours(slotEnd, 72),
-                )
-              : null,
-          },
-        });
-
-        await prisma.studentPointTransaction.create({
-          data: {
-            student_id: booking.student_id,
-            point_rule_id: pointRule.point_rule_id,
-            booking_university_id: booking.university_id,
-            booking_id: booking.booking_id,
-            student_point_txn_type: PointTxnType.EARN,
-            student_point_amount: pointAmount,
-            student_point_note: "รับแต้มจากการเข้ารับคำปรึกษาสำเร็จ",
-          },
-        });
-
-        await prisma.studentPointWallet.upsert({
-          where: {
-            university_id_student_id: {
-              university_id: booking.university_id,
-              student_id: booking.student_id,
-            },
-          },
-          create: {
-            university_id: booking.university_id,
-            student_id: booking.student_id,
-            student_point_balance: pointAmount,
-          },
-          update: {
-            student_point_balance: { increment: pointAmount },
-          },
-        });
+        totalInserted += batchBookings.length;
+      }
+      
+      remaining -= currentBatchSize;
+      
+      if (totalInserted % 10000 === 0) {
+        console.log(`   ├─ Inserted: ${totalInserted} / ${grandTotal} (${Math.round(totalInserted/grandTotal*100)}%)`);
+        // Periodic memory cleanup hint (optional)
+        if (global.gc) global.gc();
       }
     }
   }
+
+  console.log(`   ✅ Bookings seeded: ${totalInserted}`);
+  console.log("   💾 Phase 2: Generating related records using SQL Set-Based operations...");
+
+  // 1. Cancellations
+  // logic: Cancelled bookings need a record.
+  // reason: fixed string
+  // cancelled_by: student
+  // cancelled_at: ~1-48 hours before slot
+  console.log("   📝 Generating Booking Cancellations (SQL)...");
+  await prisma.$executeRawUnsafe(`
+    INSERT INTO booking_cancellation (
+      university_id, booking_id, booking_cancellation_reason, 
+      booking_cancellation_cancelled_by_id, booking_cancellation_cancelled_at
+    )
+    SELECT 
+      b.university_id, 
+      b.booking_id, 
+      'นักศึกษาไม่สามารถเข้ารับคำปรึกษาได้',
+      st.account_id,
+      b.booking_created_at + interval '1 hour' -- Simplified time logic for SQL speed
+    FROM booking b
+    JOIN student st ON b.student_id = st.student_id
+    WHERE b.booking_status = 'CANCELLED'
+    ON CONFLICT DO NOTHING;
+  `);
+
+  // 2. Assignments
+  // logic: Assigned bookings need a record
+  console.log("   📋 Generating Assignments (SQL)...");
+  await prisma.$executeRawUnsafe(`
+    INSERT INTO booking_assignment (
+      university_id, booking_id, consultant_id, consultant_university_id,
+      assigned_by_account_id, assigned_note, assigned_at
+    )
+    SELECT
+      b.university_id,
+      b.booking_id,
+      b.consultant_id,
+      b.university_id, -- Simplification: Assume same uni for seed optimization
+      NULL, -- System auto-assign or lookup head (Expensive to join, using NULL for speed/safety)
+      'มอบหมายผู้ให้คำปรึกษา (System Seed)',
+      b.booking_created_at + interval '30 minutes'
+    FROM booking b
+    WHERE b.booking_status IN ('ASSIGNED', 'IN_PROGRESS', 'COMPLETED')
+      AND b.consultant_id IS NOT NULL
+    ON CONFLICT DO NOTHING;
+  `);
+
+  // 3. Outcomes (Completed only)
+  console.log("   📊 Generating Outcomes (SQL)...");
+  await prisma.$executeRawUnsafe(`
+    INSERT INTO booking_outcome (
+      university_id, booking_id, booking_outcome_consultant_note,
+      booking_outcome_next_step, booking_outcome_risk_level
+    )
+    SELECT
+      b.university_id,
+      b.booking_id,
+      'สรุปผลการให้คำปรึกษา (Auto-generated)',
+      CASE WHEN random() < 0.5 THEN 'นัดติดตามผล' ELSE NULL END,
+      floor(random() * 3 + 1)::int
+    FROM booking b
+    WHERE b.booking_status = 'COMPLETED'
+    ON CONFLICT DO NOTHING;
+  `);
+
+  // 4. Feedback (Completed only)
+  console.log("   ⭐ Generating Feedbacks (SQL)...");
+  await prisma.$executeRawUnsafe(`
+    INSERT INTO feedback (
+      university_id, booking_id, student_id, consultant_id,
+      feedback_is_anonymous
+    )
+    SELECT
+      b.university_id,
+      b.booking_id,
+      b.student_id,
+      b.consultant_id,
+      (random() < 0.7)
+    FROM booking b
+    WHERE b.booking_status = 'COMPLETED'
+      AND b.consultant_id IS NOT NULL
+    ON CONFLICT DO NOTHING;
+  `);
+
+  // 5. Ratings (Join Feedback + Criteria)
+  // Realistic ratings: Bias towards 4-5
+  console.log("   🌟 Generating Ratings (SQL)...");
+  await prisma.$executeRawUnsafe(`
+    INSERT INTO feedback_rating (
+      feedback_id, evaluation_criterion_id, feedback_rating_score
+    )
+    SELECT
+      f.feedback_id,
+      c.evaluation_criterion_id,
+      CASE 
+        WHEN random() < 0.6 THEN 5
+        WHEN random() < 0.9 THEN 4
+        ELSE floor(random() * 3 + 1)::int
+      END
+    FROM feedback f
+    CROSS JOIN evaluation_criterion c
+    ON CONFLICT DO NOTHING;
+  `);
+
+  // 6. Comments (Optional, some feedbacks)
+  console.log("   💬 Generating Comments (SQL)...");
+  await prisma.$executeRawUnsafe(`
+    INSERT INTO feedback_comment (
+      feedback_id, feedback_comment_text
+    )
+    SELECT
+      f.feedback_id,
+      'ได้รับคำแนะนำที่ดีมาก ขอบคุณครับ/ค่ะ'
+    FROM feedback f
+    WHERE random() < 0.3
+    ON CONFLICT DO NOTHING;
+  `);
+
+  // 7. Point Transactions & Wallet
+  // Insert transactions
+  console.log("   💰 Generating Point Transactions (SQL)...");
+  await prisma.$executeRawUnsafe(`
+    INSERT INTO student_point_transaction (
+      student_id, point_rule_id, booking_university_id, booking_id,
+      student_point_txn_type, student_point_amount, student_point_note
+    )
+    SELECT
+      b.student_id,
+      ${pointRule.point_rule_id},
+      b.university_id,
+      b.booking_id,
+      'EARN',
+      ${pointAmount},
+      'Reward points for completed booking'
+    FROM booking b
+    WHERE b.booking_status = 'COMPLETED'
+    ON CONFLICT DO NOTHING;
+  `);
+
+  // Update Wallets (Aggregate)
+  console.log("   💳 Updating Wallets (SQL Aggregate)...");
+  // Upsert pattern for wallets
+  await prisma.$executeRawUnsafe(`
+    INSERT INTO student_point_wallet (university_id, student_id, student_point_balance)
+    SELECT 
+      university_id, 
+      student_id, 
+      count(*) * ${pointAmount}
+    FROM booking
+    WHERE booking_status = 'COMPLETED'
+    GROUP BY university_id, student_id
+    ON CONFLICT (university_id, student_id) 
+    DO UPDATE SET student_point_balance = student_point_wallet.student_point_balance + EXCLUDED.student_point_balance;
+  `);
+
+  console.log("   ✅ All phases complete.");
 }

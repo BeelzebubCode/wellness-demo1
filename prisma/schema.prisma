@@ -487,7 +487,7 @@ model Booking {
 
   university University  @relation(fields: [university_id], references: [university_id])
   student    Student     @relation(fields: [university_id, student_id], references: [university_id, student_id])
-  consultant Consultant? @relation(fields: [university_id, consultant_id], references: [university_id, consultant_id])
+  consultant Consultant? @relation(fields: [consultant_id], references: [consultant_id])
 
   timeSlot        TimeSlot        @relation(fields: [university_id, time_slot_id], references: [university_id, time_slot_id])
   problemCategory ProblemCategory @relation(fields: [problem_category_id], references: [problem_category_id])
@@ -1177,7 +1177,6 @@ enum StudentGender {
   MALE
   FEMALE
   LGBTQ_PLUS
-  PREFER_NOT_TO_SAY
 }
 
 // [NEW] Shift status for consultant 14-day shifts

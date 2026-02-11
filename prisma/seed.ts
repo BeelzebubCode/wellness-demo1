@@ -20,7 +20,14 @@ import { seedConsultantShifts } from "./seeds/14-consultant-shifts";
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🚀 Starting database seeding...\\n");
+  console.log("🚀 Starting database seeding...\n");
+
+  // ⚡ PostgreSQL Turbo Mode — safe for seeding (re-runnable)
+  console.log("⚡ Enabling PostgreSQL turbo mode...");
+  await prisma.$executeRawUnsafe(`SET synchronous_commit = OFF`);     // skip fsync per txn → 3-5x faster
+  await prisma.$executeRawUnsafe(`SET work_mem = '256MB'`);           // faster sorts/joins
+  await prisma.$executeRawUnsafe(`SET maintenance_work_mem = '512MB'`); // faster index builds
+  console.log("   ✅ Turbo mode enabled (synchronous_commit=OFF, work_mem=256MB)\n");
 
   await clearDatabase(prisma);
 
@@ -68,10 +75,10 @@ async function main() {
 
   const isQuickMode = process.env.SEED_QUICK_MODE === "true";
   const bookingPlan: { status: BookingStatus; count: number }[] = [
-    { status: BookingStatus.COMPLETED, count: isQuickMode ? 5000 : 100000 },
+    { status: BookingStatus.COMPLETED, count: isQuickMode ? 5000 : 2000000 },
     { status: BookingStatus.IN_PROGRESS, count: 0 },
-    { status: BookingStatus.PENDING_ASSIGNMENT, count: 0 },
-    { status: BookingStatus.CANCELLED, count: isQuickMode ? 500 : 50000 },
+    { status: BookingStatus.PENDING_ASSIGNMENT, count: 5000 },
+    { status: BookingStatus.CANCELLED, count: isQuickMode ? 500 : 300000 },
   ];
 
   await seedBookings(prisma, {
@@ -95,6 +102,7 @@ async function main() {
 
   console.log("\\n🌐 Seeding university connections...");
   await seedUniversityConnections(prisma);
+  await seedManualConnections(prisma);
 
   // Seed consultant shifts
   await seedConsultantShifts(prisma, {

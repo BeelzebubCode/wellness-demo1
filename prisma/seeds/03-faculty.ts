@@ -1,3 +1,5 @@
+import * as fs from "fs";
+import * as path from "path";
 // seeds/03-faculty.ts
 import {
   PrismaClient,
@@ -15,9 +17,21 @@ export async function seedFacultiesDepartments(
   args: { universities: UniLite[] }
 ) {
   console.log("🏛️  Creating education field groups, faculties and departments...");
-  console.log("   📌 Using DEFAULT faculty structure for ALL universities");
 
   const { universities } = args;
+
+  // =========================
+  // LOAD CSV MAPPING (JSON)
+  // =========================
+  let universityCurriculum: Record<string, Record<string, string[]>> = {};
+  try {
+    const jsonPath = path.join(__dirname, "../seed-data/university-curriculum.json");
+    const jsonContent = fs.readFileSync(jsonPath, "utf-8");
+    universityCurriculum = JSON.parse(jsonContent);
+    console.log(`   📂 Loaded curriculum data for ${Object.keys(universityCurriculum).length} universities`);
+  } catch (error) {
+    console.warn("   ⚠️  Could not load university-curriculum.json, falling back to DEFAULTS for all.", error);
+  }
 
   // =========================
   // 0) EDUCATION FIELD GROUPS (global, rerun-safe)
@@ -37,17 +51,39 @@ export async function seedFacultiesDepartments(
   );
 
   // =========================
-  // 1) FACULTIES (DEFAULT for ALL universities)
+  // 1) FACULTIES
   // =========================
   const facultyByUniAndCode = new Map<string, Faculty>();
   let totalFacultiesCreated = 0;
 
-  console.log(`   🏛️  Applying ${defaultFaculties.length} default faculties to ${universities.length} universities...`);
+  console.log(`   🏛️  Applying faculties to ${universities.length} universities (using CSV data where available)...`);
 
   for (const uni of universities) {
-    // Create all default faculties for this university
+    // Determine which ISCED codes this university supports
+    const uniSpecificData = universityCurriculum[uni.university_code];
+    let facultiesToCreate = defaultFaculties;
+
+    if (uniSpecificData) {
+      // Filter default faculties to only those matching the university's ISCED codes
+      const allowedIsced = Object.keys(uniSpecificData); 
+      // Always include 'Generics' or specific ones if needed, but for now strictly filter
+      facultiesToCreate = defaultFaculties.filter(f => 
+        f.isced_broad_field_code && allowedIsced.includes(f.isced_broad_field_code)
+      );
+      
+      // If filtering resulted in nothing (should be rare if uni is in JSON), fallback or keep empty?
+      // Let's keep empty to respect the data, but warn.
+      if (facultiesToCreate.length === 0) {
+        // console.warn(`   ⚠️  Uni ${uni.university_code} is in JSON but has no matching faculties for its ISCED codes.`);
+      }
+    } else {
+      // Fallback: Use all defaults for universities not in CSV
+      // console.log(`   ℹ️  Uni ${uni.university_code} not in CSV, using ALL default faculties.`);
+    }
+
+    // Create faculties
     await prisma.faculty.createMany({
-      data: defaultFaculties.map((f) => ({
+      data: facultiesToCreate.map((f) => ({
         university_id: uni.university_id,
         faculty_code: f.faculty_code,
         faculty_name_th: f.faculty_name_th,
@@ -59,15 +95,14 @@ export async function seedFacultiesDepartments(
       skipDuplicates: true,
     });
 
-    // Fetch created faculties
+    // Fetch created faculties to map Ids
     const facs = await prisma.faculty.findMany({
       where: {
         university_id: uni.university_id,
-        faculty_code: { in: defaultFaculties.map((x) => x.faculty_code) },
+        faculty_code: { in: facultiesToCreate.map((x) => x.faculty_code) },
       },
     });
 
-    // Index them
     for (const fac of facs) {
       facultyByUniAndCode.set(`${uni.university_code}_${fac.faculty_code}`, fac);
     }
@@ -75,16 +110,20 @@ export async function seedFacultiesDepartments(
     totalFacultiesCreated += facs.length;
   }
 
-  console.log(`   ✅ Created ${totalFacultiesCreated} faculties (${defaultFaculties.length} per university)`);
+  console.log(`   ✅ Created ${totalFacultiesCreated} faculties across ${universities.length} universities`);
 
   // =========================
-  // 2) DEPARTMENTS (DEFAULT for ALL universities)
+  // 2) DEPARTMENTS
   // =========================
   const deptByUniAndCode = new Map<string, Department>();
   let totalDepartmentsCreated = 0;
 
-  console.log(`   📚 Applying ${defaultDepartments.length} default departments to ${universities.length} universities...`);
-
+  // We loop again or just do it in the same loop? Same loop is fine, but separation is cleaner for logic.
+  // Actually, we can just process all departments now.
+  
+  // Optimization: Prepare data for createMany in chunks?
+  // But we need to look up faculty_id per university.
+  
   for (const uni of universities) {
     const data: Array<{
       university_id: number;
@@ -94,12 +133,12 @@ export async function seedFacultiesDepartments(
       department_name_en?: string | null;
     }> = [];
 
+    // We only create departments for faculties that EXIST for this university
     for (const d of defaultDepartments) {
       const fac = facultyByUniAndCode.get(`${uni.university_code}_${d.faculty_code}`);
-      if (!fac) {
-        console.warn(`   ⚠️  Faculty ${d.faculty_code} not found for ${uni.university_code}`);
-        continue;
-      }
+      
+      // Skip if faculty wasn't created (filtered out)
+      if (!fac) continue; 
 
       data.push({
         university_id: uni.university_id,
@@ -110,27 +149,28 @@ export async function seedFacultiesDepartments(
       });
     }
 
-    await prisma.department.createMany({
-      data,
-      skipDuplicates: true,
-    });
+    if (data.length > 0) {
+      await prisma.department.createMany({
+        data,
+        skipDuplicates: true,
+      });
 
-    const depts = await prisma.department.findMany({
-      where: {
-        university_id: uni.university_id,
-        department_code: { in: defaultDepartments.map((x) => x.department_code) },
-      },
-    });
+      const depts = await prisma.department.findMany({
+        where: {
+          university_id: uni.university_id,
+        },
+      });
 
-    for (const dep of depts) {
-      deptByUniAndCode.set(`${uni.university_code}_${dep.department_code}`, dep);
+      for (const dep of depts) {
+        deptByUniAndCode.set(`${uni.university_code}_${dep.department_code}`, dep);
+      }
     }
-
-    totalDepartmentsCreated += depts.length;
+    
+    totalDepartmentsCreated += data.length;
   }
-
-  console.log(`   ✅ Created ${totalDepartmentsCreated} departments (${defaultDepartments.length} per university)`);
-  console.log(`   🎓 Summary: ${universities.length} universities × ${defaultFaculties.length} faculties × ~${Math.round(defaultDepartments.length / defaultFaculties.length)} depts/faculty`);
+  
+  console.log(`   ✅ Created ${totalDepartmentsCreated} departments`);
+  console.log(`   🎓 Summary: ${universities.length} universities × faculties filtered by CSV`);
 
   return { facultyByUniAndCode, deptByUniAndCode };
 }

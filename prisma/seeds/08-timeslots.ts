@@ -14,7 +14,7 @@ export async function seedTimeSlots(
 
   const timeSlotsByUniId = new Map<number, TimeSlot[]>();
 
-  const PAST_DAYS = 90;
+  const PAST_DAYS = 365; // ✅ 1 Year History
   const FUTURE_DAYS = 14;
   const TOTAL_DAYS = PAST_DAYS + FUTURE_DAYS;
 

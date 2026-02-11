@@ -35,7 +35,7 @@ const IS_QUICK_MODE = process.env.SEED_QUICK_MODE === "true";
 const IS_DEV_MODE = process.env.SEED_DEV_MODE === "true";
 
 const MAX_STUDENTS_PER_UNI = IS_QUICK_MODE ? 100 : (IS_DEV_MODE ? 30 : 999999);
-const BATCH_SIZE = 5000; // เพิ่มจาก 1000 → 5000 เพื่อความเร็ว (แต่ยังปลอดภัย)
+const BATCH_SIZE = 10000; // ⚡ 10K per batch (PC has plenty of RAM)
 
 
 export async function seedStudents(
@@ -112,6 +112,13 @@ export async function seedStudents(
   const sortedUnis = [...universities].sort((a, b) => a.university_id - b.university_id);
   let totalStudentsSeeded = 0;
 
+  // ✅ Collect all seeded students for return (needed by booking seed)
+  const allSeededStudents: Array<{
+    student_id: number;
+    university_id: number;
+    account_id: number;
+  }> = [];
+
   for (let uIdx = 0; uIdx < sortedUnis.length; uIdx++) {
     const uni = sortedUnis[uIdx];
     const uniIndex1based = uIdx + 1;
@@ -162,7 +169,7 @@ export async function seedStudents(
       const lnameEn = hasEn ? person.last.en : null;
       const nickEn = hasEn ? person.nickname.en : null;
 
-      const gender = randomItem(Object.values(StudentGender));
+      const gender = randomItem([StudentGender.MALE, StudentGender.FEMALE, StudentGender.LGBTQ_PLUS]);
       const lineId = `U_${uniCode}_${uni.university_id}_${String(j).padStart(4, "0")}`;
       const admitYear = admitYearForIdx(idx0, YEAR_BUCKETS);
 
@@ -307,13 +314,19 @@ export async function seedStudents(
       const accountIds = batch.map(s => s.account_id);
       const students = await prisma.student.findMany({
         where: { account_id: { in: accountIds } },
-        select: { student_id: true, account_id: true },
+        select: { student_id: true, account_id: true, university_id: true },
       });
 
       students.forEach(stu => {
         const username = batch.find(b => b.account_id === stu.account_id)?._username;
         if (username) {
           studentMap.set(username, stu.student_id);
+          // ✅ Collect for return
+          allSeededStudents.push({
+            student_id: stu.student_id,
+            university_id: stu.university_id,
+            account_id: stu.account_id,
+          });
         }
       });
 
@@ -356,5 +369,8 @@ export async function seedStudents(
   }
 
   console.log(`🎉 Total students seeded: ${totalStudentsSeeded}`);
-  return [];
+
+  // ✅ Return all seeded students so booking seed can use them
+  console.log(`📤 Returning ${allSeededStudents.length} student records for booking seed`);
+  return allSeededStudents;
 }
