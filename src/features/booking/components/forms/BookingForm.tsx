@@ -152,12 +152,13 @@ export function BookingForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className={cn("space-y-5", mode !== "both" && "space-y-0")}>
+    <form onSubmit={handleSubmit} className={cn("space-y-5", mode !== "both" && "space-y-0", (mode === "categories" || mode === "description") && "h-full flex flex-col")}>
       {(mode === "both" || mode === "categories") && (
-        <div>
+        <div className={cn(mode === "categories" && "h-full flex flex-col")}>
           <label className="block text-sm font-black text-slate-800 mb-3 tracking-tight">
             ประเภทปัญหาที่ต้องการปรึกษา <span className="text-red-500 ">*</span>
           </label>
+
 
           {isCatLoading ? (
             <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-500">
@@ -268,20 +269,18 @@ export function BookingForm({
             )}
             placeholder="อธิบายปัญหาหรือสิ่งที่ต้องการปรึกษาเพิ่มเติม..."
           />
+          <p className="mt-2 text-[11px] text-gray-400">
+            ข้อมูลนี้จะถูกเก็บรักษาเป็นความลับ และใช้เพื่อการเตรียมตัวของผู้ให้คำปรึกษาเท่านั้น
+          </p>
+          {hasSubmitted && errors.problemDescription && (
+            <div className="mt-2">
+              <AlertBox type="error" message={errors.problemDescription} />
+            </div>
+          )}
         </div>
       )}
 
-      {hasSubmitted && errors.problemDescription && (
-        <div className="mt-2">
-          <AlertBox type="error" message={errors.problemDescription} />
-        </div>
-      )}
 
-      {(mode === "both" || mode === "description") && (
-        <p className="mt-2 text-[11px] text-gray-400">
-          ข้อมูลนี้จะถูกเก็บรักษาเป็นความลับ และใช้เพื่อการเตรียมตัวของผู้ให้คำปรึกษาเท่านั้น
-        </p>
-      )}
 
       {!hideSubmit && (
         <div className="mt-6">

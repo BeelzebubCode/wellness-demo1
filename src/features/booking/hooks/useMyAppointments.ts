@@ -1,13 +1,15 @@
 // src/features/booking/hooks/useMyAppointments.ts
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { MyBookingDto, BookingStatus } from "../types";
-import { getMyAppointments } from "../api";
+import { getMyAppointments, getMyAppointmentsFull } from "../api";
 
 const ACTIVE_STATUSES: BookingStatus[] = ["PENDING_ASSIGNMENT", "ASSIGNED", "IN_PROGRESS"];
 const PAST_STATUSES: BookingStatus[] = ["COMPLETED", "CANCELLED"];
 
-export function useMyAppointments(universityId?: number) {
+export function useMyAppointments(opts?: { universityId?: number; statusGroup?: "ALL" | "ACTIVE" | "HISTORY"; limit?: number }) {
+  const { universityId, statusGroup = "ALL", limit = 50 } = opts ?? {};
   const [items, setItems] = useState<MyBookingDto[]>([]);
+  const [total, setTotal] = useState(0); // ✅ Total from server
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,8 +24,13 @@ export function useMyAppointments(universityId?: number) {
     setError(null);
 
     try {
-      const data = await getMyAppointments({ universityId, signal: ac.signal });
-      setItems(Array.isArray(data) ? data : []);
+      const resp = await getMyAppointmentsFull({ universityId, statusGroup, limit, signal: ac.signal });
+      if (resp.success === true) {
+        setItems(Array.isArray(resp.items) ? resp.items : []);
+        setTotal(resp.total ?? 0);
+      } else {
+        setError(resp.error || "Failed to load appointments");
+      }
     } catch (e: any) {
       if (e?.name === "AbortError") return;
       setError(e?.message ?? "Failed to load appointments");
@@ -49,6 +56,7 @@ export function useMyAppointments(universityId?: number) {
 
   return {
     items,
+    total, // ✅ Return total
     activeBooking,
     pastBookings,
 

@@ -102,17 +102,6 @@ export default function AiChatInput({
                              DetailText: "รายละเอียดเพิ่มเติม",
                            };
 
-                           const valueMappers: Record<string, string> = {
-                             STRESS: "ความเครียด",
-                             SLEEP: "การนอนหลับ",
-                             RELATIONSHIP: "ความสัมพันธ์",
-                             ACADEMIC: "การเรียน",
-                             ADJUST: "การปรับตัว",
-                             OTHER: "อื่นๆ",
-                             DEPRESSION: "ซึมเศร้า",
-                             Burnout: "ภาวะหมดไฟ",
-                             // Add more as needed
-                           };
                           
                            // Skip internal/empty keys if necessary
                            if (!value) return null;
@@ -126,8 +115,15 @@ export default function AiChatInput({
                            if (key === "intent" && value === "CANCEL") displayValue = "ยกเลิกนัดหมาย";
                            if (key === "intent" && value === "BOOK") displayValue = "จองคิว";
                           
-                           if (key.toLowerCase().includes("category") && valueMappers[displayValue]) {
-                               displayValue = valueMappers[displayValue];
+                           // ✅ Dynamic Map using categories list from server
+                           if (key.toLowerCase().includes("category")) {
+                               const codeStr = String(displayValue).trim().toUpperCase();
+                               const catObj = chat.agent?.categories?.find((c: any) => 
+                                 String(c.code || "").trim().toUpperCase() === codeStr
+                               );
+                               if (catObj?.name) {
+                                 displayValue = catObj.name;
+                               }
                            }
 
                            return (

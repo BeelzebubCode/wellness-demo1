@@ -98,8 +98,12 @@ export function BookingPage({ universityId }: { universityId?: number }) {
   const { submitBooking, loading: bookingLoading, error: bookingError } =
     useBooking(universityId);
 
-  // ✅ Load existing appointments to check for active booking
-  const { activeBooking: existingActiveBooking, isLoading: appointmentsLoading } = useMyAppointments(universityId);
+  // ✅ Load ONLY active appointments to check for active booking status (Performance Optimized)
+  const { activeBooking: existingActiveBooking, isLoading: appointmentsLoading } = useMyAppointments({
+    universityId,
+    statusGroup: "ACTIVE",
+    limit: 5, // We only need enough to see if ANY exist
+  });
 
   const hasActiveBooking = useMemo(() => {
     // 1. Check loaded data

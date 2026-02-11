@@ -9,11 +9,13 @@ export function SignaturePad({
   onChange,
   disabled,
   className,
+  warning,
 }: {
   value?: string | null; // dataURL (png)
   onChange?: (dataUrl: string | null) => void;
   disabled?: boolean;
   className?: string;
+  warning?: React.ReactNode;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef(false);
@@ -120,7 +122,7 @@ export function SignaturePad({
   return (
     <div className={cn("flex flex-col h-full", className)}>
       <div className="h-7 flex items-center justify-between mb-2 shrink-0">
-        <label className="text-sm font-black text-slate-800 tracking-tight">
+        <label className="text-sm font-black text-slate-800 flex items-center gap-1 tracking-tight">
           ลายเซ็นยินยอม (Online) <span className="text-red-500">*</span>
         </label>
 
@@ -142,6 +144,8 @@ export function SignaturePad({
           className={cn("w-full h-full touch-none absolute inset-0", disabled && "opacity-60")}
         />
       </div>
+
+      {warning && <div className="mt-3">{warning}</div>}
 
       <p className="mt-2 text-[11px] text-gray-400">
         กรุณาเซ็นเพื่อยืนยันความยินยอมในการรับบริการแบบออนไลน์
