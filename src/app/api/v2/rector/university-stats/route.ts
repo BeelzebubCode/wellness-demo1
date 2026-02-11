@@ -50,13 +50,19 @@ export async function GET(req: NextRequest) {
         }
 
         // 3. Get university-wide statistics using RectorService
-        const stats = await RectorService.getUniversityStats(
-            account.account_home_university_id
-        );
+        const [stats, wellbeing, healthMap] = await Promise.all([
+            RectorService.getUniversityStats(account.account_home_university_id),
+            RectorService.getUniversityWellbeing(account.account_home_university_id),
+            RectorService.getFacultyHealthMap(account.account_home_university_id)
+        ]);
 
         return NextResponse.json({
             success: true,
-            data: stats,
+            data: {
+                ...stats,
+                wellbeing,
+                healthMap
+            },
         });
     } catch (error: any) {
         console.error("[RECTOR_UNIVERSITY_STATS_ERROR]", error);

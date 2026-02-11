@@ -31,6 +31,22 @@ interface UniversityStats {
         month: string;
         averageRisk: number;
     }>;
+    wellbeing?: {
+        overallScore: number;
+        riskScore: number;
+        satisfactionScore: number;
+        engagementScore: number;
+        highRiskRate: number;
+        activeStudents: number;
+    };
+    healthMap?: Array<{
+        id: number;
+        name: string;
+        engagementRate: number;
+        riskIndex: number;
+        studentCount: number;
+        highRiskCount: number;
+    }>;
 }
 
 export function useUniversityStats() {
@@ -67,6 +83,8 @@ export function useUniversityStats() {
                         repeatStats: data.repeatStats,
                         facultyBreakdown: data.facultyBreakdown || [],
                         riskTrends: data.riskTrends || [],
+                        wellbeing: data.wellbeing,
+                        healthMap: data.healthMap,
                     });
 
                     setAnalytics({
@@ -75,6 +93,9 @@ export function useUniversityStats() {
                         visitsByMonth: data.visitsByMonth,
                         repeatStats: data.repeatStats,
                         riskDistribution: data.riskDistribution,
+                        // Add new analytics data if needed
+                        wellbeing: data.wellbeing,
+                        healthMap: data.healthMap,
                     });
 
                     setFacultyBreakdown(data.facultyBreakdown || []);

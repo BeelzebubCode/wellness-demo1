@@ -6,20 +6,146 @@ export const RectorService = {
      * Includes all faculties in the university
      */
     async getUniversityStats(universityId: number) {
+        // Legacy wrapper for backward compatibility if needed, 
+        // but primarily we use the new specific functions below.
+        return await this.getLegacyStats(universityId);
+    },
+
+    // Independent function to get the "University Health Pulse"
+    async getUniversityWellbeing(universityId: number) {
+        if (!universityId) return null;
+
+        // 1. Risk Score (Inverse of High Risk %)
+        const riskQuery = await prisma.bookingOutcome.groupBy({
+            by: ['booking_outcome_risk_level'],
+            where: { university_id: universityId },
+            _count: true
+        });
+
+        let totalCases = 0;
+        let highRiskCases = 0;
+
+        riskQuery.forEach(r => {
+            const count = r._count;
+            totalCases += count;
+            if (r.booking_outcome_risk_level && r.booking_outcome_risk_level >= 4) {
+                highRiskCases += count;
+            }
+        });
+
+        const highRiskRate = totalCases > 0 ? (highRiskCases / totalCases) : 0;
+        // Score: 100 - (High Risk Rate * 100). If 20% high risk, score is 80.
+        const riskScore = Math.max(0, 100 - (highRiskRate * 100));
+
+        // 2. Satisfaction Score (0-5 -> 0-100)
+        const ratings = await prisma.feedbackRating.aggregate({
+            where: { feedback: { university_id: universityId } },
+            _avg: { feedback_rating_score: true }
+        });
+        const satisfaction = ratings._avg.feedback_rating_score || 0;
+        const satisfactionScore = (satisfaction / 5) * 100;
+
+        // 3. Engagement Score (Active Students / Total Students)
+        // Active = Has at least 1 booking
+        const totalStudents = await prisma.student.count({ where: { university_id: universityId } });
+        const activeStudents = await prisma.booking.groupBy({
+            by: ['student_id'],
+            where: { university_id: universityId },
+        }); // Returns array of unique student_ids
+
+        const engagementRate = totalStudents > 0 ? (activeStudents.length / totalStudents) : 0;
+        // Engage score: direct percentage. If 50% students active, score 50.
+        const engagementScore = Math.min(100, engagementRate * 100 * 2); // Multiplier 2x: 50% active = 100 score
+
+        // Weighted Average
+        // Risk: 40% | Satisfaction: 40% | Engagement: 20%
+        const overallScore = Math.round(
+            (riskScore * 0.4) + (satisfactionScore * 0.4) + (engagementScore * 0.2)
+        );
+
+        return {
+            overallScore,
+            riskScore,
+            satisfactionScore,
+            engagementScore,
+            totalStudents,
+            activeStudents: activeStudents.length,
+            highRiskRate,
+            satisfactionRaw: satisfaction
+        };
+    },
+
+    async getFacultyHealthMap(universityId: number) {
+        // Get list of faculties
+        const faculties = await prisma.faculty.findMany({
+            where: { university_id: universityId },
+            include: {
+                _count: { select: { studentAcademics: true } }
+            }
+        });
+
+        const healthMap = await Promise.all(faculties.map(async (faculty) => {
+            // 1. Engagement
+            const activeStudents = await prisma.booking.groupBy({
+                by: ['student_id'],
+                where: {
+                    university_id: universityId,
+                    student: { academic: { faculty_id: faculty.faculty_id } } // Updated filter
+                }
+            });
+            const studentCount = faculty._count.studentAcademics || 1; // Avoid div by 0
+            const engagementRate = (activeStudents.length / studentCount) * 100;
+
+            // 2. Risk Index (Average Risk Level)
+            const riskStats = await prisma.bookingOutcome.aggregate({
+                where: {
+                    university_id: universityId,
+                    booking: { student: { academic: { faculty_id: faculty.faculty_id } } }
+                },
+                _avg: { booking_outcome_risk_level: true }
+            });
+            const riskIndex = riskStats._avg.booking_outcome_risk_level || 0;
+
+            // 3. High Risk Volume (Bubble Size or Color)
+            // Count unique high risk students or total high risk cases? Cases is easier.
+            const highRiskCount = await prisma.bookingOutcome.count({
+                where: {
+                    university_id: universityId,
+                    booking_outcome_risk_level: { gte: 4 },
+                    booking: { student: { academic: { faculty_id: faculty.faculty_id } } }
+                }
+            });
+
+            return {
+                id: faculty.faculty_id,
+                name: faculty.faculty_name_th,
+                engagementRate: Number(engagementRate.toFixed(1)), // X-Axis
+                riskIndex: Number(riskIndex.toFixed(2)), // Y-Axis
+                studentCount, // Bubble Size
+                activeCount: activeStudents.length,
+                highRiskCount
+            };
+        }));
+
+        return healthMap;
+    },
+
+    // Legacy function wrapper to support existing calls if any
+    async getLegacyStats(universityId: number) {
         // 1. Total Students (SQL)
         const totalStudentsQuery = await prisma.$queryRaw<{ count: bigint }[]>`
-            SELECT COUNT(*)::int as count 
-            FROM "student_academic" 
-            WHERE "university_id" = ${universityId}
-        `;
+             SELECT COUNT(*)::int as count 
+             FROM "student_academic" 
+             WHERE "university_id" = ${universityId}
+         `;
         const totalStudents = Number(totalStudentsQuery[0]?.count || 0);
 
         // 2. Total Bookings (SQL)
         const totalBookingsQuery = await prisma.$queryRaw<{ count: bigint }[]>`
-            SELECT COUNT(*)::int as count 
-            FROM "booking" 
-            WHERE "university_id" = ${universityId}
-        `;
+             SELECT COUNT(*)::int as count 
+             FROM "booking" 
+             WHERE "university_id" = ${universityId}
+         `;
         const totalBookings = Number(totalBookingsQuery[0]?.count || 0);
 
         if (totalBookings === 0 && totalStudents === 0) {
@@ -46,14 +172,14 @@ export const RectorService = {
 
         // 4. Risk Distribution (SQL Group By)
         const riskStats = await prisma.$queryRaw<{ risk: number, count: bigint }[]>`
-            SELECT 
-                bo.booking_outcome_risk_level as risk,
-                COUNT(*)::int as count
-            FROM "booking" b
-            JOIN "booking_outcome" bo ON b.booking_id = bo.booking_id
-            WHERE b.university_id = ${universityId}
-            GROUP BY bo.booking_outcome_risk_level
-        `;
+             SELECT 
+                 bo.booking_outcome_risk_level as risk,
+                 COUNT(*)::int as count
+             FROM "booking" b
+             JOIN "booking_outcome" bo ON b.booking_id = bo.booking_id
+             WHERE b.university_id = ${universityId}
+             GROUP BY bo.booking_outcome_risk_level
+         `;
 
         const riskDistribution = { HIGH: 0, MEDIUM: 0, LOW: 0, NORMAL: 0 };
         riskStats.forEach(r => {
@@ -65,16 +191,16 @@ export const RectorService = {
 
         // 5. Problem Stats & Gender (SQL Group By)
         const problemGenderStats = await prisma.$queryRaw<{ name: string, gender: string, count: bigint }[]>`
-            SELECT 
-                COALESCE(pc.problem_category_name_th, 'อื่นๆ') as name,
-                sp.student_gender as gender,
-                COUNT(*)::int as count
-            FROM "booking" b
-            LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
-            LEFT JOIN "student_profile" sp ON b.student_id = sp.student_id
-            WHERE b.university_id = ${universityId}
-            GROUP BY pc.problem_category_name_th, sp.student_gender
-        `;
+             SELECT 
+                 COALESCE(pc.problem_category_name_th, 'อื่นๆ') as name,
+                 sp.student_gender as gender,
+                 COUNT(*)::int as count
+             FROM "booking" b
+             LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
+             LEFT JOIN "student_profile" sp ON b.student_id = sp.student_id
+             WHERE b.university_id = ${universityId}
+             GROUP BY pc.problem_category_name_th, sp.student_gender
+         `;
 
         const problemStats: Record<string, number> = {};
         const genderProblemStats: Record<string, Record<string, number>> = { Male: {}, Female: {} };
@@ -92,13 +218,13 @@ export const RectorService = {
 
         // 6. Visits by Month (SQL Truncate Date)
         const visitsQuery = await prisma.$queryRaw<{ month: string, count: bigint }[]>`
-            SELECT 
-                TO_CHAR(booking_created_at, 'YYYY-MM') as month,
-                COUNT(*)::int as count
-            FROM "booking"
-            WHERE university_id = ${universityId}
-            GROUP BY TO_CHAR(booking_created_at, 'YYYY-MM')
-        `;
+             SELECT 
+                 TO_CHAR(booking_created_at, 'YYYY-MM') as month,
+                 COUNT(*)::int as count
+             FROM "booking"
+             WHERE university_id = ${universityId}
+             GROUP BY TO_CHAR(booking_created_at, 'YYYY-MM')
+         `;
 
         const visitsByMonth: Record<string, number> = {};
         visitsQuery.forEach(v => {
@@ -108,17 +234,17 @@ export const RectorService = {
         // 7. Repeat Visits (SQL Count Group By Student)
         // Subquery approach: Get counts per student, then group by count
         const repeatQuery = await prisma.$queryRaw<{ visit_count: number, student_count: bigint }[]>`
-            SELECT 
-                visit_count,
-                COUNT(*)::int as student_count
-            FROM (
-                SELECT student_id, COUNT(*) as visit_count
-                FROM "booking"
-                WHERE university_id = ${universityId}
-                GROUP BY student_id
-            ) as sub
-            GROUP BY visit_count
-        `;
+             SELECT 
+                 visit_count,
+                 COUNT(*)::int as student_count
+             FROM (
+                 SELECT student_id, COUNT(*) as visit_count
+                 FROM "booking"
+                 WHERE university_id = ${universityId}
+                 GROUP BY student_id
+             ) as sub
+             GROUP BY visit_count
+         `;
 
         let singleVisits = 0;
         let repeatVisits = 0;
@@ -128,7 +254,6 @@ export const RectorService = {
         });
 
         // 8. Faculty Breakdown (Combined SQL)
-        // Ensure to count risks from bookings associated with students in that faculty
         const facultyStats = await prisma.$queryRaw<{
             faculty_id: number,
             faculty_name: string,
@@ -137,25 +262,25 @@ export const RectorService = {
             medium_risk: bigint,
             low_risk: bigint
         }[]>`
-            SELECT 
-                f.faculty_id,
-                f.faculty_name_th as faculty_name,
-                (
-                    SELECT COUNT(*) 
-                    FROM "student_academic" sa 
-                    WHERE sa.faculty_id = f.faculty_id AND sa.university_id = ${universityId}
-                )::int as student_count,
-                COALESCE(SUM(CASE WHEN bo.booking_outcome_risk_level >= 4 THEN 1 ELSE 0 END), 0)::int as high_risk,
-                COALESCE(SUM(CASE WHEN bo.booking_outcome_risk_level = 3 THEN 1 ELSE 0 END), 0)::int as medium_risk,
-                COALESCE(SUM(CASE WHEN bo.booking_outcome_risk_level = 2 THEN 1 ELSE 0 END), 0)::int as low_risk
-            FROM "faculty" f
-            LEFT JOIN "student_academic" sa ON f.faculty_id = sa.faculty_id
-            LEFT JOIN "booking" b ON sa.student_id = b.student_id AND b.university_id = ${universityId}
-            LEFT JOIN "booking_outcome" bo ON b.booking_id = bo.booking_id
-            WHERE f.university_id = ${universityId}
-            GROUP BY f.faculty_id, f.faculty_name_th
-            ORDER BY student_count DESC
-        `;
+             SELECT 
+                 f.faculty_id,
+                 f.faculty_name_th as faculty_name,
+                 (
+                     SELECT COUNT(*) 
+                     FROM "student_academic" sa 
+                     WHERE sa.faculty_id = f.faculty_id AND sa.university_id = ${universityId}
+                 )::int as student_count,
+                 COALESCE(SUM(CASE WHEN bo.booking_outcome_risk_level >= 4 THEN 1 ELSE 0 END), 0)::int as high_risk,
+                 COALESCE(SUM(CASE WHEN bo.booking_outcome_risk_level = 3 THEN 1 ELSE 0 END), 0)::int as medium_risk,
+                 COALESCE(SUM(CASE WHEN bo.booking_outcome_risk_level = 2 THEN 1 ELSE 0 END), 0)::int as low_risk
+             FROM "faculty" f
+             LEFT JOIN "student_academic" sa ON f.faculty_id = sa.faculty_id
+             LEFT JOIN "booking" b ON sa.student_id = b.student_id AND b.university_id = ${universityId}
+             LEFT JOIN "booking_outcome" bo ON b.booking_id = bo.booking_id
+             WHERE f.university_id = ${universityId}
+             GROUP BY f.faculty_id, f.faculty_name_th
+             ORDER BY student_count DESC
+         `;
 
         const facultyBreakdown = facultyStats.map(f => ({
             facultyName: f.faculty_name,
@@ -179,12 +304,12 @@ export const RectorService = {
                 repeat: repeatVisits,
             },
             facultyBreakdown,
-            riskTrends: [], // Keeping empty for now as discussed
+            riskTrends: [],
         };
     },
 
     /**
-     * Get KPIs for a specific university
+     * Get KPI for a specific university
      */
     async getRectorKPI(universityId: number, filters?: { startDate?: string; endDate?: string }) {
         if (!universityId) return null;
