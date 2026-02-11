@@ -15,7 +15,7 @@ export default function AdvisorLayout({ children }: { children: React.ReactNode 
     redirectTo: "/login",
     allowedRoles: ["ADVISOR"] as const,
     loginToastKey: "toast_login_required_advisor",
-    guard: !isLoginPage,
+    guard: false, // ✅ Allow public access
     requireTenant: true,
   });
 
@@ -24,7 +24,7 @@ export default function AdvisorLayout({ children }: { children: React.ReactNode 
 
   if (isLoginPage) return <>{children}</>;
 
-  if (isLoading || !isAuthenticated) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <LoadingSpinner size="xl" label="กำลังตรวจสอบสิทธิ์..." />
@@ -43,8 +43,8 @@ export default function AdvisorLayout({ children }: { children: React.ReactNode 
 
       <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
         <AdminHeader
-          adminName={(user as any)?.name || "Advisor"}
-          adminRole="อาจารย์ที่ปรึกษา"
+          adminName={(user as any)?.name || "Guest Advisor"}
+          adminRole={isAuthenticated ? "อาจารย์ที่ปรึกษา" : "Demo Account"}
           onMenuClick={() => setIsMobileMenuOpen(true)}
         />
 

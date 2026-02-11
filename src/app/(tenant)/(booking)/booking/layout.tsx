@@ -15,6 +15,7 @@ export default function BookingLayout({ children }: { children: React.ReactNode 
     redirectTo: "/login",
     allowedRoles: ["STUDENT"] as const,
     loginToastKey: "toast_login_required_student",
+    guard: false, // ✅ Allow public/guest access without force redirect
   });
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -32,8 +33,6 @@ export default function BookingLayout({ children }: { children: React.ReactNode 
     );
   }
 
-  if (!isAuthenticated || !user) return null;
-
   return (
     <>
       <div className="flex min-h-screen bg-slate-50">
@@ -46,8 +45,8 @@ export default function BookingLayout({ children }: { children: React.ReactNode 
 
         <div className="flex-1 flex flex-col min-w-0">
           <BookingHeader
-            userName={user.name ?? user.username}
-            userRole="นักศึกษา"
+            userName={user?.name ?? user?.username ?? "บุคคลทั่วไป"}
+            userRole={isAuthenticated ? "นักศึกษา" : "Guest"}
             onMenuClick={handleOpenMobile}
           />
           <main className="flex-1 overflow-auto">{children}</main>

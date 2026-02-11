@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Modal, Button, LoadingSpinner } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { Star } from "lucide-react";
+import { useNotificationContext } from "@/components/notification/NotificationProvider";
 
 type Criterion = {
   evaluation_criterion_id: number;
@@ -21,6 +22,7 @@ type Props = {
 };
 
 export function BookingFeedbackModal({ isOpen, bookingId, onClose, onSuccess }: Props) {
+  const { push } = useNotificationContext();
   const [criteria, setCriteria] = useState<Criterion[]>([]);
   const [scores, setScores] = useState<Record<number, number>>({});
   const [comment, setComment] = useState("");
@@ -100,6 +102,22 @@ export function BookingFeedbackModal({ isOpen, bookingId, onClose, onSuccess }: 
 
       const json = await res.json();
       if (!res.ok || !json?.success) throw new Error(json?.error ?? "submit failed");
+
+      // ✅ Celebration Notification
+      if (json.pointsAwarded > 0) {
+        push({
+          type: "reward",
+          title: "ยินดีด้วย! คุณได้รับคะแนนสะสม",
+          message: `ขอบคุณสำหรับการประเมิน คุณได้รับ +${json.pointsAwarded} แต้ม 🎉`,
+          duration: 5000,
+        });
+      } else {
+        push({
+          type: "success",
+          title: "ส่งแบบประเมินสำเร็จ",
+          message: "ขอบคุณสำหรับความคิดเห็นของคุณครับ",
+        });
+      }
 
       window.dispatchEvent(new Event("points-changed"));
 

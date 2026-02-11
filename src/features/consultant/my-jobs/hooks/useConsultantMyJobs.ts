@@ -108,8 +108,10 @@ export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
       try {
         const rows = await fetchMyBookings();
 
-        // ✅ FIX: normalize วันทั้งสองฝั่ง + รองรับ date field ไม่ตรงกัน
-        const dayRows = rows.filter((r) => getRowYmd(r) === selectedDateStrNorm);
+        // ✅ FIX: ถ้าไม่มีวันที่เลือก (เช่นตอน default) ให้เห็นทุกวัน
+        const dayRows = !selectedDateStrNorm
+          ? rows
+          : rows.filter((r) => getRowYmd(r) === selectedDateStrNorm);
 
         const byStatus =
           statusFilter === "ALL"

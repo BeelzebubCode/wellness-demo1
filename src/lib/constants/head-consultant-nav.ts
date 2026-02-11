@@ -9,16 +9,15 @@ export const HEAD_CONSULTANT_NAV: NavItem[] = [
     icon: LayoutDashboard,
     exact: true,
   },
-
-  {
-    href: "/head-consultant/borrow-consultants",
-    label: "ยืมที่ปรึกษา",
-    icon: UsersRound,
-  },
   {
     href: "/head-consultant/bookings",
     label: "มอบหมายงาน",
     icon: CalendarDays,
+  },
+  {
+    href: "/head-consultant/borrow-consultants",
+    label: "ยืมที่ปรึกษา",
+    icon: UsersRound,
   },
   {
     href: "/head-consultant/schedule",

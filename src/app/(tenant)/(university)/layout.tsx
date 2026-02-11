@@ -17,14 +17,14 @@ export default function UniversityLayout({
     redirectTo: "/login",
     allowedRoles: ["STUDENT", "CONSULTANT", "HEAD_CONSULTANT", "RECTOR", "SUPER_ADMIN", "ADVISOR", "DEAN"] as const,
     loginToastKey: "toast_login_required_university",
-    guard: !isLoginPage,
+    guard: false, // ✅ Allow public access
   });
 
   // ✅ หน้า login ก็ปล่อยผ่าน (กัน loop)
   if (isLoginPage) return <>{children}</>;
 
-  // ✅ Loading / ยังไม่ auth
-  if (isLoading || !isAuthenticated) {
+  // ✅ Loading เท่านั้นที่บล็อก
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <LoadingSpinner size="xl" label="กำลังตรวจสอบสิทธิ์..." />

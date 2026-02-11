@@ -14,7 +14,7 @@ export default function RectorLayout({ children }: { children: React.ReactNode }
     redirectTo: "/login",
     allowedRoles: ["RECTOR"] as const,
     loginToastKey: "toast_login_required_rector",
-    guard: !isLoginPage,
+    guard: false, // ✅ Allow public/guest access
     requireTenant: true,
   });
 
@@ -23,7 +23,7 @@ export default function RectorLayout({ children }: { children: React.ReactNode }
 
   if (isLoginPage) return <>{children}</>;
 
-  if (isLoading || !isAuthenticated) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <LoadingSpinner size="xl" label="กำลังตรวจสอบสิทธิ์..." />
@@ -42,8 +42,8 @@ export default function RectorLayout({ children }: { children: React.ReactNode }
 
       <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
         <AdminHeader
-          adminName={(user as any)?.name || "Rector"}
-          adminRole="อธิการบดี"
+          adminName={(user as any)?.name || "Guest Rector"}
+          adminRole={isAuthenticated ? "อธิการบดี" : "Demo Account"}
           onMenuClick={() => setIsMobileMenuOpen(true)}
         />
 

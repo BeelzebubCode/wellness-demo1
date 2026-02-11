@@ -3,7 +3,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { CalendarClock, Clock3, PlayCircle, CheckCircle2, ClipboardList, TrendingUp } from "lucide-react";
+import { CalendarClock, Clock3, PlayCircle, CheckCircle2, ClipboardList, TrendingUp, ChevronDown } from "lucide-react";
+import { cn } from "@/lib/cn";
 
 import { FilterBar } from "@/components/filters/FilterBar";
 import { CONSULTANT_MY_JOBS_FILTER_DEFS, type ConsultantMyJobsFilters } from "../filters/defs";
@@ -24,12 +25,27 @@ function toISODateString(date: Date) {
 
 export function ConsultantMyJobsPageClient() {
   const [filters, setFilters] = useState<ConsultantMyJobsFilters>(() => ({
-    date: toISODateString(new Date()),
+    date: "", // ✅ Default to all days
     status: "ALL",
     search: "",
   }));
 
   const vm = useConsultantMyJobs(filters);
+
+  // ================= PAGINATION =================
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+
+  // Reset page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
+
+  const totalPages = Math.ceil(vm.jobs.length / ITEMS_PER_PAGE);
+  const paginatedJobs = vm.jobs.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 font-sans text-slate-900 pb-20 relative overflow-hidden selection:bg-[rgba(var(--ring),0.25)] selection:text-slate-900">
@@ -76,7 +92,12 @@ export function ConsultantMyJobsPageClient() {
 
         {/* ================= STATS ================= */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatWidget title="นัดหมายวันนี้" value={vm.stats.today} icon={CalendarClock} theme="gradient-blue" />
+          <StatWidget 
+            title={filters.date ? "นัดหมายวันที่เลือก" : "นัดหมายทั้งหมด"} 
+            value={vm.stats.today} 
+            icon={CalendarClock} 
+            theme="gradient-blue" 
+          />
           <StatWidget title="รอดำเนินการ" value={vm.stats.pending} icon={Clock3} theme="gradient-amber" />
           <StatWidget title="กำลังดำเนินการ" value={vm.stats.inProgress} icon={PlayCircle} theme="gradient-purple" />
           <StatWidget title="ปิดเคสแล้ว" value={vm.stats.completed} icon={CheckCircle2} theme="gradient-green" />
@@ -122,7 +143,7 @@ export function ConsultantMyJobsPageClient() {
                 </div>
                 <div className="text-center">
                   <p className="text-sm font-semibold text-slate-600">
-                    ยังไม่มีงานในวันนี้
+                    {filters.date ? "ยังไม่มีงานในวันที่เลือก" : "ยังไม่มีรายการงานที่คุณรับผิดชอบ"}
                   </p>
                   <p className="text-xs text-slate-400 mt-1">
                     ลองเปลี่ยนวันที่หรือตัวกรองอื่นๆ
@@ -131,7 +152,7 @@ export function ConsultantMyJobsPageClient() {
               </div>
             ) : (
               <div className="space-y-4">
-                {vm.jobs.map((job, index) => (
+                {paginatedJobs.map((job, index) => (
                   <div
                     key={job.id}
                     className="animate-in fade-in slide-in-from-bottom-4"
@@ -158,6 +179,62 @@ export function ConsultantMyJobsPageClient() {
               </div>
             )}
           </div>
+
+          {/* ================= PAGINATION CONTROLS ================= */}
+          {totalPages > 1 && (
+            <div className="px-8 py-5 border-t border-slate-100/80 bg-white/50 backdrop-blur-sm flex items-center justify-between">
+              <div className="text-xs font-semibold text-slate-500">
+                หน้าที่ {currentPage} จากทั้งหมด {totalPages}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                >
+                  <ChevronDown className="w-4 h-4 rotate-90" />
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                    // Show current page, first, last, and surrounding pages
+                    const isAround = Math.abs(p - currentPage) <= 1;
+                    const isFirstLast = p === 1 || p === totalPages;
+                    
+                    if (!isAround && !isFirstLast) {
+                      if (p === 2 || p === totalPages - 1) {
+                         return <span key={p} className="w-4 text-center text-slate-400 text-xs">...</span>;
+                      }
+                      return null;
+                    }
+
+                    return (
+                      <button
+                        key={p}
+                        onClick={() => setCurrentPage(p)}
+                        className={cn(
+                          "w-9 h-9 flex items-center justify-center rounded-xl text-xs font-bold transition-all",
+                          currentPage === p
+                            ? "bg-primary text-white shadow-md shadow-primary/20 scale-105"
+                            : "bg-white border border-slate-200 text-slate-600 hover:border-primary/40 hover:text-primary"
+                        )}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                >
+                  <ChevronDown className="w-4 h-4 -rotate-90" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
