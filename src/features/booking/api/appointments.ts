@@ -2,13 +2,23 @@
 
 import type { MyAppointmentsResponse, MyBookingDto } from "../types";
 
-export async function getMyAppointments(
-  opts?: { universityId?: number; signal?: AbortSignal },
-): Promise<MyBookingDto[]> {
+// ✅ Returns the full response (items + total)
+export async function getMyAppointmentsFull(
+  opts?: { 
+    universityId?: number; 
+    statusGroup?: "ALL" | "ACTIVE" | "HISTORY";
+    limit?: number;
+    signal?: AbortSignal 
+  },
+): Promise<MyAppointmentsResponse> {
   const headers: Record<string, string> = { Accept: "application/json" };
   if (opts?.universityId != null) headers["x-university-id"] = String(opts.universityId);
 
-  const res = await fetch("/api/v2/bookings/my?limit=1000", {
+  const params = new URLSearchParams();
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  if (opts?.statusGroup) params.set("statusGroup", opts.statusGroup);
+
+  const res = await fetch(`/api/v2/bookings/my?${params.toString()}`, {
     method: "GET",
     headers,
     credentials: "include",
@@ -29,8 +39,23 @@ export async function getMyAppointments(
     throw new Error("error" in data ? data.error : "API returned unsuccessful response");
   }
 
-  // ✅ v2 ตอบ items
-  return Array.isArray(data.items) ? data.items : [];
+  return data;
+}
+
+// ✅ Keep old signature for compatibility
+export async function getMyAppointments(
+  opts?: { 
+    universityId?: number; 
+    statusGroup?: "ALL" | "ACTIVE" | "HISTORY";
+    limit?: number;
+    signal?: AbortSignal 
+  },
+): Promise<MyBookingDto[]> {
+  const data = await getMyAppointmentsFull(opts);
+  if (data.success === true) {
+    return Array.isArray(data.items) ? data.items : [];
+  }
+  return [];
 }
 
 export interface BookingHistoryResponse {

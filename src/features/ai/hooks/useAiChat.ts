@@ -18,6 +18,7 @@ type AgentState = {
   candidates?: any[];
   missingFields?: string[];
   questions?: AgentQuestion[];
+  categories?: any[];          // ✅ added categories list
 };
 
 function pickConfirmToken(data: any): string | null {
@@ -58,16 +59,17 @@ export function useAiChat(input: { mode: Mode; onConfirmed?: () => void }) {
 
     setError(null);
     setIsLoading(true);
+    
+    // ✅ Keep intent for continuity
+    const currentIntent = agent?.intent;
     setAgent(null); // กันกด confirm เก่า
 
     const nextMessages: UiMsg[] = [...messages, { role: "user", content: userText }];
     setMessages(nextMessages);
-    // setText(""); // Don't clear text if invoked directly? Actually yes, clear input if it matches?
-    // If user typed partial text and clicked button, maybe clear input?
     setText(""); 
 
     try {
-      const intent: AgentIntent = mode === "booking_agent" ? detectIntent(userText) : "BOOK";
+      const intent: AgentIntent = mode === "booking_agent" ? detectIntent(userText, currentIntent) : "BOOK";
       const ep = endpointFor(mode, intent);
 
       const payload = {
@@ -95,6 +97,7 @@ export function useAiChat(input: { mode: Mode; onConfirmed?: () => void }) {
           candidates: Array.isArray((data as any)?.candidates) ? (data as any).candidates : [],
           missingFields: Array.isArray((data as any)?.missingFields) ? (data as any).missingFields : [],
           questions: Array.isArray((data as any)?.questions) ? (data as any).questions : [],
+          categories: Array.isArray((data as any)?.categories) ? (data as any).categories : [], // ✅ Capture categories
         });
       }
     } catch (e: any) {

@@ -27,7 +27,10 @@ function safeDate(raw: any): Date | null {
 }
 
 export function BookingHistoryPageClient() {
-  const { pastBookings = [], isLoading, refetch } = useMyAppointments();
+  const { pastBookings = [], isLoading, refetch } = useMyAppointments({
+    statusGroup: "HISTORY",
+    limit: 100, // Reasonable limit for a single page/initial view
+  });
 
   const [expandedId, setExpandedId] = useState<number | null>(null);
 

@@ -96,7 +96,14 @@ export type MyBookingDto = {
 // API Response: /api/v2/bookings/my
 // ==============================
 export type MyAppointmentsResponse =
-  | { success: true; universityId?: number; items: MyBookingDto[] }
+  | { 
+      success: true; 
+      universityId?: number; 
+      items: MyBookingDto[]; 
+      total: number;
+      page: number;
+      limit: number;
+    }
   | { success: false; error: string };
 
 // ==============================
