@@ -63,7 +63,19 @@ export function useFacultyStats(facultyCode?: string) {
                     ? `/api/v2/dean/dashboard?facultyCode=${encodeURIComponent(facultyCode)}`
                     : "/api/v2/dean/dashboard";
 
-                const response = await fetch(url);
+                let response = await fetch(url);
+                
+                // If Forbidden (403), it might be a Rector trying to view a faculty.
+                // Try the Rector-specific endpoint instead.
+                if (response.status === 403) {
+                    const rectorUrl = facultyCode
+                        ? `/api/v2/rector/dashboard?facultyCode=${encodeURIComponent(facultyCode)}`
+                        : "/api/v2/rector/dashboard";
+                    
+                    console.log("Dean access forbidden, trying Rector access:", rectorUrl);
+                    response = await fetch(rectorUrl);
+                }
+
                 const result = await response.json();
 
                 if (!response.ok) {
