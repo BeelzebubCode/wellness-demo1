@@ -109,10 +109,10 @@ export async function getMyBookings(params: GetMyBookingsParams) {
     university_id: activeUniversityId,
     // Base status constraints for consultants seeing their work
     booking_status: statusFilter || {
-       // logic for consultant default view if ALL? usually they only see assigned/inprogress/completed
-       // but here we adhere to statusGroup request if provided.
-       // If no group provided, fallback to "My Work" logic: assigned+
-       in: [BookingStatus.ASSIGNED, BookingStatus.IN_PROGRESS, BookingStatus.COMPLETED],
+      // logic for consultant default view if ALL? usually they only see assigned/inprogress/completed
+      // but here we adhere to statusGroup request if provided.
+      // If no group provided, fallback to "My Work" logic: assigned+
+      in: [BookingStatus.ASSIGNED, BookingStatus.IN_PROGRESS, BookingStatus.COMPLETED],
     },
     OR: [
       { consultant_id: consultant.consultant_id },
@@ -130,7 +130,7 @@ export async function getMyBookings(params: GetMyBookingsParams) {
   // If statusGroup is explicitly ALL, maybe we want to see PENDING too?
   // But generally consultants only see what's assigned.
   // We'll trust the statusFilter if present, else default.
-  
+
   const [total, bookings] = await prisma.$transaction([
     prisma.booking.count({ where }),
     prisma.booking.findMany({
@@ -175,6 +175,7 @@ export async function getMyBookings(params: GetMyBookingsParams) {
       problemCategoryNameTh: b.problemCategory?.problem_category_name_th ?? null,
       consultantId: b.consultant_id ?? null,
       consultantName: null,
+      studentName: sp ? `${sp.student_first_name_th} ${sp.student_last_name_th}` : "ไม่ทราบชื่อ",
       consultantOrg: null,
       session,
     };

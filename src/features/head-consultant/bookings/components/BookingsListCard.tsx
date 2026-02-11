@@ -95,8 +95,8 @@ function IconAction({
     tone === "amber"
       ? "border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100"
       : tone === "emerald"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
-      : "border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100";
+        ? "border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
+        : "border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100";
 
   return (
     <button
@@ -161,7 +161,7 @@ export function BookingsListCard({
   onClickAssign: () => void;
   onClickReschedule: () => void;
 }) {
-  const studentName = row.student?.name ?? row.student?.username ?? "ไม่ทราบชื่อ";
+  const studentName = row.userName || row.student?.name || row.student?.username || "ไม่ทราบชื่อ";
   const assign = getAssignState(row);
 
   const timeLabel =
