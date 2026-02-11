@@ -91,49 +91,26 @@ export function RectorDashboard() {
       )}
 
       {/* ===== Main Content ===== */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 space-y-6">
         {/* --- Faculty Overview Table --- */}
-        <div className="lg:col-span-2 bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 space-y-6">
-          <div className="flex flex-col gap-1">
-            <h2 className="text-xl font-bold text-slate-900 border-l-4 border-[rgb(var(--primary))] pl-4 tracking-tight">
-              ภาพรวมนิสิตแยกตามคณะ
-            </h2>
-            <p className="text-sm text-slate-400 ml-5 font-medium tracking-tight">
-              สรุปจำนวนนิสิตและระดับความเสี่ยงในแต่ละคณะ
-            </p>
-          </div>
-
-          <FilterBar
-            defs={FILTER_DEFS}
-            value={filters}
-            onChange={setFilters}
-            searchKey="search"
-            searchPlaceholder="ค้นหาคณะ หรือรหัส..."
-          />
-
-          <RectorStudentList data={facultyBreakdown || []} />
+        <div className="flex flex-col gap-1">
+          <h2 className="text-xl font-bold text-slate-900 border-l-4 border-[rgb(var(--primary))] pl-4 tracking-tight">
+            ภาพรวมนิสิตแยกตามคณะ
+          </h2>
+          <p className="text-sm text-slate-400 ml-5 font-medium tracking-tight">
+            สรุปจำนวนนิสิตและระดับความเสี่ยงในแต่ละคณะ
+          </p>
         </div>
 
-        {/* --- Risk Trend --- */}
-        <div
-          className="rounded-[2rem] p-6 shadow-sm flex flex-col"
-          style={{
-            background: `linear-gradient(135deg, rgba(var(--primary), 0.05) 0%, rgba(var(--accent), 0.05) 100%)`,
-          }}
-        >
-          <div className="mb-4 flex flex-col gap-1">
-            <h2 className="text-lg font-bold tracking-tight" style={{ color: `rgb(var(--primary-600))` }}>
-              แนวโน้มความเสี่ยง
-            </h2>
-            <p className="text-xs font-bold uppercase tracking-tight opacity-60" style={{ color: `rgb(var(--primary))` }}>
-              Average Risk Trend (6m)
-            </p>
-          </div>
+        <FilterBar
+          defs={FILTER_DEFS}
+          value={filters}
+          onChange={setFilters}
+          searchKey="search"
+          searchPlaceholder="ค้นหาคณะ หรือรหัส..."
+        />
 
-          <div className="flex-1 min-h-[300px]">
-            <RectorRiskChart data={riskTrends || []} />
-          </div>
-        </div>
+        <RectorStudentList data={facultyBreakdown || []} />
       </div>
     </div>
   );

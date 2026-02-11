@@ -227,7 +227,6 @@ export function RectorAnalyticsCharts({ analytics }: RectorAnalyticsChartsProps)
                 beginAtZero: true,
                 grid: {
                     color: '#f1f5f9',
-                    drawBorder: false,
                 }
             },
             x: {
@@ -328,9 +327,9 @@ export function RectorAnalyticsCharts({ analytics }: RectorAnalyticsChartsProps)
                 <CardContent className="p-6">
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         {riskItems.map((item) => (
-                            <div key={item.name} className={`${item.bg} flex flex-col items-center p-4 rounded-2xl transition-transform hover:scale-105 duration-200`}>
-                                <span className="text-3xl font-black mb-1" style={{ color: item.color }}>{item.value}</span>
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">{item.name}</span>
+                            <div key={item.name} className={`${item.bg} flex flex-col items-center p-5 rounded-2xl transition-transform hover:scale-105 duration-200 border border-slate-200/50`}>
+                                <span className="text-4xl font-black mb-2" style={{ color: item.color }}>{item.value}</span>
+                                <span className="text-sm font-extrabold uppercase tracking-wide" style={{ color: item.color }}>{item.name}</span>
                             </div>
                         ))}
                     </div>

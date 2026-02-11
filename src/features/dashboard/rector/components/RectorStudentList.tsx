@@ -43,17 +43,17 @@ export function RectorStudentList({ data }: Props) {
                                     {faculty.studentCount}
                                 </td>
                                 <td className="px-4 py-3 text-center">
-                                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-100 text-red-700 font-semibold text-xs">
+                                    <span className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-red-50 text-red-600 font-black text-base border border-red-200">
                                         {faculty.highRiskCount}
                                     </span>
                                 </td>
                                 <td className="px-4 py-3 text-center">
-                                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-semibold text-xs">
+                                    <span className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-orange-50 text-orange-600 font-black text-base border border-orange-200">
                                         {faculty.mediumRiskCount}
                                     </span>
                                 </td>
                                 <td className="px-4 py-3 text-center">
-                                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-100 text-green-700 font-semibold text-xs">
+                                    <span className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-green-50 text-green-600 font-black text-base border border-green-200">
                                         {faculty.lowRiskCount}
                                     </span>
                                 </td>
