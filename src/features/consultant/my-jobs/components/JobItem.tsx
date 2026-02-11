@@ -52,8 +52,11 @@ function ActionButton({
 }) {
   const baseStyles = "inline-flex items-center justify-center rounded-xl font-bold transition-all duration-200 h-9 px-4 text-xs shadow-sm active:scale-95";
   const variantStyles = variant === "primary"
-    ? "bg-gradient-to-r from-primary to-blue-600 text-white hover:shadow-lg hover:shadow-primary/30 disabled:opacity-50 disabled:pointer-events-none border-0"
-    : "border border-slate-200 bg-white/80 text-slate-700 hover:border-primary hover:text-primary hover:bg-white hover:shadow-md disabled:opacity-50 disabled:pointer-events-none";
+    ? "bg-primary text-white hover:opacity-90 disabled:opacity-50 disabled:pointer-events-none border-0"
+    : "border border-primary/30 bg-white text-primary hover:bg-primary/5 disabled:opacity-50 disabled:pointer-events-none";
+
+
+
 
   return (
     <button
