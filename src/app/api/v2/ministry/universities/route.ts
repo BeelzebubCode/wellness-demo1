@@ -26,22 +26,15 @@ export async function GET(req: NextRequest) {
     const pageSizeRaw = parseInt(searchParams.get("pageSize") || "100");
     const pageSize = Math.min(500, Math.max(1, pageSizeRaw)); // cap at 500 for map view
     
-    // 🎯 NEW: Filtering & sorting
-    const problemCategory = searchParams.get("problemCategory") || ""; // Filter by problem code
-    const sortBy = searchParams.get("sortBy") || ""; // "problemCount" to sort by problem frequency
+    // 🎯 Filtering & sorting constants
+    const problemCategory = searchParams.get("problemCategory") || ""; 
+    const sortBy = searchParams.get("sortBy") || ""; 
     
     // 🚀 CACHE STRATEGY: Check Redis first
-    // Cache key includes pagination and version to avoid incorrect data
     const cacheKey = `${CacheKeys.universities()}:v2:p${page}:s${pageSize}`;
     const cachedData = await getCached<any>(cacheKey);
 
     if (cachedData) {
-      // ⚡ Cache Hit!
-      const elapsed = Date.now() - startTime;
-      if (elapsed > 100) {
-        console.warn(`[SLOW CACHE] GET /api/v2/ministry/universities cache hit took ${elapsed}ms`);
-      }
-
       return NextResponse.json(cachedData, {
         headers: {
           "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=7200",
@@ -52,75 +45,64 @@ export async function GET(req: NextRequest) {
 
     const skip = page * pageSize;
 
-    // 🚀 Performance: Use select instead of loading full models
-    const universities = await prisma.university.findMany({
-      where: {
-        university_is_active: true,
-        AND: [
-          { university_latitude: { not: null } },
-          { university_longitude: { not: null } },
-        ],
-      },
-      select: {
-        university_id: true,
-        university_code: true,
-        university_name_th: true,
-        university_name_en: true,
-        university_latitude: true,
-        university_longitude: true,
-        university_type: true,
-        province: {
-          select: {
-            province_name_th: true,
-            province_name_en: true,
-            region: {
-              select: {
-                region_name_th: true,
-                region_name_en: true,
-                region_code: true,
+    // 1. Parallel Fetch: Universities + Categories
+    const [universities, categories] = await Promise.all([
+      prisma.university.findMany({
+        where: {
+          university_is_active: true,
+          AND: [
+            { university_latitude: { not: null } },
+            { university_longitude: { not: null } },
+          ],
+        },
+        select: {
+          university_id: true,
+          university_code: true,
+          university_name_th: true,
+          university_name_en: true,
+          university_latitude: true,
+          university_longitude: true,
+          university_type: true,
+          province: {
+            select: {
+              province_name_th: true,
+              province_name_en: true,
+              region: {
+                select: {
+                  region_name_th: true,
+                  region_name_en: true,
+                  region_code: true,
+                },
               },
             },
           },
-        },
-        _count: {
-          select: {
-            students: true,
+          _count: {
+            select: {
+              students: true,
+            },
           },
         },
-      },
-      orderBy: {
-        university_name_th: "asc",
-      },
-      skip,
-      take: pageSize,
-    });
+        orderBy: {
+          university_name_th: "asc",
+        },
+        skip,
+        take: pageSize,
+      }),
+      prisma.problemCategory.findMany({
+        select: {
+          problem_category_id: true,
+          problem_category_code: true,
+          problem_category_name_en: true,
+          problem_category_name_th: true,
+        }
+      })
+    ]);
 
-    // 🔥 Aggergate Dominant Problem Category
     const universityIds = universities.map(u => u.university_id);
-    
-    // 1. Get counts by (uni, category)
-    const categoryStats = await prisma.booking.groupBy({
-      by: ["university_id", "problem_category_id"],
-      where: {
-        university_id: { in: universityIds },
-      },
-      _count: {
-        _all: true,
-      },
-    });
-
-    // 3. Transform categories into map for easy lookup
-    const categories = await prisma.problemCategory.findMany({
-      select: {
-        problem_category_id: true,
-        problem_category_code: true,
-        problem_category_name_en: true,
-        problem_category_name_th: true,
-      }
-    });
     const categoryMap = new Map(categories.map(c => [c.problem_category_id, c]));
 
-    // 4. 🔥 NEW: Granular 2D Statistics (University x Status x Category)
+    // 2. Optimized: Single GroupBy for ALL stats (status + category)
+    // This replaces two separate heavy queries with one.
     const granularStats = await prisma.booking.groupBy({
       by: ["university_id", "booking_status", "problem_category_id"],
       where: {
@@ -132,58 +114,65 @@ export async function GET(req: NextRequest) {
     });
 
     const granularStatsByUni = new Map<number, any>(); // uniId -> { STATUS: { CAT_CODE: count } }
-    const statusBreakdownByUni = new Map<number, Record<string, number>>(); // uniId -> { STATUS: count }
-    const problemBreakdownByUni = new Map<number, Record<string, number>>(); // uniId -> { CAT_CODE: count }
-    const topCategoryByUni = new Map<number, any>(); // uniId -> { code, name, count }
-    const statsByUni: Record<number, any[]> = {};
+    const statusBreakdownByUni = new Map<number, Record<string, number>>(); 
+    const problemBreakdownByUni = new Map<number, Record<string, number>>(); 
+    const topCategoryByUni = new Map<number, any>();
+    const statsAccumulator: Record<number, Record<number, number>> = {}; // uniId -> { catId: totalCount }
 
-    // Group items for dominant problem calculation
+    // Init accumulators
     for (const uniId of universityIds) {
-      statsByUni[uniId] = [];
+      statsAccumulator[uniId] = {};
     }
 
     for (const stat of granularStats) {
       const catInfo = categoryMap.get(stat.problem_category_id);
       if (!catInfo || !catInfo.problem_category_code) continue;
       const catCode = catInfo.problem_category_code;
+      const count = stat._count._all;
 
       // Update 2D breakdown
       const uniStats = granularStatsByUni.get(stat.university_id) || {};
       const statusStats = uniStats[stat.booking_status] || {};
-      statusStats[catCode] = (statusStats[catCode] || 0) + stat._count._all;
+      statusStats[catCode] = (statusStats[catCode] || 0) + count;
       uniStats[stat.booking_status] = statusStats;
       granularStatsByUni.set(stat.university_id, uniStats);
 
-      // Update Status breakdown (sum across categories)
+      // Update Status breakdown
       const stBreakdown = statusBreakdownByUni.get(stat.university_id) || {};
-      stBreakdown[stat.booking_status] = (stBreakdown[stat.booking_status] || 0) + stat._count._all;
+      stBreakdown[stat.booking_status] = (stBreakdown[stat.booking_status] || 0) + count;
       statusBreakdownByUni.set(stat.university_id, stBreakdown);
 
-      // Update Problem breakdown (sum across statuses)
+      // Update Problem breakdown
       const pbBreakdown = problemBreakdownByUni.get(stat.university_id) || {};
-      pbBreakdown[catCode] = (pbBreakdown[catCode] || 0) + stat._count._all;
+      pbBreakdown[catCode] = (pbBreakdown[catCode] || 0) + count;
       problemBreakdownByUni.set(stat.university_id, pbBreakdown);
 
-      // Collect for top category comparison
-      statsByUni[stat.university_id].push(stat);
+      // Accumulate for top category
+      statsAccumulator[stat.university_id][stat.problem_category_id] = 
+        (statsAccumulator[stat.university_id][stat.problem_category_id] || 0) + count;
     }
 
     // Determine max for each university (dominant problem)
     for (const uniId of universityIds) {
-      const stats = statsByUni[uniId];
-      if (!stats || stats.length === 0) continue;
+      const catCounts = statsAccumulator[uniId];
+      let topCatId = -1;
+      let maxCount = -1;
 
-      const top = stats.reduce((prev: any, current: any) => 
-        (current._count._all > prev._count._all) ? current : prev
-      );
+      for (const [catIdStr, count] of Object.entries(catCounts)) {
+        const catId = parseInt(catIdStr);
+        if (count > maxCount) {
+          maxCount = count;
+          topCatId = catId;
+        }
+      }
 
-      const catInfo = categoryMap.get(top.problem_category_id);
+      const catInfo = categoryMap.get(topCatId);
       if (catInfo) {
         topCategoryByUni.set(uniId, {
           code: catInfo.problem_category_code || "UNKNOWN",
           name: catInfo.problem_category_name_en || "Unknown",
           nameTH: catInfo.problem_category_name_th,
-          count: top._count._all,
+          count: maxCount,
         });
       }
     }
