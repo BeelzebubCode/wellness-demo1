@@ -80,6 +80,7 @@ export async function confirmBookingPlan(args: {
           problem_category_id: problemCategoryId,
           booking_detail_text: detailText,
           booking_status: BookingStatus.PENDING_ASSIGNMENT,
+          booking_service_mode: "ONSITE", // ✅ Fix: Missing required field
         },
         select: { booking_id: true },
       });

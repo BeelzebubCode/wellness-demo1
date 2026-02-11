@@ -13,21 +13,32 @@ export async function GET(req: NextRequest) {
     assertRole(account.role, ALLOWED);
     const role = account.role as AllowedRole;
 
-    const items = await getMyBookings({
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get("page") ?? "1");
+    const limit = parseInt(searchParams.get("limit") ?? "50");
+    const statusGroup = (searchParams.get("statusGroup") as any) ?? "ALL";
+
+    const { items, total } = await getMyBookings({
       accountId: account.accountId,
       activeUniversityId,
       role,
+      page,
+      limit,
+      statusGroup,
     });
 
     return NextResponse.json({
       success: true,
       universityId: activeUniversityId,
 
-      // ✅ FE อ่าน data.bookings
-      bookings: items,
-
-      // ✅ optional: เผื่อที่อื่นเรียก data.items อยู่ จะไม่พัง
+      // New standardized pagination fields
       items,
+      total,
+      page,
+      limit,
+      
+      // Backward compatibility fields (deprecated)
+      bookings: items, 
     });
   } catch (e: any) {
     console.error("[BOOKINGS_MY_V2_GET]", {

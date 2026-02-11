@@ -63,7 +63,7 @@ export async function listTimeSlotsByDate(
       ts.time_slot_max_capacity,
       ts.time_slot_status,
       COUNT(b.booking_id) FILTER (
-        WHERE b.booking_status::text IN ('PENDING_ASSIGNMENT', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED')
+        WHERE b.booking_status IN ('PENDING_ASSIGNMENT', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED')
       ) as active_bookings
     FROM time_slot ts
     LEFT JOIN booking b ON b.time_slot_id = ts.time_slot_id 

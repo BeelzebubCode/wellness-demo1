@@ -37,6 +37,13 @@ export function useMyAppointments(universityId?: number) {
     return () => abortRef.current?.abort();
   }, [refetch]);
 
+  // ✅ Auto-refresh on AI changes
+  useEffect(() => {
+    const handleChanged = () => refetch();
+    window.addEventListener("booking:changed", handleChanged);
+    return () => window.removeEventListener("booking:changed", handleChanged);
+  }, [refetch]);
+
   const activeBooking = items.find((b) => ACTIVE_STATUSES.includes(b.status)) ?? null;
   const pastBookings = items.filter((b) => PAST_STATUSES.includes(b.status));
 

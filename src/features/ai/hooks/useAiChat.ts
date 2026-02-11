@@ -2,6 +2,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { aiApi, detectIntent, endpointFor } from "@/features/ai/api";
 import type { ChatMsg, AiChatResponse, Mode, AgentIntent } from "@/features/ai/api";
 import type { AgentQuestion } from "@/features/ai/api/client";
@@ -31,6 +32,7 @@ function pickConfirmToken(data: any): string | null {
 
 export function useAiChat(input: { mode: Mode; onConfirmed?: () => void }) {
   const { mode, onConfirmed } = input;
+  const router = useRouter();
 
   const [messages, setMessages] = useState<UiMsg[]>([]);
   const [text, setText] = useState("");
@@ -50,8 +52,8 @@ export function useAiChat(input: { mode: Mode; onConfirmed?: () => void }) {
     setAgent(null);
   }, []);
 
-  const send = useCallback(async () => {
-    const userText = text.trim();
+  const sendMessage = useCallback(async (msgContent: string) => {
+    const userText = msgContent.trim();
     if (!userText || isLoading) return;
 
     setError(null);
@@ -60,7 +62,9 @@ export function useAiChat(input: { mode: Mode; onConfirmed?: () => void }) {
 
     const nextMessages: UiMsg[] = [...messages, { role: "user", content: userText }];
     setMessages(nextMessages);
-    setText("");
+    // setText(""); // Don't clear text if invoked directly? Actually yes, clear input if it matches?
+    // If user typed partial text and clicked button, maybe clear input?
+    setText(""); 
 
     try {
       const intent: AgentIntent = mode === "booking_agent" ? detectIntent(userText) : "BOOK";
@@ -68,6 +72,8 @@ export function useAiChat(input: { mode: Mode; onConfirmed?: () => void }) {
 
       const payload = {
         messages: nextMessages.map((m) => ({ role: m.role, content: m.content })),
+        // ✅ Send current plan to auto-merge state
+        plan: agent?.plan ?? null,
       };
 
       const data = await aiApi.chat(ep.plan, payload);
@@ -96,7 +102,11 @@ export function useAiChat(input: { mode: Mode; onConfirmed?: () => void }) {
     } finally {
       setIsLoading(false);
     }
-  }, [text, isLoading, messages, mode]);
+  }, [isLoading, messages, mode, agent]);
+
+  const send = useCallback(() => {
+    sendMessage(text);
+  }, [sendMessage, text]);
 
   const confirmAgentAction = useCallback(async () => {
     if (mode !== "booking_agent") return;
@@ -121,13 +131,14 @@ export function useAiChat(input: { mode: Mode; onConfirmed?: () => void }) {
       if (ok) {
         onConfirmed?.();
         window.dispatchEvent(new Event("booking:changed"));
+        router.refresh(); // ✅ Refresh Server Components
       }
     } catch (e: any) {
       setError(e?.message ?? "network");
     } finally {
       setIsLoading(false);
     }
-  }, [mode, agent, isLoading, onConfirmed]);
+  }, [mode, agent, isLoading, onConfirmed, router]);
 
   return {
     messages,
@@ -140,5 +151,6 @@ export function useAiChat(input: { mode: Mode; onConfirmed?: () => void }) {
     canSend,
     agent,
     confirmAgentAction,
+    sendMessage, // ✅ Exposed
   };
 }

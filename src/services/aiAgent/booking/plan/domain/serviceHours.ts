@@ -8,7 +8,7 @@ export type ServiceHours = {
 
 export const DEFAULT_SERVICE_HOURS: ServiceHours = {
   openMin: 8 * 60,    // 08:00
-  closeMin: 11 * 60,  // 11:00 exclusive
+  closeMin: 20 * 60,  // 20:00 exclusive
   slotMin: 60,
 };
 

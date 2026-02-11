@@ -5,7 +5,7 @@ import { MyAppointmentCard } from "@/features/booking/components/shared/MyAppoin
 import { BookingFeedbackModal } from "@/features/booking/components/shared/BookingFeedbackModal";
 import { Card, LoadingSpinner } from "@/components/ui";
 import { History, Inbox } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 import { FilterBar } from "@/components/filters/FilterBar";
 import {
@@ -95,8 +95,22 @@ export function BookingHistoryPageClient() {
     });
   }, [pastBookings, filters]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
+
+  const ITEMS_PER_PAGE = 10;
   const totalAll = pastBookings.length;
   const total = filteredBookings.length;
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+  const paginatedBookings = filteredBookings.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
   const done = filteredBookings.filter((b: any) => b.status === "COMPLETED").length;
   const cancelled = filteredBookings.filter((b: any) => b.status === "CANCELLED").length;
 
@@ -179,32 +193,82 @@ export function BookingHistoryPageClient() {
         </div>
 
         {filteredBookings.length > 0 ? (
-          <div className="relative pl-6">
-            <div className="absolute left-2 top-1 bottom-1 w-px bg-gray-200" />
-
-            <div className="space-y-4">
-              {filteredBookings.map((booking: any) => {
-                const isExpanded = expandedId === booking.bookingId; // Use bookingId from DTO
-
-                return (
-                  <div key={booking.bookingId ?? booking.id} className="relative">
-                    <div className="absolute -left-[2px] top-5 h-3 w-3 rounded-full bg-primary-500 ring-4 ring-white" />
-
-                    <MyAppointmentCard
-                      booking={booking}
-                      isCompact
-                      isExpanded={isExpanded}
-                      onToggle={() =>
-                        setExpandedId(isExpanded ? null : (booking.bookingId ?? booking.id))
-                      }
-                      // ✅ สำคัญ: ส่ง callback ให้ปุ่มประเมิน
-                      onFeedback={() => openFeedback(booking.bookingId ?? booking.id)}
-                    />
-                  </div>
-                );
-              })}
+          <>
+            <div className="relative pl-6">
+              <div className="absolute left-2 top-1 bottom-1 w-px bg-gray-200" />
+              <div className="space-y-4">
+                {paginatedBookings.map((booking: any) => {
+                  const isExpanded = expandedId === booking.bookingId;
+                  return (
+                    <div key={booking.bookingId ?? booking.id} className="relative">
+                      <div className="absolute -left-[2px] top-5 h-3 w-3 rounded-full bg-primary-500 ring-4 ring-white" />
+                      <MyAppointmentCard
+                        booking={booking}
+                        isCompact
+                        isExpanded={isExpanded}
+                        onToggle={() =>
+                          setExpandedId(isExpanded ? null : (booking.bookingId ?? booking.id))
+                        }
+                        onFeedback={() => openFeedback(booking.bookingId ?? booking.id)}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-6 pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 text-sm rounded-md border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  kก่อนหน้า
+                </button>
+                
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .map((p) => {
+                    // Show current, first, last, and surrounding pages logic could go here
+                    // specific request: tabs 1 2 3
+                    if (
+                      p === 1 ||
+                      p === totalPages ||
+                      (p >= currentPage - 1 && p <= currentPage + 1)
+                    ) {
+                      return (
+                        <button
+                          key={p}
+                          onClick={() => setCurrentPage(p)}
+                          className={`w-8 h-8 flex items-center justify-center text-sm rounded-md border ${
+                            currentPage === p
+                              ? "bg-primary-600 text-white border-primary-600"
+                              : "hover:bg-gray-50 text-gray-700"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      );
+                    } else if (
+                      p === currentPage - 2 ||
+                      p === currentPage + 2
+                    ) {
+                      return <span key={p} className="text-gray-400">...</span>;
+                    }
+                    return null;
+                  })}
+
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 text-sm rounded-md border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  ถัดไป
+                </button>
+              </div>
+            )}
+          </>
         ) : (
           <div className="text-center py-12 border border-dashed rounded-xl bg-gray-50">
             <Inbox className="w-12 h-12 text-gray-300 mx-auto mb-4" />

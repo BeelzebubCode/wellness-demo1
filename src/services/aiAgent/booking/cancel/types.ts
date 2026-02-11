@@ -2,6 +2,7 @@
 import type { AgentQuestion } from "@/services/aiAgent/core";
 
 export type CancelDraft = {
+  intent?: "CANCEL";
   reason: string | null;
 };
 

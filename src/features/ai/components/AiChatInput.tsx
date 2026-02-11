@@ -57,61 +57,170 @@ export default function AiChatInput({
         {/* ✅ Confirmation Card (Floating above input) */}
         {mode === "booking_agent" && chat.agent?.confirmToken && (
           <div className="mb-4 animate-in slide-in-from-bottom-5 fade-in zoom-in-95">
-            <div className="relative overflow-hidden rounded-2xl border border-indigo-100 bg-white p-4 shadow-xl">
-              <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-indigo-500 to-purple-500" />
+             {/* ... existing confirmation card ... */}
+             <div className="relative overflow-hidden rounded-2xl border border-indigo-100 bg-white p-4 shadow-xl">
+               {/* ... (keep existing content) ... */}
+               <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-indigo-500 to-purple-500" />
               
-              <div className="flex items-start gap-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
-                  <CalendarCheck className="h-6 w-6" />
-                </div>
+               <div className="flex items-start gap-4">
+                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+                   <CalendarCheck className="h-6 w-6" />
+                 </div>
                 
-                <div className="flex-1">
-                  <h3 className="text-base font-semibold text-slate-900">
-                    ยืนยันการจองคิว?
-                  </h3>
-                  <p className="mt-1 text-sm text-slate-600">
-                    ระบบได้เตรียมข้อมูลการจองของคุณแล้ว กรุณาตรวจสอบและกดยืนยัน
-                  </p>
+                 <div className="flex-1">
+                   <h3 className="text-base font-semibold text-slate-900">
+                     {(chat.agent.plan as any)?.intent === "CANCEL" 
+                       ? "ยืนยันการยกเลิกนัดหมาย?" 
+                       : "ยืนยันการจองคิว?"}
+                   </h3>
+                   <p className="mt-1 text-sm text-slate-600">
+                     ระบบได้เตรียมข้อมูลการจองของคุณแล้ว กรุณาตรวจสอบและกดยืนยัน
+                   </p>
                   
-                  {/* Optional: Show Plan Details if available */}
-                  {chat.agent.plan && (
-                    <div className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
-                      <div className="font-medium text-slate-900 mb-1">รายละเอียด:</div>
-                      <pre className="whitespace-pre-wrap font-sans text-xs text-slate-600">
-                        {JSON.stringify(chat.agent.plan, null, 2)}
-                      </pre>
-                    </div>
-                  )}
+                   {/* Optional: Show Plan Details if available */}
+                   {chat.agent.plan && (
+                     <div className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+                       <div className="font-medium text-slate-900 mb-2">รายละเอียด:</div>
+                       <div className="space-y-1">
+                         {Object.entries(chat.agent.plan).map(([key, value]) => {
+                           const labels: Record<string, string> = {
+                             intent: "ความต้องการ",
+                             date: "วันที่",
+                             time: "เวลา",
+                             reason: "เหตุผล",
+                             topic: "หัวข้อ", // or "บริการ"
+                             service: "บริการ",
+                             consultant: "ผู้ให้คำปรึกษา",
+                             action: "การดำเนินการ",
+                            
+                             // Booking specific (CamelCase & PascalCase support)
+                             timeRange: "ช่วงเวลา",
+                             TimeRange: "ช่วงเวลา",
+                             problemCategoryCode: "หมวดปัญหา",
+                             ProblemCategoryCode: "หมวดปัญหา",
+                             detailText: "รายละเอียดเพิ่มเติม",
+                             DetailText: "รายละเอียดเพิ่มเติม",
+                           };
 
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    <button
-                      type="button"
-                      onClick={() => chat.confirmAgentAction()}
-                      disabled={isLoading}
-                      className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-                    >
-                      {isLoading ? (
-                        <>กำลังยืนยัน...</>
-                      ) : (
-                        <>
-                          <CheckCircle2 className="h-4 w-4" />
-                          ยืนยันการจอง
-                        </>
-                      )}
-                    </button>
+                           const valueMappers: Record<string, string> = {
+                             STRESS: "ความเครียด",
+                             SLEEP: "การนอนหลับ",
+                             RELATIONSHIP: "ความสัมพันธ์",
+                             ACADEMIC: "การเรียน",
+                             ADJUST: "การปรับตัว",
+                             OTHER: "อื่นๆ",
+                             DEPRESSION: "ซึมเศร้า",
+                             Burnout: "ภาวะหมดไฟ",
+                             // Add more as needed
+                           };
+                          
+                           // Skip internal/empty keys if necessary
+                           if (!value) return null;
 
-                    <button
-                      type="button"
-                      onClick={() => chat.reset()} // Or specialized cancel
-                      className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-red-600 transition-colors"
-                    >
-                      ยกเลิก
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+                           // Normalize key for display
+                           const label = labels[key] ?? key;
+
+                           // Map intent/value values
+                           let displayValue = String(value);
+                          
+                           if (key === "intent" && value === "CANCEL") displayValue = "ยกเลิกนัดหมาย";
+                           if (key === "intent" && value === "BOOK") displayValue = "จองคิว";
+                          
+                           if (key.toLowerCase().includes("category") && valueMappers[displayValue]) {
+                               displayValue = valueMappers[displayValue];
+                           }
+
+                           return (
+                             <div key={key} className="flex flex-col sm:flex-row sm:gap-2">
+                               {/* Label */}
+                               <span className="font-medium text-slate-500 min-w-[60px] capitalize">
+                                 {label}:
+                               </span>
+                               {/* Value */}
+                               <span className="text-slate-800 break-words font-medium">
+                                 {typeof value === "object" 
+                                   ? JSON.stringify(value) 
+                                   : displayValue}
+                               </span>
+                             </div>
+                           );
+                         })}
+                       </div>
+                     </div>
+                   )}
+
+                   <div className="mt-4 flex flex-wrap gap-3">
+                     <button
+                       type="button"
+                       onClick={() => chat.confirmAgentAction()}
+                       disabled={isLoading}
+                       className={cn(
+                         "inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm disabled:opacity-50 transition-colors",
+                          (chat.agent.plan as any)?.intent === "CANCEL"
+                           ? "bg-red-600 hover:bg-red-700"
+                           : "bg-indigo-600 hover:bg-indigo-700"
+                       )}
+                     >
+                       {isLoading ? (
+                         <>กำลังยืนยัน...</>
+                       ) : (
+                         <>
+                           {(chat.agent.plan as any)?.intent === "CANCEL" ? (
+                             <XCircle className="h-4 w-4" />
+                           ) : (
+                             <CheckCircle2 className="h-4 w-4" />
+                           )}
+                           {(chat.agent.plan as any)?.intent === "CANCEL" 
+                             ? "ยืนยันการยกเลิก" 
+                             : "ยืนยันการจอง"}
+                         </>
+                       )}
+                     </button>
+
+                     <button
+                       type="button"
+                       onClick={() => chat.reset()} // Or specialized cancel
+                       className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-red-600 transition-colors"
+                     >
+                       ยกเลิก
+                     </button>
+                   </div>
+                 </div>
+               </div>
+             </div>
           </div>
+        )}
+
+        {/* ✅ Question Options (NEW) */}
+        {mode === "booking_agent" && !chat.agent?.confirmToken && chat.agent?.questions && chat.agent.questions.length > 0 && (
+           <div className="mb-4 animate-in slide-in-from-bottom-5 fade-in zoom-in-95">
+             {chat.agent.questions.map((q, idx) => (
+                q.options && q.options.length > 0 && (
+                  <div key={idx} className="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/50 p-4 shadow-sm">
+                     <p className="mb-3 text-sm font-medium text-slate-700">
+                        {q.text || "เลือกตัวเลือก:"}
+                     </p>
+                     <div className="flex flex-wrap gap-2">
+                       {q.options.map((opt: any) => (
+                         <button
+                           key={opt.value}
+                           type="button"
+                           disabled={isLoading}
+                           onClick={() => {
+                             // Send the label as text
+                             const val = opt.label || opt.value;
+                             chat.sendMessage(val);
+                           }}
+                           className="inline-flex items-center rounded-full border border-indigo-200 bg-white px-3 py-1.5 text-sm text-indigo-700 shadow-sm hover:bg-indigo-50 hover:border-indigo-300 transition-colors"
+                         >
+                           {opt.label}
+                         </button>
+                       ))}
+                     </div>
+                  </div>
+                )
+             ))}
+           </div>
         )}
 
         <div className="flex flex-col gap-3">

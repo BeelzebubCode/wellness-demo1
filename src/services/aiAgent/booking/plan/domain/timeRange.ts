@@ -11,7 +11,7 @@ export function userLooksLikeGaveTime(text: string) {
   const t = String(text || "");
   return (
     /\b\d{1,2}:\d{2}\b/.test(t) ||
-    /\b\d{1,2}\s*โมง\b/.test(t) ||
+    /\b\d{1,2}\s*โมง/.test(t) ||
     /เช้า|สาย|บ่าย|เย็น|ค่ำ|เที่ยง/.test(t)
   );
 }

@@ -31,7 +31,7 @@ export class BookingCancelEngine {
     const reason = extractCancelReason(question);
     const minLen = this.deps.minReasonLen ?? 3;
 
-    const state: CancelDraft = { reason: reason?.trim() || null };
+    const state: CancelDraft = { intent: "CANCEL", reason: reason?.trim() || null };
 
     if (!state.reason || state.reason.length < minLen) {
       const q: AgentQuestion = {

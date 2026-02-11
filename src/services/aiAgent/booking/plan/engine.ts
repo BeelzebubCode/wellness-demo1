@@ -62,7 +62,7 @@ export class BookingPlanEngine {
     const hours = DEFAULT_SERVICE_HOURS;
 
     // LLM → plan
-    const plan = await callPlannerLLM({
+    const llmPlan = await callPlannerLLM({
       baseURL: this.deps.aiBaseURL,
       model: this.deps.aiModel,
       userMessages,
@@ -70,26 +70,66 @@ export class BookingPlanEngine {
       bookingWindow: window,
     });
 
-    if (!plan) {
+    if (!llmPlan) {
       return {
         reply: "ผมอ่านแผนจองจาก AI ไม่ได้ ลองพิมพ์ใหม่เช่น “จองพรุ่งนี้ 09:00 เรื่องความเครียด”",
       };
     }
 
+    // ✅ Merge with previous state (Fix "Amnesia")
+    const prevPlan = body.plan as PlanLLM | undefined;
+    const plan: PlanLLM = {
+      intent: llmPlan.intent ?? prevPlan?.intent ?? "BOOK",
+      date: llmPlan.date ?? prevPlan?.date ?? null,
+      timeRange: llmPlan.timeRange ?? prevPlan?.timeRange ?? null,
+      problemCategoryCode: llmPlan.problemCategoryCode ?? prevPlan?.problemCategoryCode ?? null,
+      detailText: llmPlan.detailText ?? prevPlan?.detailText ?? null,
+    };
+
     // --------------------------
     // 🎯 TimeRange (single truth)
     // --------------------------
-    const { userTimeHint, decision } = decideTimeRange({
-      question,
-      serviceOpenMin: hours.openMin,
-      serviceCloseMin: hours.closeMin,
-    });
+    // --------------------------
+    // 🎯 TimeRange (LLM > Regex)
+    // --------------------------
+    const llmTimeValid = plan.timeRange && /^\d{1,2}:\d{2}-\d{1,2}:\d{2}$/.test(plan.timeRange);
+    let userTimeHint = !!llmTimeValid;
 
-    if (decision.kind === "RANGE") {
-      plan.timeRange = decision.value;
+    // If LLM already resolved a valid range (e.g. from "บ่าย 2" -> "14:00-15:00"), use it.
+    if (!llmTimeValid) {
+      const { userTimeHint: hint, decision } = decideTimeRange({
+        question,
+        serviceOpenMin: hours.openMin,
+        serviceCloseMin: hours.closeMin,
+      });
 
-      // ✅ HARD STOP: อยู่นอกเวลาบริการ
-      if (isOutOfServiceTime(plan.timeRange, hours)) {
+      userTimeHint = hint;
+
+      if (decision.kind === "RANGE") {
+        plan.timeRange = decision.value;
+      } else if (decision.kind === "NEED_REASK") {
+        // Only error if we really have no idea.
+        // But if LLM sent something invalid, we might want to ask.
+        // For now, if LLM failed and regex failed -> Ask.
+         return {
+          reply:
+            `⛔ **ผมยังไม่เข้าใจเวลาที่พิมพ์มาครับ**\n\n` +
+            `✍️ กรุณาพิมพ์เวลาในรูปแบบที่ชัดเจน เช่น:\n` +
+            `• 10:00\n• 10:00-11:00\n• พรุ่งนี้ 09:00`,
+          state: plan,
+          candidates: [],
+          missingFields: ["timeRange"],
+          questions: [{ field: "timeRange", text: "ต้องการจองช่วงเวลาไหนครับ?" }],
+        };
+      } else {
+        // AUTO
+        // If we kept previous plan timeRange, it is effectively valid?
+        if (!plan.timeRange) plan.timeRange = "AUTO";
+      }
+    }
+
+    // ✅ Match check check service hours
+    if (plan.timeRange && plan.timeRange !== "AUTO" && isOutOfServiceTime(plan.timeRange, hours)) {
         return {
           reply:
             `⛔ **เวลา ${plan.timeRange} อยู่นอกช่วงให้บริการครับ**\n\n` +
@@ -101,20 +141,6 @@ export class BookingPlanEngine {
           missingFields: ["timeRange"],
           questions: [{ field: "timeRange", text: "ต้องการจองช่วงเวลาไหนครับ?" }],
         };
-      }
-    } else if (decision.kind === "NEED_REASK") {
-      return {
-        reply:
-          `⛔ **ผมยังไม่เข้าใจเวลาที่พิมพ์มาครับ**\n\n` +
-          `✍️ กรุณาพิมพ์เวลาในรูปแบบที่ชัดเจน เช่น:\n` +
-          `• 10:00\n• 10:00-11:00\n• พรุ่งนี้ 09:00`,
-        state: plan,
-        candidates: [],
-        missingFields: ["timeRange"],
-        questions: [{ field: "timeRange", text: "ต้องการจองช่วงเวลาไหนครับ?" }],
-      };
-    } else {
-      plan.timeRange = "AUTO";
     }
 
     // --------------------------
@@ -123,7 +149,16 @@ export class BookingPlanEngine {
     plan.date = normalizePlanDate({ question, planDate: plan.date });
 
     if (!userLooksLikeGaveDate(question)) {
-      plan.date = window.minISO;
+      // ✅ Auto-bump to tomorrow if today is nearly over
+      // (If current time is > closeMin - 30 mins, assume user wants tomorrow)
+      const nowMin = toMinBkk(new Date().toISOString());
+      const cutoff = hours.closeMin - 30; // buffer before closing
+
+      if (nowMin >= cutoff) {
+        plan.date = addDaysISO(window.minISO, 1);
+      } else {
+        plan.date = window.minISO;
+      }
     }
 
     if (plan.date && isOutOfWindow(plan.date, window)) {
@@ -166,6 +201,16 @@ export class BookingPlanEngine {
         window,
       );
 
+      let nextSlotsText = "";
+      if (nextDate) {
+        const nextSlots = await listAvailableSlots({
+          universityId: activeUniversityId,
+          date: nextDate,
+          limit: 5,
+        });
+        nextSlotsText = topCandidatesText(nextSlots, 5);
+      }
+
       const progress = buildProgressCard({
         dateISO: plan.date!,
         timeRange: this.toDisplayTimeRange(plan.timeRange),
@@ -175,12 +220,14 @@ export class BookingPlanEngine {
 
       return {
         reply:
-          `😕 **วัน${plan.date} ไม่มีคิวว่างแล้วครับ**\n\n` +
-          progress +
+          `😕 **วัน ${plan.date} คิวเต็มแล้วครับ**\n\n` +
           (nextDate
-            ? `\n\n✅ วันถัดไปที่ยังพอมีคิวว่าง: **${nextDate}**\nพิมพ์ “${nextDate}” เพื่อให้ผมหาช่วงที่เหมาะสุดให้ได้เลย`
-            : `\n\n⚠️ ช่วงวันที่เปิดให้จอง (${window.minISO} ถึง ${window.maxISO}) ตอนนี้ไม่มีคิวว่างแล้วครับ`) +
-          `\n\nลองพิมพ์วันใหม่ เช่น “พรุ่งนี้” หรือ “${window.maxISO}”`,
+            ? `✅ **แนะนำคิวว่างที่ใกล้ที่สุด:**\n` +
+              `📅 **${nextDate}**\n` +
+              `${nextSlotsText}\n\n` +
+              `✍️ พิมพ์เวลาที่ต้องการจองได้เลย (เช่น "10:00") หรือพิมพ์ "จอง ${nextDate}"`
+            : `⚠️ ช่วงวันที่เปิดให้จอง (${window.minISO} ถึง ${window.maxISO}) ไม่มีคิวว่างเลยครับ`) +
+          `\n\n(หรือพิมพ์เปลี่ยนวันได้ครับ)`,
         state: plan,
         candidates: [],
       };

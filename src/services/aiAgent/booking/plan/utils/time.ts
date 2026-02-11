@@ -67,7 +67,7 @@ function hasExplicitClock(text: string) {
 }
 
 function extractHourThai(text: string): number | null {
-  const m = text.match(/\b(\d{1,2})\s*โมง\b/);
+  const m = text.match(/\b(\d{1,2})\s*โมง/);
   if (!m) return null;
 
   const h = Number(m[1]);

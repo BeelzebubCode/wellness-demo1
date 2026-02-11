@@ -8,7 +8,7 @@ export async function getMyAppointments(
   const headers: Record<string, string> = { Accept: "application/json" };
   if (opts?.universityId != null) headers["x-university-id"] = String(opts.universityId);
 
-  const res = await fetch("/api/v2/bookings/my", {
+  const res = await fetch("/api/v2/bookings/my?limit=1000", {
     method: "GET",
     headers,
     credentials: "include",
@@ -31,4 +31,52 @@ export async function getMyAppointments(
 
   // ✅ v2 ตอบ items
   return Array.isArray(data.items) ? data.items : [];
+}
+
+export interface BookingHistoryResponse {
+  items: MyBookingDto[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export async function getBookingHistory(
+  opts?: { 
+    universityId?: number; 
+    page?: number; 
+    limit?: number; 
+    signal?: AbortSignal 
+  }
+): Promise<BookingHistoryResponse> {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (opts?.universityId != null) headers["x-university-id"] = String(opts.universityId);
+
+  const params = new URLSearchParams();
+  if (opts?.page) params.set("page", String(opts.page));
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  params.set("statusGroup", "HISTORY");
+
+  const res = await fetch(`/api/v2/bookings/my?${params.toString()}`, {
+    method: "GET",
+    headers,
+    credentials: "include",
+    cache: "no-store",
+    signal: opts?.signal,
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch booking history (${res.status})`);
+  }
+
+  const data = await res.json();
+  if (!data.success) {
+    throw new Error(data.error || "API returned unsuccessful response");
+  }
+
+  return {
+    items: Array.isArray(data.items) ? data.items : [],
+    total: Number(data.total || 0),
+    page: Number(data.page || 1),
+    limit: Number(data.limit || 10),
+  };
 }

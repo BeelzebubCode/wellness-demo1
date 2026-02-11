@@ -5,6 +5,7 @@ export type ProblemCatRow = {
   problem_category_id: number;
   problem_category_code: string;
   problem_category_name_th: string;
+  problem_category_description: string | null; // ✅ Added
 };
 
 export async function loadProblemCategories(): Promise<ProblemCatRow[]> {
@@ -14,6 +15,7 @@ export async function loadProblemCategories(): Promise<ProblemCatRow[]> {
       problem_category_id: true,
       problem_category_code: true,
       problem_category_name_th: true,
+      problem_category_description: true, // ✅ Added
     },
     take: 200,
   });
@@ -25,6 +27,7 @@ export function categoriesJsonForPrompt(cats: ProblemCatRow[]) {
       id: c.problem_category_id,
       code: c.problem_category_code,
       name: c.problem_category_name_th,
+      desc: c.problem_category_description, // ✅ Added for AI context
     })),
     null,
     2,
@@ -87,12 +90,36 @@ export function guessCategoryFromBrief(cats: ProblemCatRow[], brief: string): Pr
     const nameNorm = norm(c.problem_category_name_th);
     let score = 0;
 
-    if (b.includes(nameNorm)) score += 5;
+    // 1. Name exact/partial match
+    if (b.includes(nameNorm)) score += 10;
+    
+    // 2. Name tokens
+    const nameTokens = nameNorm.split(/[^a-z0-9ก-๙]+/i).filter((t) => t.length > 2);
+    for (const tk of nameTokens) {
+      if (b.includes(tk)) score += 3;
+      
+      // ✅ Special Text Matching: Strip "ความ", "การ" prefix
+      // e.g. "ความเครียด" -> "เครียด". If user says "เครียด", match it!
+      const stripped = tk.replace(/^(ความ|การ)/, "");
+      if (stripped.length > 2 && stripped !== tk && b.includes(stripped)) {
+        score += 5; // High confidence for core word match
+      }
+    }
 
-    const tokens = nameNorm.split(/[^a-z0-9ก-๙]+/i);
-    for (const tk of tokens) if (tk && b.includes(tk)) score += 1;
+    // 3. Description tokens (✅ New)
+    if (c.problem_category_description) {
+      const descNorm = norm(c.problem_category_description);
+      const descTokens = descNorm.split(/[^a-z0-9ก-๙]+/i).filter((t) => t.length > 2);
+      
+      for (const tk of descTokens) {
+        if (["เช่น", "การ", "ความ", "และ", "หรือ", "จาก", "ของ"].includes(tk)) continue;
+        if (b.includes(tk)) score += 2;
+      }
+    }
 
-    if (!best || score > best.score) best = { cat: c, score };
+    if (score > 0) {
+      if (!best || score > best.score) best = { cat: c, score };
+    }
   }
 
   if (!best || best.score <= 0) return null;
