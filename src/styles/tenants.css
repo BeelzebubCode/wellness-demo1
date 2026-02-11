@@ -11,27 +11,36 @@
 ========================================================= */
 :root {
   /* surface */
-  --bg: 240 240 240;          /* #F0F0F0 */
+  --bg: 240 240 240;
+  /* #F0F0F0 */
   --card: 255 255 255;
   --card-fg: 30 41 59;
 
   /* text */
-  --fg: 30 41 59;             /* slate-800 */
-  --muted: 100 116 139;       /* slate-500 */
+  --fg: 30 41 59;
+  /* slate-800 */
+  --muted: 100 116 139;
+  /* slate-500 */
 
   /* border (soft) */
-  --border: 217 233 207;      /* #D9E9CF */
+  --border: 225 246 250;
+  /* Very light cyan */
 
   /* brand */
-  --primary: 150 167 141;     /* #96A78D */
-  --primary-600: 132 150 124; /* deeper sage */
-  --accent: 182 206 180;      /* #B6CEB4 */
+  --primary: 17 174 207;
+  /* #11aecf - Cyan */
+  --primary-600: 14 139 166;
+  /* Darker cyan */
+  --accent: 103 206 227;
+  /* #67CEE3 - Light cyan */
 
   /* background gradient */
-  --bg-grad-1: 240 240 240;   /* #F0F0F0 */
-  --bg-grad-2: 217 233 207;   /* #D9E9CF */
+  --bg-grad-1: 240 249 251;
+  /* Very light cyan tint */
+  --bg-grad-2: 225 246 250;
+  /* Light cyan */
 
-  --ring: 150 167 141;
+  --ring: 17 174 207;
 }
 
 /* =========================================================
@@ -44,16 +53,21 @@ html[data-tenant="NU"] {
   --muted: 100 116 139;
 
   /* border */
-  --border: 237 213 200;      /* แสดอ่อนมาก */
+  --border: 237 213 200;
+  /* แสดอ่อนมาก */
 
   /* brand (NU ORANGE) */
-  --primary: 245 130 31;      /* 🟠 สีเดิม */
+  --primary: 245 130 31;
+  /* 🟠 สีเดิม */
   --primary-600: 234 88 12;
-  --accent: 167 169 172;      /* เทา NU */
+  --accent: 167 169 172;
+  /* เทา NU */
 
   /* background (warm clinic) */
-  --bg-grad-1: 255 251 245;   /* ขาวอมส้ม */
-  --bg-grad-2: 255 236 220;   /* ส้มอ่อน */
+  --bg-grad-1: 255 251 245;
+  /* ขาวอมส้ม */
+  --bg-grad-2: 255 236 220;
+  /* ส้มอ่อน */
 
   --ring: 245 130 31;
 }
@@ -69,12 +83,15 @@ html[data-tenant="CU"] {
   --border: 245 216 231;
 
   /* Chula Pink (เดิม) */
-  --primary: 222 92 142;      /* 💗 */
+  --primary: 222 92 142;
+  /* 💗 */
   --primary-600: 190 24 93;
   --accent: 222 92 142;
 
-  --bg-grad-1: 255 250 252;  /* ขาวอมชมพู */
-  --bg-grad-2: 253 232 243;  /* rose soft */
+  --bg-grad-1: 255 250 252;
+  /* ขาวอมชมพู */
+  --bg-grad-2: 253 232 243;
+  /* rose soft */
 
   --ring: 222 92 142;
 }
@@ -90,12 +107,15 @@ html[data-tenant="KKU"] {
   --border: 240 214 206;
 
   /* KKU brick red (เดิม) */
-  --primary: 167 59 36;       /* 🟤 */
+  --primary: 167 59 36;
+  /* 🟤 */
   --primary-600: 130 44 28;
   --accent: 167 59 36;
 
-  --bg-grad-1: 255 248 245;  /* cream */
-  --bg-grad-2: 255 232 224;  /* ดินแดงอ่อน */
+  --bg-grad-1: 255 248 245;
+  /* cream */
+  --bg-grad-2: 255 232 224;
+  /* ดินแดงอ่อน */
 
   --ring: 167 59 36;
 }
@@ -113,9 +133,11 @@ html[data-tenant="TU"] {
   --border: 255 232 194;
 
   /* Thammasat: เหลือง-แดง */
-  --primary: 200 16 46;        /* red */
+  --primary: 200 16 46;
+  /* red */
   --primary-600: 161 13 37;
-  --accent: 255 205 0;         /* yellow */
+  --accent: 255 205 0;
+  /* yellow */
 
   --bg-grad-1: 255 252 245;
   --bg-grad-2: 255 237 205;
@@ -131,9 +153,11 @@ html[data-tenant="MU"] {
   --border: 219 234 254;
 
   /* Mahidol: สีน้ำเงิน */
-  --primary: 0 61 130;         /* deep blue */
+  --primary: 0 61 130;
+  /* deep blue */
   --primary-600: 0 45 97;
-  --accent: 56 189 248;        /* sky */
+  --accent: 56 189 248;
+  /* sky */
 
   --bg-grad-1: 245 250 255;
   --bg-grad-2: 219 234 254;
@@ -167,7 +191,8 @@ html[data-tenant="SU"] {
   --border: 210 244 232;
 
   /* Silpakorn: เขียวเวอร์ริเดียน (พบการอ้างอิงรหัส #41826e) */
-  --primary: 65 130 110;       /* #41826e */
+  --primary: 65 130 110;
+  /* #41826e */
   --primary-600: 50 102 86;
   --accent: 167 243 208;
 
@@ -185,9 +210,11 @@ html[data-tenant="SWU"] {
   --border: 229 231 235;
 
   /* Srinakharinwirot: เทา-แดง */
-  --primary: 185 28 28;        /* red */
+  --primary: 185 28 28;
+  /* red */
   --primary-600: 153 27 27;
-  --accent: 107 114 128;       /* grey */
+  --accent: 107 114 128;
+  /* grey */
 
   --bg-grad-1: 250 250 250;
   --bg-grad-2: 243 244 246;
@@ -203,9 +230,11 @@ html[data-tenant="RU"] {
   --border: 226 232 240;
 
   /* Ramkhamhaeng: น้ำเงิน-ทอง */
-  --primary: 30 64 175;        /* blue */
+  --primary: 30 64 175;
+  /* blue */
   --primary-600: 30 58 138;
-  --accent: 234 179 8;         /* gold */
+  --accent: 234 179 8;
+  /* gold */
 
   --bg-grad-1: 248 250 252;
   --bg-grad-2: 226 232 240;
@@ -221,7 +250,8 @@ html[data-tenant="NIDA"] {
   --border: 254 243 199;
 
   /* NIDA: สีทองที่ใช้ในตราสถาบัน (เอกสารข้อบังคับ) */
-  --primary: 202 138 4;        /* gold */
+  --primary: 202 138 4;
+  /* gold */
   --primary-600: 161 98 7;
   --accent: 245 158 11;
 
@@ -239,9 +269,11 @@ html[data-tenant="KMUTT"] {
   --border: 255 237 213;
 
   /* KMUTT: สีแสดเป็นหลัก (คู่มือ CI) */
-  --primary: 245 130 31;       /* orange */
+  --primary: 245 130 31;
+  /* orange */
   --primary-600: 234 88 12;
-  --accent: 250 204 21;        /* yellow */
+  --accent: 250 204 21;
+  /* yellow */
 
   --bg-grad-1: 255 251 245;
   --bg-grad-2: 255 237 213;
@@ -257,9 +289,11 @@ html[data-tenant="KMITL"] {
   --border: 255 237 213;
 
   /* KMITL: สีประจำสถาบัน = สีแสด */
-  --primary: 245 130 31;       /* orange */
+  --primary: 245 130 31;
+  /* orange */
   --primary-600: 234 88 12;
-  --accent: 163 163 163;       /* grey */
+  --accent: 163 163 163;
+  /* grey */
 
   --bg-grad-1: 255 251 245;
   --bg-grad-2: 255 237 213;
@@ -275,9 +309,11 @@ html[data-tenant="KMUTNB"] {
   --border: 254 226 226;
 
   /* KMUTNB: สีแดงหมากสุก (มีรหัส #AC3520) */
-  --primary: 172 53 32;        /* #AC3520 */
+  --primary: 172 53 32;
+  /* #AC3520 */
   --primary-600: 130 44 28;
-  --accent: 17 24 39;          /* near-black */
+  --accent: 17 24 39;
+  /* near-black */
 
   --bg-grad-1: 255 248 245;
   --bg-grad-2: 254 226 226;
@@ -293,9 +329,11 @@ html[data-tenant="CMU"] {
   --border: 243 232 255;
 
   /* CMU: สีม่วงดอกรัก (R158 G118 B180) */
-  --primary: 158 118 180;      /* #9E76B4 */
+  --primary: 158 118 180;
+  /* #9E76B4 */
   --primary-600: 126 34 206;
-  --accent: 40 100 40;         /* green used in emblem ring */
+  --accent: 40 100 40;
+  /* green used in emblem ring */
 
   --bg-grad-1: 253 244 255;
   --bg-grad-2: 243 232 255;
@@ -307,7 +345,8 @@ html[data-tenant="CMU"] {
 html[data-tenant="MFU"] {
   /* TODO verify official color */
   --border: 254 226 226;
-  --primary: 127 29 29;        /* deep maroon */
+  --primary: 127 29 29;
+  /* deep maroon */
   --primary-600: 109 40 40;
   --accent: 251 191 36;
 
@@ -321,7 +360,8 @@ html[data-tenant="MFU"] {
 html[data-tenant="MJU"] {
   /* TODO verify official color */
   --border: 220 252 231;
-  --primary: 21 128 61;        /* green */
+  --primary: 21 128 61;
+  /* green */
   --primary-600: 22 101 52;
   --accent: 163 230 53;
 
@@ -335,7 +375,8 @@ html[data-tenant="MJU"] {
 html[data-tenant="UP"] {
   /* TODO verify official color */
   --border: 243 232 255;
-  --primary: 107 33 168;       /* purple */
+  --primary: 107 33 168;
+  /* purple */
   --primary-600: 88 28 135;
   --accent: 216 180 254;
 
@@ -349,7 +390,8 @@ html[data-tenant="UP"] {
 html[data-tenant="MSU"] {
   /* TODO verify official color */
   --border: 254 226 226;
-  --primary: 136 19 55;        /* maroon */
+  --primary: 136 19 55;
+  /* maroon */
   --primary-600: 120 18 51;
   --accent: 244 63 94;
 
@@ -363,7 +405,8 @@ html[data-tenant="MSU"] {
 html[data-tenant="SURO"] {
   /* TODO verify official color */
   --border: 220 252 231;
-  --primary: 3 105 161;        /* blue-green */
+  --primary: 3 105 161;
+  /* blue-green */
   --primary-600: 7 89 133;
   --accent: 34 197 94;
 
@@ -377,9 +420,11 @@ html[data-tenant="SURO"] {
 html[data-tenant="UBU"] {
   /* TODO verify official color */
   --border: 255 237 213;
-  --primary: 249 115 22;       /* orange */
+  --primary: 249 115 22;
+  /* orange */
   --primary-600: 234 88 12;
-  --accent: 59 130 246;        /* blue */
+  --accent: 59 130 246;
+  /* blue */
 
   --bg-grad-1: 255 251 245;
   --bg-grad-2: 255 237 213;
@@ -391,7 +436,8 @@ html[data-tenant="UBU"] {
 html[data-tenant="NPU"] {
   /* TODO verify official color */
   --border: 233 213 255;
-  --primary: 124 58 237;       /* violet */
+  --primary: 124 58 237;
+  /* violet */
   --primary-600: 109 40 217;
   --accent: 196 181 253;
 
@@ -405,7 +451,8 @@ html[data-tenant="NPU"] {
 html[data-tenant="KSU"] {
   /* TODO verify official color */
   --border: 233 213 255;
-  --primary: 147 51 234;       /* purple */
+  --primary: 147 51 234;
+  /* purple */
   --primary-600: 126 34 206;
   --accent: 216 180 254;
 
@@ -419,7 +466,8 @@ html[data-tenant="KSU"] {
 html[data-tenant="BUU"] {
   /* TODO verify official color */
   --border: 219 234 254;
-  --primary: 29 78 216;        /* royal blue */
+  --primary: 29 78 216;
+  /* royal blue */
   --primary-600: 30 64 175;
   --accent: 56 189 248;
 
@@ -437,9 +485,11 @@ html[data-tenant="PSU"] {
   --border: 219 234 254;
 
   /* PSU: navy blue (มีอัตลักษณ์สีเป็นกลุ่มน้ำเงิน) */
-  --primary: 0 0 128;          /* #000080 */
+  --primary: 0 0 128;
+  /* #000080 */
   --primary-600: 0 0 90;
-  --accent: 56 189 248;        /* sky */
+  --accent: 56 189 248;
+  /* sky */
 
   --bg-grad-1: 245 250 255;
   --bg-grad-2: 219 234 254;
@@ -451,7 +501,8 @@ html[data-tenant="PSU"] {
 html[data-tenant="WU"] {
   /* TODO verify official color */
   --border: 220 252 231;
-  --primary: 16 185 129;       /* emerald */
+  --primary: 16 185 129;
+  /* emerald */
   --primary-600: 5 150 105;
   --accent: 34 197 94;
 
@@ -465,7 +516,8 @@ html[data-tenant="WU"] {
 html[data-tenant="TSU"] {
   /* TODO verify official color */
   --border: 255 237 213;
-  --primary: 180 83 9;         /* warm brown/orange */
+  --primary: 180 83 9;
+  /* warm brown/orange */
   --primary-600: 146 64 14;
   --accent: 249 115 22;
 
@@ -476,25 +528,121 @@ html[data-tenant="TSU"] {
 }
 
 /* ===================== RAJABHAT / PRIVATE (TODO verify official) ===================== */
-html[data-tenant="SRRU"] { /* TODO verify */ --border: 220 252 231; --primary: 34 197 94; --primary-600: 22 163 74; --accent: 250 204 21; --bg-grad-1: 240 253 244; --bg-grad-2: 220 252 231; --ring: 34 197 94; }
-html[data-tenant="BRU"]  { /* TODO verify */ --border: 254 226 226; --primary: 185 28 28; --primary-600: 153 27 27; --accent: 250 204 21; --bg-grad-1: 255 241 242; --bg-grad-2: 254 226 226; --ring: 185 28 28; }
-html[data-tenant="CRRU"] { /* TODO verify */ --border: 219 234 254; --primary: 37 99 235; --primary-600: 29 78 216; --accent: 34 197 94; --bg-grad-1: 245 250 255; --bg-grad-2: 219 234 254; --ring: 37 99 235; }
-html[data-tenant="CMRU"] { /* TODO verify */ --border: 243 232 255; --primary: 147 51 234; --primary-600: 126 34 206; --accent: 34 197 94; --bg-grad-1: 250 245 255; --bg-grad-2: 243 232 255; --ring: 147 51 234; }
-html[data-tenant="KPRU"] { /* TODO verify */ --border: 254 243 199; --primary: 202 138 4;  --primary-600: 161 98 7;  --accent: 59 130 246; --bg-grad-1: 255 251 235; --bg-grad-2: 254 243 199; --ring: 202 138 4; }
+html[data-tenant="SRRU"] {
+  /* TODO verify */
+  --border: 220 252 231;
+  --primary: 34 197 94;
+  --primary-600: 22 163 74;
+  --accent: 250 204 21;
+  --bg-grad-1: 240 253 244;
+  --bg-grad-2: 220 252 231;
+  --ring: 34 197 94;
+}
 
-html[data-tenant="BU"]   { /* TODO verify */ --border: 219 234 254; --primary: 30 64 175; --primary-600: 30 58 138; --accent: 56 189 248; --bg-grad-1: 245 250 255; --bg-grad-2: 219 234 254; --ring: 30 64 175; }
-html[data-tenant="SPU"]  { /* TODO verify */ --border: 254 226 226; --primary: 225 29 72; --primary-600: 190 18 60; --accent: 147 197 253; --bg-grad-1: 255 241 242; --bg-grad-2: 254 226 226; --ring: 225 29 72; }
-html[data-tenant="UTCC"] { /* TODO verify */ --border: 220 252 231; --primary: 0 106 78;  --primary-600: 0 80 59;   --accent: 250 204 21; --bg-grad-1: 245 255 250; --bg-grad-2: 220 252 231; --ring: 0 106 78; }
-html[data-tenant="RSU"]  { /* TODO verify */ --border: 219 234 254; --primary: 2 132 199; --primary-600: 3 105 161; --accent: 56 189 248; --bg-grad-1: 245 250 255; --bg-grad-2: 219 234 254; --ring: 2 132 199; }
-html[data-tenant="ABAC"] { /* TODO verify */ --border: 219 234 254; --primary: 37 99 235; --primary-600: 29 78 216; --accent: 248 113 113; --bg-grad-1: 245 250 255; --bg-grad-2: 219 234 254; --ring: 37 99 235; }
+html[data-tenant="BRU"] {
+  /* TODO verify */
+  --border: 254 226 226;
+  --primary: 185 28 28;
+  --primary-600: 153 27 27;
+  --accent: 250 204 21;
+  --bg-grad-1: 255 241 242;
+  --bg-grad-2: 254 226 226;
+  --ring: 185 28 28;
+}
+
+html[data-tenant="CRRU"] {
+  /* TODO verify */
+  --border: 219 234 254;
+  --primary: 37 99 235;
+  --primary-600: 29 78 216;
+  --accent: 34 197 94;
+  --bg-grad-1: 245 250 255;
+  --bg-grad-2: 219 234 254;
+  --ring: 37 99 235;
+}
+
+html[data-tenant="CMRU"] {
+  /* TODO verify */
+  --border: 243 232 255;
+  --primary: 147 51 234;
+  --primary-600: 126 34 206;
+  --accent: 34 197 94;
+  --bg-grad-1: 250 245 255;
+  --bg-grad-2: 243 232 255;
+  --ring: 147 51 234;
+}
+
+html[data-tenant="KPRU"] {
+  /* TODO verify */
+  --border: 254 243 199;
+  --primary: 202 138 4;
+  --primary-600: 161 98 7;
+  --accent: 59 130 246;
+  --bg-grad-1: 255 251 235;
+  --bg-grad-2: 254 243 199;
+  --ring: 202 138 4;
+}
+
+html[data-tenant="BU"] {
+  /* TODO verify */
+  --border: 219 234 254;
+  --primary: 30 64 175;
+  --primary-600: 30 58 138;
+  --accent: 56 189 248;
+  --bg-grad-1: 245 250 255;
+  --bg-grad-2: 219 234 254;
+  --ring: 30 64 175;
+}
+
+html[data-tenant="SPU"] {
+  /* TODO verify */
+  --border: 254 226 226;
+  --primary: 225 29 72;
+  --primary-600: 190 18 60;
+  --accent: 147 197 253;
+  --bg-grad-1: 255 241 242;
+  --bg-grad-2: 254 226 226;
+  --ring: 225 29 72;
+}
+
+html[data-tenant="UTCC"] {
+  /* TODO verify */
+  --border: 220 252 231;
+  --primary: 0 106 78;
+  --primary-600: 0 80 59;
+  --accent: 250 204 21;
+  --bg-grad-1: 245 255 250;
+  --bg-grad-2: 220 252 231;
+  --ring: 0 106 78;
+}
+
+html[data-tenant="RSU"] {
+  /* TODO verify */
+  --border: 219 234 254;
+  --primary: 2 132 199;
+  --primary-600: 3 105 161;
+  --accent: 56 189 248;
+  --bg-grad-1: 245 250 255;
+  --bg-grad-2: 219 234 254;
+  --ring: 2 132 199;
+}
+
+html[data-tenant="ABAC"] {
+  /* TODO verify */
+  --border: 219 234 254;
+  --primary: 37 99 235;
+  --primary-600: 29 78 216;
+  --accent: 248 113 113;
+  --bg-grad-1: 245 250 255;
+  --bg-grad-2: 219 234 254;
+  --ring: 37 99 235;
+}
 
 /* ---------- Basic helpers (ใช้กับ login/hero ได้เลย) ---------- */
 .bg-tenant {
-  background: linear-gradient(
-    135deg,
-    rgb(var(--bg-grad-1)) 0%,
-    rgb(var(--bg-grad-2)) 100%
-  );
+  background: linear-gradient(135deg,
+      rgb(var(--bg-grad-1)) 0%,
+      rgb(var(--bg-grad-2)) 100%);
 }
 
 .card-tenant {
@@ -507,6 +655,7 @@ html[data-tenant="ABAC"] { /* TODO verify */ --border: 219 234 254; --primary: 3
   background: rgb(var(--primary));
   color: #fff;
 }
+
 .btn-primary:hover {
   background: rgb(var(--primary-600));
 }
@@ -525,12 +674,15 @@ html[data-tenant="ABAC"] { /* TODO verify */ --border: 219 234 254; --primary: 3
 .bg-primary {
   background-color: rgb(var(--primary));
 }
+
 .bg-primary-600 {
   background-color: rgb(var(--primary-600));
 }
+
 .text-primary {
   color: rgb(var(--primary));
 }
+
 .border-primary {
   border-color: rgb(var(--primary));
 }
@@ -540,6 +692,7 @@ html[data-tenant="ABAC"] { /* TODO verify */ --border: 219 234 254; --primary: 3
   background: rgb(var(--primary));
   color: #fff;
 }
+
 .btn-tenant:hover {
   background: rgb(var(--primary-600));
 }
@@ -556,6 +709,7 @@ html[data-tenant="ABAC"] { /* TODO verify */ --border: 219 234 254; --primary: 3
   background: rgb(var(--primary));
   color: #fff;
 }
+
 .pill-tenant:hover {
   background: rgb(var(--primary-600));
 }
@@ -565,6 +719,7 @@ html[data-tenant="ABAC"] { /* TODO verify */ --border: 219 234 254; --primary: 3
   background: rgb(var(--primary-600));
   color: #fff;
 }
+
 .sidebar-tenant-soft {
   background: rgba(var(--primary), 0.12);
   color: rgb(var(--primary));
@@ -581,6 +736,7 @@ html[data-tenant="ABAC"] { /* TODO verify */ --border: 219 234 254; --primary: 3
   background: rgba(255, 255, 255, 0.92);
   color: rgb(var(--primary-600));
 }
+
 .sidebar-item-active svg {
   color: rgb(var(--primary-600));
 }
@@ -593,11 +749,9 @@ html[data-tenant="ABAC"] { /* TODO verify */ --border: 219 234 254; --primary: 3
 .bg-tenant {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(
-    135deg,
-    rgb(var(--bg-grad-1)) 0%,
-    rgb(var(--bg-grad-2)) 100%
-  );
+  background: linear-gradient(135deg,
+      rgb(var(--bg-grad-1)) 0%,
+      rgb(var(--bg-grad-2)) 100%);
 }
 
 /* blob ใหญ่ มุมซ้ายบน */
@@ -609,12 +763,10 @@ html[data-tenant="ABAC"] { /* TODO verify */ --border: 219 234 254; --primary: 3
   width: 420px;
   height: 420px;
   border-radius: 50%;
-  background: radial-gradient(
-    circle at center,
-    rgba(var(--accent), 0.35),
-    rgba(var(--accent), 0.15),
-    transparent 70%
-  );
+  background: radial-gradient(circle at center,
+      rgba(var(--accent), 0.35),
+      rgba(var(--accent), 0.15),
+      transparent 70%);
   filter: blur(40px);
   z-index: 0;
 }
@@ -628,13 +780,10 @@ html[data-tenant="ABAC"] { /* TODO verify */ --border: 219 234 254; --primary: 3
   width: 480px;
   height: 480px;
   border-radius: 50%;
-  background: radial-gradient(
-    circle at center,
-    rgba(var(--primary), 0.30),
-    rgba(var(--primary), 0.12),
-    transparent 70%
-  );
+  background: radial-gradient(circle at center,
+      rgba(var(--primary), 0.30),
+      rgba(var(--primary), 0.12),
+      transparent 70%);
   filter: blur(48px);
   z-index: 0;
 }
-

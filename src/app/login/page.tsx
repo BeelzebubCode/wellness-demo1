@@ -26,14 +26,14 @@ export default function LoginPage() {
     login,
   } = useLogin();
 
-  // ✅ Force DEFAULT tenant colors (Sage Wellness from tenants.css :root)
+  // ✅ Force DEFAULT tenant colors (Cyan Wellness from tenants.css :root)
   const defaultTenantVars = {
-    ["--primary" as any]: "150 167 141", // #96A78D
-    ["--primary-600" as any]: "132 150 124", // deeper sage
-    ["--accent" as any]: "182 206 180", // #B6CEB4
-    ["--bg-grad-1" as any]: "240 240 240", // #F0F0F0
-    ["--bg-grad-2" as any]: "217 233 207", // #D9E9CF
-    ["--ring" as any]: "150 167 141",
+    ["--primary" as any]: "17 174 207", // #11aecf - Cyan
+    ["--primary-600" as any]: "14 139 166", // deeper cyan
+    ["--accent" as any]: "103 206 227", // #67CEE3 - Light cyan
+    ["--bg-grad-1" as any]: "240 249 251", // Very light cyan tint
+    ["--bg-grad-2" as any]: "225 246 250", // Light cyan
+    ["--ring" as any]: "17 174 207",
   } as React.CSSProperties;
 
   // ✅ demo accounts (stable list)
@@ -105,10 +105,19 @@ export default function LoginPage() {
       style={defaultTenantVars}
       className="min-h-screen w-full bg-white relative overflow-hidden pt-8"
     >
-      {/* background blobs */}
-      <div className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-[rgb(var(--primary)/0.12)] blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-28 -right-20 h-72 w-72 rounded-full bg-[rgb(var(--accent)/0.12)] blur-3xl" />
-      <div className="pointer-events-none absolute top-10 right-10 h-28 w-28 rounded-full bg-[rgb(var(--primary)/0.16)]" />
+      {/* Full background illustration with moderate blur */}
+      <div className="absolute inset-0">
+        <img
+          src="/images/login-illustration.png"
+          alt=""
+          className="w-full h-full object-cover blur-[40px] scale-105"
+        />
+      </div>
+
+      {/* background blobs - now more subtle */}
+      <div className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-[rgb(var(--primary)/0.08)] blur-3xl z-10" />
+      <div className="pointer-events-none absolute -bottom-28 -right-20 h-72 w-72 rounded-full bg-[rgb(var(--accent)/0.08)] blur-3xl z-10" />
+      <div className="pointer-events-none absolute top-10 right-10 h-28 w-28 rounded-full bg-[rgb(var(--primary)/0.10)] z-10" />
 
       <div className="relative z-10 min-h-screen flex items-center justify-center px-4 py-10">
         <div className="w-full max-w-5xl rounded-[26px] bg-white shadow-[0_22px_60px_rgba(2,6,23,0.12)] border border-slate-200 overflow-hidden">
@@ -277,15 +286,16 @@ export default function LoginPage() {
               <div className="pointer-events-none absolute bottom-10 left-10 w-28 h-28 rounded-full bg-[rgb(var(--accent)/0.14)]" />
               <div className="pointer-events-none absolute bottom-20 right-8 w-36 h-36 rounded-full bg-[rgb(var(--primary)/0.10)]" />
 
-              <div className="relative w-[78%] max-w-md mx-auto">
-                <div className="relative w-full aspect-[4/3] bg-white rounded-[24px] border border-slate-200 shadow-[0_16px_40px_rgba(2,6,23,0.12)] overflow-hidden">
-                  <div className="absolute inset-0 animate-shimmer bg-shimmer" />
-                  <div className="relative z-10 flex h-full w-full items-center justify-center">
+              <div className="relative w-full h-full">
+                <div className="relative w-full h-full overflow-hidden rounded-r-[24px]">
+                  <div className="relative z-10 h-full w-full">
                     <img
                       src="/images/login-illustration.png"
                       alt="login illustration"
-                      className="w-[86%] max-h-[86%] object-contain rounded-[15px] drop-shadow-[0_14px_28px_rgba(2,6,23,0.12)]"
+                      className="w-full h-full object-cover"
                     />
+                    {/* Soft overlay matching site theme */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-[rgb(var(--primary)/0.08)] via-transparent to-[rgb(var(--accent)/0.06)] pointer-events-none mix-blend-soft-light" />
                   </div>
                 </div>
               </div>
