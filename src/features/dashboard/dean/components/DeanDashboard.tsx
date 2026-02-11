@@ -4,7 +4,7 @@ import { LoadingSpinner } from "@/components/ui";
 import { DeanOverviewCards } from "./sections/DeanOverviewCards";
 import { DeanAnalytics } from "./sections/DeanAnalytics";
 import { DepartmentBreakdownTable } from "./sections/DepartmentBreakdownTable";
-import { TherapistWorkloadSection } from "./sections/TherapistWorkloadSection";
+
 import { ExecutiveSummarySection } from "./sections/ExecutiveSummarySection";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
 
@@ -95,16 +95,6 @@ export function DeanDashboard({ facultyCode }: DeanDashboardProps) {
                 </div>
                 <DepartmentBreakdownTable stats={stats.departmentStats} />
             </section>
-
-            {/* 4. CONSULTANT WORKLOAD */}
-            {stats.consultantStats && stats.consultantStats.length > 0 && (
-                <section>
-                    <TherapistWorkloadSection
-                        consultantStats={stats.consultantStats}
-                        academicYear={stats.academicYear}
-                    />
-                </section>
-            )}
 
             {/* 5. EXECUTIVE SUMMARY */}
             <section>

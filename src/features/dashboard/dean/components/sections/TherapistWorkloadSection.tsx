@@ -95,16 +95,15 @@ export function TherapistWorkloadSection({ consultantStats, academicYear }: Ther
             </h2>
 
             <Card className="border-none shadow-sm bg-white">
-                <CardHeader>
-                    <CardTitle className="text-lg font-semibold text-slate-600 flex items-center gap-2">
-                        <span>จำนวนเคสที่ดูแล</span>
-                        {isImbalanced && (
+                {isImbalanced && (
+                    <CardHeader>
+                        <CardTitle className="text-lg font-semibold text-slate-600 flex items-center gap-2">
                             <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
                                 ภาระงานไม่สมดุล
                             </span>
-                        )}
-                    </CardTitle>
-                </CardHeader>
+                        </CardTitle>
+                    </CardHeader>
+                )}
                 <CardContent className="h-[300px]">
                     <Bar data={chartData} options={workloadOptions} />
                 </CardContent>

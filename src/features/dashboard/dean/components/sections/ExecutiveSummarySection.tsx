@@ -1,215 +1,167 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
-import { TrendingUp, TrendingDown, Users, Repeat } from "lucide-react";
-import {
-    Chart as ChartJS,
-    ArcElement,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Tooltip,
-    Legend,
-    ChartData,
-    ChartOptions
-} from 'chart.js';
-import { Doughnut, Line } from 'react-chartjs-2';
-
-ChartJS.register(
-    ArcElement,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Tooltip,
-    Legend
-);
+import { Card, CardContent } from "@/components/ui/Card";
+import { GraduationCap, BrainCircuit, Users } from "lucide-react";
 
 interface ExecutiveSummarySectionProps {
     stats: {
-        totalBookings: number;
-        repeatStats: { single: number; repeat: number };
-        visitTrend: string;
-        visitsByMonth: Record<string, number>;
-        departmentStats: Array<{
-            departmentName: string;
-            bookingCount: number;
-        }>;
+        yearLevelDistribution: {
+            YEAR_1: number;
+            YEAR_2: number;
+            YEAR_3: number;
+            YEAR_4: number;
+            YEAR_5_PLUS: number;
+            UNKNOWN: number;
+        };
+        problemStats: Record<string, number>;
+        genderProblemStats: Record<string, Record<string, number>>;
     };
 }
 
 export function ExecutiveSummarySection({ stats }: ExecutiveSummarySectionProps) {
-    // 1. Repeat Visit Rate (Gauge-style Doughnut)
-    const repeatRate = stats.totalBookings > 0
-        ? ((stats.repeatStats.repeat / stats.totalBookings) * 100).toFixed(1)
-        : '0';
-
-    const repeatValue = parseFloat(repeatRate);
-    const gaugeData: ChartData<'doughnut'> = {
-        labels: ['กลับมาใช้บริการซ้ำ', 'ใช้บริการครั้งเดียว'],
-        datasets: [{
-            data: [repeatValue, 100 - repeatValue],
-            backgroundColor: ['#10b981', '#e5e7eb'],
-            borderWidth: 0,
-        }],
+    // 1. Find Top Year Level
+    let topYear = "N/A";
+    let topYearCount = 0;
+    const yearMapping: Record<string, string> = {
+        YEAR_1: "ชั้นปีที่ 1",
+        YEAR_2: "ชั้นปีที่ 2",
+        YEAR_3: "ชั้นปีที่ 3",
+        YEAR_4: "ชั้นปีที่ 4",
+        YEAR_5_PLUS: "ปี 5 ขึ้นไป"
     };
 
-    const gaugeOptions: ChartOptions<'doughnut'> = {
-        responsive: true,
-        maintainAspectRatio: false,
-        circumference: 180,
-        rotation: -90,
-        cutout: '75%',
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                callbacks: {
-                    label: (context) => `${context.parsed}%`
-                }
+    if (stats.yearLevelDistribution) {
+        Object.entries(stats.yearLevelDistribution).forEach(([key, count]) => {
+            if (key !== 'UNKNOWN' && count > topYearCount) {
+                topYearCount = count;
+                topYear = yearMapping[key] || key;
             }
+        });
+    }
+
+    // 2. Find Top Problem
+    let topProblem = "ไม่มีข้อมูล";
+    let topProblemCount = 0;
+    if (stats.problemStats) {
+        Object.entries(stats.problemStats).forEach(([problem, count]) => {
+            if (count > topProblemCount) {
+                topProblemCount = count;
+                topProblem = problem;
+            }
+        });
+    }
+
+    // 3. Gender Ratio
+    let totalMale = 0;
+    let totalFemale = 0;
+
+    if (stats.genderProblemStats) {
+        if (stats.genderProblemStats.Male) {
+            totalMale = Object.values(stats.genderProblemStats.Male).reduce((a, b) => a + b, 0);
         }
-    };
-
-    // 2. Visit Trend (Last 6 months)
-    const monthEntries = Object.entries(stats.visitsByMonth || {})
-        .sort(([a], [b]) => a.localeCompare(b))
-        .slice(-6);
-
-    const trendData: ChartData<'line'> = {
-        labels: monthEntries.map(([month]) => {
-            const [year, monthNum] = month.split('-');
-            return `${monthNum}/${year.slice(-2)}`;
-        }),
-        datasets: [{
-            label: 'จำนวนการเข้ารับบริการ',
-            data: monthEntries.map(([, count]) => count),
-            borderColor: '#3b82f6',
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-            tension: 0.4,
-            fill: true,
-            pointRadius: 4,
-            pointHoverRadius: 6,
-        }]
-    };
-
-    const trendOptions: ChartOptions<'line'> = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                backgroundColor: '#0f172a',
-                titleFont: { family: "'Noto Sans Thai', sans-serif" },
-                bodyFont: { family: "'Noto Sans Thai', sans-serif" },
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: { font: { family: "'Noto Sans Thai', sans-serif" } }
-            },
-            x: {
-                ticks: { font: { family: "'Noto Sans Thai', sans-serif" } }
-            }
+        if (stats.genderProblemStats.Female) {
+            totalFemale = Object.values(stats.genderProblemStats.Female).reduce((a, b) => a + b, 0);
         }
-    };
+    }
 
-    // 3. Top 3 Departments
-    const topDepartments = [...stats.departmentStats]
-        .sort((a, b) => b.bookingCount - a.bookingCount)
-        .slice(0, 3);
-
-    const maxCount = topDepartments[0]?.bookingCount || 1;
-
-    const visitTrendValue = parseFloat(stats.visitTrend);
-    const isTrendingUp = visitTrendValue > 0;
+    const totalGender = totalMale + totalFemale;
+    const malePercent = totalGender > 0 ? ((totalMale / totalGender) * 100).toFixed(0) : "0";
+    const femalePercent = totalGender > 0 ? ((totalFemale / totalGender) * 100).toFixed(0) : "0";
 
     return (
         <div className="space-y-6">
-            <div>
-                <h2 className="text-xl font-bold text-slate-900">สรุปภาพรวม</h2>
-                <p className="text-sm text-slate-500">ตัวชี้วัดสำคัญและแนวโน้มของคณะ</p>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-xl font-bold text-slate-900">สรุปประเด็นเชิงกลยุทธ์</h2>
+                    <p className="text-sm text-slate-500">ข้อมูลเชิงลึกเพื่อการวางแผนดูแลนิสิต</p>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* 1. Repeat Visit Gauge */}
-                <Card className="border shadow-sm bg-white">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
-                            <Repeat className="h-5 w-5 text-emerald-600" />
-                            อัตราการกลับมาใช้บริการ
-                        </CardTitle>
-                        <CardDescription>นิสิตที่กลับมาใช้บริการมากกว่า 1 ครั้ง</CardDescription>
-                    </CardHeader>
-                    <CardContent className="relative">
-                        <div className="h-[140px] relative">
-                            <Doughnut data={gaugeData} options={gaugeOptions} />
-                            <div className="absolute inset-0 flex items-end justify-center pb-2">
-                                <div className="text-center">
-                                    <div className="text-3xl font-black text-emerald-600">{repeatRate}%</div>
-                                    <div className="text-xs text-slate-400 uppercase font-bold tracking-wider">
-                                        {stats.repeatStats.repeat} / {stats.totalBookings} ราย
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* 1. Top Year Level - Blue/Cyan Gradient */}
+                <Card className="border-none shadow-md relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-cyan-500 opacity-100 transition-all duration-300 group-hover:scale-105"></div>
+                    <CardContent className="relative p-6 text-white h-full flex flex-col justify-between">
+                        <div>
+                            <div className="flex items-center gap-2 text-blue-100 mb-1">
+                                <GraduationCap className="w-5 h-5" />
+                                <span className="text-sm font-medium">กลุ่มเสี่ยงสูงสุด</span>
+                            </div>
+                            <h3 className="text-3xl font-black tracking-tight mt-2">{topYear}</h3>
+                            <p className="text-blue-100 text-sm mt-1">จำนวน {topYearCount.toLocaleString()} คน</p>
+                        </div>
+                        <div className="mt-6 pt-4 border-t border-white/20 flex items-center justify-between">
+                            <span className="text-xs font-medium text-blue-50 bg-white/10 px-2 py-1 rounded">
+                                จากสถิติการใช้งาน
+                            </span>
+                            <GraduationCap className="w-12 h-12 text-white/10 absolute bottom-4 right-4" />
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* 2. Top Problem - Rose/Pink Gradient */}
+                <Card className="border-none shadow-md relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-gradient-to-br from-rose-500 to-pink-500 opacity-100 transition-all duration-300 group-hover:scale-105"></div>
+                    <CardContent className="relative p-6 text-white h-full flex flex-col justify-between">
+                        <div>
+                            <div className="flex items-center gap-2 text-rose-100 mb-1">
+                                <BrainCircuit className="w-5 h-5" />
+                                <span className="text-sm font-medium">ปัญหาที่พบมากที่สุด</span>
+                            </div>
+                            <h3 className="text-3xl font-black tracking-tight mt-2 truncate max-w-full" title={topProblem}>
+                                {topProblem}
+                            </h3>
+                            <p className="text-rose-100 text-sm mt-1">จำนวน {topProblemCount.toLocaleString()} เคส</p>
+                        </div>
+                        <div className="mt-6 pt-4 border-t border-white/20 flex items-center justify-between">
+                            <span className="text-xs font-medium text-rose-50 bg-white/10 px-2 py-1 rounded">
+                                ความกังวลหลัก
+                            </span>
+                            <BrainCircuit className="w-12 h-12 text-white/10 absolute bottom-4 right-4" />
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* 3. Gender Ratio - Slate/Gray Gradient */}
+                <Card className="border-none shadow-md relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-600 opacity-100 transition-all duration-300 group-hover:scale-105"></div>
+                    <CardContent className="relative p-6 text-white h-full flex flex-col justify-between">
+                        <div>
+                            <div className="flex items-center gap-2 text-slate-300 mb-1">
+                                <Users className="w-5 h-5" />
+                                <span className="text-sm font-medium">สัดส่วนผู้ขอรับคำปรึกษา</span>
+                            </div>
+
+                            <div className="mt-4 flex items-end gap-2">
+                                <div className="flex-1">
+                                    <div className="flex justify-between text-xs text-slate-300 mb-1">
+                                        <span>ชาย</span>
+                                        <span>{malePercent}%</span>
+                                    </div>
+                                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                                        <div className="h-full bg-blue-400" style={{ width: `${malePercent}%` }}></div>
+                                    </div>
+                                </div>
+                                <div className="flex-1">
+                                    <div className="flex justify-between text-xs text-slate-300 mb-1">
+                                        <span>หญิง</span>
+                                        <span>{femalePercent}%</span>
+                                    </div>
+                                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                                        <div className="h-full bg-pink-400" style={{ width: `${femalePercent}%` }}></div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </CardContent>
-                </Card>
 
-                {/* 2. Visit Trend */}
-                <Card className="border shadow-sm bg-white">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
-                            {isTrendingUp ? (
-                                <TrendingUp className="h-5 w-5 text-blue-600" />
-                            ) : (
-                                <TrendingDown className="h-5 w-5 text-slate-600" />
-                            )}
-                            แนวโน้มการเข้ารับบริการ
-                        </CardTitle>
-                        <CardDescription>6 เดือนล่าสุด</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="h-[140px]">
-                            <Line data={trendData} options={trendOptions} />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* 3. Top Departments */}
-                <Card className="border shadow-sm bg-white">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
-                            <Users className="h-5 w-5 text-purple-600" />
-                            ภาควิชาที่ใช้บริการมากที่สุด
-                        </CardTitle>
-                        <CardDescription>Top 3 อันดับ</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {topDepartments.map((dept, idx) => {
-                                const percentage = (dept.bookingCount / maxCount) * 100;
-                                const colors = ['bg-purple-500', 'bg-blue-500', 'bg-slate-400'];
-                                return (
-                                    <div key={dept.departmentName} className="space-y-1">
-                                        <div className="flex items-center justify-between text-sm">
-                                            <span className="font-medium text-slate-700 truncate flex-1">
-                                                {idx + 1}. {dept.departmentName}
-                                            </span>
-                                            <span className="font-bold text-slate-900 ml-2">
-                                                {dept.bookingCount}
-                                            </span>
-                                        </div>
-                                        <div className="w-full bg-slate-100 rounded-full h-2">
-                                            <div
-                                                className={`${colors[idx]} h-2 rounded-full transition-all duration-500`}
-                                                style={{ width: `${percentage}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                        <div className="mt-6 pt-4 border-t border-white/10">
+                            <div className="flex items-center justify-between text-xs text-slate-300">
+                                <span>รวม {totalGender.toLocaleString()} คน</span>
+                                <div className="flex gap-2">
+                                    <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-400"></div> ชาย ({totalMale})</span>
+                                    <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-pink-400"></div> หญิง ({totalFemale})</span>
+                                </div>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
