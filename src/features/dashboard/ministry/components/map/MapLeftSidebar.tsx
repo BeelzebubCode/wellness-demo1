@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, MapPin, Filter, ChevronDown } from "lucide-react";
+import { Search, MapPin, Filter, ChevronDown, ChevronLeft } from "lucide-react";
 import { useState } from "react";
 import { ProblemCategoryFilter } from "./ProblemCategoryFilter";
 
@@ -41,13 +41,15 @@ export function MapLeftSidebar({
       {/* Header - Thai + Minimal */}
       <div className="px-5 py-4 border-b border-gray-100">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xs font-bold text-gray-900 tracking-tight">ตัวกรอง</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-xs font-bold text-gray-900 tracking-tight">ตัวกรอง</h3>
+          </div>
           {activeFilterCount > 0 && (
             <button
-              onClick={() => onChange({ search: "", region: "", type: "", stress: "", status: "", problemCategories: [] })}
-              className="text-[10px] xl:text-xs font-semibold text-gray-500 hover:text-gray-900 transition-colors"
+              onClick={() => handleFilterChange({ search: "", region: "", type: "", stress: "", status: "", problemCategories: [] })}
+              className="text-[10px] xl:text-xs font-semibold text-primary hover:text-primary/80 transition-colors bg-primary/5 px-2 py-1 rounded-md"
             >
-              ล้าง ({activeFilterCount})
+              ล้างทั้งหมด ({activeFilterCount})
             </button>
           )}
         </div>

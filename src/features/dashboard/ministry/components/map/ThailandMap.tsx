@@ -11,7 +11,7 @@ import ReactDOMServer from "react-dom/server";
 import { MapLeftSidebar, MapFilterState } from "./MapLeftSidebar";
 import { useUniversitiesMap } from "../../hooks/useUniversitiesMap";
 import type { UniversityMapData } from "../../hooks/useUniversitiesMap";
-import { Layers, Map as MapIcon } from "lucide-react";
+import { Layers, Map as MapIcon, PanelLeft, ChevronRight, ChevronLeft } from "lucide-react";
 import { UniversityRankings } from "./UniversityRankings";
 
 // Fix Leaflet default icon
@@ -190,6 +190,7 @@ function MapBoundsController({ data, resetZoom = false }: { data: any[]; resetZo
 }
 
 export function ThailandMap() {
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [filter, setFilter] = useState<MapFilterState>({
     search: "",
     region: "",
@@ -281,38 +282,60 @@ export function ThailandMap() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] w-full overflow-hidden bg-tenant">
+    <div className="flex h-[calc(100vh-4rem)] w-full overflow-hidden bg-tenant relative">
+      {/* Sidebar Toggle Handle (Always visible at the edge) */}
+      <button
+        onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
+        style={{ left: isSidebarExpanded ? "320px" : "0" }}
+        className="absolute top-1/2 -translate-y-1/2 z-[1001] w-5 h-12 bg-white border border-gray-200 shadow-md flex items-center justify-center rounded-r-md hover:bg-gray-50 transition-all duration-300 ease-in-out group"
+        title={isSidebarExpanded ? "พับเก็บ" : "ขยายออก"}
+      >
+        {isSidebarExpanded ? (
+          <ChevronLeft className="w-4 h-4 text-gray-400 group-hover:text-primary transition-colors" />
+        ) : (
+          <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-primary transition-colors font-bold" />
+        )}
+      </button>
+
       {/* Left Sidebar - Filters */}
-      <div className="w-[320px] h-full flex-shrink-0 overflow-y-auto border-r border-gray-200 bg-white z-20 relative shadow-sm">
-        <MapLeftSidebar filter={filter} onChange={setFilter} />
+      <div 
+        className={`h-full flex-shrink-0 border-r border-gray-200 bg-white z-20 relative shadow-sm transition-all duration-300 ease-in-out ${
+          isSidebarExpanded ? "w-[320px] translate-x-0" : "w-0 -translate-x-full opacity-0"
+        }`}
+      >
+        <div className="w-[320px] h-full overflow-y-auto">
+          <MapLeftSidebar 
+            filter={filter} 
+            onChange={setFilter} 
+          />
+        </div>
       </div>
 
       {/* Center - Map */}
       <div className="flex-1 relative h-full overflow-hidden">
+        <MapContainer
+          center={[13.7563, 100.5018]}
+          zoom={6}
+          style={{ height: "100%", width: "100%" }}
+          zoomControl={true}
+          scrollWheelZoom={true}
+        >
+          <MapStyleController mapStyle={mapStyle} />
+          <MapBoundsController data={filteredData} resetZoom={!filter.region} />
 
-      <MapContainer
-        center={[13.7563, 100.5018]}
-        zoom={6}
-        style={{ height: "100%", width: "100%" }}
-        zoomControl={true}
-        scrollWheelZoom={true}
-      >
-        <MapStyleController mapStyle={mapStyle} />
-       <MapBoundsController data={filteredData} resetZoom={!filter.region} />
+          {/* Selected region universities (fully visible) */}
+          {selectedRegionData.map((uni) => (
+            <UniversityPin key={uni.id} data={uni} opacity={1} />
+          ))}
 
-        {/* Selected region universities (fully visible) */}
-        {selectedRegionData.map((uni) => (
-          <UniversityPin key={uni.id} data={uni} opacity={1} />
-        ))}
+          {/* Other region universities (dimmed) */}
+          {otherRegionData.map((uni) => (
+            <UniversityPin key={`dimmed-${uni.id}`} data={uni} opacity={0.3} />
+          ))}
+        </MapContainer>
 
-        {/* Other region universities (dimmed) */}
-        {otherRegionData.map((uni) => (
-          <UniversityPin key={`dimmed-${uni.id}`} data={uni} opacity={0.3} />
-        ))}
-      </MapContainer>
-
-      {/* Map Style Controls */}
-      <div className="absolute bottom-6 right-6 z-[1000] flex gap-2 bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-gray-200 p-2 animate-in fade-in slide-in-from-right-4 pointer-events-auto">
+        {/* Map Style Controls */}
+        <div className="absolute bottom-6 right-6 z-[1000] flex gap-2 bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-gray-200 p-2 animate-in fade-in slide-in-from-right-4 pointer-events-auto">
           <button
             onClick={() => setMapStyle("street")}
             className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all shadow-sm ${
@@ -364,15 +387,21 @@ export function ThailandMap() {
       </div>
 
       {/* Right Sidebar - University Rankings */}
-      <div className="w-[380px] h-full flex-shrink-0 border-l border-gray-200 bg-white">
-        <UniversityRankings 
-          universities={filteredData}
-          problemCategories={filter.problemCategories}
-          status={filter.status}
-          onSelect={(code) => {
-            window.location.href = `/ministry/universities/${code}`;
-          }}
-        />
+      <div 
+        className={`h-full flex-shrink-0 border-l border-gray-200 bg-white z-20 relative transition-all duration-300 ease-in-out ${
+          isSidebarExpanded ? "w-[380px] translate-x-0" : "w-0 translate-x-full opacity-0"
+        }`}
+      >
+        <div className="w-[380px] h-full">
+          <UniversityRankings 
+            universities={filteredData}
+            problemCategories={filter.problemCategories}
+            status={filter.status}
+            onSelect={(code) => {
+              window.location.href = `/ministry/universities/${code}`;
+            }}
+          />
+        </div>
       </div>
     </div>
   );
