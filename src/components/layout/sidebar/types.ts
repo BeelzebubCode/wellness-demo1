@@ -35,4 +35,5 @@ export interface BaseSidebarProps {
   isCollapsed: boolean;
   onCloseMobile: () => void;
   onToggleCollapse: () => void;
+  footer?: React.ReactNode;
 }

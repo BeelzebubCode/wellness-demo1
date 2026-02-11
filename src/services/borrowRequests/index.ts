@@ -14,5 +14,6 @@ export { platformApproveBorrowRequest } from "./handlers/platformApproveBorrowRe
 export { platformAssignBorrowRequest } from "./handlers/platformAssignBorrowRequest";
 export { platformListBorrowCandidates } from "./handlers/platformListBorrowCandidates";
 export { consultantListBorrowedAssignments } from "./handlers/consultantListBorrowedAssignments";
+export { consultantCompleteBorrowAssignment } from "./handlers/consultantCompleteBorrowAssignment";
 
 export { submitBorrowRequest } from "./handlers/submitBorrowRequest";

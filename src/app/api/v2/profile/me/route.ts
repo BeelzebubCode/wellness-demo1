@@ -13,6 +13,7 @@ type ProfileType =
 export type ProfileMeDTO = {
   role: ProfileType;
   displayName: string;
+  activeUniversityId: number;
   profile: {
     type: ProfileType;
     id?: number | null;
@@ -26,6 +27,7 @@ export type ProfileMeDTO = {
     phone?: string | null;
 
     universityId?: number | null;
+    universityCode?: string | null;
     universityName?: string | null;
 
     // consultant
@@ -137,7 +139,6 @@ export async function GET(req: NextRequest) {
       const consultant = await prisma.consultant.findFirst({
         where: {
           account_id: account.accountId,
-          university_id: activeUniversityId,
         },
         include: {
           profile: true,
@@ -158,6 +159,7 @@ export async function GET(req: NextRequest) {
       const p = consultant.profile;
 
       const dto: ProfileMeDTO = {
+        activeUniversityId,
         role,
         displayName: formatDisplayName(
           p.consultant_prefix,
@@ -176,6 +178,9 @@ export async function GET(req: NextRequest) {
           phone: p.consultant_phone_number,
 
           universityId: consultant.university_id,
+          universityCode: inc.university
+            ? consultant.university?.university_code ?? null
+            : undefined,
           universityName: inc.university
             ? consultant.university?.university_name_th ?? null
             : undefined,
@@ -186,27 +191,27 @@ export async function GET(req: NextRequest) {
 
           languages: inc.languages
             ? consultant.languages
-                .slice()
-                .sort((a, b) =>
-                  a.consultant_language_code.localeCompare(
-                    b.consultant_language_code
-                  )
+              .slice()
+              .sort((a, b) =>
+                a.consultant_language_code.localeCompare(
+                  b.consultant_language_code
                 )
-                .map((l) => ({
-                  code: l.consultant_language_code,
-                  fluencyLevel: l.consultant_language_fluency_level,
-                }))
+              )
+              .map((l) => ({
+                code: l.consultant_language_code,
+                fluencyLevel: l.consultant_language_fluency_level,
+              }))
             : undefined,
 
           specializations: inc.specializations
             ? consultant.specializations
-                .slice()
-                .sort((a, b) =>
-                  a.consultant_specialization_topic.localeCompare(
-                    b.consultant_specialization_topic
-                  )
+              .slice()
+              .sort((a, b) =>
+                a.consultant_specialization_topic.localeCompare(
+                  b.consultant_specialization_topic
                 )
-                .map((s) => s.consultant_specialization_topic)
+              )
+              .map((s) => s.consultant_specialization_topic)
             : undefined,
         },
       };
@@ -258,6 +263,7 @@ export async function GET(req: NextRequest) {
       const { first, last, nick } = pickStudentNames(req, p);
 
       const dto: ProfileMeDTO = {
+        activeUniversityId,
         role,
         displayName: formatDisplayName(p.student_prefix, first, last),
         profile: {
@@ -305,27 +311,27 @@ export async function GET(req: NextRequest) {
           advisorName: inc.academic
             ? a?.advisor
               ? formatDisplayName(
-                  a.advisor.advisor_prefix,
-                  a.advisor.advisor_first_name,
-                  a.advisor.advisor_last_name
-                )
+                a.advisor.advisor_prefix,
+                a.advisor.advisor_first_name,
+                a.advisor.advisor_last_name
+              )
               : null
             : undefined,
 
           // addresses
           addresses: inc.addresses
             ? (student.addresses ?? []).map((x) => ({
-                type: x.student_address_type as "CURRENT" | "PERMANENT",
-                detail: x.student_address_detail ?? null,
-                subDistrict: x.student_address_sub_district ?? null,
-                district: x.student_address_district ?? null,
-                provinceName:
-                  x.province?.province_name_th ??
-                  // เผื่อ schema ใช้ชื่อ province_name
-                  (x.province as any)?.province_name ??
-                  null,
-                postalCode: x.student_address_postal_code ?? null,
-              }))
+              type: x.student_address_type as "CURRENT" | "PERMANENT",
+              detail: x.student_address_detail ?? null,
+              subDistrict: x.student_address_sub_district ?? null,
+              district: x.student_address_district ?? null,
+              provinceName:
+                x.province?.province_name_th ??
+                // เผื่อ schema ใช้ชื่อ province_name
+                (x.province as any)?.province_name ??
+                null,
+              postalCode: x.student_address_postal_code ?? null,
+            }))
             : undefined,
         },
       };
@@ -337,6 +343,7 @@ export async function GET(req: NextRequest) {
     // STAFF (RECTOR / SUPER_ADMIN)
     // =========================
     const dto: ProfileMeDTO = {
+      activeUniversityId,
       role,
       displayName: account.username,
       profile: {

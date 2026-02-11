@@ -2,6 +2,7 @@
 
 import { NextRequest } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
+import prisma from "@/lib/prisma";
 import { consultantListBorrowedAssignments } from "@/services/borrowRequests";
 
 export async function GET(req: NextRequest) {
@@ -13,7 +14,23 @@ export async function GET(req: NextRequest) {
             accountId: account.accountId,
         });
 
-        return Response.json({ ok: true, data });
+        // ✅ Fetch home university details for redirection
+        let homeUniversity = null;
+        if (account.homeUniversityId) {
+            const u = await prisma.university.findUnique({
+                where: { university_id: account.homeUniversityId },
+                select: { university_id: true, university_code: true, university_name_th: true },
+            });
+            if (u) {
+                homeUniversity = {
+                    id: u.university_id,
+                    code: u.university_code,
+                    name: u.university_name_th,
+                };
+            }
+        }
+
+        return Response.json({ ok: true, data, homeUniversity });
     } catch (error: any) {
         console.error("Error listing borrowed assignments:", error);
 

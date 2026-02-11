@@ -51,7 +51,7 @@ export function BookingsDashboard({
   isLoadingAssignees: boolean;
 
   onRefresh: () => void;
-  onAssign: (bookingId: number, consultantId: number) => Promise<void>;
+  onAssign: (bookingId: number, consultantId: number, borrowAssignmentId?: number) => Promise<void>;
   onReschedule: (bookingId: number, isoDateTime: string) => Promise<void>;
 }) {
   const [activeRow, setActiveRow] = useState<AdminBookingRow | null>(null);
@@ -123,10 +123,10 @@ export function BookingsDashboard({
         assignees={assignees}
         isLoadingAssignees={isLoadingAssignees}
         isSaving={isSavingAssign}
-        onConfirmAssign={async (bookingId, consultantId) => {
+        onConfirmAssign={async (bookingId, consultantId, borrowAssignmentId) => {
           setIsSavingAssign(true);
           try {
-            await onAssign(bookingId, consultantId);
+            await onAssign(bookingId, consultantId, borrowAssignmentId);
             onRefresh();
           } finally {
             setIsSavingAssign(false);

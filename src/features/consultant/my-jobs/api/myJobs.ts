@@ -18,7 +18,7 @@ export async function fetchMyBookings(): Promise<MyBookingApiRow[]> {
 
   // ✅ backend ส่ง MyBookingDto[] ใน data.items
   const items = (data.items ?? data.bookings ?? []);
-  
+
   // ✅ แปลงจาก MyBookingDto เป็น MyBookingApiRow
   return items.map((item: any) => ({
     id: item.bookingId ?? item.id,
@@ -26,18 +26,21 @@ export async function fetchMyBookings(): Promise<MyBookingApiRow[]> {
     problemType: item.problemCategoryNameTh ?? item.problemType ?? null,
     createdAt: null,
     updatedAt: null,
-    
+
     // ✅ แปลง startAt/endAt ISO string เป็น date/startTime/endTime
     date: item.startAt ? item.startAt.slice(0, 10) : null,
     startTime: item.startAt ? new Date(item.startAt).toTimeString().slice(0, 5) : null,
     endTime: item.endAt ? new Date(item.endAt).toTimeString().slice(0, 5) : null,
-    
+
     studentName: item.studentName ?? item.consultantName ?? null,
     bookingDetailText: null,
-    
+
     serviceMode: item.serviceMode ?? null,
     onlineChannelUrl: item.session?.joinUrl ?? null,
     onlineChannelNote: item.session?.extraDetail ?? null,
+
+    universityName: item.universityName ?? null,
+    universityCode: item.universityCode ?? null,
   }));
 }
 

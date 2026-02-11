@@ -11,7 +11,7 @@ async function safeJson(res: Response) {
 }
 
 export async function fetchAssignees(): Promise<AssigneeOption[]> {
-  const res = await fetch(`/api/v2/consultants`, { credentials: "include" });
+  const res = await fetch(`/api/v2/consultants?includeBorrowed=true`, { credentials: "include" });
   const data = await safeJson(res);
 
   const raw = (data.consultants ?? []) as any[];
@@ -28,7 +28,14 @@ export async function fetchAssignees(): Promise<AssigneeOption[]> {
           : null);
 
       if (!Number.isFinite(consultantId) || !name) return null;
-      return { id: consultantId, name } as AssigneeOption;
+
+      const borrowAssignmentId = Number(c.borrowAssignmentId);
+
+      return {
+        id: consultantId,
+        name,
+        borrowAssignmentId: Number.isFinite(borrowAssignmentId) ? borrowAssignmentId : undefined,
+      } as AssigneeOption;
     })
     .filter(Boolean) as AssigneeOption[];
 }

@@ -15,6 +15,7 @@ export function BaseSidebar({
   isCollapsed,
   onCloseMobile,
   onToggleCollapse,
+  footer,
 }: BaseSidebarProps) {
   const pathname = usePathname();
   const { logo, items, theme = "light", backLink } = config;
@@ -169,6 +170,13 @@ export function BaseSidebar({
           </>
         )}
       </nav>
+
+      {/* Footer */}
+      {footer && (
+        <div className={cn("px-4 py-4 border-t flex-shrink-0", t.border)}>
+          {footer}
+        </div>
+      )}
 
       {/* Collapse Toggle (desktop only) */}
       <div className={cn("p-4 border-t hidden md:block overflow-hidden flex-shrink-0", t.border)}>

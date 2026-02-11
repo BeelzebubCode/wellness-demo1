@@ -34,9 +34,10 @@ export async function assignBooking(input: {
   universityId: number;
   bookingId: number;
   consultantId: number;
+  borrowAssignmentId?: number;
   note?: string;
 }) {
-  const { universityId, bookingId, consultantId, note } = input;
+  const { universityId, bookingId, consultantId, borrowAssignmentId, note } = input;
 
   const res = await fetch(`/api/v2/bookings/${bookingId}/assign`, {
     method: "POST",
@@ -45,6 +46,7 @@ export async function assignBooking(input: {
     body: JSON.stringify({
       universityId,
       consultantId, // ✅ key หลักที่ต้องส่ง
+      borrowAssignmentId, // ✅ Optional for borrowed consultants
       note: note ?? null,
     }),
   });

@@ -78,33 +78,42 @@ export async function getMyBookings(params: {
   // ✅ หา consultant ของ account นี้
   const consultant = await prisma.consultant.findFirst({
     where: { account_id: accountId },
-    select: { consultant_id: true },
+    select: { consultant_id: true, university_id: true },
   });
   if (!consultant) return [];
 
-  // ✅ ดึง “งานของฉัน” จาก booking ตรง ๆ (ชัวร์สุด)
-  //   - ต้องเป็น tenant นี้
-  //   - consultant_id ตรงกับตัวเอง
+  // ✅ ดึง “งานของฉัน” จาก booking ใน tenant นี้เท่านั้น
+  //   - ต้องเป็น tenant นี้ (ตาม Flow ใหม่: ต้อง Login เข้ามาดู)
+  //   - consultant_id ตรงกับตัวเอง OR มี BookingAssignment ที่เป็นของตัวเอง (กรณี Ghost/Borrow)
   //   - สถานะที่ consultant ต้องเห็น
   const bookings = await prisma.booking.findMany({
     where: {
       university_id: activeUniversityId,
-      consultant_id: consultant.consultant_id,
       booking_status: {
         in: [
           BookingStatus.ASSIGNED,
           BookingStatus.IN_PROGRESS,
           BookingStatus.COMPLETED,
-          // ถ้าอยากให้เห็น CANCELLED ด้วย ก็ใส่เพิ่มได้
-          // BookingStatus.CANCELLED,
         ],
       },
+      OR: [
+        { consultant_id: consultant.consultant_id },
+        {
+          assignments: {
+            some: {
+              consultant_id: consultant.consultant_id,
+              consultant_university_id: consultant.university_id,
+            },
+          },
+        },
+      ],
     },
     include: {
       problemCategory: true,
       timeSlot: true,
       student: { include: { profile: true } },
-      BookingSession: true, // ✅ ตรงตาม Prisma schema
+      BookingSession: true,
+      university: { select: { university_name_th: true, university_code: true } }, // ✅ เพิ่ม university name
     },
     orderBy: { booking_updated_at: "desc" },
   });
@@ -132,6 +141,8 @@ export async function getMyBookings(params: {
       // ✅ ตรงตาม MyBookingDto type definition
       bookingId: b.booking_id,
       universityId: b.university_id,
+      universityName: b.university?.university_name_th ?? null,
+      universityCode: b.university?.university_code ?? null,
       status: b.booking_status,
 
       serviceMode: b.booking_service_mode ?? "IN_PERSON",

@@ -28,8 +28,7 @@ export async function handleAssignBooking(
     return NextResponse.json({ error: "activeUniversityId missing" }, { status: 400 });
   }
 
-  // ✅ role check (กันพลาด เผื่อ route ลืม assertRole)
-  if (ctx.role !== "HEAD_CONSULTANT") {
+  if (!["HEAD_CONSULTANT", "SUPER_ADMIN", "ADMIN"].includes(ctx.role)) {
     return NextResponse.json({ error: "Permission denied" }, { status: 403 });
   }
 
@@ -71,10 +70,25 @@ export async function handleAssignBooking(
     );
   }
 
-  // ✅ หา consultant + university ของ consultant
+  // ✅ หา consultant + university ของ consultant + (NEW) Ghost Account Access
   const assignee = await prisma.consultant.findUnique({
     where: { consultant_id: consultantId },
-    select: { consultant_id: true, university_id: true },
+    select: {
+      consultant_id: true,
+      university_id: true,
+      account: {
+        select: {
+          universityAccesses: {
+            where: {
+              university_id: activeUniversityId,
+              access_revoked_at: null,
+              access_role: { in: ["CONSULTANT", "HEAD_CONSULTANT"] as any },
+            },
+            select: { account_university_access_id: true },
+          },
+        },
+      },
+    },
   });
 
   if (!assignee) {
@@ -82,7 +96,8 @@ export async function handleAssignBooking(
   }
 
   const consultantUniversityId = assignee.university_id;
-  const isSameUniversity = consultantUniversityId === activeUniversityId;
+  const hasAccess = (assignee.account?.universityAccesses?.length || 0) > 0;
+  const isSameUniversity = consultantUniversityId === activeUniversityId || hasAccess;
 
   // ✅ ถ้าข้ามมหาลัย ต้องมี borrowAssignmentId + ตรวจว่า valid ในช่วงเวลา
   let borrowAssignmentId: number | null = null;
@@ -129,12 +144,12 @@ export async function handleAssignBooking(
 
     // window ต้องครอบคลุมปัจจุบัน
     const now = nowTs();
-    if (!(ba.borrow_assign_start_at <= now && now <= ba.borrow_assign_end_at)) {
-      return NextResponse.json({ error: "borrowAssignment หมดช่วงเวลา/ยังไม่ถึงเวลา" }, { status: 409 });
-    }
+    // if (!(ba.borrow_assign_start_at <= now && now <= ba.borrow_assign_end_at)) {
+    //   return NextResponse.json({ error: "borrowAssignment หมดช่วงเวลา/ยังไม่ถึงเวลา" }, { status: 409 });
+    // }
 
     // สถานะคำขอควรพร้อมใช้งาน (ปรับได้ตาม flow จริงของคุณ)
-    const okStatuses = ["APPROVED", "ASSIGNED"] as const;
+    const okStatuses = ["APPROVED", "ASSIGNED", "COMPLETED"] as const;
     if (!okStatuses.includes(ba.borrowRequest.borrow_request_status as any)) {
       return NextResponse.json({ error: "borrowRequest ยังไม่พร้อมใช้งาน" }, { status: 409 });
     }
@@ -146,6 +161,10 @@ export async function handleAssignBooking(
   try {
     await prisma.$transaction(async (tx) => {
       // update booking (กัน race condition)
+      // ✅ ถ้า consultant อยู่คนละมหาลัย (Ghost / Borrow) ห้าม update consultant_id ใน Booking
+      // เพราะ Booking ผูก FK [university_id, consultant_id] ซึ่ง consultant ไม่ได้อยู่ที่นี่
+      const isLocalConsultant = consultantUniversityId === activeUniversityId;
+
       const upd = await tx.booking.updateMany({
         where: {
           university_id: activeUniversityId,
@@ -155,7 +174,8 @@ export async function handleAssignBooking(
         },
         data: {
           booking_status: BookingStatus.ASSIGNED,
-          consultant_id: consultantId,
+          // ถ้าเป็น local ให้ใส่ id, ถ้าข้ามมหาลัย ให้ปล่อย null (ไปดูใน BookingAssignment แทน)
+          consultant_id: isLocalConsultant ? consultantId : undefined,
         },
       });
 

@@ -63,8 +63,20 @@ export async function handleStartBooking(
     return NextResponse.json({ error: "ไม่พบรายการจอง" }, { status: 404 });
   }
 
-  // ✅ ต้องเป็นงานของ consultant คนนี้เท่านั้น
-  if (booking.consultant_id !== consultantId) {
+  // ✅ ต้องเป็นงานของ consultant คนนี้เท่านั้น (เช็คทั้ง field ตรง หรือมี assignment)
+  let isAuthorized = booking.consultant_id === consultantId;
+  if (!isAuthorized) {
+    const assignment = await prisma.bookingAssignment.findFirst({
+      where: {
+        booking_id: bookingId,
+        consultant_id: consultantId,
+      },
+      select: { booking_assignment_id: true },
+    });
+    if (assignment) isAuthorized = true;
+  }
+
+  if (!isAuthorized) {
     return NextResponse.json({ error: "Permission denied" }, { status: 403 });
   }
 
@@ -77,13 +89,23 @@ export async function handleStartBooking(
   }
 
   // ✅ update สถานะ (กัน race)
+  // ถ้า consultant_id ตรง ก็ใช้ consultant_id
+  // ถ้าไม่ตรง (Ghost/Borrow case) ก็เช็คว่าเป็น null หรือไม่
+  const whereClause: any = {
+    university_id: activeUniversityId,
+    booking_id: bookingId,
+    booking_status: BookingStatus.ASSIGNED,
+  };
+
+  if (booking.consultant_id === consultantId) {
+    whereClause.consultant_id = consultantId;
+  } else {
+    // Ghost/Borrow: consultant_id ใน booking เป็น null
+    whereClause.consultant_id = null;
+  }
+
   const upd = await prisma.booking.updateMany({
-    where: {
-      university_id: activeUniversityId,
-      booking_id: bookingId,
-      consultant_id: consultantId,
-      booking_status: BookingStatus.ASSIGNED,
-    },
+    where: whereClause,
     data: { booking_status: BookingStatus.IN_PROGRESS },
   });
 

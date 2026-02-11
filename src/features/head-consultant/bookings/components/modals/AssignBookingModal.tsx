@@ -30,6 +30,7 @@ export function AssignBookingModal({
   onConfirmAssign: (
     bookingId: number,
     consultantId: number,
+    borrowAssignmentId?: number,
   ) => Promise<void> | void;
 }) {
   const [consultantId, setConsultantId] = useState<number | "">("");
@@ -118,7 +119,8 @@ export function AssignBookingModal({
                 const cid = Number(consultantId);
                 if (!Number.isFinite(cid) || cid <= 0) return;
 
-                await onConfirmAssign(booking.id, cid);
+                const selected = assignees.find((a) => a.id === cid);
+                await onConfirmAssign(booking.id, cid, selected?.borrowAssignmentId);
                 onOpenChange(false);
               }}
             >

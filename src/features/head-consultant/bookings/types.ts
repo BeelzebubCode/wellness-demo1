@@ -28,7 +28,7 @@ export type AdminBookingRow = BookingCore & {
   cancellation?: BookingCancellationCore | null;
 };
 
-export type AssigneeOption = { id: number; name: string };
+export type AssigneeOption = { id: number; name: string; borrowAssignmentId?: number };
 
 export type AdminBookingStatusFilter = BookingStatus | "ALL";
 export type { BookingStatus };

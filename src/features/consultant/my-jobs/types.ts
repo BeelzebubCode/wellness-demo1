@@ -23,6 +23,9 @@ export type MyBookingApiRow = {
   /** ✅ เพิ่ม: ช่องทางออนไลน์ (ถ้ามีแล้ว) */
   onlineChannelUrl?: string | null;
   onlineChannelNote?: string | null;
+
+  universityName?: string | null;
+  universityCode?: string | null;
 };
 
 export type Job = {
@@ -39,6 +42,9 @@ export type Job = {
   serviceMode?: "ONSITE" | "ONLINE" | string | null;
   onlineChannelUrl?: string | null;
   onlineChannelNote?: string | null;
+
+  universityName?: string | null;
+  universityCode?: string | null;
 
   raw?: {
     date?: string | null;

@@ -10,7 +10,7 @@ export async function POST(
   try {
     const { account, activeUniversityId } = await requireTenant(req);
 
-    assertRole(account.role, ["HEAD_CONSULTANT"]);
+    assertRole(account.role, ["HEAD_CONSULTANT", "SUPER_ADMIN", "ADMIN"]);
 
     const body = (await req.json().catch(() => ({}))) as {
       consultantId?: number;
@@ -35,8 +35,8 @@ export async function POST(
       status === 401
         ? "Unauthorized"
         : status === 403
-        ? "Permission denied"
-        : e?.message ?? "Failed to assign booking";
+          ? "Permission denied"
+          : e?.message ?? "Failed to assign booking";
 
     return NextResponse.json({ error: message }, { status });
   }

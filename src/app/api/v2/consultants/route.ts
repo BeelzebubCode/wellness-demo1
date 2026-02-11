@@ -12,11 +12,13 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const orgIdRaw = searchParams.get("organizationId");
     const organizationId = orgIdRaw ? Number(orgIdRaw) : null;
-    
+    const includeBorrowed = searchParams.get("includeBorrowed") === "true";
+
     // ✅ ส่ง ctx ให้ handler
     const ctx = { ...account, activeUniversityId } as any;
     return handleListConsultants(ctx, {
       organizationId: Number.isFinite(organizationId as any) ? organizationId : null,
+      includeBorrowed,
     });
   } catch (err: any) {
     console.error("[GET /api/v2/consultants]", err);

@@ -13,6 +13,7 @@ export function useBookingActions(opts?: { onDone?: () => void }) {
       universityId: number;
       bookingId: number;
       consultantId: number; // ✅ required
+      borrowAssignmentId?: number;
       note?: string;
     }) => {
       setIsSaving(true);

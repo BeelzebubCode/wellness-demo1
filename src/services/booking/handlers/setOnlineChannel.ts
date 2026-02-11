@@ -71,7 +71,19 @@ export async function handleSetOnlineChannel(
   });
 
   if (!booking) return NextResponse.json({ error: "ไม่พบรายการจอง" }, { status: 404 });
-  if (booking.consultant_id !== consultantId) {
+  let isAuthorized = booking.consultant_id === consultantId;
+  if (!isAuthorized) {
+    const assignment = await prisma.bookingAssignment.findFirst({
+      where: {
+        booking_id: bookingId,
+        consultant_id: consultantId,
+      },
+      select: { booking_assignment_id: true },
+    });
+    if (assignment) isAuthorized = true;
+  }
+
+  if (!isAuthorized) {
     return NextResponse.json({ error: "Permission denied" }, { status: 403 });
   }
 

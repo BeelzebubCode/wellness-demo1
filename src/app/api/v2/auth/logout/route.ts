@@ -62,13 +62,41 @@ export async function POST(req: NextRequest) {
   );
 
   // 1) ลบแบบ host-only (กันของเก่าค้าง)
-  clearCookie(res, "auth_token", undefined, true);
-  clearCookie(res, "tenant_code", undefined, false);
+  res.cookies.set({
+    name: "auth_token",
+    value: "",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+    expires: new Date(0),
+  });
+
+  res.cookies.set({
+    name: "tenant_code",
+    value: "",
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+    expires: new Date(0),
+  });
 
   // 2) ลบแบบ shared domain (สำคัญสุดสำหรับข้าม subdomain)
+  // ✅ ใช้ headers.append เพื่อไม่ให้ทับกับ host-only cookie
   if (sharedDomain) {
-    clearCookie(res, "auth_token", sharedDomain, true);
-    clearCookie(res, "tenant_code", sharedDomain, false);
+    res.headers.append(
+      "Set-Cookie",
+      `auth_token=; Domain=${sharedDomain}; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax${process.env.NODE_ENV === "production" ? "; Secure" : ""
+      }`
+    );
+    res.headers.append(
+      "Set-Cookie",
+      `tenant_code=; Domain=${sharedDomain}; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${process.env.NODE_ENV === "production" ? "; Secure" : ""
+      }`
+    );
   }
 
   return res;

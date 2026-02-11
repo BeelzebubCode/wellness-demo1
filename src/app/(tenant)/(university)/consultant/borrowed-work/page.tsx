@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Briefcase, Calendar, MapPin, Clock } from "lucide-react";
+import { Briefcase, Calendar, MapPin, Clock, LogIn, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { authApi } from "@/features/auth/api";
+import { buildTargetHostFromTenantCode } from "@/features/auth/login/login-utils";
 
 type BorrowedAssignment = {
     assignmentId: number;
@@ -11,6 +13,7 @@ type BorrowedAssignment = {
     title: string;
     reason: string;
     fromUniversityId: number;
+    fromUniversityCode: string | null;
     fromUniversityNameTh: string;
     fromUniversityNameEn: string | null;
     startAt: string;
@@ -20,15 +23,33 @@ type BorrowedAssignment = {
     submittedAt: string | null;
     createdAt: string;
     note: string | null;
+    assignedBookings: {
+        bookingId: number;
+        status: string;
+        assignedAt: string;
+        problemCategory: string;
+        studentName: string;
+    }[];
 };
 
 export default function ConsultantBorrowedWorkPage() {
     const [assignments, setAssignments] = useState<BorrowedAssignment[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [switchingId, setSwitchingId] = useState<number | null>(null);
+    const [completingId, setCompletingId] = useState<number | null>(null);
+    const [currentSubdomain, setCurrentSubdomain] = useState<string>("");
+
+    const [homeUniversity, setHomeUniversity] = useState<{ id: number; code: string; name: string } | null>(null);
 
     useEffect(() => {
         fetchAssignments();
+        // ดึง subdomain จาก URL ปัจจุบัน เช่น cu.wellness.local → "CU"
+        const hostname = window.location.hostname;
+        const parts = hostname.split(".");
+        if (parts.length >= 3) {
+            setCurrentSubdomain(parts[0].toUpperCase());
+        }
     }, []);
 
     async function fetchAssignments() {
@@ -42,6 +63,9 @@ export default function ConsultantBorrowedWorkPage() {
             }
 
             setAssignments(json.data || []);
+            if (json.homeUniversity) {
+                setHomeUniversity(json.homeUniversity);
+            }
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -82,6 +106,70 @@ export default function ConsultantBorrowedWorkPage() {
             month: "short",
             year: "numeric",
         });
+    }
+
+    async function handleLoginToUniversity(universityId: number, universityCode: string | null, universityName: string) {
+        try {
+            setSwitchingId(universityId);
+            const result = await authApi.switchTenant(universityId);
+            if (!result.success) {
+                alert(result.error || "ไม่สามารถเปลี่ยนมหาวิทยาลัยได้");
+                return;
+            }
+
+            // Build target URL using university code subdomain
+            const tenantCode = (universityCode || "").toUpperCase();
+            const { protocol, targetHost } = buildTargetHostFromTenantCode(tenantCode);
+            const targetPath = "/consultant/my-jobs";
+            window.location.assign(`${protocol}//${targetHost}${targetPath}`);
+        } catch (err) {
+            console.error("Switch tenant error:", err);
+            alert("เกิดข้อผิดพลาดในการเข้าสู่ระบบมหาวิทยาลัย");
+        } finally {
+            setSwitchingId(null);
+        }
+    }
+
+    async function handleComplete(assignmentId: number) {
+        const confirmed = window.confirm(
+            "คุณต้องการยืนยันว่างานนี้เสร็จสิ้นแล้วใช่หรือไม่?\n\nเมื่อยืนยันแล้วจะไม่สามารถเปลี่ยนกลับได้"
+        );
+        if (!confirmed) return;
+
+        try {
+            setCompletingId(assignmentId);
+            const res = await fetch(
+                `/api/v2/consultant/borrowed-assignments/${assignmentId}/complete`,
+                { method: "POST", credentials: "include" }
+            );
+            const json = await res.json();
+
+            if (!json.ok) {
+                alert(json.error || "ไม่สามารถยืนยันการทำงานได้");
+                return;
+            }
+
+            // ✅ ถ้ามี homeUniversity ให้ย้ายกลับทันที
+            if (homeUniversity) {
+                // alert(`บันทึกสำเร็จ กำลังกลับสู่ ${homeUniversity.name}...`);
+                const result = await authApi.switchTenant(homeUniversity.id);
+                if (result.success) {
+                    const tenantCode = (homeUniversity.code || "").toUpperCase();
+                    const { protocol, targetHost } = buildTargetHostFromTenantCode(tenantCode);
+                    const targetPath = "/consultant/my-jobs"; // หรือหน้าอื่นตาม flow
+                    window.location.assign(`${protocol}//${targetHost}${targetPath}`);
+                    return;
+                }
+            }
+
+            // Refresh assignments list (ถ้าไม่ได้ย้ายกลับ หรือย้ายไม่ผ่าน)
+            await fetchAssignments();
+        } catch (err) {
+            console.error("Complete assignment error:", err);
+            alert("เกิดข้อผิดพลาดในการยืนยัน");
+        } finally {
+            setCompletingId(null);
+        }
     }
 
     if (loading) {
@@ -241,17 +329,83 @@ export default function ConsultantBorrowedWorkPage() {
                                             </p>
                                         </div>
 
-                                        {/* Note */}
-                                        {assignment.note && (
-                                            <div className="bg-amber-50 border-l-4 border-amber-400 rounded-xl p-4">
-                                                <div className="flex items-start gap-2">
-                                                    <span className="text-xs font-semibold text-amber-900">
-                                                        📌 หมายเหตุ:
-                                                    </span>
-                                                    <p className="text-sm text-amber-900 flex-1">
-                                                        {assignment.note}
-                                                    </p>
+                                        {/* Assigned Bookings List */}
+                                        {assignment.assignedBookings && assignment.assignedBookings.length > 0 && (
+                                            <div className="mt-6 pt-6 border-t border-slate-100">
+                                                <div className="flex items-center gap-2 mb-4">
+                                                    <div className="p-1.5 bg-indigo-100 rounded-lg">
+                                                        <Briefcase className="w-4 h-4 text-indigo-600" />
+                                                    </div>
+                                                    <h4 className="font-semibold text-slate-800">
+                                                        งานที่ได้รับมอบหมาย ({assignment.assignedBookings.length})
+                                                    </h4>
                                                 </div>
+
+                                                <div className="space-y-3">
+                                                    {assignment.assignedBookings.map((booking) => (
+                                                        <div
+                                                            key={booking.bookingId}
+                                                            className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-200 hover:shadow-sm transition-all"
+                                                        >
+                                                            <div>
+                                                                <div className="font-medium text-slate-900">
+                                                                    {booking.studentName}
+                                                                </div>
+                                                                <div className="text-xs text-slate-500 mt-0.5">
+                                                                    {booking.problemCategory} • {formatDateOnly(booking.assignedAt)}
+                                                                </div>
+                                                            </div>
+                                                            <Badge
+                                                                variant={
+                                                                    booking.status === "COMPLETED" ? "success" :
+                                                                        booking.status === "IN_PROGRESS" ? "warning" :
+                                                                            booking.status === "ASSIGNED" ? "default" :
+                                                                                "outline"
+                                                                }
+                                                                className="text-xs"
+                                                            >
+                                                                {booking.status}
+                                                            </Badge>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Action Buttons */}
+                                        {assignment.status === "ASSIGNED" && (
+                                            <div className="mt-4 pt-4 border-t border-slate-200">
+                                                {currentSubdomain === (assignment.fromUniversityCode || "").toUpperCase() ? (
+                                                    /* ✅ อยู่ที่มหาวิทยาลัยที่ขอยืมแล้ว → แสดงปุ่มยืนยัน */
+                                                    <Button
+                                                        onClick={() => handleComplete(assignment.assignmentId)}
+                                                        disabled={completingId === assignment.assignmentId}
+                                                        className="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-2xl px-6 py-3 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all"
+                                                    >
+                                                        <CheckCircle className="w-5 h-5" />
+                                                        {completingId === assignment.assignmentId
+                                                            ? "กำลังยืนยัน..."
+                                                            : "ยืนยันการทำงานเสร็จสิ้น"}
+                                                    </Button>
+                                                ) : (
+                                                    /* 🔑 ยังอยู่มหาวิทยาลัยต้นสังกัด → แสดงปุ่ม login */
+                                                    <Button
+                                                        onClick={() =>
+                                                            handleLoginToUniversity(
+                                                                assignment.fromUniversityId,
+                                                                assignment.fromUniversityCode,
+                                                                assignment.fromUniversityNameTh
+                                                            )
+                                                        }
+                                                        disabled={switchingId === assignment.fromUniversityId}
+                                                        className="w-full sm:w-auto bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-semibold rounded-2xl px-6 py-3 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all"
+                                                    >
+                                                        <LogIn className="w-5 h-5" />
+                                                        {switchingId === assignment.fromUniversityId
+                                                            ? "กำลังเข้าสู่ระบบ..."
+                                                            : `เข้าสู่ระบบ ${assignment.fromUniversityNameTh}`}
+                                                    </Button>
+                                                )}
                                             </div>
                                         )}
                                     </div>

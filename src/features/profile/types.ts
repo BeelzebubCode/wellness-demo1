@@ -12,6 +12,7 @@ export type StudentAddressType = "CURRENT" | "PERMANENT";
 export type ProfileMeDTO = {
   role: ProfileType;
   displayName: string;
+  activeUniversityId: number;
   profile: {
     type: ProfileType;
     id?: number | null;
@@ -25,6 +26,7 @@ export type ProfileMeDTO = {
     phone?: string | null;
 
     universityId?: number | null;
+    universityCode?: string | null;
     universityName?: string | null;
 
     // consultant

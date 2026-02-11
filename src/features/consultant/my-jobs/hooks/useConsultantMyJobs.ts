@@ -120,12 +120,12 @@ export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
         const filteredRows = !q
           ? byStatus
           : byStatus.filter((r) => {
-              const hay = [r.studentName, r.problemType, r.bookingDetailText, r.status]
-                .filter(Boolean)
-                .join(" ")
-                .toLowerCase();
-              return hay.includes(q);
-            });
+            const hay = [r.studentName, r.problemType, r.bookingDetailText, r.status]
+              .filter(Boolean)
+              .join(" ")
+              .toLowerCase();
+            return hay.includes(q);
+          });
 
         const mapped: Job[] = filteredRows.map((r: MyBookingApiRow) => {
           const detailFull = (r.bookingDetailText ?? "").trim();
@@ -143,6 +143,9 @@ export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
             serviceMode: r.serviceMode ?? null,
             onlineChannelUrl: r.onlineChannelUrl ?? null,
             onlineChannelNote: r.onlineChannelNote ?? null,
+
+            universityName: r.universityName ?? null,
+            universityCode: r.universityCode ?? null,
 
             raw: {
               date: r.date,
