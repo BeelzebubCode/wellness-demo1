@@ -9,6 +9,7 @@ export type MapFilterState = {
   region: string;
   type: string;
   stress: string;
+  status: string; // 🔥 Added status filter
   problemCategories: string[]; // 🔥 Changed to array for multi-select
 };
 
@@ -19,6 +20,11 @@ export function MapLeftSidebar({
   filter: MapFilterState;
   onChange: (v: MapFilterState) => void;
 }) {
+  const handleFilterChange = (v: MapFilterState) => {
+    console.log("Filter changing to:", v);
+    onChange(v);
+  };
+
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const activeFilterCount = [
@@ -26,6 +32,7 @@ export function MapLeftSidebar({
     filter.region,
     filter.type,
     filter.stress,
+    filter.status, // 🔥 Include status in count
     (filter.problemCategories || []).length > 0
   ].filter(Boolean).length;
 
@@ -37,7 +44,7 @@ export function MapLeftSidebar({
           <h3 className="text-xs font-bold text-gray-900 tracking-tight">ตัวกรอง</h3>
           {activeFilterCount > 0 && (
             <button
-              onClick={() => onChange({ search: "", region: "", type: "", stress: "", problemCategories: [] })}
+              onClick={() => onChange({ search: "", region: "", type: "", stress: "", status: "", problemCategories: [] })}
               className="text-[10px] xl:text-xs font-semibold text-gray-500 hover:text-gray-900 transition-colors"
             >
               ล้าง ({activeFilterCount})
@@ -50,7 +57,7 @@ export function MapLeftSidebar({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            className="w-full pl-9 pr-3 py-2 bg-gray-50 border-0 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 transition-all placeholder:text-gray-400"
+            className="w-full pl-9 pr-3 py-2 bg-gray-50 border-0 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary transition-all placeholder:text-gray-400"
             placeholder="ค้นหามหาวิทยาลัย..."
             value={filter.search}
             onChange={(e) => onChange({ ...filter, search: e.target.value })}
@@ -81,9 +88,10 @@ export function MapLeftSidebar({
             ].map((r) => (
               <button
                 key={r.value}
-                onClick={() => onChange({ ...filter, region: r.value })}
+                type="button"
+                onClick={() => handleFilterChange({ ...filter, region: r.value })}
                 className={`px-2 py-2 rounded-md text-[10px] xl:text-xs font-medium transition-all border ${filter.region === r.value
-                  ? "bg-gray-900 text-white border-gray-900"
+                  ? "bg-primary text-white border-primary shadow-sm"
                   : "bg-white text-gray-600 hover:bg-gray-50 border-gray-200"
                   }`}
               >
@@ -97,8 +105,35 @@ export function MapLeftSidebar({
         <div>
           <ProblemCategoryFilter
             selected={filter.problemCategories}
-            onChange={(codes) => onChange({ ...filter, problemCategories: codes })}
+            onChange={(codes) => handleFilterChange({ ...filter, problemCategories: codes })}
           />
+        </div>
+
+        {/* Status Filter - NEW */}
+        <div>
+          <label className="text-xs font-bold text-gray-500 mb-2 flex items-center gap-1.5 uppercase tracking-wider">
+            <Filter className="w-3 h-3" />
+            สถานะการจอง
+          </label>
+          <div className="grid grid-cols-3 gap-1.5">
+            {[
+              { value: "", label: "ทั้งหมด" },
+              { value: "COMPLETED", label: "สำเร็จ" },
+              { value: "CANCELLED", label: "ยกเลิก" },
+            ].map((s) => (
+              <button
+                key={s.value}
+                type="button"
+                onClick={() => handleFilterChange({ ...filter, status: s.value })}
+                className={`px-2 py-2 rounded-md text-[10px] xl:text-xs font-medium transition-all border ${filter.status === s.value
+                  ? "bg-primary text-white border-primary shadow-sm"
+                  : "bg-white text-gray-600 hover:bg-gray-50 border-gray-200"
+                  }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Advanced Filters Toggle - Thai */}
@@ -126,13 +161,14 @@ export function MapLeftSidebar({
                   { value: "", label: "ทั้งหมด" },
                   { value: "PUBLIC", label: "รัฐ" },
                   { value: "PRIVATE", label: "เอกชน" },
-                  { value: "AUTONOMOUS", label: "อิสระ" },
+                  { value: "SUPERVISED", label: "ในกำกับ (อิสระ)" },
                 ].map((t) => (
                   <button
                     key={t.value}
-                    onClick={() => onChange({ ...filter, type: t.value })}
+                    type="button"
+                    onClick={() => handleFilterChange({ ...filter, type: t.value })}
                     className={`px-2 py-2 rounded-md text-[10px] xl:text-xs font-medium transition-all border ${filter.type === t.value
-                      ? "bg-gray-900 text-white border-gray-900"
+                      ? "bg-primary text-white border-primary shadow-sm"
                       : "bg-white text-gray-600 hover:bg-gray-50 border-gray-200"
                       }`}
                   >
@@ -156,11 +192,12 @@ export function MapLeftSidebar({
                 ].map((s) => (
                   <button
                     key={s.value}
-                    onClick={() => onChange({ ...filter, stress: s.value })}
+                    type="button"
+                    onClick={() => handleFilterChange({ ...filter, stress: s.value })}
                     className={`px-2 py-2 rounded-md text-[10px] xl:text-xs font-medium transition-all border ${filter.stress === s.value
-                      ? "bg-gray-900 text-white border-gray-900"
-                      : "bg-white text-gray-600 hover:bg-gray-50 border-gray-200"
-                      }`}
+                    ? "bg-primary text-white border-primary shadow-sm"
+                    : "bg-white text-gray-600 hover:bg-gray-50 border-gray-200"
+                    }`}
                   >
                     {s.label}
                   </button>

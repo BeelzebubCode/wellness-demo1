@@ -19,6 +19,8 @@ export interface UniversityMapData {
   dominantProblemTH?: string | null;
   dominantProblemCount: number;
   problemBreakdown: Record<string, number>;
+  statusBreakdown: Record<string, number>; // 🔥 Added status breakdown
+  granularStats: Record<string, Record<string, number>>; // 🔥 Added 2D breakdown
 }
 
 export function useUniversitiesMap() {

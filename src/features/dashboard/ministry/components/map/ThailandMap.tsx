@@ -114,7 +114,7 @@ function UniversityPin({ data, opacity = 1 }: { data: UniversityMapData; opacity
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "10px" }}>
             <div>
               <div style={{ fontSize: "10px", color: "#9ca3af", textTransform: "uppercase" }}>นักศึกษา</div>
-              <div style={{ fontWeight: 600, fontSize: "13px", color: "#6366f1" }}>
+              <div className="font-semibold text-[13px] text-primary">
                 {data.students.toLocaleString()}
               </div>
             </div>
@@ -125,22 +125,12 @@ function UniversityPin({ data, opacity = 1 }: { data: UniversityMapData; opacity
               </div>
             </div>
           </div>
-          <a
-            href={`/ministry/universities/${data.code}`}
-            style={{
-              display: "block",
-              textAlign: "center",
-              padding: "8px 12px",
-              background: "#6366f1",
-              color: "#fff",
-              borderRadius: "8px",
-              fontSize: "13px",
-              fontWeight: 600,
-              textDecoration: "none",
-            }}
-          >
-            ดูแดชบอร์ด →
-          </a>
+            <a
+              href={`/ministry/universities/${data.code}`}
+              className="block text-center py-2 px-3 bg-primary text-white rounded-lg text-[13px] font-semibold no-underline"
+            >
+              ดูแดชบอร์ด →
+            </a>
         </div>
       </Popup>
     </Marker>
@@ -205,6 +195,7 @@ export function ThailandMap() {
     region: "",
     type: "",
     stress: "",
+    status: "", // 🔥 Added initial status
     problemCategories: [], // 🔥 Ensure initialized
   });
   const [mapStyle, setMapStyle] = useState<"street" | "satellite" | "terrain">("street");
@@ -216,22 +207,47 @@ export function ThailandMap() {
     if (!universities || universities.length === 0) return [];
 
     return universities.filter((uni) => {
-      // Search filter
+      // 1. Search filter
       if (filter.search && !uni.name.toLowerCase().includes(filter.search.toLowerCase())) {
         return false;
       }
 
-      // Type filter
+      // 2. Type filter
       if (filter.type && uni.type !== filter.type) {
         return false;
       }
 
-      // Stress filter (stub)
-      // if (filter.stress) { ... }
+      // 3 & 5. Combined Problem Category and Status filter
+      if (filter.status && filter.problemCategories && filter.problemCategories.length > 0) {
+        const hasCombinedMatch = filter.problemCategories.some(cat => 
+          uni.granularStats?.[filter.status]?.[cat] && uni.granularStats[filter.status][cat] > 0
+        );
+        if (!hasCombinedMatch) return false;
+      } else if (filter.problemCategories && filter.problemCategories.length > 0) {
+        // Individual problem filter
+        const hasMatch = filter.problemCategories.some(cat => 
+          uni.problemBreakdown && uni.problemBreakdown[cat] && uni.problemBreakdown[cat] > 0
+        );
+        if (!hasMatch) return false;
+      } else if (filter.status) {
+        // Individual status filter
+        if (!uni.statusBreakdown || !uni.statusBreakdown[filter.status] || uni.statusBreakdown[filter.status] === 0) {
+          return false;
+        }
+      }
+
+      // 4. Stress/Urgency filter 
+      // (Infer from dominantProblemCount for now as "Urgency" usually correlates with load)
+      if (filter.stress) {
+        const count = uni.dominantProblemCount || 0;
+        if (filter.stress === "HIGH" && count < 50) return false;
+        if (filter.stress === "MEDIUM" && (count < 20 || count >= 50)) return false;
+        if (filter.stress === "LOW" && count >= 20) return false;
+      }
 
       return true;
     });
-  }, [universities, filter.search, filter.type, filter.stress]);
+  }, [universities, filter.search, filter.type, filter.stress, filter.status, filter.problemCategories]);
 
   // Selected region universities (fully visible)
   const selectedRegionData = useMemo(() => {
@@ -265,9 +281,9 @@ export function ThailandMap() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] w-full overflow-hidden bg-gray-50">
+    <div className="flex h-[calc(100vh-4rem)] w-full overflow-hidden bg-tenant">
       {/* Left Sidebar - Filters */}
-      <div className="w-[320px] h-full flex-shrink-0 overflow-y-auto border-r border-gray-200 bg-white">
+      <div className="w-[320px] h-full flex-shrink-0 overflow-y-auto border-r border-gray-200 bg-white z-20 relative shadow-sm">
         <MapLeftSidebar filter={filter} onChange={setFilter} />
       </div>
 
@@ -299,30 +315,30 @@ export function ThailandMap() {
       <div className="absolute bottom-6 right-6 z-[1000] flex gap-2 bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-gray-200 p-2 animate-in fade-in slide-in-from-right-4 pointer-events-auto">
           <button
             onClick={() => setMapStyle("street")}
-            className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+            className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all shadow-sm ${
               mapStyle === "street"
-                ? "bg-indigo-600 text-white shadow-lg"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                ? "bg-primary text-white"
+                : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-100"
             }`}
           >
             🗺️
           </button>
           <button
             onClick={() => setMapStyle("satellite")}
-            className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+            className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all shadow-sm ${
               mapStyle === "satellite"
-                ? "bg-indigo-600 text-white shadow-lg"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                ? "bg-primary text-white"
+                : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-100"
             }`}
           >
             🛰️
           </button>
           <button
             onClick={() => setMapStyle("terrain")}
-            className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+            className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all shadow-sm ${
               mapStyle === "terrain"
-                ? "bg-indigo-600 text-white shadow-lg"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                ? "bg-primary text-white"
+                : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-100"
             }`}
           >
             🏔️
@@ -352,6 +368,7 @@ export function ThailandMap() {
         <UniversityRankings 
           universities={filteredData}
           problemCategories={filter.problemCategories}
+          status={filter.status}
           onSelect={(code) => {
             window.location.href = `/ministry/universities/${code}`;
           }}

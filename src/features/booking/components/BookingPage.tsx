@@ -352,7 +352,6 @@ export function BookingPage({ universityId }: { universityId?: number }) {
         <BookingSuccessModal
           isOpen={successOpen}
           onClose={() => setSuccessOpen(false)}
-          onViewAppointments={() => setSuccessOpen(false)}
         />
       </main>
     </div>

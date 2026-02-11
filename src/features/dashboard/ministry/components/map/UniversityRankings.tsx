@@ -15,6 +15,8 @@ type University = {
   dominantProblemTH?: string | null;
   dominantProblemCount: number;
   problemBreakdown: Record<string, number>;
+  statusBreakdown: Record<string, number>; // 🔥 Added status breakdown
+  granularStats: Record<string, Record<string, number>>; // 🔥 Added 2D breakdown
 };
 
 type UniversityRankingsProps = {
@@ -22,6 +24,7 @@ type UniversityRankingsProps = {
   selectedCode?: string | null;
   onSelect?: (code: string) => void;
   problemCategories?: string[]; 
+  status?: string; // 🔥 Added status filter
 };
 
 // Fixed Tooltip Component
@@ -79,17 +82,32 @@ export function UniversityRankings({
   universities, 
   selectedCode, 
   onSelect,
-  problemCategories = [] 
+  problemCategories = [],
+  status = "" // 🔥 Default status
 }: UniversityRankingsProps) {
   const [hoveredUni, setHoveredUni] = useState<{ text: string; rect: DOMRect } | null>(null);
   
   // Helper to get count based on selection
+  // Helper to get count based on selection
   const getProblemCount = (uni: University) => {
-    if (problemCategories && problemCategories.length > 0) {
-      // Sum all selected categories
-      return problemCategories.reduce((sum, cat) => sum + (uni.problemBreakdown[cat] || 0), 0);
+    // 1. Combined: Status + Problems
+    if (status && problemCategories && problemCategories.length > 0) {
+      return problemCategories.reduce((sum: number, cat: string) => 
+        sum + (uni.granularStats?.[status]?.[cat] || 0), 0);
     }
-    return uni.dominantProblemCount;
+
+    // 2. Only Status: Show total for that status
+    if (status) {
+      return Object.values(uni.granularStats?.[status] || {}).reduce((sum: number, count: number) => sum + (count || 0), 0);
+    }
+
+    // 3. Only Problems: Show total for those categories across all statuses
+    if (problemCategories && problemCategories.length > 0) {
+      return problemCategories.reduce((sum: number, cat: string) => sum + (uni.problemBreakdown[cat] || 0), 0);
+    }
+
+    // 4. Default: Show absolute total
+    return Object.values(uni.problemBreakdown || {}).reduce((sum: number, count: number) => sum + (count || 0), 0);
   };
 
   // Sort universities by calculated count
@@ -97,8 +115,10 @@ export function UniversityRankings({
     return getProblemCount(b) - getProblemCount(a);
   });
 
-  // Filter 0 counts if filtering is active
-  const filteredUniversities = problemCategories.length > 0
+  // Filter 0 counts if filtering is active (either status or categories)
+  const isFilteringActive = status || (problemCategories && problemCategories.length > 0);
+  
+  const filteredUniversities = isFilteringActive
     ? sortedUniversities.filter(uni => getProblemCount(uni) > 0)
     : sortedUniversities;
 
@@ -108,7 +128,7 @@ export function UniversityRankings({
       <div className="px-5 py-4 border-b border-gray-100 bg-white z-10">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-bold text-gray-900 tracking-tight flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-indigo-600" />
+            <TrendingUp className="w-4 h-4 text-primary" />
             อันดับมหาวิทยาลัย
           </h3>
           <div className="bg-gray-100 px-2 py-0.5 rounded-full text-[10px] font-bold text-gray-600">
@@ -119,8 +139,8 @@ export function UniversityRankings({
         {/* Stats Row */}
         <div className="flex gap-3">
           <div className="flex-1 p-3 rounded-lg bg-gray-50 border border-gray-100">
-            <div className="text-xl font-bold text-indigo-900 leading-none mb-1">
-              {filteredUniversities.reduce((sum, uni) => sum + getProblemCount(uni), 0).toLocaleString()}
+            <div className="text-xl font-bold text-primary leading-none mb-1">
+              {filteredUniversities.reduce((sum: number, uni: University) => sum + getProblemCount(uni), 0).toLocaleString()}
             </div>
             <div className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">เคสทั้งหมด</div>
           </div>
@@ -155,8 +175,8 @@ export function UniversityRankings({
                   onClick={() => onSelect?.(uni.code)}
                   className={`
                     w-full px-5 py-3 flex items-center gap-3 transition-all duration-200 border-b border-gray-50
-                    hover:bg-indigo-50/50 group relative
-                    ${isSelected ? "bg-indigo-50 border-indigo-100" : ""}
+                    hover:bg-primary/5 group relative
+                    ${isSelected ? "bg-primary/10 border-primary/20" : ""}
                   `}
                   style={{
                     animation: `slideInRight 0.3s ease-out ${index * 0.03}s both`
@@ -210,13 +230,13 @@ export function UniversityRankings({
 
                   {/* Count & Bar */}
                   <div className="flex-shrink-0 text-right w-20">
-                    <div className={`text-xs font-bold tabular-nums mb-1 ${index < 3 ? "text-indigo-600" : "text-gray-600"}`}>
+                    <div className={`text-xs font-bold tabular-nums mb-1 ${index < 3 ? "text-primary" : "text-gray-600"}`}>
                       {problemCount.toLocaleString()}
                     </div>
                     {/* Progress Bar */}
                     <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
                         <div 
-                            className={`h-full rounded-full ${index < 3 ? "bg-gradient-to-r from-indigo-500 to-purple-500" : "bg-gray-300"}`}
+                            className={`h-full rounded-full ${index < 3 ? "bg-primary" : "bg-gray-300"}`}
                             style={{ 
                                 width: `${(problemCount / (sortedUniversities[0]?.dominantProblemCount || 1)) * 100}%`,
                                 transition: "width 1s ease-out"

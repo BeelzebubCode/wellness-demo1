@@ -20,7 +20,7 @@ export function MinistryMapDashboard() {
   };
 
   return (
-    <div className="h-screen w-full bg-gray-50 flex flex-col overflow-hidden">
+    <div className="h-screen w-full bg-tenant flex flex-col overflow-hidden">
       {/* Modern Minimal Header - White Theme */}
       <header className="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-200 shadow-sm z-20 animate-fadeIn">
         
@@ -28,7 +28,7 @@ export function MinistryMapDashboard() {
         <div className="flex items-center gap-6">
            {/* Logo - Minimal Black Circle */}
            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center shadow-md hover:shadow-lg transition-shadow">
+            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-md hover:shadow-lg transition-shadow">
                 <Shield className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -49,8 +49,8 @@ export function MinistryMapDashboard() {
                     px-4 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2
                     hover:shadow-sm
                     ${item.href === "/ministry" 
-                      ? "bg-gray-900 text-white shadow-md" 
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                      ? "bg-primary text-white shadow-md" 
+                      : "text-gray-600 hover:text-gray-900 hover:bg-white/50"
                     }
                   `}
                 >

@@ -100,14 +100,14 @@ export function ProblemCategoryFilter({ selected, onChange }: ProblemCategoryFil
       </label>
 
       {/* Beautiful Custom Dropdown Trigger */}
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={`
-          w-full px-3 py-2.5 text-[10px] xl:text-xs font-medium border-2 rounded-xl flex items-center justify-between text-left transition-all
-          ${isOpen ? "border-indigo-600 ring-4 ring-indigo-50 shadow-md bg-white" : "border-gray-200 bg-white hover:border-gray-400 hover:shadow-sm"}
-        `}
-      >
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className={`
+            w-full px-3 py-2.5 text-[10px] xl:text-xs font-medium border-2 rounded-xl flex items-center justify-between text-left transition-all
+            ${isOpen ? "border-primary ring-4 ring-primary/10 shadow-md bg-white" : "border-gray-200 bg-white hover:border-gray-400 hover:shadow-sm"}
+          `}
+        >
         <span className={selected.length === 0 ? "text-gray-500" : "text-gray-900 font-semibold"}>
           {selected.length === 0 ? "เลือกประเภทปัญหา" : `${selected.length} รายการ`}
         </span>
@@ -129,7 +129,7 @@ export function ProblemCategoryFilter({ selected, onChange }: ProblemCategoryFil
       {selected.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5 animate-fadeIn max-h-32 overflow-y-auto custom-scrollbar">
           {selected.map(code => (
-            <div key={code} className="px-2 py-1 bg-gradient-to-r from-gray-900 to-gray-700 text-white text-[10px] xl:text-xs font-medium rounded-md shadow-sm flex items-center gap-1 flex-shrink-0">
+            <div key={code} className="px-2 py-1 bg-primary text-white text-[10px] xl:text-xs font-medium rounded-md shadow-sm flex items-center gap-1 flex-shrink-0">
               {categories.find(c => c.code === code)?.nameTh || code}
               <button onClick={() => handleSelect(code)} className="hover:text-red-200 ml-0.5"><X className="w-2.5 h-2.5" /></button>
             </div>
@@ -277,12 +277,12 @@ function DropdownPortal({
               className={`
                                 w-full px-3 py-2.5 rounded-lg flex items-center justify-between text-[10px] xl:text-xs text-left transition-all
                                 ${isSelected
-                  ? "bg-indigo-50 text-indigo-900 font-bold"
+                  ? "bg-primary/10 text-primary font-bold"
                   : "text-gray-700 hover:bg-gray-50"}
                             `}
             >
               <span className="truncate pr-2">{cat.nameTh}</span>
-              {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" />}
+              {isSelected && <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
             </button>
           )
         })}

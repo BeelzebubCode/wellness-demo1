@@ -23,7 +23,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
     redirectTo: "/login",
     allowedRoles: ["STUDENT", "CONSULTANT", "HEAD_CONSULTANT", "RECTOR", "SUPER_ADMIN", "MINISTRY", "ADVISOR"] as const,
     loginToastKey: "toast_public_layout_auth_check",
-    guard: true, // User requested: "Bounce to login" if not authenticated
+    guard: false, // User requested: "Bounce to login" if not authenticated
     requireTenant: false,
   });
 

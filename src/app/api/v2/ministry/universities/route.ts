@@ -31,8 +31,8 @@ export async function GET(req: NextRequest) {
     const sortBy = searchParams.get("sortBy") || ""; // "problemCount" to sort by problem frequency
     
     // 🚀 CACHE STRATEGY: Check Redis first
-    // Cache key includes pagination to avoid incorrect data
-    const cacheKey = `${CacheKeys.universities()}:p${page}:s${pageSize}`;
+    // Cache key includes pagination and version to avoid incorrect data
+    const cacheKey = `${CacheKeys.universities()}:v2:p${page}:s${pageSize}`;
     const cachedData = await getCached<any>(cacheKey);
 
     if (cachedData) {
@@ -109,8 +109,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // 2. Get category details (cacheable)
-    // In a real app we might cache this separately, but it's small enough to fetch
+    // 3. Transform categories into map for easy lookup
     const categories = await prisma.problemCategory.findMany({
       select: {
         problem_category_id: true,
@@ -121,34 +120,60 @@ export async function GET(req: NextRequest) {
     });
     const categoryMap = new Map(categories.map(c => [c.problem_category_id, c]));
 
-    // 3. Find top category per university AND build full breakdown
-    const topCategoryByUni = new Map<number, any>(); // uniId -> { categoryName, count }
-    const problemBreakdownByUni = new Map<number, Record<string, number>>(); // uniId -> { STRESS: 10, ANXIETY: 5 }
-    
-    // Group stats by university first
-    const statsByUni: Record<number, typeof categoryStats> = {};
-    for (const stat of categoryStats) {
-      if (!statsByUni[stat.university_id]) statsByUni[stat.university_id] = [];
+    // 4. 🔥 NEW: Granular 2D Statistics (University x Status x Category)
+    const granularStats = await prisma.booking.groupBy({
+      by: ["university_id", "booking_status", "problem_category_id"],
+      where: {
+        university_id: { in: universityIds },
+      },
+      _count: {
+        _all: true,
+      },
+    });
+
+    const granularStatsByUni = new Map<number, any>(); // uniId -> { STATUS: { CAT_CODE: count } }
+    const statusBreakdownByUni = new Map<number, Record<string, number>>(); // uniId -> { STATUS: count }
+    const problemBreakdownByUni = new Map<number, Record<string, number>>(); // uniId -> { CAT_CODE: count }
+    const topCategoryByUni = new Map<number, any>(); // uniId -> { code, name, count }
+    const statsByUni: Record<number, any[]> = {};
+
+    // Group items for dominant problem calculation
+    for (const uniId of universityIds) {
+      statsByUni[uniId] = [];
+    }
+
+    for (const stat of granularStats) {
+      const catInfo = categoryMap.get(stat.problem_category_id);
+      if (!catInfo || !catInfo.problem_category_code) continue;
+      const catCode = catInfo.problem_category_code;
+
+      // Update 2D breakdown
+      const uniStats = granularStatsByUni.get(stat.university_id) || {};
+      const statusStats = uniStats[stat.booking_status] || {};
+      statusStats[catCode] = (statusStats[catCode] || 0) + stat._count._all;
+      uniStats[stat.booking_status] = statusStats;
+      granularStatsByUni.set(stat.university_id, uniStats);
+
+      // Update Status breakdown (sum across categories)
+      const stBreakdown = statusBreakdownByUni.get(stat.university_id) || {};
+      stBreakdown[stat.booking_status] = (stBreakdown[stat.booking_status] || 0) + stat._count._all;
+      statusBreakdownByUni.set(stat.university_id, stBreakdown);
+
+      // Update Problem breakdown (sum across statuses)
+      const pbBreakdown = problemBreakdownByUni.get(stat.university_id) || {};
+      pbBreakdown[catCode] = (pbBreakdown[catCode] || 0) + stat._count._all;
+      problemBreakdownByUni.set(stat.university_id, pbBreakdown);
+
+      // Collect for top category comparison
       statsByUni[stat.university_id].push(stat);
     }
 
-    // Determine max for each AND build full breakdown
+    // Determine max for each university (dominant problem)
     for (const uniId of universityIds) {
       const stats = statsByUni[uniId];
       if (!stats || stats.length === 0) continue;
 
-      // Build full problem breakdown
-      const breakdown: Record<string, number> = {};
-      for (const stat of stats) {
-        const catInfo = categoryMap.get(stat.problem_category_id);
-        if (catInfo && catInfo.problem_category_code) {
-          breakdown[catInfo.problem_category_code] = stat._count._all;
-        }
-      }
-      problemBreakdownByUni.set(uniId, breakdown);
-
-      // Find max count (dominant problem)
-      const top = stats.reduce((prev, current) => 
+      const top = stats.reduce((prev: any, current: any) => 
         (current._count._all > prev._count._all) ? current : prev
       );
 
@@ -174,6 +199,8 @@ export async function GET(req: NextRequest) {
     let mapData = universities.map((uni) => {
       const topIssue = topCategoryByUni.get(uni.university_id);
       const problemBreakdown = problemBreakdownByUni.get(uni.university_id) || {};
+      const statusBreakdown = statusBreakdownByUni.get(uni.university_id) || {};
+      const granularStats = granularStatsByUni.get(uni.university_id) || {};
       
       return {
         id: uni.university_code,
@@ -194,7 +221,9 @@ export async function GET(req: NextRequest) {
         dominantProblemCode: topIssue ? topIssue.code : null,
         dominantProblemTH: topIssue ? topIssue.nameTH : null,
         dominantProblemCount: topIssue ? topIssue.count : 0,
-        problemBreakdown, // Full breakdown: { STRESS: 10, ANXIETY: 5, ... }
+        problemBreakdown, // Full breakdown: { STRESS: 10, DEPRESSION: 5, ... }
+        statusBreakdown,  // Status breakdown: { COMPLETED: 10, CANCELLED: 2, ... }
+        granularStats,    // 🔥 2D Statistics: { COMPLETED: { STRESS: 5 }, CANCELLED: { STRESS: 1 } }
       };
     });
 

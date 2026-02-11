@@ -7,6 +7,7 @@ import { ClipboardList } from "lucide-react";
 
 import { AlertBox } from "@/components/notification/AlertBox";
 import { LoadingSpinner } from "@/components/ui";
+import { useNotificationContext } from "@/components/notification/NotificationProvider";
 
 import { useMyAppointments } from "@/features/booking/hooks/useMyAppointments";
 import { useBooking } from "@/features/booking/hooks/useBooking";
@@ -35,6 +36,7 @@ export default function MyAppointmentsPageClient() {
     setShowCancelModal(true);
   };
 
+  const { push } = useNotificationContext();
   const { items, loading, error, refetch } = useMyAppointments();
   const { cancelBooking, isCancelling } = useBooking();
 
@@ -80,6 +82,13 @@ export default function MyAppointmentsPageClient() {
       setCancelReason("");
       setCancelError(null);
       setHasSubmitted(false);
+
+      push({
+        type: "success",
+        title: "ยกเลิกสำเร็จ",
+        message: "ยกเลิกนัดหมายเรียบร้อยแล้ว",
+        duration: 3000,
+      });
 
       await refetch(); // ✅ ไม่ reload หน้า
     } catch {
