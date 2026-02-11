@@ -1,7 +1,6 @@
-// src/features/booking/components/forms/SignaturePad.tsx
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 
 export function SignaturePad({
@@ -11,7 +10,7 @@ export function SignaturePad({
   className,
   warning,
 }: {
-  value?: string | null; // dataURL (png)
+  value?: string | null;
   onChange?: (dataUrl: string | null) => void;
   disabled?: boolean;
   className?: string;
@@ -20,37 +19,39 @@ export function SignaturePad({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef(false);
   const lastRef = useRef<{ x: number; y: number } | null>(null);
-
   const [hasInk, setHasInk] = useState(!!value);
 
-  const size = useMemo(() => ({ w: 560, h: 160 }), []);
-
+  // 🔥 ตั้งค่า canvas ให้ตรงกับขนาดจริงแบบไม่ใช้ scale()
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // init style
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.lineWidth = 2;
     ctx.lineCap = "round";
     ctx.strokeStyle = "#111827";
 
-    // restore if value exists
     if (value) {
       const img = new Image();
       img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       img.src = value;
     }
-  }, [value, size.w, size.h]);
+  }, [value]);
 
   const getPos = (e: PointerEvent) => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
+
     return {
-      x: (e.clientX - rect.left) * (canvas.width / rect.width),
-      y: (e.clientY - rect.top) * (canvas.height / rect.height),
+      x: Math.max(0, Math.min(e.clientX - rect.left, rect.width)),
+      y: Math.max(0, Math.min(e.clientY - rect.top, rect.height)),
     };
   };
 
@@ -64,6 +65,7 @@ export function SignaturePad({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || disabled) return;
+
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
@@ -76,16 +78,19 @@ export function SignaturePad({
 
     const onMove = (e: PointerEvent) => {
       if (!drawingRef.current) return;
+
       const p = getPos(e);
       const last = lastRef.current;
       if (!last) {
         lastRef.current = p;
         return;
       }
+
       ctx.beginPath();
       ctx.moveTo(last.x, last.y);
       ctx.lineTo(p.x, p.y);
       ctx.stroke();
+
       lastRef.current = p;
     };
 
@@ -107,13 +112,13 @@ export function SignaturePad({
       canvas.removeEventListener("pointerup", onUp);
       canvas.removeEventListener("pointercancel", onUp);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [disabled, hasInk]);
 
   const clear = () => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     setHasInk(false);
     onChange?.(null);
@@ -122,7 +127,7 @@ export function SignaturePad({
   return (
     <div className={cn("flex flex-col h-full", className)}>
       <div className="h-7 flex items-center justify-between mb-2 shrink-0">
-        <label className="text-sm font-black text-slate-800 flex items-center gap-1 tracking-tight">
+        <label className="text-sm font-black text-slate-800">
           ลายเซ็นยินยอม (Online) <span className="text-red-500">*</span>
         </label>
 
@@ -136,12 +141,11 @@ export function SignaturePad({
         </button>
       </div>
 
-      <div className="h-[220px] min-h-[220px] rounded-xl border border-gray-200 bg-white overflow-hidden relative">
+      <div className="h-[220px] rounded-xl border border-gray-200 bg-white overflow-hidden relative">
         <canvas
           ref={canvasRef}
-          width={size.w}
-          height={size.h}
-          className={cn("w-full h-full touch-none absolute inset-0", disabled && "opacity-60")}
+          className={cn("w-full h-full touch-none", disabled && "opacity-60")}
+          style={{ touchAction: "none" }}
         />
       </div>
 
