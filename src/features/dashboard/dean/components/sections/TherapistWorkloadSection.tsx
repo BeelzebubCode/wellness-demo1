@@ -97,7 +97,7 @@ export function TherapistWorkloadSection({ consultantStats, academicYear }: Ther
             <Card className="border-none shadow-sm bg-white">
                 <CardHeader>
                     <CardTitle className="text-lg font-semibold text-slate-600 flex items-center gap-2">
-                        <span>จำนวนเคสที่ดูแล{academicYear ? ` (${academicYear})` : ''}</span>
+                        <span>จำนวนเคสที่ดูแล</span>
                         {isImbalanced && (
                             <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
                                 ภาระงานไม่สมดุล
