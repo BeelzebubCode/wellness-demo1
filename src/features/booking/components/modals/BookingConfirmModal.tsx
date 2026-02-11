@@ -49,7 +49,6 @@ export function BookingConfirmModal({
 }) {
   const [service, setService] = useState<ServicePick>({
     mode: "ONSITE",
-    onlineChannel: null,
   });
 
   const [consentChecked, setConsentChecked] = useState(false);
@@ -96,7 +95,6 @@ export function BookingConfirmModal({
       className="max-w-[1024px] w-[calc(100vw-24px)]"
       contentClassName="p-0 pt-3"
     >
-
       {!slot ? (
         <div className="p-8 text-center text-sm text-slate-500">
           ยังไม่ได้เลือกช่วงเวลา
@@ -105,88 +103,105 @@ export function BookingConfirmModal({
         <div className="flex flex-col overflow-hidden" style={{ maxHeight: "calc(90vh - 80px)" }}>
           {/* BODY */}
           <div className="flex-1 overflow-auto p-4 md:p-5 custom-scroll">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-2 gap-y-4 lg:gap-y-0 items-stretch">
-
-              {/* ROW 0, COL 0: Categories (Left Top) */}
-              <div className="rounded-t-[2rem] lg:rounded-b-none border border-gray-100 bg-white p-5 md:p-6 lg:pb-0 lg:border-b-0 shadow-sm">
-                <div className="pb-8">
-                  <BookingForm
-                    value={form}
-                    onChange={setForm}
-                    hideSubmit
-                    isLoading={!!isLoading}
-                    error={null}
-                    mode="categories"
+            <div className="flex flex-col gap-y-4">
+              {/* TOP: Service Mode Picker */}
+              <div className="rounded-[2rem] border border-gray-100 bg-white p-5 md:p-6 shadow-sm">
+                <div className="max-w-lg mx-auto w-full">
+                  <label className="text-sm font-black text-slate-800 flex items-center justify-center gap-1 tracking-tight mb-3">
+                    ประเภทการเข้าพบ <span className="text-red-500">*</span>
+                  </label>
+                  <ServiceModePicker
+                    value={service}
+                    onChange={(next) => {
+                      setService(next);
+                      if (next.mode !== "ONLINE") {
+                        setConsentSignature(null);
+                      }
+                    }}
                   />
+                  {needsOnlineChannel && !service.onlineChannel && (
+                    <div className="mt-3">
+                      <AlertBox type="warning" message="กรุณาเลือกช่องทางออนไลน์ก่อนทำการจอง" />
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* ROW 0, COL 1: Service Mode & Consent (Right Top) */}
-              <div className="rounded-t-[2rem] lg:rounded-b-none border border-gray-100 bg-white p-5 md:p-6 lg:pb-0 lg:border-b-0 shadow-sm">
-                <div className="space-y-5 pb-8">
-                  <div className="space-y-4">
-                    <label className="text-sm font-black text-slate-800 flex items-center gap-1 tracking-tight">
-                      ประเภทการเข้าพบ <span className="text-red-500">*</span>
-                    </label>
-                    <ServiceModePicker
-                      value={service}
-                      onChange={(next) => {
-                        setService(next);
-                        if (next.mode !== "ONLINE") {
-                          setConsentSignature(null);
-                        }
-                      }}
+              {/* GRID AREA */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-2 gap-y-4 lg:gap-y-0 items-stretch">
+                {/* ROW 0, COL 0: Categories (Left Top) */}
+                <div className="rounded-t-[2rem] lg:rounded-b-none border border-gray-100 bg-white p-5 md:p-6 lg:pb-5 lg:border-b-0 shadow-sm">
+                  <div className="h-full flex flex-col">
+                    <BookingForm
+                      value={form}
+                      onChange={setForm}
+                      hideSubmit
+                      isLoading={!!isLoading}
+                      error={null}
+                      mode="categories"
                     />
-                    {needsOnlineChannel && !service.onlineChannel && (
+                  </div>
+                </div>
+
+                {/* ROW 0, COL 1: Consent (Right Top) */}
+                <div className="rounded-t-[2rem] lg:rounded-b-none border border-gray-100 bg-white p-5 md:p-6 lg:pb-5 lg:border-b-0 shadow-sm">
+                  <div className="h-full flex flex-col">
+                    <div className="flex-1">
+                      <ConsentBlock
+                        checked={consentChecked}
+                        onChange={setConsentChecked}
+                        className="h-full"
+                      />
+                    </div>
+                    {!consentChecked && (
                       <div className="mt-3">
-                        <AlertBox type="warning" message="กรุณาเลือกช่องทางออนไลน์ก่อนทำการจอง" />
+                        <AlertBox type="warning" message="กรุณายอมรับเงื่อนไขก่อนทำการจอง" />
                       </div>
                     )}
                   </div>
+                </div>
 
-                  <div className="space-y-3">
-                    <ConsentBlock checked={consentChecked} onChange={setConsentChecked} />
-                    {!consentChecked && (
-                      <AlertBox type="warning" message="กรุณายอมรับเงื่อนไขก่อนทำการจอง" />
+                {/* ROW 1, COL 0: Description (Left Bottom) */}
+                <div className="rounded-b-[2rem] lg:rounded-t-none border border-gray-100 bg-white p-5 md:p-6 lg:pt-4 lg:border-t-0 shadow-sm flex flex-col">
+                  <div className="min-h-[300px] flex flex-col">
+                    <BookingForm
+                      value={form}
+                      onChange={setForm}
+                      hideSubmit
+                      isLoading={!!isLoading}
+                      error={null}
+                      mode="description"
+                    />
+                  </div>
+                </div>
+
+                {/* ROW 1, COL 1: Signature/Onsite (Right Bottom) */}
+                <div className="rounded-b-[2rem] lg:rounded-t-none border border-gray-100 bg-white p-5 md:p-6 lg:pt-4 lg:border-t-0 shadow-sm flex flex-col">
+                  <div className="min-h-[300px] flex flex-col">
+                    {service.mode === "ONLINE" ? (
+                      <div className="flex-1 flex flex-col space-y-3">
+                        <SignaturePad
+                          value={consentSignature}
+                          onChange={setConsentSignature}
+                          disabled={!!isLoading}
+                          warning={!consentSignature && (
+                            <AlertBox type="warning" message="กรุณาเซ็นยินยอมการจองออนไลน์" />
+                          )}
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex-1 flex flex-col">
+                        <div className="flex-1 flex items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50 text-slate-400 text-sm min-h-[220px]">
+                          ไม่ต้องเซ็นชื่อสำหรับการเข้าพบที่ศูนย์
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
               </div>
-
-              {/* ROW 1, COL 0: Description (Left Bottom) */}
-              <div className="rounded-b-[2rem] lg:rounded-t-none border border-gray-100 bg-white p-5 md:p-6 lg:pt-0 lg:border-t-0 shadow-sm">
-                <BookingForm
-                  value={form}
-                  onChange={setForm}
-                  hideSubmit
-                  isLoading={!!isLoading}
-                  error={null}
-                  mode="description"
-                />
-              </div>
-
-              {/* ROW 1, COL 1: Signature/Onsite (Right Bottom) */}
-              <div className="rounded-b-[2rem] lg:rounded-t-none border border-gray-100 bg-white p-5 md:p-6 lg:pt-0 lg:border-t-0 shadow-sm flex flex-col">
-                {service.mode === "ONLINE" ? (
-                  <SignaturePad
-                    value={consentSignature}
-                    onChange={setConsentSignature}
-                    disabled={!!isLoading}
-                  />
-                ) : (
-                  <div className="flex flex-col h-full">
-                    <div className="h-7 flex items-center mb-2">
-                      <span className="text-sm font-black text-slate-800 opacity-0">Placeholder</span>
-                    </div>
-                    <div className="flex-1 flex items-center justify-center border border-dashed border-gray-200 rounded-xl bg-gray-50/30 text-gray-400 text-sm italic min-h-[220px]">
-                      ไม่ต้องเซ็นชื่อสำหรับการเข้าพบที่ศูนย์
-                    </div>
-                  </div>
-                )}
-                {error && <div className="mt-4"><AlertBox type="error" message={error} /></div>}
-              </div>
-
             </div>
+
+            {error && <div className="mt-4 px-4"><AlertBox type="error" message={error} /></div>}
           </div>
 
           {/* FOOTER */}

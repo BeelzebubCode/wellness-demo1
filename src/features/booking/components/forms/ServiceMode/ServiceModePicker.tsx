@@ -56,7 +56,6 @@ export function ServiceModePicker({
   return (
     <div className="space-y-3" ref={wrapRef}>
       <div>
-
         <div className="grid grid-cols-2 gap-2">
           <SegBtn
             active={mode === ServiceModeEnum.ONSITE}
@@ -126,11 +125,11 @@ export function ServiceModePicker({
 
                       // normal
                       !active &&
-                        "bg-white border-gray-200 hover:border-primary-300 hover:shadow-sm",
+                      "bg-white border-gray-200 hover:border-primary-300 hover:shadow-sm",
 
                       // active
                       active &&
-                        "bg-primary-50 border-primary-500 ring-2 ring-primary-200 shadow-sm",
+                      "bg-primary-50 border-primary-500 ring-2 ring-primary-200 shadow-sm",
 
                       // disabled
                       disabled && "opacity-50 cursor-not-allowed",
@@ -154,7 +153,7 @@ export function ServiceModePicker({
 
 
 
-          <p className="mt-2 text-xs text-gray-500">
+          <p className="mt-4 text-xs text-gray-500">
             เลือกช่องทางที่สะดวก ระบบจะแจ้งลิงก์/รายละเอียดภายหลัง
           </p>
         </div>
