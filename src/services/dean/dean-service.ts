@@ -128,36 +128,94 @@ export const DeanService = {
             problem_category_name_en: true,
           },
         },
+        student: {
+          select: {
+            profile: {
+              select: {
+                student_gender: true,
+              },
+            },
+          },
+        },
       },
     });
 
     // Calculate risk distribution
     const riskDistribution = {
-      critical: 0,
-      high: 0,
-      moderate: 0,
-      normal: 0,
+      HIGH: 0,
+      MEDIUM: 0,
+      LOW: 0,
+      NORMAL: 0,
     };
 
     bookings.forEach((booking) => {
       const riskLevel = booking.outcome?.booking_outcome_risk_level || 0;
       if (riskLevel >= 5) {
-        riskDistribution.critical++;
+        riskDistribution.HIGH++;
       } else if (riskLevel === 4) {
-        riskDistribution.high++;
+        riskDistribution.MEDIUM++;
       } else if (riskLevel === 3) {
-        riskDistribution.moderate++;
+        riskDistribution.LOW++;
       } else {
-        riskDistribution.normal++;
+        riskDistribution.NORMAL++;
       }
     });
 
     // Calculate problem breakdown
-    const problemBreakdown: Record<string, number> = {};
+    const problemStats: Record<string, number> = {};
     bookings.forEach((booking) => {
       const code = booking.problemCategory?.problem_category_code;
       if (code) {
-        problemBreakdown[code] = (problemBreakdown[code] || 0) + 1;
+        problemStats[code] = (problemStats[code] || 0) + 1;
+      }
+    });
+
+    // Calculate gender vs problem stats
+    const genderProblemStats: Record<string, Record<string, number>> = {
+      Male: {},
+      Female: {},
+    };
+
+    bookings.forEach((booking) => {
+      const gender = booking.student?.profile?.student_gender;
+      const code = booking.problemCategory?.problem_category_code;
+
+      if (code && gender && (gender === "MALE" || gender === "FEMALE")) {
+        const genderKey = gender === "MALE" ? "Male" : "Female";
+        if (!genderProblemStats[genderKey][code]) {
+          genderProblemStats[genderKey][code] = 0;
+        }
+        genderProblemStats[genderKey][code]++;
+      }
+    });
+
+    // Calculate visits by month
+    const visitsByMonth: Record<string, number> = {};
+    bookings.forEach((booking) => {
+      const createdAt = booking.booking_created_at;
+      if (createdAt) {
+        const monthKey = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, '0')}`;
+        visitsByMonth[monthKey] = (visitsByMonth[monthKey] || 0) + 1;
+      }
+    });
+
+    // Calculate repeat consultation stats
+    const studentVisitCounts: Record<number, number> = {};
+    bookings.forEach((booking) => {
+      const studentId = booking.student_id;
+      studentVisitCounts[studentId] = (studentVisitCounts[studentId] || 0) + 1;
+    });
+
+    const repeatStats = {
+      single: 0,
+      repeat: 0,
+    };
+
+    Object.values(studentVisitCounts).forEach((count) => {
+      if (count === 1) {
+        repeatStats.single++;
+      } else if (count > 1) {
+        repeatStats.repeat++;
       }
     });
 
@@ -208,7 +266,10 @@ export const DeanService = {
       totalDepartments: departments.length,
       totalBookings: bookings.length,
       riskDistribution,
-      problemBreakdown,
+      problemStats,
+      genderProblemStats,
+      visitsByMonth,
+      repeatStats,
       departmentStats,
     };
   },

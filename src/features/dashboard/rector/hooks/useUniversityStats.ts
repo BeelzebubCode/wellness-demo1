@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from "react";
 
-interface FacultyStats {
+interface UniversityStats {
     totalStudents: number;
     totalBookings: number;
-    facultyName: string;
-    facultyCode: string;
+    universityId: number;
     universityName: string;
     riskDistribution: {
         HIGH: number;
@@ -21,44 +20,36 @@ interface FacultyStats {
         single: number;
         repeat: number;
     };
+    facultyBreakdown: Array<{
+        facultyName: string;
+        studentCount: number;
+        highRiskCount: number;
+        mediumRiskCount: number;
+        lowRiskCount: number;
+    }>;
+    riskTrends: Array<{
+        month: string;
+        averageRisk: number;
+    }>;
 }
 
-interface StudentListItem {
-    id: number;
-    code: string | null;
-    name: string;
-    department: string | undefined;
-    latestRisk: number;
-    lastActivity: Date | null;
-}
-
-interface RiskTrendItem {
-    month: string;
-    averageRisk: number;
-}
-
-export function useFacultyStats(facultyCode?: string) {
-    const [stats, setStats] = useState<FacultyStats | null>(null);
+export function useUniversityStats() {
+    const [stats, setStats] = useState<UniversityStats | null>(null);
     const [analytics, setAnalytics] = useState<any>(null);
-    const [students, setStudents] = useState<StudentListItem[]>([]);
-    const [riskTrends, setRiskTrends] = useState<RiskTrendItem[]>([]);
+    const [facultyBreakdown, setFacultyBreakdown] = useState<any[]>([]);
+    const [riskTrends, setRiskTrends] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [filters, setFilters] = useState<any>({ riskLevel: "ALL" });
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         async function fetchData() {
             setIsLoading(true);
             try {
-                const url = facultyCode
-                    ? `/api/v2/dean/dashboard?facultyCode=${encodeURIComponent(facultyCode)}`
-                    : "/api/v2/dean/dashboard";
-
-                const response = await fetch(url);
+                const response = await fetch("/api/v2/rector/university-stats");
                 const result = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(result.error || "Failed to fetch faculty stats");
+                    throw new Error(result.error || "Failed to fetch university stats");
                 }
 
                 if (result.success) {
@@ -67,14 +58,15 @@ export function useFacultyStats(facultyCode?: string) {
                     setStats({
                         totalStudents: data.totalStudents,
                         totalBookings: data.totalBookings,
-                        facultyName: data.facultyName,
-                        facultyCode: data.facultyCode,
+                        universityId: data.universityId,
                         universityName: data.universityName,
                         riskDistribution: data.riskDistribution,
                         problemStats: data.problemStats,
                         genderProblemStats: data.genderProblemStats,
                         visitsByMonth: data.visitsByMonth,
                         repeatStats: data.repeatStats,
+                        facultyBreakdown: data.facultyBreakdown || [],
+                        riskTrends: data.riskTrends || [],
                     });
 
                     setAnalytics({
@@ -85,16 +77,13 @@ export function useFacultyStats(facultyCode?: string) {
                         riskDistribution: data.riskDistribution,
                     });
 
-                    // Mock student data for now - will be replaced with actual API call
-                    setStudents(data.students || []);
-
-                    // Mock risk trends for now - will be replaced with actual calculation
+                    setFacultyBreakdown(data.facultyBreakdown || []);
                     setRiskTrends(data.riskTrends || []);
                 } else {
                     throw new Error(result.error || "Unknown error");
                 }
             } catch (err: any) {
-                console.error("Error fetching faculty stats:", err);
+                console.error("Error fetching university stats:", err);
                 setError(err.message);
             } finally {
                 setIsLoading(false);
@@ -102,7 +91,7 @@ export function useFacultyStats(facultyCode?: string) {
         }
 
         fetchData();
-    }, [facultyCode, filters]);
+    }, []);
 
-    return { stats, analytics, students, riskTrends, isLoading, filters, setFilters, error };
+    return { stats, analytics, facultyBreakdown, riskTrends, isLoading, error };
 }

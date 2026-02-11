@@ -2,7 +2,7 @@
 "use client";
 
 
-import type { RefObject } from "react"; 
+import type { RefObject } from "react";
 import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui";
 import type { FilterDef } from "./types";
@@ -60,7 +60,7 @@ export function FilterPopover<TFilters extends Record<string, any>>({
                   className={[
                     "w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-left transition",
                     isSelected
-                      ? "bg-indigo-600 text-white border-indigo-600"
+                      ? "bg-primary text-white border-primary shadow-sm"
                       : "bg-white hover:bg-gray-50 border-gray-200",
                   ].join(" ")}
                 >

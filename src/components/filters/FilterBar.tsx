@@ -122,7 +122,7 @@ export function FilterBar<TFilters extends Record<string, any>>({
             <SlidersHorizontal className="w-4 h-4 mr-1" />
             ตัวกรอง
             {activeDefs.length > 0 && (
-              <span className="ml-2 px-2 py-0.5 text-xs bg-indigo-100 text-indigo-700 rounded-full">
+              <span className="ml-2 px-2 py-0.5 text-xs bg-primary-100 text-primary-600 rounded-full font-bold">
                 {activeDefs.length}
               </span>
             )}

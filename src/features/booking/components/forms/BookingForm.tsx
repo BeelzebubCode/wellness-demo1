@@ -152,7 +152,7 @@ export function BookingForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div>
-        <label className="block text-sm font-bold text-black-700 mb-3">
+        <label className="block text-sm font-black text-slate-800 mb-3 tracking-tight">
           ประเภทปัญหาที่ต้องการปรึกษา <span className="text-red-500 ">*</span>
         </label>
 
@@ -169,7 +169,7 @@ export function BookingForm({
           </div>
         ) : (
           <>
-            <div className="grid [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))] gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {categories.map((c) => {
                 const isSelected = formData.problemCategoryId === c.id;
                 const codeUpper = String(c.code ?? "").trim().toUpperCase();
@@ -191,7 +191,7 @@ export function BookingForm({
                       setHasSubmitted(false);
                     }}
                     className={cn(
-                      "flex items-center gap-2 rounded-xl border-2 p-3 text-left text-sm transition-all",
+                      "flex items-center gap-2 rounded-xl border-2 p-3.5 text-left text-xs transition-all",
                       isSelected
                         ? "border-primary-500 bg-primary-50 text-primary-800 shadow-sm"
                         : "border-gray-200 text-gray-700 hover:border-primary-200 hover:bg-primary-50/40",
@@ -199,10 +199,10 @@ export function BookingForm({
                     )}
                     disabled={isLoading}
                   >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50">
-                      <Icon className={cn("h-5 w-5", config.color)} />
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-50">
+                      <Icon className={cn("h-4 w-4", config.color)} />
                     </div>
-                    <span className="font-medium leading-snug break-words">{c.nameTh}</span>
+                    <span className="font-medium leading-tight break-words translate-y-[2px]">{c.nameTh}</span>
                   </button>
                 );
               })}
@@ -245,7 +245,7 @@ export function BookingForm({
       ) : null}
 
       <div>
-        <label className="block text-sm text-black-700 mb-2">
+        <label className="block text-sm font-black text-slate-800 mb-2 tracking-tight">
           รายละเอียดเพิ่มเติม <span className="text-red-500">*</span>
         </label>
 

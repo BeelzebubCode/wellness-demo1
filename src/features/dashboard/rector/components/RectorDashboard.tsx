@@ -1,53 +1,138 @@
-// features/dashboard/rector/components/RectorDashboard.tsx
 "use client";
 
-import { useRectorStats } from "../hooks/useRectorStats";
-import { RectorCharts } from "./RectorCharts";
-import { RectorKPI } from "./RectorKPI";
+import { useUniversityStats } from "../hooks/useUniversityStats";
+import { RectorStatsCards } from "./RectorStatsCards";
+import { RectorAnalyticsCharts } from "./RectorAnalyticsCharts";
+import { RectorStudentList } from "./RectorStudentList";
+import { RectorRiskChart } from "./RectorRiskChart";
 import { LoadingSpinner } from "@/components/ui";
 
 import { FilterBar } from "@/components/filters/FilterBar";
+import { FilterDef } from "@/components/filters/types";
+
+const FILTER_DEFS: FilterDef<any>[] = [
+  {
+    key: "riskLevel",
+    label: "ระดับความเสี่ยง",
+    type: "select",
+    options: [
+      { label: "ทั้งหมด", value: "ALL" },
+      { label: "🔴 เสี่ยงสูง (High)", value: "HIGH" },
+      { label: "🟠 เสี่ยงปานกลาง (Medium)", value: "MEDIUM" },
+      { label: "🟢 เสี่ยงต่ำ (Low)", value: "LOW" },
+      { label: "⚪ ปกติ (Normal)", value: "NORMAL" },
+    ],
+    placeholder: "ทั้งหมด",
+  },
+];
 
 export function RectorDashboard() {
-  const { data, isLoading, filters, setFilters } = useRectorStats();
+  const { stats, analytics, facultyBreakdown, riskTrends, isLoading, error } = useUniversityStats();
 
-  if (isLoading && !data) {
+  if (isLoading || !stats) {
     return (
-      <div className="h-64 flex items-center justify-center">
+      <div className="h-64 flex items-center justify-center bg-slate-50 rounded-xl">
         <LoadingSpinner />
       </div>
     );
   }
 
+  if (error) {
+    return (
+      <div className="h-64 flex items-center justify-center bg-red-50 rounded-xl">
+        <p className="text-red-600">เกิดข้อผิดพลาด: {error}</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex flex-col gap-1">
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Executive Dashboard</h1>
-            <p className="text-gray-500">ภาพรวมสถิติสุขภาพจิตและการใช้งานระบบของมหาวิทยาลัย</p>
-        </div>
-        
-        <div className="shrink-0">
-            <FilterBar 
-                defs={[]}
-                value={filters}
-                onChange={setFilters}
-                dateKey="startDate" // Using startDate as key triggers date picker range logic if supported, or single date. 
-                                    // Our FilterBar prop name is dateKey, but it usually sets a single 'date'. 
-                                    // If we need range, we might need to check if FilterBar supports it.
-                                    // Looking at FilterBar code: 
-                                    // `dateYMD = dateKey ? String((value as any)[dateKey] ?? "").trim() : "";`
-                                    // It seems to support single date. 
-                                    // However, user asked for "Date Range". 
-                                    // For now let's enable the single date picker as a start, or check DateCalendarPopover support.
-                                    // If strict range is needed, we might need deeper changes. 
-                                    // Let's assume standard date filter for now.
-            />
-        </div>
+    <div
+      className="space-y-8 p-6 rounded-2xl min-h-screen"
+      style={{ backgroundColor: `rgba(var(--primary), 0.03)` }}
+    >
+      {/* ===== Header ===== */}
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tighter">
+          แผงควบคุมอธิการบดี
+        </h1>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">
+          ภาพรวมการดูแลนิสิตทั้งมหาวิทยาลัย {stats.universityName}
+        </p>
       </div>
 
-      <RectorKPI data={data!.kpi} />
-      <RectorCharts data={data!} />
+      {/* ===== Stats Cards ===== */}
+      <div className="bg-white rounded-2xl p-4 shadow-sm">
+        <RectorStatsCards stats={stats} />
+      </div>
+
+      {/* ===== Analytics Section ===== */}
+      {analytics && (
+        <div
+          className="rounded-[2.5rem] p-8"
+          style={{
+            background: `linear-gradient(145deg, rgb(var(--bg-grad-1)) 0%, rgb(var(--bg-grad-2)) 100%)`
+          }}
+        >
+          <div className="mb-6 flex flex-col gap-1">
+            <h2
+              className="text-2xl font-black tracking-tighter"
+              style={{ color: `rgb(var(--primary-600))` }}
+            >
+              ภาพรวมเชิงวิเคราะห์ระดับมหาวิทยาลัย
+            </h2>
+            <p className="text-sm font-bold opacity-70 tracking-tight" style={{ color: `rgb(var(--primary))` }}>
+              แนวโน้มและสถิติด้านสุขภาวะของนิสิตทุกคณะในมหาวิทยาลัย
+            </p>
+          </div>
+          <RectorAnalyticsCharts analytics={analytics} />
+        </div>
+      )}
+
+      {/* ===== Main Content ===== */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* --- Faculty Overview Table --- */}
+        <div className="lg:col-span-2 bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 space-y-6">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-xl font-bold text-slate-900 border-l-4 border-[rgb(var(--primary))] pl-4 tracking-tight">
+              ภาพรวมนิสิตแยกตามคณะ
+            </h2>
+            <p className="text-sm text-slate-400 ml-5 font-medium tracking-tight">
+              สรุปจำนวนนิสิตและระดับความเสี่ยงในแต่ละคณะ
+            </p>
+          </div>
+
+          <FilterBar
+            defs={FILTER_DEFS}
+            value={{}}
+            onChange={() => { }} // Placeholder for now
+            searchKey="search"
+            searchPlaceholder="ค้นหาคณะ หรือรหัส..."
+          />
+
+          <RectorStudentList data={facultyBreakdown || []} />
+        </div>
+
+        {/* --- Risk Trend --- */}
+        <div
+          className="rounded-[2rem] p-6 shadow-sm flex flex-col"
+          style={{
+            background: `linear-gradient(135deg, rgba(var(--primary), 0.05) 0%, rgba(var(--accent), 0.05) 100%)`,
+          }}
+        >
+          <div className="mb-4 flex flex-col gap-1">
+            <h2 className="text-lg font-bold tracking-tight" style={{ color: `rgb(var(--primary-600))` }}>
+              แนวโน้มความเสี่ยง
+            </h2>
+            <p className="text-xs font-bold uppercase tracking-tight opacity-60" style={{ color: `rgb(var(--primary))` }}>
+              Average Risk Trend (6m)
+            </p>
+          </div>
+
+          <div className="flex-1 min-h-[300px]">
+            <RectorRiskChart data={riskTrends || []} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

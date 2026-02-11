@@ -42,17 +42,17 @@ export function FilterChipsRow<TFilters extends Record<string, any>>({
         return (
           <div
             key={String(def.key)}
-            className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-full px-3 py-1.5 text-xs shrink-0"
+            className="inline-flex items-center gap-2 bg-primary-50 border border-primary-200 rounded-full px-3 py-1.5 text-xs shrink-0"
           >
-            <span className="font-medium text-indigo-800">{def.label}:</span>
-            <span className="text-indigo-600">{preview}</span>
+            <span className="font-semibold text-primary-600">{def.label}:</span>
+            <span className="text-primary-500 font-medium">{preview}</span>
             <button
-              className="p-0.5 hover:bg-indigo-100 rounded-full"
+              className="p-0.5 hover:bg-primary-100 rounded-full transition-colors"
               onClick={() => onRemove(def.key)}
               type="button"
               title="ลบตัวกรองนี้"
             >
-              <X className="w-3.5 h-3.5 text-indigo-500" />
+              <X className="w-3.5 h-3.5 text-primary-400" />
             </button>
           </div>
         );

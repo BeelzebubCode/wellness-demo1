@@ -114,26 +114,25 @@ export function Modal(props: ModalProps) {
         onClick={(e) => e.stopPropagation()}
       >
         {(title || showCloseButton) && (
-          <div className="flex items-start justify-between px-5 py-4 border-b border-gray-100">
-            <div className="min-w-0">
+          <div className="flex items-center justify-between px-6 h-14 border-b border-gray-100 shrink-0 bg-white">
+            {/* Title Section */}
+            <div className="flex items-center min-w-0">
               {title && (
-                <h2 className={cn("text-gray-900 truncate", titleStyles[titleSize])}>
+                <h2 className={cn("text-gray-900 truncate font-black tracking-tight translate-y-[10px]", titleStyles[titleSize])}>
                   {title}
                 </h2>
               )}
-              {description && (
-                <p className="mt-1 text-xs text-gray-500">{description}</p>
-              )}
             </div>
 
+            {/* Close Button Section */}
             {showCloseButton && (
               <button
                 type="button"
                 onClick={close}
                 aria-label="ปิด"
-                className="ml-3 rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                className="flex items-center justify-center w-10 h-10 rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 shrink-0"
               >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
