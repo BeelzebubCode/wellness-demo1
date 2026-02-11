@@ -118,32 +118,32 @@ export function SignaturePad({
   };
 
   return (
-    <div className={cn("space-y-2", className)}>
-      <div className="flex items-center justify-between">
-        <div className="text-sm font-bold text-black-700">
+    <div className={cn("flex flex-col h-full", className)}>
+      <div className="h-7 flex items-center justify-between mb-2 shrink-0">
+        <label className="text-sm font-black text-slate-800 tracking-tight">
           ลายเซ็นยินยอม (Online) <span className="text-red-500">*</span>
-        </div>
+        </label>
 
         <button
           type="button"
           onClick={clear}
           disabled={disabled}
-          className="text-xs px-2 py-1 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 disabled:opacity-50"
         >
           ล้างลายเซ็น
         </button>
       </div>
 
-      <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+      <div className="h-[220px] min-h-[220px] rounded-xl border border-gray-200 bg-white overflow-hidden relative">
         <canvas
           ref={canvasRef}
           width={size.w}
           height={size.h}
-          className={cn("w-full h-[140px] md:h-[160px] touch-none", disabled && "opacity-60")}
+          className={cn("w-full h-full touch-none absolute inset-0", disabled && "opacity-60")}
         />
       </div>
 
-      <p className="text-[11px] text-gray-500">
+      <p className="mt-2 text-[11px] text-gray-400">
         กรุณาเซ็นเพื่อยืนยันความยินยอมในการรับบริการแบบออนไลน์
       </p>
     </div>

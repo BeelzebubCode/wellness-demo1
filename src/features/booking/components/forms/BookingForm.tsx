@@ -36,6 +36,7 @@ export function BookingForm({
   value,
   onChange,
   hideSubmit = false,
+  mode = "both",
 }: {
   onSubmit?: (data: BookingFormData) => void | Promise<void>;
   isLoading?: boolean;
@@ -45,6 +46,7 @@ export function BookingForm({
   value?: BookingFormData;
   onChange?: (v: BookingFormData) => void;
   hideSubmit?: boolean;
+  mode?: "both" | "categories" | "description";
 }) {
   const [formData, setFormData] = useState<BookingFormData>(
     value ?? { problemCategoryId: 0, problemTypeOther: "", problemDescription: "" },
@@ -150,75 +152,77 @@ export function BookingForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      <div>
-        <label className="block text-sm font-black text-slate-800 mb-3 tracking-tight">
-          ประเภทปัญหาที่ต้องการปรึกษา <span className="text-red-500 ">*</span>
-        </label>
-
-        {isCatLoading ? (
-          <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-500">
-            กำลังโหลดประเภทปัญหา...
-          </div>
-        ) : catError ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-3">
-            <p className="flex items-start gap-2 text-xs text-red-700">
-              <AlertTriangle className="mt-0.5 h-4 w-4" />
-              <span>{catError}</span>
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-2 gap-2">
-              {categories.map((c) => {
-                const isSelected = formData.problemCategoryId === c.id;
-                const codeUpper = String(c.code ?? "").trim().toUpperCase();
-
-                const config = getProblemCategoryUi(c.code);
-                const Icon = config.icon;
-
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => {
-                      if (isLoading) return;
-                      update({
-                        problemCategoryId: c.id,
-                        problemTypeOther: codeUpper === "OTHER" ? formData.problemTypeOther : "",
-                      });
-                      setErrors((prev) => ({ ...prev, problemCategoryId: undefined }));
-                      setHasSubmitted(false);
-                    }}
-                    className={cn(
-                      "flex items-center gap-2 rounded-xl border-2 p-3.5 text-left text-xs transition-all",
-                      isSelected
-                        ? "border-primary-500 bg-primary-50 text-primary-800 shadow-sm"
-                        : "border-gray-200 text-gray-700 hover:border-primary-200 hover:bg-primary-50/40",
-                      isLoading && "opacity-60 cursor-not-allowed",
-                    )}
-                    disabled={isLoading}
-                  >
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-50">
-                      <Icon className={cn("h-4 w-4", config.color)} />
-                    </div>
-                    <span className="font-medium leading-tight break-words translate-y-[2px]">{c.nameTh}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {hasSubmitted && errors.problemCategoryId ? (
-              <div className="mt-3">
-                <AlertBox type="error" message={errors.problemCategoryId} />
-              </div>
-            ) : null}
-          </>
-        )}
-      </div>
-
-      {isOtherSelected ? (
+    <form onSubmit={handleSubmit} className={cn("space-y-5", mode !== "both" && "space-y-0")}>
+      {(mode === "both" || mode === "categories") && (
         <div>
+          <label className="block text-sm font-black text-slate-800 mb-3 tracking-tight">
+            ประเภทปัญหาที่ต้องการปรึกษา <span className="text-red-500 ">*</span>
+          </label>
+
+          {isCatLoading ? (
+            <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-500">
+              กำลังโหลดประเภทปัญหา...
+            </div>
+          ) : catError ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-3">
+              <p className="flex items-start gap-2 text-xs text-red-700">
+                <AlertTriangle className="mt-0.5 h-4 w-4" />
+                <span>{catError}</span>
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                {categories.map((c) => {
+                  const isSelected = formData.problemCategoryId === c.id;
+                  const codeUpper = String(c.code ?? "").trim().toUpperCase();
+
+                  const config = getProblemCategoryUi(c.code);
+                  const Icon = config.icon;
+
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        if (isLoading) return;
+                        update({
+                          problemCategoryId: c.id,
+                          problemTypeOther: codeUpper === "OTHER" ? formData.problemTypeOther : "",
+                        });
+                        setErrors((prev) => ({ ...prev, problemCategoryId: undefined }));
+                        setHasSubmitted(false);
+                      }}
+                      className={cn(
+                        "flex items-center gap-2 rounded-xl border-2 p-3.5 text-left text-xs transition-all",
+                        isSelected
+                          ? "border-primary-500 bg-primary-50 text-primary-800 shadow-sm"
+                          : "border-gray-200 text-gray-700 hover:border-primary-200 hover:bg-primary-50/40",
+                        isLoading && "opacity-60 cursor-not-allowed",
+                      )}
+                      disabled={isLoading}
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-50">
+                        <Icon className={cn("h-4 w-4", config.color)} />
+                      </div>
+                      <span className="font-medium leading-tight break-words translate-y-[2px]">{c.nameTh}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {hasSubmitted && errors.problemCategoryId ? (
+                <div className="mt-3">
+                  <AlertBox type="error" message={errors.problemCategoryId} />
+                </div>
+              ) : null}
+            </>
+          )}
+        </div>
+      )}
+
+      {(mode === "both" || mode === "categories") && isOtherSelected && (
+        <div className={cn(mode === "both" && "mt-5")}>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             กรุณาระบุประเภทปัญหา
           </label>
@@ -242,51 +246,62 @@ export function BookingForm({
             </div>
           ) : null}
         </div>
-      ) : null}
+      )}
 
-      <div>
-        <label className="block text-sm font-black text-slate-800 mb-2 tracking-tight">
-          รายละเอียดเพิ่มเติม <span className="text-red-500">*</span>
-        </label>
-
-        <textarea
-          value={formData.problemDescription || ""}
-          disabled={isLoading}
-          onChange={(e) => {
-            if (isLoading) return;
-            update({ problemDescription: e.target.value });
-            if (hasSubmitted) setErrors((prev) => ({ ...prev, problemDescription: undefined }));
-          }}
-          rows={4}
-          placeholder="อธิบายปัญหาหรือสิ่งที่ต้องการปรึกษาเพิ่มเติม..."
-          className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 disabled:opacity-60"
-        />
-
-        {hasSubmitted && errors.problemDescription ? (
-          <div className="mt-3">
-            <AlertBox type="error" message={errors.problemDescription} />
+      {(mode === "both" || mode === "description") && (
+        <div className={cn("flex flex-col", mode === "description" && "h-full")}>
+          <div className="h-7 flex items-center mb-2">
+            <label className="block text-sm font-black text-slate-800 tracking-tight">
+              รายละเอียดเพิ่มเติม <span className="text-red-500">*</span>
+            </label>
           </div>
-        ) : null}
+          <textarea
+            value={formData.problemDescription || ""}
+            disabled={isLoading}
+            onChange={(e) => {
+              if (isLoading) return;
+              update({ problemDescription: e.target.value });
+              if (hasSubmitted) setErrors((prev) => ({ ...prev, problemDescription: undefined }));
+            }}
+            className={cn(
+              "w-full h-[220px] min-h-[220px] resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 disabled:opacity-60 mt-0",
+            )}
+            placeholder="อธิบายปัญหาหรือสิ่งที่ต้องการปรึกษาเพิ่มเติม..."
+          />
+        </div>
+      )}
 
-        <p className="mt-1 text-xs text-gray-400">
+      {hasSubmitted && errors.problemDescription && (
+        <div className="mt-2">
+          <AlertBox type="error" message={errors.problemDescription} />
+        </div>
+      )}
+
+      {(mode === "both" || mode === "description") && (
+        <p className="mt-2 text-[11px] text-gray-400">
           ข้อมูลนี้จะถูกเก็บรักษาเป็นความลับ และใช้เพื่อการเตรียมตัวของผู้ให้คำปรึกษาเท่านั้น
         </p>
-      </div>
+      )}
 
-      {error ? <AlertBox type="error" message={error} /> : null}
-
-      {!hideSubmit ? (
-        <Button
-          type="submit"
-          variant="primary"
-          size="lg"
-          className="w-full bg-primary-500 hover:bg-primary-600"
-          isLoading={isLoading}
-          disabled={isLoading || !!disableSubmit}
-        >
-          ยืนยันการจอง
-        </Button>
-      ) : null}
+      {!hideSubmit && (
+        <div className="mt-6">
+          {error && <AlertBox type="error" message={error} />}
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            className="w-full bg-primary-500 hover:bg-primary-600"
+            isLoading={isLoading}
+            disabled={isLoading || !!disableSubmit}
+          >
+            ยืนยันการจอง
+          </Button>
+        </div>
+      )}
     </form>
   );
+}
+
+function isOther(form: BookingFormData) {
+  return !!form.problemTypeOther?.trim();
 }

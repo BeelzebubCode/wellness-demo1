@@ -8,6 +8,7 @@ import type { OnlineChannel, ServiceMode } from "@/shared/types/service";
 
 import { Modal, Button } from "@/components/ui";
 import { AlertBox } from "@/components/notification/AlertBox";
+import { cn } from "@/lib/cn";
 
 import {
   BookingForm,
@@ -104,22 +105,25 @@ export function BookingConfirmModal({
         <div className="flex flex-col overflow-hidden" style={{ maxHeight: "calc(90vh - 80px)" }}>
           {/* BODY */}
           <div className="flex-1 overflow-auto p-4 md:p-5 custom-scroll">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
-              {/* LEFT: Booking Form */}
-              <div className="rounded-[2rem] border border-gray-100 bg-white p-5 md:p-6 shadow-sm flex flex-col flex-1">
-                <BookingForm
-                  value={form}
-                  onChange={setForm}
-                  hideSubmit
-                  isLoading={!!isLoading}
-                  error={null}
-                />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-2 gap-y-4 lg:gap-y-0 items-stretch">
+
+              {/* ROW 0, COL 0: Categories (Left Top) */}
+              <div className="rounded-t-[2rem] lg:rounded-b-none border border-gray-100 bg-white p-5 md:p-6 lg:pb-0 lg:border-b-0 shadow-sm">
+                <div className="pb-8">
+                  <BookingForm
+                    value={form}
+                    onChange={setForm}
+                    hideSubmit
+                    isLoading={!!isLoading}
+                    error={null}
+                    mode="categories"
+                  />
+                </div>
               </div>
 
-              {/* RIGHT: Service Mode & Consent */}
-              <div className="rounded-[2rem] border border-gray-100 bg-white p-5 md:p-6 shadow-sm flex flex-col flex-1">
-                <div className="flex-1 flex flex-col space-y-6">
-                  {/* Service mode */}
+              {/* ROW 0, COL 1: Service Mode & Consent (Right Top) */}
+              <div className="rounded-t-[2rem] lg:rounded-b-none border border-gray-100 bg-white p-5 md:p-6 lg:pb-0 lg:border-b-0 shadow-sm">
+                <div className="space-y-5 pb-8">
                   <div className="space-y-4">
                     <label className="text-sm font-black text-slate-800 flex items-center gap-1 tracking-tight">
                       ประเภทการเข้าพบ <span className="text-red-500">*</span>
@@ -133,49 +137,55 @@ export function BookingConfirmModal({
                         }
                       }}
                     />
-
                     {needsOnlineChannel && !service.onlineChannel && (
-                      <AlertBox
-                        type="warning"
-                        message="กรุณาเลือกช่องทางออนไลน์ก่อนทำการจอง"
-                      />
+                      <div className="mt-3">
+                        <AlertBox type="warning" message="กรุณาเลือกช่องทางออนไลน์ก่อนทำการจอง" />
+                      </div>
                     )}
                   </div>
 
-                  {/* Consent */}
-                  <div className="space-y-4">
-                    <ConsentBlock
-                      checked={consentChecked}
-                      onChange={setConsentChecked}
-                    />
+                  <div className="space-y-3">
+                    <ConsentBlock checked={consentChecked} onChange={setConsentChecked} />
                     {!consentChecked && (
-                      <AlertBox
-                        type="warning"
-                        message="กรุณายอมรับเงื่อนไขก่อนทำการจอง"
-                      />
+                      <AlertBox type="warning" message="กรุณายอมรับเงื่อนไขก่อนทำการจอง" />
                     )}
                   </div>
-
-                  {/* Signature Pad for Online */}
-                  {service.mode === "ONLINE" && (
-                    <div className="space-y-4">
-                      <SignaturePad
-                        value={consentSignature}
-                        onChange={setConsentSignature}
-                        disabled={!!isLoading}
-                      />
-                      {!consentSignature && (
-                        <AlertBox
-                          type="warning"
-                          message="กรุณาเซ็นลายเซ็นยินยอมก่อนทำการจองออนไลน์"
-                        />
-                      )}
-                    </div>
-                  )}
-
-                  {error && <AlertBox type="error" message={error} />}
                 </div>
               </div>
+
+              {/* ROW 1, COL 0: Description (Left Bottom) */}
+              <div className="rounded-b-[2rem] lg:rounded-t-none border border-gray-100 bg-white p-5 md:p-6 lg:pt-0 lg:border-t-0 shadow-sm">
+                <BookingForm
+                  value={form}
+                  onChange={setForm}
+                  hideSubmit
+                  isLoading={!!isLoading}
+                  error={null}
+                  mode="description"
+                />
+              </div>
+
+              {/* ROW 1, COL 1: Signature/Onsite (Right Bottom) */}
+              <div className="rounded-b-[2rem] lg:rounded-t-none border border-gray-100 bg-white p-5 md:p-6 lg:pt-0 lg:border-t-0 shadow-sm flex flex-col">
+                {service.mode === "ONLINE" ? (
+                  <SignaturePad
+                    value={consentSignature}
+                    onChange={setConsentSignature}
+                    disabled={!!isLoading}
+                  />
+                ) : (
+                  <div className="flex flex-col h-full">
+                    <div className="h-7 flex items-center mb-2">
+                      <span className="text-sm font-black text-slate-800 opacity-0">Placeholder</span>
+                    </div>
+                    <div className="flex-1 flex items-center justify-center border border-dashed border-gray-200 rounded-xl bg-gray-50/30 text-gray-400 text-sm italic min-h-[220px]">
+                      ไม่ต้องเซ็นชื่อสำหรับการเข้าพบที่ศูนย์
+                    </div>
+                  </div>
+                )}
+                {error && <div className="mt-4"><AlertBox type="error" message={error} /></div>}
+              </div>
+
             </div>
           </div>
 

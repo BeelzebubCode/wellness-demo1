@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useUniversityStats } from "../hooks/useUniversityStats";
 import { RectorStatsCards } from "./RectorStatsCards";
 import { RectorAnalyticsCharts } from "./RectorAnalyticsCharts";
@@ -28,6 +29,7 @@ const FILTER_DEFS: FilterDef<any>[] = [
 
 export function RectorDashboard() {
   const { stats, analytics, facultyBreakdown, riskTrends, isLoading, error } = useUniversityStats();
+  const [filters, setFilters] = useState<any>({});
 
   if (isLoading || !stats) {
     return (
@@ -103,8 +105,8 @@ export function RectorDashboard() {
 
           <FilterBar
             defs={FILTER_DEFS}
-            value={{}}
-            onChange={() => { }} // Placeholder for now
+            value={filters}
+            onChange={setFilters}
             searchKey="search"
             searchPlaceholder="ค้นหาคณะ หรือรหัส..."
           />
