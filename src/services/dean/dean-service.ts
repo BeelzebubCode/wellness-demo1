@@ -240,7 +240,7 @@ export const DeanService = {
     `;
 
     const problemStats: Record<string, number> = {};
-    const genderProblemStats: Record<string, Record<string, number>> = { Male: {}, Female: {} };
+    const genderProblemStats: Record<string, Record<string, number>> = { Male: {}, Female: {}, Other: {} };
 
     problemGenderStats.forEach(row => {
       const count = Number(row.count);
@@ -249,6 +249,8 @@ export const DeanService = {
         genderProblemStats.Male[row.name] = (genderProblemStats.Male[row.name] || 0) + count;
       } else if (row.gender === 'FEMALE') {
         genderProblemStats.Female[row.name] = (genderProblemStats.Female[row.name] || 0) + count;
+      } else {
+        genderProblemStats.Other[row.name] = (genderProblemStats.Other[row.name] || 0) + count;
       }
     });
 

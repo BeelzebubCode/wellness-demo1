@@ -190,39 +190,38 @@ export function DeanAnalytics({ stats }: DeanAnalyticsProps) {
     // Build gender breakdown for each problem
     const maleStats = stats.genderProblemStats?.Male || {};
     const femaleStats = stats.genderProblemStats?.Female || {};
+    const otherStats = stats.genderProblemStats?.Other || {}; // Support 'Other'
 
-    // 4. Problem Stats & Gender (Butterfly Chart)
+    // 4. Problem Stats & Gender (Stacked Bar Chart - 3 Categories)
     const problemBarData: ChartData<'bar'> = {
         labels: topProblems.map(([name]) => name),
         datasets: [
             {
                 label: 'ชาย',
-                data: topProblems.map(([name]) => {
-                    const count = stats.genderProblemStats.Male[name] || 0;
-                    return count * -1; // Negative for Left side
-                }),
+                data: topProblems.map(([name]) => maleStats[name] || 0),
                 backgroundColor: '#60a5fa', // Blue-400
-                barThickness: 20,
-                borderRadius: { topLeft: 4, bottomLeft: 4 },
+                barThickness: 24,
+                borderRadius: 4,
                 borderSkipped: false,
             },
             {
                 label: 'หญิง',
-                data: topProblems.map(([name]) => stats.genderProblemStats.Female[name] || 0),
+                data: topProblems.map(([name]) => femaleStats[name] || 0),
                 backgroundColor: '#f472b6', // Pink-400
-                barThickness: 20,
-                borderRadius: { topRight: 4, bottomRight: 4 },
+                barThickness: 24,
+                borderRadius: 4,
+                borderSkipped: false,
+            },
+            {
+                label: 'อื่นๆ/ไม่ระบุ',
+                data: topProblems.map(([name]) => otherStats[name] || 0),
+                backgroundColor: '#a78bfa', // Violet-400
+                barThickness: 24,
+                borderRadius: 4,
                 borderSkipped: false,
             },
         ],
     };
-
-    const maxVal = Math.max(
-        ...topProblems.map(([name]) => maleStats[name] || 0),
-        ...topProblems.map(([name]) => femaleStats[name] || 0)
-    );
-    // Add 10% buffer
-    const limit = Math.ceil(maxVal * 1.1) || 10;
 
     const problemBarOptions: ChartOptions<'bar'> = {
         indexAxis: 'y',
@@ -230,7 +229,7 @@ export function DeanAnalytics({ stats }: DeanAnalyticsProps) {
         maintainAspectRatio: false,
         layout: {
             padding: {
-                right: 32
+                right: 20
             }
         },
         plugins: {
@@ -240,9 +239,9 @@ export function DeanAnalytics({ stats }: DeanAnalyticsProps) {
                 labels: {
                     usePointStyle: true,
                     pointStyle: 'circle',
-                    padding: 20,
                     font: { size: 12, family: "'Noto Sans Thai', 'Inter', sans-serif" },
-                    color: '#64748b'
+                    color: '#64748b',
+                    padding: 20,
                 },
             },
             tooltip: {
@@ -252,16 +251,14 @@ export function DeanAnalytics({ stats }: DeanAnalyticsProps) {
                 bodyColor: '#e2e8f0',
                 titleFont: { size: 14, weight: 'bold', family: "'Noto Sans Thai', sans-serif" },
                 bodyFont: { size: 13, family: "'Noto Sans Thai', sans-serif" },
-                padding: 16,
+                padding: 12,
                 cornerRadius: 8,
                 displayColors: true,
-                boxPadding: 6,
-                borderColor: 'rgba(255,255,255,0.1)',
-                borderWidth: 1,
+                boxPadding: 4,
                 callbacks: {
                     title: (items) => items[0].label,
                     label: (item) => {
-                        const value = Math.abs(Number(item.raw)); // Absolute value
+                        const value = Number(item.raw);
                         return ` ${item.dataset.label}: ${value.toLocaleString()} ราย`;
                     },
                 },
@@ -269,15 +266,12 @@ export function DeanAnalytics({ stats }: DeanAnalyticsProps) {
         },
         scales: {
             x: {
-                stacked: true, // Stacked for Butterfly
-                min: -limit,
-                max: limit,
+                stacked: true,
                 grid: { color: '#f1f5f9', drawTicks: false },
                 border: { display: false },
                 ticks: {
                     font: { size: 11, family: "'Inter', sans-serif" },
                     color: '#94a3b8',
-                    callback: (value) => Math.abs(Number(value)).toLocaleString(), // Show absolute
                 },
             },
             y: {
