@@ -267,7 +267,7 @@ export function RectorAnalyticsCharts({ analytics }: RectorAnalyticsChartsProps)
     return (
         <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <Card className="bg-white/80 backdrop-blur-sm border-none shadow-sm rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
+                <Card className="bg-white/80 backdrop-blur-sm border-none shadow-2xl rounded-2xl overflow-hidden hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] transition-shadow">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-bold text-slate-700">ประเภทปัญหาของนิสิตทั้งมหาวิทยาลัย</CardTitle>
                     </CardHeader>
@@ -280,7 +280,7 @@ export function RectorAnalyticsCharts({ analytics }: RectorAnalyticsChartsProps)
                     </CardContent>
                 </Card>
 
-                <Card className="bg-white/80 backdrop-blur-sm border-none shadow-sm rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
+                <Card className="bg-white/80 backdrop-blur-sm border-none shadow-2xl rounded-2xl overflow-hidden hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] transition-shadow">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-bold text-slate-700">แยกตามเพศและปัญหา</CardTitle>
                     </CardHeader>
@@ -295,7 +295,7 @@ export function RectorAnalyticsCharts({ analytics }: RectorAnalyticsChartsProps)
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <Card className="md:col-span-2 bg-white/80 backdrop-blur-sm border-none shadow-sm rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
+                <Card className="md:col-span-2 bg-white/80 backdrop-blur-sm border-none shadow-2xl rounded-2xl overflow-hidden hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] transition-shadow">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-bold text-slate-700">ช่วงเวลาการเข้ารับคำปรึกษา (รายเดือน)</CardTitle>
                     </CardHeader>
@@ -308,7 +308,7 @@ export function RectorAnalyticsCharts({ analytics }: RectorAnalyticsChartsProps)
                     </CardContent>
                 </Card>
 
-                <Card className="bg-white/80 backdrop-blur-sm border-none shadow-sm rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
+                <Card className="bg-white/80 backdrop-blur-sm border-none shadow-2xl rounded-2xl overflow-hidden hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] transition-shadow">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-bold text-slate-700">สัดส่วนการมาซ้ำ (Consistency)</CardTitle>
                     </CardHeader>
@@ -320,7 +320,7 @@ export function RectorAnalyticsCharts({ analytics }: RectorAnalyticsChartsProps)
                 </Card>
             </div>
 
-            <Card className="bg-white/90 backdrop-blur-md border-none shadow-sm rounded-[2rem] overflow-hidden">
+            <Card className="bg-white/90 backdrop-blur-md border-none shadow-2xl rounded-[2rem] overflow-hidden">
                 <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-bold text-slate-700">สัดส่วนรายละเอียดเคสตามระดับความเสี่ยง (Case Breakdown)</CardTitle>
                 </CardHeader>

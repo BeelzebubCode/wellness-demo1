@@ -44,15 +44,15 @@ export function RectorDashboard() {
       <div className="flex flex-col md:flex-row justify-between items-end mb-10 border-b border-slate-200 pb-6 gap-3">
         <div>
           <h1 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight leading-none mb-3">
-            University Wellbeing Command
+            ศูนย์บัญชาการด้านสุขภาวะมหาวิทยาลัย
           </h1>
           <p className="text-sm text-slate-500 font-bold tracking-wide">
-            Real-time Governance & Strategic Insight Dashboard
+            แดชบอร์ดการกำกับดูแลและข้อมูลเชิงกลยุทธ์แบบเรียลไทม์
           </p>
         </div>
         <div className="flex items-center gap-2">
           <div className="text-right hidden md:block mr-1">
-            <p className="text-xs font-bold text-slate-400">Last Updated</p>
+            <p className="text-xs font-bold text-slate-400">อัปเดตล่าสุด</p>
             <p className="text-sm font-bold text-slate-700">Today, {new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</p>
           </div>
 
@@ -66,7 +66,7 @@ export function RectorDashboard() {
           </div>
 
           <button className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all">
-            Update Data
+            อัพเดตข้อมูล
           </button>
         </div>
       </div>

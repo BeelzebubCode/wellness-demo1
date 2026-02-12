@@ -185,7 +185,7 @@ export function FacultyRiskBreakdownChart({ data: externalData }: FacultyRiskBre
     };
 
     return (
-        <Card className="h-full border-none shadow-lg shadow-slate-100 rounded-[2rem] bg-gradient-to-br from-white to-slate-50">
+        <Card className="h-full border-none shadow-2xl rounded-[2rem] bg-gradient-to-br from-white to-slate-50">
             <CardContent className="p-10 h-full flex flex-col">
                 {/* Header Section */}
                 <div className="flex justify-between items-start mb-8">

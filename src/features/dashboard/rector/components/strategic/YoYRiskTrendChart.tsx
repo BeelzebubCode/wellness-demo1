@@ -85,7 +85,7 @@ export function YoYRiskTrendChart() {
     };
 
     return (
-        <Card className="h-full border-none shadow-sm rounded-[2rem] bg-white overflow-hidden relative group hover:shadow-md transition-all">
+        <Card className="h-full border-none shadow-2xl rounded-[2rem] bg-white overflow-hidden relative group hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] transition-all">
             <CardContent className="p-6 h-full flex flex-col">
                 <div className="flex justify-between items-start mb-4 z-10">
                     <div>

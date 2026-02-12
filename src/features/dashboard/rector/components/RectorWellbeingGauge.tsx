@@ -65,7 +65,7 @@ export function RectorWellbeingGauge({ score, loading }: RectorWellbeingGaugePro
     };
 
     return (
-        <Card className="h-full border-none shadow-sm shadow-blue-gray-100 rounded-[2rem] bg-white overflow-hidden font-sans">
+        <Card className="h-full border-none shadow-2xl rounded-[2rem] bg-white overflow-hidden font-sans">
             <CardContent className="p-8 flex flex-col items-center justify-between h-full relative">
                 <div className="w-full flex justify-between items-center z-10">
                     <h3 className="text-sm font-bold text-slate-800 tracking-tight">ดัชนีสุขภาวะ (Wellbeing)</h3>

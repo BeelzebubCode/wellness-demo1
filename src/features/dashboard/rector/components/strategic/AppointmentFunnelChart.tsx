@@ -15,7 +15,7 @@ export function AppointmentFunnelChart() {
     ];
 
     return (
-        <Card className="h-full border-none shadow-sm rounded-[2rem] bg-white">
+        <Card className="h-full border-none shadow-2xl rounded-[2rem] bg-white">
             <CardContent className="p-6 h-full flex flex-col">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="text-sm font-bold text-slate-500 flex items-center gap-2">
@@ -41,9 +41,9 @@ export function AppointmentFunnelChart() {
                     ))}
                 </div>
 
-                <div className="mt-4 flex justify-between text-[10px] text-slate-400 font-medium px-4">
-                    <span>Conversion: {Math.round((funnel.completed / funnel.requested) * 100)}%</span>
-                    <span>Drop-off: {Math.round((1 - (funnel.completed / funnel.requested)) * 100)}%</span>
+                <div className="mt-4 flex justify-between text-sm text-slate-400 font-medium px-4">
+                    <span>อัตราความสำเร็จ: {Math.round((funnel.completed / funnel.requested) * 100)}%</span>
+                    <span>อัตราหลุดร่วง: {Math.round((1 - (funnel.completed / funnel.requested)) * 100)}%</span>
                 </div>
             </CardContent>
         </Card>

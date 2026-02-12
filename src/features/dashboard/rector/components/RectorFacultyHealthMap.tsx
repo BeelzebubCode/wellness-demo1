@@ -132,7 +132,7 @@ export function RectorFacultyHealthMap({ data, loading }: RectorFacultyHealthMap
     };
 
     return (
-        <Card className="h-full border-none shadow-sm shadow-blue-gray-100 rounded-[2rem] bg-white overflow-hidden font-sans">
+        <Card className="h-full border-none shadow-2xl rounded-[2rem] bg-white overflow-hidden font-sans">
             <CardContent className="p-8 h-full flex flex-col">
                 <div className="flex justify-between items-center mb-4">
                     <div>

@@ -15,7 +15,7 @@ export function RectorStatsCards({ stats }: { stats: UniversityStats | null }) {
     return (
         <div className="flex flex-col gap-6 h-full font-sans">
             {/* Card 1: Total Students - Indigo Theme */}
-            <Card className="flex-1 border-none shadow-sm shadow-blue-gray-100 rounded-[2rem] bg-white hover:shadow-md transition-all duration-300">
+            <Card className="flex-1 border-none shadow-2xl rounded-[2rem] bg-white hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] transition-all duration-300">
                 <CardContent className="p-8 flex flex-col justify-between h-full">
                     <div className="flex justify-between items-start">
                         <div className="flex flex-col gap-1">
@@ -44,7 +44,7 @@ export function RectorStatsCards({ stats }: { stats: UniversityStats | null }) {
             </Card>
 
             {/* Card 2: Active Cases - Orange Theme */}
-            <Card className="flex-1 border-none shadow-sm shadow-blue-gray-100 rounded-[2rem] bg-white hover:shadow-md transition-all duration-300">
+            <Card className="flex-1 border-none shadow-2xl rounded-[2rem] bg-white hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] transition-all duration-300">
                 <CardContent className="p-8 flex flex-col justify-between h-full">
                     <div className="flex justify-between items-start">
                         <div className="flex flex-col gap-1">

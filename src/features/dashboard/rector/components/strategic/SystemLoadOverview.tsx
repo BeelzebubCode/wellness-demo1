@@ -13,7 +13,7 @@ export function SystemLoadOverview() {
     return (
         <div className="h-full">
             {/* Average Wait Time */}
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white h-full">
+            <Card className="border-none shadow-2xl rounded-[2rem] bg-white h-full">
                 <CardContent className="p-6 flex flex-col justify-between h-full">
                     <div className="flex justify-between items-start">
                         <span className="text-sm font-bold text-slate-400">เวลารอคอยเฉลี่ย</span>

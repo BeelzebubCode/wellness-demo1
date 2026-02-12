@@ -9,7 +9,7 @@ export function IssueFrequencyChart() {
     const maxCount = Math.max(...issues.map(i => i.count));
 
     return (
-        <Card className="h-full border-none shadow-sm rounded-[2rem] bg-white">
+        <Card className="h-full border-none shadow-2xl rounded-[2rem] bg-white">
             <CardContent className="p-6 h-full flex flex-col">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="text-sm font-bold text-slate-500 flex items-center gap-2">

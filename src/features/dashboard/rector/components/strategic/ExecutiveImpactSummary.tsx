@@ -10,7 +10,7 @@ export function ExecutiveImpactSummary() {
     return (
         <div className="h-full flex flex-col gap-4 font-sans">
             {/* Real Data Hero: Satisfaction (Feedback Table) */}
-            <Card className="border-none shadow-md shadow-indigo-100 bg-indigo-600 text-white rounded-[2rem] relative overflow-hidden">
+            <Card className="border-none shadow-2xl shadow-indigo-200 bg-indigo-600 text-white rounded-[2rem] relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-20">
                     <Star size={80} />
                 </div>
@@ -31,24 +31,24 @@ export function ExecutiveImpactSummary() {
 
             <div className="grid grid-cols-2 gap-4 flex-1">
                 {/* Response Rate */}
-                <Card className="border-none shadow-sm rounded-[2rem] bg-white">
+                <Card className="border-none shadow-xl rounded-[2rem] bg-white">
                     <CardContent className="p-5 flex flex-col items-center justify-center h-full text-center">
                         <div className="p-3 bg-emerald-50 text-emerald-600 rounded-full mb-2">
                             <CheckCircle size={20} />
                         </div>
-                        <div className="text-2xl font-black text-slate-800">{impact.responseRate}%</div>
-                        <span className="text-[10px] text-slate-400 font-bold">อัตราการตอบรับเคส</span>
+                        <div className="text-4xl font-black text-slate-800">{impact.responseRate}%</div>
+                        <span className="text-sm text-slate-400 font-bold">อัตราการตอบรับเคส</span>
                     </CardContent>
                 </Card>
 
                 {/* Safety/Compliance */}
-                <Card className="border-none shadow-sm rounded-[2rem] bg-white">
+                <Card className="border-none shadow-xl rounded-[2rem] bg-white">
                     <CardContent className="p-5 flex flex-col items-center justify-center h-full text-center">
                         <div className="p-3 bg-white text-slate-500 rounded-full mb-2 shadow-sm">
                             <ShieldCheck size={20} />
                         </div>
-                        <div className="text-2xl font-black text-slate-600">{quality.criticalIncidents}</div>
-                        <span className="text-[10px] text-slate-400 font-bold">ความเสี่ยงเชิงระบบ</span>
+                        <div className="text-4xl font-black text-slate-600">{quality.criticalIncidents}</div>
+                        <span className="text-sm text-slate-400 font-bold">ความเสี่ยงเชิงระบบ</span>
                     </CardContent>
                 </Card>
             </div>

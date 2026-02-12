@@ -95,7 +95,7 @@ export function FacultyHealthVerticalBarChart({ data: externalData }: FacultyHea
     };
 
     return (
-        <Card className="h-full border-none shadow-sm rounded-[2rem] bg-white">
+        <Card className="h-full border-none shadow-2xl rounded-[2rem] bg-white">
             <CardContent className="p-6 h-full flex flex-col">
                 <div className="flex items-center gap-3 mb-4">
                     <div className="p-2 bg-rose-50 rounded-lg">
