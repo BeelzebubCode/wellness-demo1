@@ -14,11 +14,16 @@ const normNote = (v: any) => {
 };
 
 function detectChannelFromUrl(url: string): OnlineChannel {
-  const u = url.toLowerCase();
+  const u = url.toLowerCase().trim();
   if (u.includes("meet.google.com")) return OnlineChannel.GOOGLE_MEET;
   if (u.includes("zoom.us") || u.includes("zoom.com")) return OnlineChannel.ZOOM;
   if (u.includes("teams.microsoft.com")) return OnlineChannel.MICROSOFT_TEAMS;
-  if (u.startsWith("tel:")) return OnlineChannel.PHONE;
+  
+  // ✅ Detect phone: tel: or starts with digits (e.g. 02, 08, 09)
+  if (u.startsWith("tel:") || /^[0-9+ ]{3,15}$/.test(u.replace(/[-\s]/g, ""))) {
+    return OnlineChannel.PHONE;
+  }
+
   return OnlineChannel.OTHER;
 }
 
@@ -100,6 +105,7 @@ export async function handleSetOnlineChannel(
   }
 
   const channel = detectChannelFromUrl(url);
+  const isPhone = channel === OnlineChannel.PHONE;
 
   // ✅ ของ schema ใหม่: เก็บลง BookingSession (upsert)
   await prisma.bookingSession.upsert({
@@ -116,7 +122,8 @@ export async function handleSetOnlineChannel(
       booking_session_mode: ServiceMode.ONLINE,
       booking_session_online_channel: channel,
 
-      booking_session_join_url: url,
+      booking_session_join_url: isPhone ? null : url,
+      booking_session_phone_number: isPhone ? url.replace("tel:", "") : null,
       booking_session_extra_detail: note,
 
       provided_by_account_id: (ctx as any).accountId ?? null,
@@ -126,7 +133,8 @@ export async function handleSetOnlineChannel(
       booking_session_mode: ServiceMode.ONLINE,
       booking_session_online_channel: channel,
 
-      booking_session_join_url: url,
+      booking_session_join_url: isPhone ? null : url,
+      booking_session_phone_number: isPhone ? url.replace("tel:", "") : null,
       booking_session_extra_detail: note,
 
       provided_by_account_id: (ctx as any).accountId ?? null,

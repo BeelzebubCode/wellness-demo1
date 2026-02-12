@@ -145,6 +145,8 @@ export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
             serviceMode: r.serviceMode ?? null,
             onlineChannelUrl: r.onlineChannelUrl ?? null,
             onlineChannelNote: r.onlineChannelNote ?? null,
+            preferredOnlineChannel: r.preferredOnlineChannel ?? null,
+            phoneNumber: r.phoneNumber ?? null,
 
             universityName: r.universityName ?? null,
             universityCode: r.universityCode ?? null,

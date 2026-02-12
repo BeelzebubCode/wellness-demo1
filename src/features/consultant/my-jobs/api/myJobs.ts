@@ -38,6 +38,8 @@ export async function fetchMyBookings(): Promise<MyBookingApiRow[]> {
     serviceMode: item.serviceMode ?? null,
     onlineChannelUrl: item.session?.joinUrl ?? null,
     onlineChannelNote: item.session?.extraDetail ?? null,
+    preferredOnlineChannel: item.onlineChannel ?? null,
+    phoneNumber: item.session?.phoneNumber ?? null,
 
     universityName: item.universityName ?? null,
     universityCode: item.universityCode ?? null,

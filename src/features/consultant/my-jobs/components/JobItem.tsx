@@ -3,7 +3,7 @@
 "use client";
 
 import React from "react";
-import { ChevronDown, Loader2, Send, Link as LinkIcon, Clock, User, Info, Edit } from "lucide-react";
+import { ChevronDown, Loader2, Send, Link as LinkIcon, Clock, User, Info, Edit, Phone } from "lucide-react";
 import type { Job } from "../types";
 
 function StatusBadge({ status }: { status: Job["status"] }) {
@@ -210,10 +210,17 @@ export function JobItem({
             {String(job.serviceMode ?? "").toUpperCase() === "ONLINE" && (
               <div className="rounded-xl border border-blue-200/80 bg-gradient-to-br from-blue-50/80 to-cyan-50/40 p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-bold text-blue-700 flex items-center gap-2">
-                    <LinkIcon className="w-4 h-4" />
-                    ช่องทางออนไลน์
-                  </p>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-xs font-bold text-blue-700 flex items-center gap-2">
+                      <LinkIcon className="w-4 h-4" />
+                      ช่องทางออนไลน์
+                    </p>
+                    {job.preferredOnlineChannel && (
+                      <p className="text-[10px] text-blue-600 font-medium pl-6">
+                        นิสิตเลือก: <span className="font-bold underline">{job.preferredOnlineChannel}</span>
+                      </p>
+                    )}
+                  </div>
                   {/* ✅ แสดงปุ่มแก้ไขเมื่อรับเคสแล้ว (PENDING หรือ IN_PROGRESS) */}
                   {onEditChannel && (job.status === "PENDING" || job.status === "IN_PROGRESS") && (
                     <button
@@ -224,27 +231,45 @@ export function JobItem({
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 text-xs font-bold transition-colors active:scale-95"
                     >
                       <Edit className="w-3.5 h-3.5" />
-                      {job.onlineChannelUrl?.trim() ? "แก้ไข" : "ตั้งค่า"}
+                      {job.onlineChannelUrl?.trim() || job.phoneNumber?.trim() ? "แก้ไข" : "ตั้งค่า"}
                     </button>
                   )}
                 </div>
-                {job.onlineChannelUrl?.trim() ? (
-                  <>
-                    <a
-                      href={job.onlineChannelUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="inline-block text-sm text-blue-600 hover:text-blue-700 font-semibold underline break-all mb-2"
-                    >
-                      {job.onlineChannelUrl}
-                    </a>
+
+                {job.onlineChannelUrl?.trim() || job.phoneNumber?.trim() ? (
+                  <div className="space-y-2">
+                    {/* Link */}
+                    {job.onlineChannelUrl?.trim() && (
+                      <a
+                        href={job.onlineChannelUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-semibold underline break-all"
+                      >
+                        <LinkIcon className="w-3.5 h-3.5 shrink-0" />
+                        {job.onlineChannelUrl}
+                      </a>
+                    )}
+
+                    {/* Phone */}
+                    {job.phoneNumber?.trim() && (
+                      <a
+                        href={`tel:${job.phoneNumber}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700 font-semibold underline"
+                      >
+                        <Phone className="w-3.5 h-3.5 shrink-0" />
+                        เบอร์โทรศัพท์: {job.phoneNumber}
+                      </a>
+                    )}
+
                     {job.onlineChannelNote?.trim() && (
                       <p className="text-xs text-slate-600 whitespace-pre-wrap mt-2 pl-3 border-l-2 border-blue-300">
                         {job.onlineChannelNote}
                       </p>
                     )}
-                  </>
+                  </div>
                 ) : (
                   <p className="text-sm text-slate-500 italic">ยังไม่ได้ตั้งค่าช่องทางออนไลน์</p>
                 )}

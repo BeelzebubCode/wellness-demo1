@@ -2,7 +2,7 @@
 "use client";
 
 import { cn } from "@/lib/cn";
-import { Link2, Info } from "lucide-react";
+import { Link2, Info, Phone } from "lucide-react";
 import type { MyBookingDto } from "@/features/booking/types";
 import { ONLINE_CHANNEL_META } from "@/lib/constants/booking-service";
 
@@ -11,6 +11,7 @@ export function OnlineSessionPanel({ booking }: { booking: MyBookingDto }) {
   const session = booking.session;
   const channel = booking.onlineChannel ?? session?.onlineChannel ?? null;
   const meetingUrl = session?.joinUrl ?? null;    // ลิงก์ที่ consultant ส่งมา
+  const phoneNumber = session?.phoneNumber ?? null; // เบอร์โทรที่ consultant ส่งมา
   const meetingNote = session?.extraDetail ?? null;  // note เพิ่มเติม (ถ้ามี)
 
   // ถ้าไม่ได้เป็นออนไลน์ ไม่ต้องโชว์
@@ -20,13 +21,15 @@ export function OnlineSessionPanel({ booking }: { booking: MyBookingDto }) {
   const meta = channel ? (ONLINE_CHANNEL_META as any)[channel] : null;
   const channelLabel = meta?.label ?? (channel ? String(channel) : null);
 
-  const isEmpty = !channel && !meetingUrl && !meetingNote;
+  const isEmpty = !channel && !meetingUrl && !phoneNumber && !meetingNote;
+
+  const isPhone = channel === "PHONE" || !!phoneNumber;
 
   return (
     <div className="rounded-2xl border bg-white p-4">
       <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
         <Link2 className="w-4 h-4 text-primary-600" />
-        ช่องทางสำหรับออนไลน์
+        ช่องทางติดต่อจากผู้ให้คำปรึกษา
       </div>
 
       {isEmpty ? (
@@ -42,36 +45,48 @@ export function OnlineSessionPanel({ booking }: { booking: MyBookingDto }) {
           </div>
         </div>
       ) : (
-        <div className="mt-2 space-y-2">
+        <div className="mt-2 space-y-3">
           <div className="text-sm text-gray-700">
             <span className="text-gray-500">ช่องทาง: </span>
-            <span className="font-semibold">{channelLabel ?? "-"}</span>
+            <span className="font-semibold">{channelLabel ?? (isPhone ? "โทรศัพท์" : "-")}</span>
           </div>
 
-          {meetingUrl ? (
-            <a
-              href={meetingUrl}
-              target="_blank"
-              rel="noreferrer"
-              className={cn(
-                "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm",
-                "hover:bg-gray-50 transition"
-              )}
-            >
-              <Link2 className="w-4 h-4" />
-              เปิดลิงก์เข้าร่วม
-            </a>
-          ) : (
-            <div className="text-xs text-gray-500">
-              (ยังไม่มีลิงก์เข้าร่วม)
-            </div>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {meetingUrl && (
+              <a
+                href={meetingUrl}
+                target="_blank"
+                rel="noreferrer"
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50/50 px-4 py-2 text-sm text-blue-700 font-bold shadow-sm",
+                  "hover:bg-blue-100 transition active:scale-95"
+                )}
+              >
+                <Link2 className="w-4 h-4" />
+                เปิดลิงก์เข้าร่วม
+              </a>
+            )}
 
-          {meetingNote ? (
-            <div className="text-xs text-gray-500 whitespace-pre-line">
+            {phoneNumber && (
+              <a
+                href={`tel:${phoneNumber}`}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50/50 px-4 py-2 text-sm text-indigo-700 font-bold shadow-sm",
+                  "hover:bg-indigo-100 transition active:scale-95"
+                )}
+              >
+                <Phone className="w-4 h-4" />
+                โทรหาผู้ให้คำปรึกษา ({phoneNumber})
+              </a>
+            )}
+          </div>
+
+          {meetingNote && (
+            <div className="text-xs text-gray-600 whitespace-pre-line pl-3 border-l-2 border-primary/20 bg-slate-50/50 py-2 rounded-r-lg">
+              <span className="font-bold block mb-1 text-gray-500 uppercase tracking-widest text-[9px]">หมายเหตุ:</span>
               {meetingNote}
             </div>
-          ) : null}
+          )}
         </div>
       )}
     </div>

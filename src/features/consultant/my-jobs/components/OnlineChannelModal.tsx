@@ -48,9 +48,11 @@ export function OnlineChannelModal({
               <LinkIcon className="w-4 h-4" />
               เคสนี้เป็น ONLINE
             </p>
-            <p className="text-[11px] text-slate-600 mt-1">
-              กรอกลิงก์/ช่องทาง (เช่น Google Meet / Zoom / Teams) เพื่อให้ user เข้าร่วมได้
-            </p>
+            {job?.preferredOnlineChannel && (
+              <p className="text-xs font-bold text-indigo-700 mt-2 bg-indigo-50/50 rounded-lg p-2 border border-indigo-100 flex items-center gap-2">
+                📌 ช่องทางที่นิสิตเลือก: {job.preferredOnlineChannel}
+              </p>
+            )}
           </div>
 
           <div>

@@ -32,7 +32,7 @@ export const universityGpsByCode = {
   "FTU": { lat: 6.598699275, lon: 101.3435167 },
   "HATYAIU": { lat: 6.980191472, lon: 100.4659536 },
   "HCU": { lat: 13.61341021, lon: 100.7574952 },
-  "IBSC": { lat: 6.782757448, lon: 100.3958651 },
+  "IBSC": { lat: 14.7274712, lon: 102.0217437 },
   "IICC": { lat: 13.76602275, lon: 100.5078954 },
   "INTERTECH": { lat: 18.26172027, lon: 99.46222322 },
   "IST": { lat: 13.61005181, lon: 100.695832 },
