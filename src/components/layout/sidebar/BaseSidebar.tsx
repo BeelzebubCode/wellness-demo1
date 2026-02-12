@@ -97,7 +97,7 @@ export function BaseSidebar({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-6 px-3 space-y-2">
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-6 px-3 space-y-2 scrollbar-hide">
         {items.map((item) => {
           const isActive = item.exact
             ? pathname === item.href

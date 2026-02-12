@@ -84,24 +84,14 @@
 }
 
 /* ================================
-   Hide scrollbar (still scrollable)
+    Hide Scrollbar (Sidebar)
    ================================ */
 
-/* Chrome, Safari, Edge */
-html::-webkit-scrollbar,
-body::-webkit-scrollbar {
-  width: 0px;
-  height: 0px;
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE / old Edge */
+  scrollbar-width: none;    /* Firefox */
 }
 
-/* Firefox */
-html,
-body {
-  scrollbar-width: none; /* hide */
-}
-
-/* IE/old Edge */
-html,
-body {
-  -ms-overflow-style: none;
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;            /* Chrome / Safari */
 }
