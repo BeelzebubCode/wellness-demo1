@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Briefcase, Calendar, MapPin, Clock, LogIn, CheckCircle } from "lucide-react";
+import { Briefcase, Calendar, MapPin, Clock, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { authApi } from "@/features/auth/api";
@@ -37,7 +37,7 @@ export default function ConsultantBorrowedWorkPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [switchingId, setSwitchingId] = useState<number | null>(null);
-    const [completingId, setCompletingId] = useState<number | null>(null);
+    const [autoCompleting, setAutoCompleting] = useState(false);
     const [currentSubdomain, setCurrentSubdomain] = useState<string>("");
 
     const [homeUniversity, setHomeUniversity] = useState<{ id: number; code: string; name: string } | null>(null);
@@ -62,9 +62,48 @@ export default function ConsultantBorrowedWorkPage() {
                 throw new Error(json.error || "Failed to fetch assignments");
             }
 
-            setAssignments(json.data || []);
-            if (json.homeUniversity) {
-                setHomeUniversity(json.homeUniversity);
+            const data: BorrowedAssignment[] = json.data || [];
+            const home = json.homeUniversity || null;
+            setAssignments(data);
+            if (home) setHomeUniversity(home);
+
+            // ✅ Auto-complete expired assignments
+            const now = new Date();
+            const expired = data.filter(
+                (a) => a.status === "ASSIGNED" && new Date(a.endAt) < now
+            );
+
+            if (expired.length > 0 && home) {
+                setAutoCompleting(true);
+                try {
+                    // Complete all expired assignments
+                    await Promise.all(
+                        expired.map((a) =>
+                            fetch(`/api/v2/consultant/borrowed-assignments/${a.assignmentId}/complete`, {
+                                method: "POST",
+                                credentials: "include",
+                            })
+                        )
+                    );
+
+                    // Redirect to home university
+                    const result = await authApi.switchTenant(home.id);
+                    if (result.success) {
+                        const tenantCode = (home.code || "").toUpperCase();
+                        const { protocol, targetHost } = buildTargetHostFromTenantCode(tenantCode);
+                        window.location.assign(`${protocol}//${targetHost}/consultant/my-jobs`);
+                        return;
+                    }
+                } catch (err) {
+                    console.error("Auto-complete expired assignments error:", err);
+                } finally {
+                    setAutoCompleting(false);
+                }
+
+                // Refresh after auto-complete if redirect didn't happen
+                const res2 = await fetch("/api/v2/consultant/borrowed-assignments");
+                const json2 = await res2.json();
+                if (json2.ok) setAssignments(json2.data || []);
             }
         } catch (err: any) {
             setError(err.message);
@@ -130,55 +169,17 @@ export default function ConsultantBorrowedWorkPage() {
         }
     }
 
-    async function handleComplete(assignmentId: number) {
-        const confirmed = window.confirm(
-            "คุณต้องการยืนยันว่างานนี้เสร็จสิ้นแล้วใช่หรือไม่?\n\nเมื่อยืนยันแล้วจะไม่สามารถเปลี่ยนกลับได้"
-        );
-        if (!confirmed) return;
 
-        try {
-            setCompletingId(assignmentId);
-            const res = await fetch(
-                `/api/v2/consultant/borrowed-assignments/${assignmentId}/complete`,
-                { method: "POST", credentials: "include" }
-            );
-            const json = await res.json();
 
-            if (!json.ok) {
-                alert(json.error || "ไม่สามารถยืนยันการทำงานได้");
-                return;
-            }
-
-            // ✅ ถ้ามี homeUniversity ให้ย้ายกลับทันที
-            if (homeUniversity) {
-                // alert(`บันทึกสำเร็จ กำลังกลับสู่ ${homeUniversity.name}...`);
-                const result = await authApi.switchTenant(homeUniversity.id);
-                if (result.success) {
-                    const tenantCode = (homeUniversity.code || "").toUpperCase();
-                    const { protocol, targetHost } = buildTargetHostFromTenantCode(tenantCode);
-                    const targetPath = "/consultant/my-jobs"; // หรือหน้าอื่นตาม flow
-                    window.location.assign(`${protocol}//${targetHost}${targetPath}`);
-                    return;
-                }
-            }
-
-            // Refresh assignments list (ถ้าไม่ได้ย้ายกลับ หรือย้ายไม่ผ่าน)
-            await fetchAssignments();
-        } catch (err) {
-            console.error("Complete assignment error:", err);
-            alert("เกิดข้อผิดพลาดในการยืนยัน");
-        } finally {
-            setCompletingId(null);
-        }
-    }
-
-    if (loading) {
+    if (loading || autoCompleting) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
                     <div className="text-center py-12">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-                        <p className="mt-4 text-slate-600">กำลังโหลด...</p>
+                        <p className="mt-4 text-slate-600">
+                            {autoCompleting ? "ครบกำหนดเวลายืมตัว กำลังส่งกลับมหาลัยต้นสังกัด..." : "กำลังโหลด..."}
+                        </p>
                     </div>
                 </div>
             </div>
@@ -373,39 +374,25 @@ export default function ConsultantBorrowedWorkPage() {
                                         )}
 
                                         {/* Action Buttons */}
-                                        {assignment.status === "ASSIGNED" && (
+                                        {/* ✅ ปุ่ม Login เท่านั้น (auto-complete เมื่อครบกำหนด) */}
+                                        {assignment.status === "ASSIGNED" && currentSubdomain !== (assignment.fromUniversityCode || "").toUpperCase() && (
                                             <div className="mt-4 pt-4 border-t border-slate-200">
-                                                {currentSubdomain === (assignment.fromUniversityCode || "").toUpperCase() ? (
-                                                    /* ✅ อยู่ที่มหาวิทยาลัยที่ขอยืมแล้ว → แสดงปุ่มยืนยัน */
-                                                    <Button
-                                                        onClick={() => handleComplete(assignment.assignmentId)}
-                                                        disabled={completingId === assignment.assignmentId}
-                                                        className="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-2xl px-6 py-3 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all"
-                                                    >
-                                                        <CheckCircle className="w-5 h-5" />
-                                                        {completingId === assignment.assignmentId
-                                                            ? "กำลังยืนยัน..."
-                                                            : "ยืนยันการทำงานเสร็จสิ้น"}
-                                                    </Button>
-                                                ) : (
-                                                    /* 🔑 ยังอยู่มหาวิทยาลัยต้นสังกัด → แสดงปุ่ม login */
-                                                    <Button
-                                                        onClick={() =>
-                                                            handleLoginToUniversity(
-                                                                assignment.fromUniversityId,
-                                                                assignment.fromUniversityCode,
-                                                                assignment.fromUniversityNameTh
-                                                            )
-                                                        }
-                                                        disabled={switchingId === assignment.fromUniversityId}
-                                                        className="w-full sm:w-auto bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-semibold rounded-2xl px-6 py-3 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all"
-                                                    >
-                                                        <LogIn className="w-5 h-5" />
-                                                        {switchingId === assignment.fromUniversityId
-                                                            ? "กำลังเข้าสู่ระบบ..."
-                                                            : `เข้าสู่ระบบ ${assignment.fromUniversityNameTh}`}
-                                                    </Button>
-                                                )}
+                                                <Button
+                                                    onClick={() =>
+                                                        handleLoginToUniversity(
+                                                            assignment.fromUniversityId,
+                                                            assignment.fromUniversityCode,
+                                                            assignment.fromUniversityNameTh
+                                                        )
+                                                    }
+                                                    disabled={switchingId === assignment.fromUniversityId}
+                                                    className="w-full sm:w-auto bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-semibold rounded-2xl px-6 py-3 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all"
+                                                >
+                                                    <LogIn className="w-5 h-5" />
+                                                    {switchingId === assignment.fromUniversityId
+                                                        ? "กำลังเข้าสู่ระบบ..."
+                                                        : `เข้าสู่ระบบ ${assignment.fromUniversityNameTh}`}
+                                                </Button>
                                             </div>
                                         )}
                                     </div>

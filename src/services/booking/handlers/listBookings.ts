@@ -35,6 +35,7 @@ export type ListBookingDTO = {
   date: string | null; // yyyy-mm-dd
   startTime: string | null; // HH:mm
   endTime: string | null; // HH:mm
+  student: { id: number; username: string; name: string | null };
   consultant: { id: number; name: string } | null;
   outcome: any | null;      // ถ้าอยาก type outcome เดี๋ยวผมทำให้ต่อได้
   cancellation: any | null; // เช่นกัน
@@ -69,7 +70,7 @@ export async function handleListBookings(
   },
 ) {
   const startTime = Date.now();
-  
+
   const role = ctx.role as AccountRole;
   const activeUniversityId = (ctx as any).activeUniversityId as number | undefined;
 
@@ -90,12 +91,12 @@ export async function handleListBookings(
   }
 
   const staff = isStaff(role);
-  
+
   // 🔥 Pagination (default pageSize=50)
   const page = Math.max(0, input.page ?? 0);
   const pageSize = Math.min(200, Math.max(1, input.pageSize ?? 50));
   const skip = page * pageSize;
-  
+
   const safeInput = {
     status: input.status ?? null,
     date: input.date ?? null,
@@ -230,7 +231,7 @@ export async function handleListBookings(
   });
 
   const elapsed = Date.now() - startTime;
-  
+
   // 🔍 Log slow queries (>100ms) without PII
   if (elapsed > 100) {
     console.warn(
@@ -259,11 +260,17 @@ export async function handleListBookings(
       startTime: slot?.time_slot_start_datetime ? slot.time_slot_start_datetime.toTimeString().slice(0, 5) : null,
       endTime: slot?.time_slot_end_datetime ? slot.time_slot_end_datetime.toTimeString().slice(0, 5) : null,
 
+      student: {
+        id: b.student.student_id,
+        username: b.student.student_code ?? "",
+        name: sp ? `${sp.student_first_name_th} ${sp.student_last_name_th}` : null,
+      },
+
       consultant: cp
         ? {
-            id: b.consultant_id!,
-            name: `${cp.consultant_first_name} ${cp.consultant_last_name}`,
-          }
+          id: b.consultant_id!,
+          name: `${cp.consultant_first_name} ${cp.consultant_last_name}`,
+        }
         : null,
 
       outcome: b.outcome ?? null,

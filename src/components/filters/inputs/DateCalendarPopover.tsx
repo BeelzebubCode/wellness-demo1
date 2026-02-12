@@ -29,6 +29,8 @@ export function DateCalendarPopover({
   closeOnSelect = false,
   placeholder,
   align = "left",
+  formatLabel,
+  className,
 }: {
   valueYMD?: string;
   onChangeYMD: (ymd: string) => void;
@@ -38,6 +40,8 @@ export function DateCalendarPopover({
   closeOnSelect?: boolean;
   placeholder?: string;
   align?: "left" | "right";
+  formatLabel?: (ymd: string) => string;
+  className?: string; // ✅ Allow custom styling
 }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -80,7 +84,12 @@ export function DateCalendarPopover({
   }, [open]);
 
   // ✅ label ควรใช้ค่าที่ normalize แล้ว (กัน พ.ศ.)
-  const label = valueYMD ? formatDateDMY(normalizeYMD(valueYMD)) : (placeholder || "เลือกวันที่");
+  // ถ้ามี formatLabel ให้ใช้ก่อน
+  const label = valueYMD
+    ? formatLabel
+      ? formatLabel(normalizeYMD(valueYMD))
+      : formatDateDMY(normalizeYMD(valueYMD))
+    : placeholder || "เลือกวันที่";
   const hasValue = !!valueYMD;
 
   // ✅ min/max ก็ normalize กันไว้ (เผื่อใครส่ง date ที่มีเวลาแปลก ๆ)
@@ -88,15 +97,15 @@ export function DateCalendarPopover({
   const maxDateSafe = useMemo(() => (maxDate ? atNoon(maxDate) : undefined), [maxDate]);
 
   return (
-    <div ref={wrapRef} className="relative inline-block text-left">
+    <div ref={wrapRef} className={cn("relative inline-block text-left", className)}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "group flex items-center gap-2 h-10 px-3.5 rounded-xl border transition-all duration-200",
+          "group flex items-center gap-2 h-11 px-3.5 rounded-xl border transition-all duration-200 w-full", // h-10 -> h-11
           "focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400",
           open
-            ? "border-primary-400 bg-primary-50/50 ring-2 ring-primary-100"
+            ? "border-primary-400 bg-white ring-2 ring-primary-100" // bg-primary-50/50 -> bg-white
             : "border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300",
           hasValue ? "text-gray-900" : "text-gray-500"
         )}

@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { DateCalendarPopover } from "@/components/filters/inputs/DateCalendarPopover";
 import type { CreateBorrowRequestInput } from "@/features/borrow-requests/types";
 import { Calendar, Clock, RotateCcw, ArrowRight, AlertCircle, Trash2 } from "lucide-react";
 
@@ -36,48 +37,57 @@ type Props = {
 function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
-function toDatetimeLocalValue(d: Date) {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(
-    d.getHours(),
-  )}:${pad2(d.getMinutes())}`;
-}
-function addMinutes(d: Date, mins: number) {
-  const x = new Date(d);
-  x.setMinutes(x.getMinutes() + mins);
-  return x;
-}
-function setTime(d: Date, hh: number, mm: number) {
-  const x = new Date(d);
-  x.setHours(hh, mm, 0, 0);
-  return x;
+function toDateInputValue(d: Date) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
-function toIsoOrNull(dtLocal: string) {
-  const v = (dtLocal || "").trim();
+function toIsoOrNull(dateStr: string, isEnd: boolean = false) {
+  const v = (dateStr || "").trim();
   if (!v) return null;
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toISOString();
+
+  // Create local date at 00:00 or 23:59
+  // Note: new Date("YYYY-MM-DD") is UTC, but we want local day representation usually? 
+  // actually input type="date" gives YYYY-MM-DD. 
+  // Let's assume we want to store it as 00:00:00 local time for that day.
+  // Or just simpler: use the date string as is?
+  // Backend expects ISO string probably.
+
+  // Let's construct a date object treating input as local date
+  const parts = v.split("-");
+  const year = parseInt(parts[0]);
+  const month = parseInt(parts[1]) - 1;
+  const day = parseInt(parts[2]);
+
+  const localDate = new Date(year, month, day);
+  if (isEnd) {
+    localDate.setHours(23, 59, 59, 999);
+  } else {
+    localDate.setHours(0, 0, 0, 0);
+  }
+
+  return localDate.toISOString();
 }
 
-function isoToDatetimeLocal(iso?: string | null) {
+function isoToDateInputValue(iso?: string | null) {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return toDatetimeLocalValue(d);
+  return toDateInputValue(d);
 }
 
 function prettyLocal(dtLocal: string) {
   if (!dtLocal) return "—";
   const d = new Date(dtLocal);
   if (Number.isNaN(d.getTime())) return "รูปแบบไม่ถูกต้อง";
-  return d.toLocaleString("th-TH", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+
+  const day = d.getDate();
+  const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+  const month = months[d.getMonth()];
+  const year = d.getFullYear() + 543;
+
+  return `${day} ${month} ${year}`;
 }
 
 export function BorrowRequestForm({
@@ -146,10 +156,10 @@ export function BorrowRequestForm({
   const [neededCount, setNeededCount] = useState<number>(initialValues?.neededCount ?? 1);
 
   const [neededFrom, setNeededFrom] = useState<string>(() =>
-    isoToDatetimeLocal(initialValues?.neededFrom ?? null),
+    isoToDateInputValue(initialValues?.neededFrom ?? null),
   );
   const [neededTo, setNeededTo] = useState<string>(() =>
-    isoToDatetimeLocal(initialValues?.neededTo ?? null),
+    isoToDateInputValue(initialValues?.neededTo ?? null),
   );
 
   const timeHint = useMemo(() => {
@@ -170,12 +180,13 @@ export function BorrowRequestForm({
     if (reason.trim().length === 0) return false;
     if (!(neededCount >= 1)) return false;
 
-    if (neededFrom && neededTo) {
-      const from = new Date(neededFrom);
-      const to = new Date(neededTo);
-      if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return false;
-      if (to.getTime() < from.getTime()) return false;
-    }
+    if (!neededFrom || !neededTo) return false; // ✅ Require dates
+
+    const from = new Date(neededFrom);
+    const to = new Date(neededTo);
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return false;
+    if (to.getTime() < from.getTime()) return false;
+
     return true;
   }, [selectedCat, reason, neededCount, neededFrom, neededTo]);
 
@@ -188,8 +199,8 @@ export function BorrowRequestForm({
       reason: reason.trim(),
       detail: detail.trim() ? detail.trim() : null,
       neededCount,
-      neededFrom: toIsoOrNull(neededFrom),
-      neededTo: toIsoOrNull(neededTo),
+      neededFrom: toIsoOrNull(neededFrom, false),
+      neededTo: toIsoOrNull(neededTo, true),
     };
 
     onSubmit(payload);
@@ -202,7 +213,7 @@ export function BorrowRequestForm({
           {isEdit ? "แก้ไขคำขอยืมผู้ให้คำปรึกษา" : "สร้างคำขอยืมผู้ให้คำปรึกษา"}
         </div>
         <div className="text-sm text-slate-500 mt-1">
-          เลือกประเภทปัญหา + ระบุเหตุผล และช่วงเวลาที่ต้องการ (ถ้ามี)
+          เลือกประเภทปัญหา + ระบุเหตุผล และช่วงเวลาที่ต้องการ
         </div>
       </div>
 
@@ -257,14 +268,14 @@ export function BorrowRequestForm({
       </div>
 
       {/* ✅ วันเวลา UX ใหม่ */}
-      <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-5 overflow-hidden">
+      <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-5">
         <div className="flex items-center justify-between gap-2 mb-4">
           <div className="flex items-center gap-2">
             <div className="p-1.5 bg-white rounded-md border border-slate-200 shadow-sm">
               <Calendar className="w-4 h-4 text-primary-600" />
             </div>
             <div>
-              <div className="font-semibold text-slate-800">ช่วงเวลาที่ต้องการ (optional)</div>
+              <div className="font-semibold text-slate-800">ช่วงเวลาที่ต้องการ <span className="text-red-500">*</span></div>
               <div className="text-xs text-slate-500">
                 ระบุเวลาที่ต้องการให้ช่วยรับงาน
               </div>
@@ -291,76 +302,28 @@ export function BorrowRequestForm({
         {/* Inputs */}
         <div className="grid gap-4">
           <div className="grid gap-1.5">
-            <label className="text-sm font-medium text-slate-700">เริ่มวันที่ - เวลา</label>
-            <Input
-              type="datetime-local"
-              step={300} // 5 min step
-              className="bg-white h-11 text-base"
-              value={neededFrom}
-              onChange={(e) => {
-                const v = e.target.value;
+            <label className="text-sm font-medium text-slate-700">เริ่มวันที่</label>
+            <DateCalendarPopover
+              valueYMD={neededFrom}
+              onChangeYMD={(v) => {
                 setNeededFrom(v);
-
-                const start = new Date(v);
-                const end = new Date(neededTo || "");
-                // Auto-set end time if empty or invalid
-                if (!neededTo || Number.isNaN(end.getTime()) || end <= start) {
-                  setNeededTo(toDatetimeLocalValue(addMinutes(start, 60)));
-                }
+                if (!neededTo) setNeededTo(v);
               }}
+              placeholder="วว/ดด/ปปปป"
+              formatLabel={prettyLocal}
+              className="w-full"
             />
           </div>
 
           <div className="grid gap-1.5">
-            <label className="text-sm font-medium text-slate-700">ถึงวันที่ - เวลา</label>
-            <Input
-              type="datetime-local"
-              step={300}
-              className="bg-white h-11 text-base"
-              value={neededTo}
-              onChange={(e) => setNeededTo(e.target.value)}
+            <label className="text-sm font-medium text-slate-700">ถึงวันที่</label>
+            <DateCalendarPopover
+              valueYMD={neededTo}
+              onChangeYMD={setNeededTo}
+              placeholder="วว/ดด/ปปปป"
+              formatLabel={prettyLocal}
+              className="w-full"
             />
-
-            {neededFrom && (
-              <div className="flex flex-wrap gap-2 mt-1">
-                <button
-                  type="button"
-                  className="inline-flex items-center px-2.5 py-1 rounded-md bg-white border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-primary-600 hover:border-primary-200 transition-colors shadow-sm"
-                  onClick={() => {
-                    const start = new Date(neededFrom);
-                    if (!Number.isNaN(start.getTime())) {
-                      setNeededTo(toDatetimeLocalValue(addMinutes(start, 30)));
-                    }
-                  }}
-                >
-                  +30 นาที
-                </button>
-                <button
-                  type="button"
-                  className="inline-flex items-center px-2.5 py-1 rounded-md bg-white border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-primary-600 hover:border-primary-200 transition-colors shadow-sm"
-                  onClick={() => {
-                    const start = new Date(neededFrom);
-                    if (!Number.isNaN(start.getTime())) {
-                      setNeededTo(toDatetimeLocalValue(addMinutes(start, 60)));
-                    }
-                  }}
-                >
-                  +1 ชม.
-                </button>
-                <button
-                  type="button"
-                  className="inline-flex items-center px-2.5 py-1 rounded-md bg-white border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-primary-600 hover:border-primary-200 transition-colors shadow-sm"
-                  onClick={() => {
-                    const start = new Date(neededFrom);
-                    if (!Number.isNaN(start.getTime())) {
-                      setNeededTo(toDatetimeLocalValue(addMinutes(start, 120)));
-                    }
-                  }}
-                >
-                  +2 ชม.
-                </button>
-              </div>
-            )}
           </div>
         </div>
 

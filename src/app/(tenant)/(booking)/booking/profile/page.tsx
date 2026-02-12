@@ -30,10 +30,10 @@ type LoadState =
   | { status: "idle" | "loading" }
   | { status: "error"; message: string }
   | {
-      status: "success";
-      dataTh: ProfileMeDTO; // ข้อมูลหลัก (TH)
-      dataEn: ProfileMeDTO | null; // ข้อมูล EN (optional)
-    };
+    status: "success";
+    dataTh: ProfileMeDTO; // ข้อมูลหลัก (TH)
+    dataEn: ProfileMeDTO | null; // ข้อมูล EN (optional)
+  };
 
 function safe(s?: string | null) {
   const t = (s ?? "").trim();
@@ -166,30 +166,45 @@ export default function StudentProfilePage() {
     if (!dtoTh || !pTh) return [];
 
     const items: ProfileFieldItem[] = [
+      // Row 1: ชื่อที่แสดง | คำนำหน้า
       { label: "ชื่อที่แสดง", value: safe(dtoTh.displayName), icon: <User className="w-4 h-4" /> },
-
       { label: "คำนำหน้า", value: safe(pTh.prefix), icon: <User className="w-4 h-4" /> },
+
+      // Row 2: ชื่อ (TH) | นามสกุล (TH)
       { label: "ชื่อ", value: safe(pTh.firstName), icon: <User className="w-4 h-4" /> },
       { label: "นามสกุล", value: safe(pTh.lastName), icon: <User className="w-4 h-4" /> },
-      { label: "ชื่อเล่น", value: safe(pTh.nickname), icon: <Bookmark className="w-4 h-4" /> },
     ];
 
-    // เพิ่มชื่อ EN ถ้ามี
-    if (pEn && (isMeaningful(pEn.firstName) || isMeaningful(pEn.lastName) || isMeaningful(pEn.nickname))) {
+    // Row 3: ชื่อ (EN) | นามสกุล (EN)
+    if (pEn && (isMeaningful(pEn.firstName) || isMeaningful(pEn.lastName))) {
       items.push(
         { label: "ชื่อ (EN)", value: safe(pEn.firstName), icon: <User className="w-4 h-4" /> },
         { label: "นามสกุล (EN)", value: safe(pEn.lastName), icon: <User className="w-4 h-4" /> },
-        { label: "ชื่อเล่น (EN)", value: safe(pEn.nickname), icon: <Bookmark className="w-4 h-4" /> }
+      );
+    }
+
+    // Row 4: ชื่อเล่น (TH) | ชื่อเล่น (EN)
+    if (pEn && isMeaningful(pEn.nickname)) {
+      items.push(
+        { label: "ชื่อเล่น", value: safe(pTh.nickname), icon: <Bookmark className="w-4 h-4" /> },
+        { label: "ชื่อเล่น (EN)", value: safe(pEn.nickname), icon: <Bookmark className="w-4 h-4" /> },
+      );
+    } else {
+      items.push(
+        { label: "ชื่อเล่น", value: safe(pTh.nickname), icon: <Bookmark className="w-4 h-4" /> },
       );
     }
 
     if (isStudent) {
       items.push(
+        // Row: เพศ | วันเกิด
         { label: "เพศ", value: genderLabel(pTh.gender), icon: <Shield className="w-4 h-4" /> },
         { label: "วันเกิด", value: formatThaiDateShort(pTh.birthday), icon: <Cake className="w-4 h-4" /> },
+        // Row: สัญชาติ | ศาสนา
         { label: "สัญชาติ", value: safe(pTh.nationality), icon: <IdCard className="w-4 h-4" /> },
         { label: "ศาสนา", value: safe(pTh.religion), icon: <Briefcase className="w-4 h-4" /> },
-        { label: "กรุ๊ปเลือด", value: safe(pTh.bloodGroup), icon: <Shield className="w-4 h-4" /> }
+        // Row: กรุ๊ปเลือด
+        { label: "กรุ๊ปเลือด", value: safe(pTh.bloodGroup), icon: <Shield className="w-4 h-4" /> },
       );
     }
 
