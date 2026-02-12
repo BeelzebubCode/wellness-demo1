@@ -23,8 +23,8 @@ export default function Page() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? "สร้างคำขอไม่สำเร็จ");
 
-      // ✅ กลับ list แบบปลอดภัย
-      router.push("..");
+      // ✅ กลับหน้าเดิม
+      router.back();
     } catch (e: any) {
       alert(e?.message ?? "สร้างคำขอไม่สำเร็จ");
     } finally {

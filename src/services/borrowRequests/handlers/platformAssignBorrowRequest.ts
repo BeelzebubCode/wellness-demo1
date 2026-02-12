@@ -38,6 +38,20 @@ async function assignOne(tx: any, input: {
   });
   if (!consultant) throw new Error("CONSULTANT_NOT_FOUND");
 
+  // ✅ ป้องกัน assign consultant ที่มี assignment อยู่แล้ว (ข้าม request ด้วย)
+  const existingAssignment = await tx.borrowAssignment.findFirst({
+    where: {
+      consultant_id: input.consultantId,
+      borrowRequest: {
+        borrow_request_status: { in: ["APPROVED", "ASSIGNED"] as any },
+      },
+      // ช่วงเวลาซ้อนกัน (overlap)
+      borrow_assign_start_at: { lt: endAt },
+      borrow_assign_end_at: { gt: startAt },
+    },
+  });
+  if (existingAssignment) throw new Error("CONSULTANT_ALREADY_ASSIGNED");
+
   const assignment = await tx.borrowAssignment.create({
     data: {
       borrow_request_id: input.borrowRequestId,

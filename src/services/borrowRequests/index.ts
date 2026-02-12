@@ -17,3 +17,4 @@ export { consultantListBorrowedAssignments } from "./handlers/consultantListBorr
 export { consultantCompleteBorrowAssignment } from "./handlers/consultantCompleteBorrowAssignment";
 
 export { submitBorrowRequest } from "./handlers/submitBorrowRequest";
+export { autoExpireAssignments } from "./handlers/autoExpireBorrowAssignments";

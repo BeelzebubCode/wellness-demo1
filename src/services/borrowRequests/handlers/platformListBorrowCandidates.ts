@@ -165,6 +165,27 @@ export async function platformListBorrowCandidates(input: {
   // shift info จะแสดงเป็น optional information เท่านั้น
   const filteredConsultants = consultants;
 
+  // ✅ ดึง borrow assignment ที่ active อยู่ เพื่อเช็คว่า consultant ถูกมอบหมายแล้วหรือไม่
+  const activeAssignments = await prisma.borrowAssignment.findMany({
+    where: {
+      consultant_id: { in: consultantIds },
+      borrowRequest: {
+        borrow_request_status: { in: ["APPROVED", "ASSIGNED"] as any },
+      },
+      // เฉพาะที่ช่วงเวลาซ้อนกับคำขอนี้
+      ...(br.borrow_needed_from && br.borrow_needed_to
+        ? {
+          borrow_assign_start_at: { lt: br.borrow_needed_to },
+          borrow_assign_end_at: { gt: br.borrow_needed_from },
+        }
+        : {}),
+    },
+    select: {
+      consultant_id: true,
+    },
+  });
+  const alreadyAssignedSet = new Set(activeAssignments.map((a) => a.consultant_id));
+
   // 4) group by university
   const map = new Map<
     number,
@@ -178,14 +199,15 @@ export async function platformListBorrowCandidates(input: {
         fullName: string;
         nickname?: string | null;
         specializations: string[];
-        topicMatchCount: number; // ✅ เพิ่ม field นับจำนวน topic ที่ match
+        topicMatchCount: number;
+        alreadyAssigned: boolean; // ✅ ถูกมอบหมายแล้ว
         shifts: Array<{
           shiftId: number;
           startAt: string;
           endAt: string;
           status: string;
           currentBorrowCount: number;
-        }>; // ✅ เพิ่ม shift info
+        }>;
       }>;
     }
   >();
@@ -253,8 +275,9 @@ export async function platformListBorrowCandidates(input: {
       fullName,
       nickname,
       specializations,
-      topicMatchCount, // ✅ เก็บจำนวน topic ที่ match
-      shifts, // ✅ เพิ่ม shift info
+      topicMatchCount,
+      alreadyAssigned: alreadyAssignedSet.has(c.consultant_id), // ✅ flag ถูกมอบหมายแล้ว
+      shifts,
     });
   }
 

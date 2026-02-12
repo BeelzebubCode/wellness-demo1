@@ -20,10 +20,6 @@ const CONSULTANT_CONFIG: SidebarConfig = {
   },
   items: CONSULTANT_NAV,
   theme: "dark",
-  backLink: {
-    href: "/",
-    label: "กลับหน้าหลัก",
-  },
 };
 
 interface ConsultantSidebarProps {

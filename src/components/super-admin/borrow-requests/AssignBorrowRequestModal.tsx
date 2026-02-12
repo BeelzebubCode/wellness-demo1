@@ -31,7 +31,8 @@ type CandidateConsultant = {
   fullName: string;
   nickname?: string | null;
   specializations: string[];
-  shifts: CandidateShift[]; // ✅ เพิ่ม shift info
+  alreadyAssigned?: boolean; // ✅ ถูกมอบหมายแล้ว
+  shifts: CandidateShift[];
 };
 
 type CandidateUniversityGroup = {
@@ -298,16 +299,26 @@ export function AssignBorrowRequestModal({
                     return (
                       <div
                         key={key}
-                        className="rounded-2xl border-2 border-slate-200 bg-white p-5 flex items-start justify-between gap-4 shadow-[0_6px_18px_rgba(0,0,0,0.04)] hover:border-slate-300 transition-colors"
+                        className={[
+                          "rounded-2xl border-2 p-5 flex items-start justify-between gap-4 shadow-[0_6px_18px_rgba(0,0,0,0.04)] transition-colors",
+                          c.alreadyAssigned
+                            ? "border-cyan-200 bg-cyan-50/50"
+                            : "border-slate-200 bg-white hover:border-slate-300",
+                        ].join(" ")}
                       >
                         <div className="min-w-0 flex-1">
-                          <div className="text-lg font-bold text-slate-900 truncate mb-1">
+                          <div className="text-lg font-bold text-slate-900 truncate mb-1 flex items-center gap-2">
                             {c.fullName}
                             {c.nickname ? (
-                              <span className="text-slate-500 font-normal text-base ml-2">
+                              <span className="text-slate-500 font-normal text-base">
                                 ({c.nickname})
                               </span>
                             ) : null}
+                            {c.alreadyAssigned && (
+                              <Badge variant="default" className="text-xs bg-cyan-600 shrink-0">
+                                มอบหมายแล้ว
+                              </Badge>
+                            )}
                           </div>
 
                           {/* ✅ แสดง shift info */}
@@ -369,10 +380,10 @@ export function AssignBorrowRequestModal({
                         <Button
                           size="md"
                           className="rounded-xl px-5 shadow-sm shrink-0"
-                          disabled={picked}
+                          disabled={picked || !!c.alreadyAssigned}
                           onClick={() => addAssignee(activeGroup, c)}
                         >
-                          {picked ? "เลือกแล้ว" : "เลือก"}
+                          {c.alreadyAssigned ? "มอบหมายแล้ว" : picked ? "เลือกแล้ว" : "เลือก"}
                         </Button>
                       </div>
                     );

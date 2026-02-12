@@ -172,6 +172,7 @@ export function BorrowRequestForm({
     if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()))
       return "รูปแบบวันเวลาไม่ถูกต้อง";
     if (to.getTime() < from.getTime()) return "วัน/เวลาสิ้นสุดต้องไม่ก่อนวัน/เวลาเริ่มต้น";
+    if (neededFrom === neededTo) return "วันเริ่มต้นและวันสิ้นสุดต้องไม่ใช่วันเดียวกัน";
     return null;
   }, [neededFrom, neededTo]);
 
@@ -185,7 +186,7 @@ export function BorrowRequestForm({
     const from = new Date(neededFrom);
     const to = new Date(neededTo);
     if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return false;
-    if (to.getTime() < from.getTime()) return false;
+    if (to.getTime() <= from.getTime()) return false;
 
     return true;
   }, [selectedCat, reason, neededCount, neededFrom, neededTo]);
@@ -307,7 +308,12 @@ export function BorrowRequestForm({
               valueYMD={neededFrom}
               onChangeYMD={(v) => {
                 setNeededFrom(v);
-                if (!neededTo) setNeededTo(v);
+                // ถ้ายังไม่ได้เลือกวันสิ้นสุด หรือวันสิ้นสุดเดิม <= วันเริ่มใหม่ → ให้เป็นวันถัดไป
+                if (!neededTo || neededTo <= v) {
+                  const next = new Date(v);
+                  next.setDate(next.getDate() + 1);
+                  setNeededTo(toDateInputValue(next));
+                }
               }}
               placeholder="วว/ดด/ปปปป"
               formatLabel={prettyLocal}
@@ -323,6 +329,7 @@ export function BorrowRequestForm({
               placeholder="วว/ดด/ปปปป"
               formatLabel={prettyLocal}
               className="w-full"
+              minDate={neededFrom ? (() => { const d = new Date(neededFrom); d.setDate(d.getDate() + 1); return d; })() : undefined}
             />
           </div>
         </div>

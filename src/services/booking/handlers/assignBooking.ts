@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { BookingStatus } from "@prisma/client";
+import { autoExpireAssignments } from "@/services/borrowRequests";
 
 type AssignBody = {
   consultantId?: number;
@@ -18,6 +19,9 @@ export async function handleAssignBooking(
   bookingIdRaw: string,
   body: AssignBody,
 ) {
+  // ✅ Lazy expiration: auto-complete expired borrow assignments
+  await autoExpireAssignments();
+
   const bookingId = Number(bookingIdRaw);
   if (!Number.isFinite(bookingId)) {
     return NextResponse.json({ error: "Invalid booking ID" }, { status: 400 });
@@ -139,11 +143,11 @@ export async function handleAssignBooking(
       return NextResponse.json({ error: "borrowAssignment ไม่ได้ยืมเข้ามหาลัยนี้" }, { status: 400 });
     }
 
-    // window ต้องครอบคลุมปัจจุบัน
+    // ✅ window ต้องครอบคลุมปัจจุบัน — ป้องกัน assign งานให้คนที่หมดกำหนดยืมตัวแล้ว
     const now = nowTs();
-    // if (!(ba.borrow_assign_start_at <= now && now <= ba.borrow_assign_end_at)) {
-    //   return NextResponse.json({ error: "borrowAssignment หมดช่วงเวลา/ยังไม่ถึงเวลา" }, { status: 409 });
-    // }
+    if (now > ba.borrow_assign_end_at) {
+      return NextResponse.json({ error: "ช่วงเวลายืมตัวหมดอายุแล้ว ไม่สามารถแจกงานได้" }, { status: 409 });
+    }
 
     // สถานะคำขอควรพร้อมใช้งาน (ปรับได้ตาม flow จริงของคุณ)
     const okStatuses = ["APPROVED", "ASSIGNED", "COMPLETED"] as const;

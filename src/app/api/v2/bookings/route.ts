@@ -4,6 +4,7 @@ import type { BookingStatus } from "@prisma/client";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
 import { handleListBookings } from "@/services/booking/handlers/listBookings";
 import { handleCreateBooking } from "@/services/booking/handlers/createBooking";
+import { autoExpireAssignments } from "@/services/borrowRequests";
 
 function getIpAddress(req: NextRequest): string | null {
   // รองรับ proxy หลายชั้น (เอาตัวแรก)
@@ -28,6 +29,9 @@ export async function GET(request: NextRequest) {
       "SUPER_ADMIN",
       "RECTOR",
     ]);
+
+    // ✅ Lazy expiration: auto-complete expired borrow assignments
+    await autoExpireAssignments();
 
     const { searchParams } = new URL(request.url);
 

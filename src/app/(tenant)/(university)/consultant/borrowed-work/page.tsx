@@ -37,7 +37,6 @@ export default function ConsultantBorrowedWorkPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [switchingId, setSwitchingId] = useState<number | null>(null);
-    const [autoCompleting, setAutoCompleting] = useState(false);
     const [currentSubdomain, setCurrentSubdomain] = useState<string>("");
 
     const [homeUniversity, setHomeUniversity] = useState<{ id: number; code: string; name: string } | null>(null);
@@ -66,45 +65,6 @@ export default function ConsultantBorrowedWorkPage() {
             const home = json.homeUniversity || null;
             setAssignments(data);
             if (home) setHomeUniversity(home);
-
-            // ✅ Auto-complete expired assignments
-            const now = new Date();
-            const expired = data.filter(
-                (a) => a.status === "ASSIGNED" && new Date(a.endAt) < now
-            );
-
-            if (expired.length > 0 && home) {
-                setAutoCompleting(true);
-                try {
-                    // Complete all expired assignments
-                    await Promise.all(
-                        expired.map((a) =>
-                            fetch(`/api/v2/consultant/borrowed-assignments/${a.assignmentId}/complete`, {
-                                method: "POST",
-                                credentials: "include",
-                            })
-                        )
-                    );
-
-                    // Redirect to home university
-                    const result = await authApi.switchTenant(home.id);
-                    if (result.success) {
-                        const tenantCode = (home.code || "").toUpperCase();
-                        const { protocol, targetHost } = buildTargetHostFromTenantCode(tenantCode);
-                        window.location.assign(`${protocol}//${targetHost}/consultant/my-jobs`);
-                        return;
-                    }
-                } catch (err) {
-                    console.error("Auto-complete expired assignments error:", err);
-                } finally {
-                    setAutoCompleting(false);
-                }
-
-                // Refresh after auto-complete if redirect didn't happen
-                const res2 = await fetch("/api/v2/consultant/borrowed-assignments");
-                const json2 = await res2.json();
-                if (json2.ok) setAssignments(json2.data || []);
-            }
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -171,15 +131,13 @@ export default function ConsultantBorrowedWorkPage() {
 
 
 
-    if (loading || autoCompleting) {
+    if (loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
                     <div className="text-center py-12">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-                        <p className="mt-4 text-slate-600">
-                            {autoCompleting ? "ครบกำหนดเวลายืมตัว กำลังส่งกลับมหาลัยต้นสังกัด..." : "กำลังโหลด..."}
-                        </p>
+                        <p className="mt-4 text-slate-600">กำลังโหลด...</p>
                     </div>
                 </div>
             </div>
