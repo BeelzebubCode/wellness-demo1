@@ -25,29 +25,18 @@ export async function seedTimeSlots(
   // ------------------------------
   // helpers
   // ------------------------------
-  function isWeekend(date: Date) {
-    const day = date.getUTCDay();
-    return day === 0 || day === 6;
-  }
-
   function buildSlotsForDate(date: Date) {
     const openHour = 8;
-    const closeHour = isWeekend(date) ? 17 : 21;
+    const closeHour = 20; // ✅ Fix: Always close at 20:00 (last slot 19:00-20:00) regardless of weekend
 
     const slots: Array<{ start: Date; end: Date }> = [];
 
     for (let hour = openHour; hour < closeHour; hour++) {
       // Use toThaiDate to get the correct UTC instant for 08:00 TH
       const start = toThaiDate(date, hour, 0);
-      if (hour === 0 || hour === 8) {
-         console.log(`[DEBUG] Date: ${date.toISOString()}, Hour: ${hour}, StartUTC: ${start.toISOString()}`);
-      }
 
       const end = new Date(start);
       end.setMinutes(end.getMinutes() + SLOT_DURATION_MINUTES);
-
-      // No need to check closeHour logic again if loop bound is correct
-      // But let's keep it safe in case of overflow
 
       slots.push({ start, end });
     }
