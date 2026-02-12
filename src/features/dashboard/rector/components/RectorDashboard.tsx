@@ -12,7 +12,7 @@ import { FacultyBreakdownTable } from "./sections/FacultyBreakdownTable";
 import { RectorExecutiveSummary } from "./sections/RectorExecutiveSummary";
 
 export function RectorDashboard() {
-  // Default to Last 30 Days (Today - 30 days) - or just month range like Rector usually likes
+  // Default to Last 30 Days (Today - 30 days)
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date } | undefined>(() => {
     const to = new Date();
     to.setHours(23, 59, 59, 999);
@@ -40,11 +40,11 @@ export function RectorDashboard() {
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-6">
       <div className="space-y-8">
-        {/* Header (Mirrors DeanHeader somewhat, but embedded for now since RectorHeader might be separate) */}
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-800">ศูนย์บัญชาการด้านสุขภาวะมหาวิทยาลัย</h1>
-            <p className="text-slate-500 text-sm mt-1">ข้อมูลเชิงลึกและการกำกับดูแลระดับมหาวิทยาลัย</p>
+            <p className="text-slate-500 text-sm mt-1">ข้อมูลเชิงลึกและการกำกับดูแลระดับมหาวิทยาลัย (Executive Command Center)</p>
           </div>
 
           <div className="flex flex-col items-end gap-2">
@@ -53,10 +53,7 @@ export function RectorDashboard() {
               endDate={dateRange?.to}
               onChange={(range: { from?: Date; to?: Date }) => setDateRange(range)}
             />
-
             <div className="text-right">
-              {/* Academic Year logic is handled in service/hook usually, but simple display here */}
-
               <p className="text-xs text-slate-400">
                 อัปเดตล่าสุด: {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
               </p>
@@ -67,8 +64,7 @@ export function RectorDashboard() {
         {/* 1. KEY PERFORMANCE INDICATORS */}
         <section>
           <div className="mb-4">
-            <h3 className="text-lg font-bold text-slate-800">ภาพรวมมหาวิทยาลัย</h3>
-            <p className="text-sm text-slate-500">ดัชนีชี้วัดสำคัญของทุกคณะ</p>
+            <h3 className="text-lg font-bold text-slate-800 uppercase tracking-tight">ภาพรวมมหาวิทยาลัย (University KPI)</h3>
           </div>
           <RectorOverviewCards stats={stats} />
         </section>
@@ -76,8 +72,7 @@ export function RectorDashboard() {
         {/* 2. ANALYTICS & INSIGHTS */}
         <section>
           <div className="mb-4">
-            <h3 className="text-lg font-bold text-slate-800">การวิเคราะห์</h3>
-            <p className="text-sm text-slate-500">แนวโน้ม ความเสี่ยง และประเภทปัญหา (ภาพรวม)</p>
+            <h3 className="text-lg font-bold text-slate-800 uppercase tracking-tight">การวิเคราะห์เชิงลึก (Deep Analytics)</h3>
           </div>
           <RectorAnalytics stats={stats} />
         </section>
@@ -85,17 +80,14 @@ export function RectorDashboard() {
         {/* 3. FACULTY FOCUS (Deep Dive) */}
         <section>
           <div className="mb-4">
-            <h3 className="text-lg font-bold text-slate-800">ภาพรวมรายคณะ</h3>
-            <p className="text-sm text-slate-500">เปรียบเทียบสถิติระหว่างคณะต่างๆ</p>
+            <h3 className="text-lg font-bold text-slate-800 uppercase tracking-tight">เปรียบเทียบระหว่างคณะ (Faculty Breakdown)</h3>
           </div>
           <FacultyBreakdownTable stats={stats.facultyBreakdown} />
         </section>
 
-        {/* 5. EXECUTIVE SUMMARY */}
+        {/* 4. EXECUTIVE SUMMARY */}
         <section>
-          <div className="mb-4">
-            <RectorExecutiveSummary stats={stats} />
-          </div>
+          <RectorExecutiveSummary stats={stats} />
         </section>
 
         {/* FOOTER */}

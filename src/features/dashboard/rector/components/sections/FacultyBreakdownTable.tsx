@@ -7,57 +7,45 @@ import { cn } from "@/lib/cn";
 interface FacultyStat {
     facultyName: string;
     studentCount: number;
+    bookingCount: number;
     highRiskCount: number;
     mediumRiskCount: number;
     lowRiskCount: number;
-    // We only have this in RectorService if we add bookingCount there, 
-    // but for now, we can infer activity/risk per capita if needed, 
-    // OR we can rely on what we have.
-    // The RectorService returns:
-    // facultyName, studentCount, highRiskCount, mediumRiskCount, lowRiskCount.
-    // We should probably add bookingCount to RectorService to match the "Activity" column properly
-    // but for now let's use highRiskCount ratio as defined in Dean logic or just map what we have.
 }
-
-// Update: RectorService return type in `facultyBreakdown`:
-// { facultyName, studentCount, highRiskCount, mediumRiskCount, lowRiskCount }
 
 interface FacultyBreakdownTableProps {
     stats: FacultyStat[];
 }
 
 export function FacultyBreakdownTable({ stats }: FacultyBreakdownTableProps) {
-    // Sort by high risk count descending for initial view
-    const sortedStats = [...stats].sort((a, b) => b.highRiskCount - a.highRiskCount);
+    // Sort by booking count descending
+    const sortedStats = [...stats].sort((a, b) => b.bookingCount - a.bookingCount);
 
-    const totalHighRisk = stats.reduce((sum, d) => sum + d.highRiskCount, 0);
+    const totalBookings = stats.reduce((sum, d) => sum + d.bookingCount, 0);
     const totalStudents = stats.reduce((sum, d) => sum + d.studentCount, 0);
 
     // Metrics for cards
-    const topRiskFaculty = sortedStats[0];
-
-    // Risk Rate (High Risk / Student Count)
-    const facultyByRiskRate = [...stats]
-        .map(d => ({ ...d, rate: d.studentCount > 0 ? (d.highRiskCount / d.studentCount) * 100 : 0 }))
+    const topDept = sortedStats[0];
+    const deptByRate = [...stats]
+        .map(d => ({ ...d, rate: d.studentCount > 0 ? (d.bookingCount / d.studentCount) * 100 : 0 }))
         .sort((a, b) => b.rate - a.rate);
-
-    const highestRiskRateFaculty = facultyByRiskRate[0];
-    const lowestRiskRateFaculty = facultyByRiskRate[facultyByRiskRate.length - 1];
+    const highestRateDept = deptByRate[0];
+    const lowestRateDept = deptByRate[deptByRate.length - 1];
 
     return (
         <div className="space-y-6">
             {/* Quick Insight Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="border border-red-100 bg-gradient-to-br from-red-50 to-white shadow-sm">
+                <Card className="border border-blue-100 bg-gradient-to-br from-blue-50 to-white shadow-sm">
                     <CardContent className="p-5">
                         <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-red-100 rounded-lg">
-                                <AlertCircle className="h-4 w-4 text-red-600" />
+                            <div className="p-2 bg-blue-100 rounded-lg">
+                                <BookOpen className="h-4 w-4 text-blue-600" />
                             </div>
-                            <span className="text-xs font-semibold text-red-600 uppercase tracking-wider">เคสเสี่ยงสูงมากสุด</span>
+                            <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">คณะที่เข้ารับบริการมากสุด</span>
                         </div>
-                        <p className="text-lg font-bold text-slate-800 truncate">{topRiskFaculty?.facultyName}</p>
-                        <p className="text-sm text-slate-500 mt-0.5">{topRiskFaculty?.highRiskCount.toLocaleString()} ราย ({totalHighRisk > 0 ? ((topRiskFaculty?.highRiskCount / totalHighRisk) * 100).toFixed(1) : 0}%)</p>
+                        <p className="text-lg font-bold text-slate-800 truncate">{topDept?.facultyName}</p>
+                        <p className="text-sm text-slate-500 mt-0.5">{topDept?.bookingCount.toLocaleString()} ครั้ง ({totalBookings > 0 ? ((topDept?.bookingCount / totalBookings) * 100).toFixed(1) : 0}%)</p>
                     </CardContent>
                 </Card>
 
@@ -65,12 +53,12 @@ export function FacultyBreakdownTable({ stats }: FacultyBreakdownTableProps) {
                     <CardContent className="p-5">
                         <div className="flex items-center gap-3 mb-2">
                             <div className="p-2 bg-amber-100 rounded-lg">
-                                <ActivityIcon className="h-4 w-4 text-amber-600" />
+                                <AlertCircle className="h-4 w-4 text-amber-600" />
                             </div>
-                            <span className="text-xs font-semibold text-amber-600 uppercase tracking-wider">อัตราเสี่ยงสูงต่อประชากรสูงสุด</span>
+                            <span className="text-xs font-semibold text-amber-600 uppercase tracking-wider">อัตราเข้าถึงภาพรวมสูงสุด</span>
                         </div>
-                        <p className="text-lg font-bold text-slate-800 truncate">{highestRiskRateFaculty?.facultyName}</p>
-                        <p className="text-sm text-slate-500 mt-0.5">{highestRiskRateFaculty?.rate.toFixed(1)}%</p>
+                        <p className="text-lg font-bold text-slate-800 truncate">{highestRateDept?.facultyName}</p>
+                        <p className="text-sm text-slate-500 mt-0.5">{highestRateDept?.rate.toFixed(1)}%</p>
                     </CardContent>
                 </Card>
 
@@ -80,10 +68,10 @@ export function FacultyBreakdownTable({ stats }: FacultyBreakdownTableProps) {
                             <div className="p-2 bg-emerald-100 rounded-lg">
                                 <TrendingUp className="h-4 w-4 text-emerald-600" />
                             </div>
-                            <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">อัตราเสี่ยงต่ำสุด</span>
+                            <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">อัตราเข้าถึงภาพรวมต่ำสุด</span>
                         </div>
-                        <p className="text-lg font-bold text-slate-800 truncate">{lowestRiskRateFaculty?.facultyName}</p>
-                        <p className="text-sm text-slate-500 mt-0.5">{lowestRiskRateFaculty?.rate.toFixed(1)}%</p>
+                        <p className="text-lg font-bold text-slate-800 truncate">{lowestRateDept?.facultyName}</p>
+                        <p className="text-sm text-slate-500 mt-0.5">{lowestRateDept?.rate.toFixed(1)}%</p>
                     </CardContent>
                 </Card>
             </div>
@@ -97,7 +85,7 @@ export function FacultyBreakdownTable({ stats }: FacultyBreakdownTableProps) {
                                 เปรียบเทียบระหว่างคณะ
                             </CardTitle>
                             <CardDescription>
-                                รายละเอียดจำนวนนิสิตและความเสี่ยงรายคณะ
+                                รายละเอียดจำนวนนิสิตและความหนาแน่นของการใช้บริการรายคณะ
                             </CardDescription>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-slate-400">
@@ -115,14 +103,15 @@ export function FacultyBreakdownTable({ stats }: FacultyBreakdownTableProps) {
                                 <th className="px-6 py-3 font-semibold w-[50px]">#</th>
                                 <th className="px-6 py-3 font-semibold">คณะ</th>
                                 <th className="px-6 py-3 font-semibold text-right">จำนวนนิสิต</th>
-                                <th className="px-6 py-3 font-semibold text-right">กลุ่มเสี่ยงสูง (High Risk)</th>
-                                <th className="px-6 py-3 font-semibold w-[30%]">อัตราส่วนความเสี่ยง (Risk % of Pop.)</th>
+                                <th className="px-6 py-3 font-semibold text-right">จำนวนครั้งที่ใช้บริการ</th>
+                                <th className="px-6 py-3 font-semibold text-right">เสี่ยงสูง (High Risk)</th>
+                                <th className="px-6 py-3 font-semibold w-[25%]">อัตราส่วนการเข้าถึง</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {sortedStats.map((dept, index) => {
                                 const rate = dept.studentCount > 0
-                                    ? (dept.highRiskCount / dept.studentCount) * 100
+                                    ? (dept.bookingCount / dept.studentCount) * 100
                                     : 0;
 
                                 return (
@@ -135,6 +124,9 @@ export function FacultyBreakdownTable({ stats }: FacultyBreakdownTableProps) {
                                             {dept.studentCount.toLocaleString()}
                                         </td>
                                         <td className="px-6 py-4 text-right tabular-nums">
+                                            <span className="font-bold text-blue-600">{dept.bookingCount.toLocaleString()}</span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right tabular-nums">
                                             <span className="font-bold text-red-600">{dept.highRiskCount.toLocaleString()}</span>
                                         </td>
                                         <td className="px-6 py-4">
@@ -143,13 +135,13 @@ export function FacultyBreakdownTable({ stats }: FacultyBreakdownTableProps) {
                                                     <div
                                                         className={cn(
                                                             "h-full rounded-full",
-                                                            rate > 5 ? "bg-red-500" : rate > 2 ? "bg-amber-500" : "bg-emerald-500"
+                                                            rate > 10 ? "bg-amber-500" : "bg-blue-500"
                                                         )}
-                                                        style={{ width: `${Math.min(rate * 5, 100)}%` }} // Scale up for visibility
+                                                        style={{ width: `${Math.min(rate * 2, 100)}%` }} // Scaling for visibility
                                                     />
                                                 </div>
-                                                <span className="text-xs font-semibold text-slate-700 w-[50px] text-right">
-                                                    {rate.toFixed(2)}%
+                                                <span className="text-xs font-semibold text-slate-700 w-[40px] text-right">
+                                                    {rate.toFixed(1)}%
                                                 </span>
                                             </div>
                                         </td>
@@ -162,23 +154,4 @@ export function FacultyBreakdownTable({ stats }: FacultyBreakdownTableProps) {
             </Card>
         </div>
     );
-}
-
-function ActivityIcon(props: React.SVGProps<SVGSVGElement>) {
-    return (
-        <svg
-            {...props}
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-        </svg>
-    )
 }

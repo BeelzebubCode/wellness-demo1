@@ -13,6 +13,14 @@ interface UniversityStats {
         LOW: number;
         NORMAL: number;
     };
+    yearLevelDistribution: {
+        YEAR_1: number;
+        YEAR_2: number;
+        YEAR_3: number;
+        YEAR_4: number;
+        YEAR_5_PLUS: number;
+        UNKNOWN: number;
+    };
     problemStats: Record<string, number>;
     genderProblemStats: Record<string, Record<string, number>>;
     visitsByMonth: Record<string, number>;
@@ -23,6 +31,7 @@ interface UniversityStats {
     facultyBreakdown: Array<{
         facultyName: string;
         studentCount: number;
+        bookingCount: number;
         highRiskCount: number;
         mediumRiskCount: number;
         lowRiskCount: number;
@@ -96,6 +105,7 @@ export function useUniversityStats(dateRange?: DateRange) {
                         universityId: data.universityId,
                         universityName: data.universityName,
                         riskDistribution: data.riskDistribution,
+                        yearLevelDistribution: data.yearLevelDistribution,
                         problemStats: data.problemStats,
                         genderProblemStats: data.genderProblemStats,
                         visitsByMonth: data.visitsByMonth,
@@ -111,10 +121,10 @@ export function useUniversityStats(dateRange?: DateRange) {
                     setAnalytics({
                         problemStats: data.problemStats,
                         genderProblemStats: data.genderProblemStats,
+                        yearLevelDistribution: data.yearLevelDistribution,
                         visitsByMonth: data.visitsByMonth,
                         repeatStats: data.repeatStats,
                         riskDistribution: data.riskDistribution,
-                        // Add new analytics data if needed
                         wellbeing: data.wellbeing,
                         healthMap: data.healthMap,
                     });

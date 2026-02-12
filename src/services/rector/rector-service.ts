@@ -217,7 +217,11 @@ export const RectorService = {
 
     // Legacy function wrapper to support existing calls if any
     async getLegacyStats(universityId: number, startDate?: Date, endDate?: Date) {
-        // 1. Total Students (SQL)
+        // Set defaults if not provided (last 30 days)
+        const end = endDate ? new Date(endDate) : new Date();
+        const start = startDate ? new Date(startDate) : new Date(new Date(end).setDate(end.getDate() - 30));
+
+        // 1. Total Students (SQL) - This is university population, usually not date-filtered
         const totalStudentsQuery = await prisma.$queryRaw<{ count: bigint }[]>`
              SELECT COUNT(*)::int as count 
              FROM "student_academic" 
@@ -225,11 +229,13 @@ export const RectorService = {
          `;
         const totalStudents = Number(totalStudentsQuery[0]?.count || 0);
 
-        // 2. Total Bookings (SQL)
+        // 2. Total Bookings (SQL) - DATE FILTERED
         const totalBookingsQuery = await prisma.$queryRaw<{ count: bigint }[]>`
              SELECT COUNT(*)::int as count 
              FROM "booking" 
              WHERE "university_id" = ${universityId}
+             AND "booking_created_at" >= ${start}
+             AND "booking_created_at" <= ${end}
          `;
         const totalBookings = Number(totalBookingsQuery[0]?.count || 0);
 
@@ -255,7 +261,7 @@ export const RectorService = {
             select: { university_name_th: true },
         });
 
-        // 4. Risk Distribution (SQL Group By)
+        // 4. Risk Distribution (SQL Group By) - DATE FILTERED
         const riskStats = await prisma.$queryRaw<{ risk: number, count: bigint }[]>`
              SELECT 
                  bo.booking_outcome_risk_level as risk,
@@ -263,6 +269,8 @@ export const RectorService = {
              FROM "booking" b
              JOIN "booking_outcome" bo ON b.booking_id = bo.booking_id
              WHERE b.university_id = ${universityId}
+             AND b.booking_created_at >= ${start}
+             AND b.booking_created_at <= ${end}
              GROUP BY bo.booking_outcome_risk_level
          `;
 
@@ -274,7 +282,7 @@ export const RectorService = {
             else riskDistribution.NORMAL += Number(r.count);
         });
 
-        // 5. Problem Stats & Gender (SQL Group By)
+        // 5. Problem Stats & Gender (SQL Group By) - DATE FILTERED
         const problemGenderStats = await prisma.$queryRaw<{ name: string, gender: string, count: bigint }[]>`
              SELECT 
                  COALESCE(pc.problem_category_name_th, 'อื่นๆ') as name,
@@ -284,11 +292,13 @@ export const RectorService = {
              LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
              LEFT JOIN "student_profile" sp ON b.student_id = sp.student_id
              WHERE b.university_id = ${universityId}
+             AND b.booking_created_at >= ${start}
+             AND b.booking_created_at <= ${end}
              GROUP BY pc.problem_category_name_th, sp.student_gender
          `;
 
         const problemStats: Record<string, number> = {};
-        const genderProblemStats: Record<string, Record<string, number>> = { Male: {}, Female: {} };
+        const genderProblemStats: Record<string, Record<string, number>> = { Male: {}, Female: {}, Other: {} };
 
         problemGenderStats.forEach(row => {
             const count = Number(row.count);
@@ -298,16 +308,51 @@ export const RectorService = {
                 genderProblemStats.Male[row.name] = (genderProblemStats.Male[row.name] || 0) + count;
             } else if (row.gender === 'FEMALE') {
                 genderProblemStats.Female[row.name] = (genderProblemStats.Female[row.name] || 0) + count;
+            } else {
+                genderProblemStats.Other[row.name] = (genderProblemStats.Other[row.name] || 0) + count;
             }
         });
 
-        // 6. Visits by Month (SQL Truncate Date)
+        // 5.1. Year Level Distribution (University Wide) - DATE FILTERED
+        const currentYear = new Date().getFullYear();
+        const currentBuddhistYear = currentYear + 543;
+
+        const yearLevelQuery = await prisma.$queryRaw<{ year_level: number, count: bigint }[]>`
+            SELECT 
+                CASE 
+                    WHEN sa.student_admit_academic_year IS NULL THEN 0
+                    WHEN (${currentBuddhistYear} - sa.student_admit_academic_year + 1) > 4 THEN 5
+                    ELSE (${currentBuddhistYear} - sa.student_admit_academic_year + 1)
+                END as year_level,
+                COUNT(DISTINCT b.student_id)::int as count
+            FROM "booking" b
+            JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
+            WHERE b.university_id = ${universityId}
+            AND b.booking_created_at >= ${start}
+            AND b.booking_created_at <= ${end}
+            GROUP BY year_level
+        `;
+
+        const yearLevelDistribution = { YEAR_1: 0, YEAR_2: 0, YEAR_3: 0, YEAR_4: 0, YEAR_5_PLUS: 0, UNKNOWN: 0 };
+        yearLevelQuery.forEach(r => {
+            const count = Number(r.count);
+            if (r.year_level === 1) yearLevelDistribution.YEAR_1 += count;
+            else if (r.year_level === 2) yearLevelDistribution.YEAR_2 += count;
+            else if (r.year_level === 3) yearLevelDistribution.YEAR_3 += count;
+            else if (r.year_level === 4) yearLevelDistribution.YEAR_4 += count;
+            else if (r.year_level === 5) yearLevelDistribution.YEAR_5_PLUS += count;
+            else yearLevelDistribution.UNKNOWN += count;
+        });
+
+        // 6. Visits by Month (SQL Truncate Date) - FILTERED BY RANGE
         const visitsQuery = await prisma.$queryRaw<{ month: string, count: bigint }[]>`
              SELECT 
                  TO_CHAR(booking_created_at, 'YYYY-MM') as month,
                  COUNT(*)::int as count
              FROM "booking"
              WHERE university_id = ${universityId}
+             AND booking_created_at >= ${start}
+             AND booking_created_at <= ${end}
              GROUP BY TO_CHAR(booking_created_at, 'YYYY-MM')
          `;
 
@@ -316,8 +361,7 @@ export const RectorService = {
             if (v.month) visitsByMonth[v.month] = Number(v.count);
         });
 
-        // 7. Repeat Visits (SQL Count Group By Student)
-        // Subquery approach: Get counts per student, then group by count
+        // 7. Repeat Visits (SQL Count Group By Student) - DATE FILTERED
         const repeatQuery = await prisma.$queryRaw<{ visit_count: number, student_count: bigint }[]>`
              SELECT 
                  visit_count,
@@ -326,6 +370,8 @@ export const RectorService = {
                  SELECT student_id, COUNT(*) as visit_count
                  FROM "booking"
                  WHERE university_id = ${universityId}
+                 AND booking_created_at >= ${start}
+                 AND booking_created_at <= ${end}
                  GROUP BY student_id
              ) as sub
              GROUP BY visit_count
@@ -338,11 +384,12 @@ export const RectorService = {
             else repeatVisits += Number(r.student_count);
         });
 
-        // 8. Faculty Breakdown (Combined SQL)
+        // 8. Faculty Breakdown (Combined SQL) - DATE FILTERED
         const facultyStats = await prisma.$queryRaw<{
             faculty_id: number,
             faculty_name: string,
             student_count: bigint,
+            booking_count: bigint,
             high_risk: bigint,
             medium_risk: bigint,
             low_risk: bigint
@@ -355,12 +402,14 @@ export const RectorService = {
                      FROM "student_academic" sa 
                      WHERE sa.faculty_id = f.faculty_id AND sa.university_id = ${universityId}
                  )::int as student_count,
+                 COUNT(DISTINCT b.booking_id)::int as booking_count,
                  COALESCE(SUM(CASE WHEN bo.booking_outcome_risk_level >= 4 THEN 1 ELSE 0 END), 0)::int as high_risk,
                  COALESCE(SUM(CASE WHEN bo.booking_outcome_risk_level = 3 THEN 1 ELSE 0 END), 0)::int as medium_risk,
                  COALESCE(SUM(CASE WHEN bo.booking_outcome_risk_level = 2 THEN 1 ELSE 0 END), 0)::int as low_risk
              FROM "faculty" f
              LEFT JOIN "student_academic" sa ON f.faculty_id = sa.faculty_id
-             LEFT JOIN "booking" b ON sa.student_id = b.student_id AND b.university_id = ${universityId}
+             LEFT JOIN "booking" b ON sa.student_id = b.student_id AND b.university_id = ${universityId} 
+                AND b.booking_created_at >= ${start} AND b.booking_created_at <= ${end}
              LEFT JOIN "booking_outcome" bo ON b.booking_id = bo.booking_id
              WHERE f.university_id = ${universityId}
              GROUP BY f.faculty_id, f.faculty_name_th
@@ -370,33 +419,42 @@ export const RectorService = {
         const facultyBreakdown = facultyStats.map(f => ({
             facultyName: f.faculty_name,
             studentCount: Number(f.student_count),
+            bookingCount: Number(f.booking_count),
             highRiskCount: Number(f.high_risk),
             mediumRiskCount: Number(f.medium_risk),
             lowRiskCount: Number(f.low_risk)
         }));
 
-        // 9. Active Cases (University Wide)
+        // 9. Active Cases (University Wide) - DATE FILTERED
         const activeCasesQuery = await prisma.$queryRaw<{ count: bigint }[]>`
              SELECT COUNT(DISTINCT booking_id)::int as count
              FROM "booking"
              WHERE university_id = ${universityId}
+             AND booking_created_at >= ${start}
+             AND booking_created_at <= ${end}
              AND booking_status IN ('PENDING_ASSIGNMENT', 'ASSIGNED', 'IN_PROGRESS')
          `;
         const activeCases = Number(activeCasesQuery[0]?.count || 0);
 
-        // 10. Visit Trends (Current Month vs Previous Month)
-        const now = new Date();
-        const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const prevMonthStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+        // 10. Visit Trends (Selected Period vs Previous Equivalent Period)
+        const durationMs = end.getTime() - start.getTime();
+        const prevStart = new Date(start.getTime() - durationMs);
+        const prevEnd = new Date(end.getTime() - durationMs);
 
-        const currentMonthVisits = visitsByMonth[currentMonthStr] || 0;
-        const prevMonthVisits = visitsByMonth[prevMonthStr] || 0;
+        const currentPeriodVisits = totalBookings;
+        const prevPeriodQuery = await prisma.$queryRaw<{ count: bigint }[]>`
+            SELECT COUNT(*)::int as count 
+            FROM "booking" 
+            WHERE "university_id" = ${universityId}
+            AND "booking_created_at" >= ${prevStart}
+            AND "booking_created_at" <= ${prevEnd}
+        `;
+        const prevPeriodVisits = Number(prevPeriodQuery[0]?.count || 0);
 
         let visitTrendValue = 0;
-        if (prevMonthVisits > 0) {
-            visitTrendValue = ((currentMonthVisits - prevMonthVisits) / prevMonthVisits) * 100;
-        } else if (currentMonthVisits > 0) {
+        if (prevPeriodVisits > 0) {
+            visitTrendValue = ((currentPeriodVisits - prevPeriodVisits) / prevPeriodVisits) * 100;
+        } else if (currentPeriodVisits > 0) {
             visitTrendValue = 100;
         }
 
@@ -406,6 +464,7 @@ export const RectorService = {
             universityId,
             universityName: university?.university_name_th || "",
             riskDistribution,
+            yearLevelDistribution,
             problemStats,
             genderProblemStats,
             visitsByMonth,
