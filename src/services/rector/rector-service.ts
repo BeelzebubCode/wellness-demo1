@@ -18,9 +18,11 @@ export const RectorService = {
         // Build date filter
         const dateFilter = startDate && endDate ? {
             booking: {
-                booking_appointment_datetime: {
-                    gte: startDate,
-                    lte: endDate
+                timeSlot: {
+                    time_slot_start_datetime: {
+                        gte: startDate,
+                        lte: endDate
+                    }
                 }
             }
         } : {};
@@ -32,9 +34,11 @@ export const RectorService = {
                 university_id: universityId,
                 ...(startDate && endDate ? {
                     booking: {
-                        booking_appointment_datetime: {
-                            gte: startDate,
-                            lte: endDate
+                        timeSlot: {
+                            time_slot_start_datetime: {
+                                gte: startDate,
+                                lte: endDate
+                            }
                         }
                     }
                 } : {})
@@ -46,10 +50,12 @@ export const RectorService = {
         let highRiskCases = 0;
 
         riskQuery.forEach(r => {
-            const count = r._count;
-            totalCases += count;
-            if (r.booking_outcome_risk_level && r.booking_outcome_risk_level >= 4) {
-                highRiskCases += count;
+            const count = r._count as unknown as number; // Force cast safely if type is ambiguous
+            if (typeof count === 'number') {
+                totalCases += count;
+                if (r.booking_outcome_risk_level && r.booking_outcome_risk_level >= 4) {
+                    highRiskCases += count;
+                }
             }
         });
 
@@ -63,9 +69,11 @@ export const RectorService = {
                 feedback: {
                     university_id: universityId,
                     booking: {
-                        booking_appointment_datetime: {
-                            gte: startDate,
-                            lte: endDate
+                        timeSlot: {
+                            time_slot_start_datetime: {
+                                gte: startDate,
+                                lte: endDate
+                            }
                         }
                     }
                 }
@@ -83,9 +91,11 @@ export const RectorService = {
 
         const bookingDateFilter = startDate && endDate ? {
             university_id: universityId,
-            booking_appointment_datetime: {
-                gte: startDate,
-                lte: endDate
+            timeSlot: {
+                time_slot_start_datetime: {
+                    gte: startDate,
+                    lte: endDate
+                }
             }
         } : { university_id: universityId };
 
@@ -129,9 +139,11 @@ export const RectorService = {
             // Build booking date filter for this faculty
             const facultyBookingFilter = startDate && endDate ? {
                 university_id: universityId,
-                booking_appointment_datetime: {
-                    gte: startDate,
-                    lte: endDate
+                timeSlot: {
+                    time_slot_start_datetime: {
+                        gte: startDate,
+                        lte: endDate
+                    }
                 },
                 student: { academic: { faculty_id: faculty.faculty_id } }
             } : {
@@ -152,9 +164,11 @@ export const RectorService = {
                 where: startDate && endDate ? {
                     university_id: universityId,
                     booking: {
-                        booking_appointment_datetime: {
-                            gte: startDate,
-                            lte: endDate
+                        timeSlot: {
+                            time_slot_start_datetime: {
+                                gte: startDate,
+                                lte: endDate
+                            }
                         },
                         student: { academic: { faculty_id: faculty.faculty_id } }
                     }
@@ -172,9 +186,11 @@ export const RectorService = {
                     university_id: universityId,
                     booking_outcome_risk_level: { gte: 4 },
                     booking: {
-                        booking_appointment_datetime: {
-                            gte: startDate,
-                            lte: endDate
+                        timeSlot: {
+                            time_slot_start_datetime: {
+                                gte: startDate,
+                                lte: endDate
+                            }
                         },
                         student: { academic: { faculty_id: faculty.faculty_id } }
                     }
@@ -200,7 +216,7 @@ export const RectorService = {
     },
 
     // Legacy function wrapper to support existing calls if any
-    async getLegacyStats(universityId: number) {
+    async getLegacyStats(universityId: number, startDate?: Date, endDate?: Date) {
         // 1. Total Students (SQL)
         const totalStudentsQuery = await prisma.$queryRaw<{ count: bigint }[]>`
              SELECT COUNT(*)::int as count 
@@ -359,6 +375,31 @@ export const RectorService = {
             lowRiskCount: Number(f.low_risk)
         }));
 
+        // 9. Active Cases (University Wide)
+        const activeCasesQuery = await prisma.$queryRaw<{ count: bigint }[]>`
+             SELECT COUNT(DISTINCT booking_id)::int as count
+             FROM "booking"
+             WHERE university_id = ${universityId}
+             AND booking_status IN ('PENDING_ASSIGNMENT', 'ASSIGNED', 'IN_PROGRESS')
+         `;
+        const activeCases = Number(activeCasesQuery[0]?.count || 0);
+
+        // 10. Visit Trends (Current Month vs Previous Month)
+        const now = new Date();
+        const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const prevMonthStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+
+        const currentMonthVisits = visitsByMonth[currentMonthStr] || 0;
+        const prevMonthVisits = visitsByMonth[prevMonthStr] || 0;
+
+        let visitTrendValue = 0;
+        if (prevMonthVisits > 0) {
+            visitTrendValue = ((currentMonthVisits - prevMonthVisits) / prevMonthVisits) * 100;
+        } else if (currentMonthVisits > 0) {
+            visitTrendValue = 100;
+        }
+
         return {
             totalStudents,
             totalBookings,
@@ -374,6 +415,8 @@ export const RectorService = {
             },
             facultyBreakdown,
             riskTrends: [],
+            activeCases,
+            visitTrend: visitTrendValue.toFixed(1),
         };
     },
 

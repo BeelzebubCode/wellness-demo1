@@ -31,6 +31,8 @@ interface UniversityStats {
         month: string;
         averageRisk: number;
     }>;
+    activeCases: number;
+    visitTrend: string;
     wellbeing?: {
         overallScore: number;
         riskScore: number;
@@ -100,6 +102,8 @@ export function useUniversityStats(dateRange?: DateRange) {
                         repeatStats: data.repeatStats,
                         facultyBreakdown: data.facultyBreakdown || [],
                         riskTrends: data.riskTrends || [],
+                        activeCases: data.activeCases || 0,
+                        visitTrend: data.visitTrend || "0",
                         wellbeing: data.wellbeing,
                         healthMap: data.healthMap,
                     });
