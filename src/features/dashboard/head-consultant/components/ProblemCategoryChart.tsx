@@ -1,19 +1,25 @@
-// features/dashboard/head-consultant/components/ProblemCategoryChart.tsx
-"use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui";
 import { FolderKanban } from "lucide-react";
+import {
+    PieChart,
+    Pie,
+    Cell,
+    Tooltip,
+    Legend,
+    ResponsiveContainer
+} from "recharts";
 import type { CategoryItem } from "../hooks/useHeadConsultantDashboard";
 
-const BAR_COLORS = [
-    "bg-indigo-500",
-    "bg-sky-500",
-    "bg-emerald-500",
-    "bg-amber-500",
-    "bg-rose-500",
-    "bg-violet-500",
-    "bg-teal-500",
-    "bg-orange-500",
+const COLORS = [
+    "rgb(var(--primary))",
+    "rgb(var(--primary-600))",
+    "rgb(var(--accent))",
+    "rgba(var(--primary), 0.7)",
+    "rgba(var(--primary-600), 0.7)",
+    "rgba(var(--accent), 0.7)",
+    "rgba(var(--primary), 0.4)",
+    "rgba(var(--primary-600), 0.4)",
 ];
 
 interface Props {
@@ -21,45 +27,63 @@ interface Props {
 }
 
 export function ProblemCategoryChart({ categories }: Props) {
-    const maxCount = Math.max(...categories.map((c) => c.count), 1);
+    const chartData = categories.slice(0, 8).map(c => ({
+        name: c.nameTh,
+        value: c.count
+    }));
 
     return (
-        <Card className="col-span-1">
-            <CardHeader className="flex flex-row items-center gap-3 pb-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
-                    <FolderKanban className="h-5 w-5" />
+        <Card className="col-span-1 shadow-md hover:shadow-lg transition-all duration-300 border border-slate-200 rounded-xl bg-white flex flex-col h-full overflow-hidden">
+            <CardHeader className="p-4 border-b border-slate-100 flex flex-row items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-sm text-white shrink-0">
+                    <FolderKanban className="h-4 w-4" />
                 </div>
                 <div>
-                    <CardTitle className="text-base">ประเภทปัญหา</CardTitle>
-                    <CardDescription>สัดส่วน booking แยกตามหมวดปัญหา</CardDescription>
+                    <CardTitle className="text-base font-bold text-slate-900">ประเภทปัญหา</CardTitle>
+                    <CardDescription className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Problem Categories</CardDescription>
                 </div>
             </CardHeader>
-            <CardContent>
-                {categories.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-8">ยังไม่มีข้อมูล</p>
-                ) : (
-                    <div className="space-y-3">
-                        {categories.map((cat, idx) => (
-                            <div key={cat.categoryId} className="group">
-                                <div className="flex items-center justify-between mb-1">
-                                    <span className="text-sm font-medium text-gray-700 truncate max-w-[200px]">
-                                        {cat.nameTh}
-                                    </span>
-                                    <span className="text-xs font-semibold text-gray-500 tabular-nums">
-                                        {cat.count} เคส
-                                    </span>
-                                </div>
-                                <div className="h-2.5 w-full rounded-full bg-gray-100 overflow-hidden">
-                                    <div
-                                        className={`h-full rounded-full transition-all duration-500 ${BAR_COLORS[idx % BAR_COLORS.length]}`}
-                                        style={{ width: `${(cat.count / maxCount) * 100}%` }}
-                                    />
-                                </div>
-                            </div>
-                        ))}
+            <CardContent className="p-4 flex-1 h-[300px]">
+                {chartData.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-slate-300">
+                        <FolderKanban className="h-10 w-10 mb-2 opacity-10" />
+                        <p className="text-xs font-bold">ยังไม่มีข้อมูล</p>
                     </div>
+                ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Pie
+                                data={chartData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={50}
+                                outerRadius={85}
+                                paddingAngle={4}
+                                dataKey="value"
+                            >
+                                {chartData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} className="stroke-white stroke-2" />
+                                ))}
+                            </Pie>
+                            <Tooltip
+                                contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '11px' }}
+                                itemStyle={{ fontWeight: 700 }}
+                            />
+                            <Legend
+                                layout="vertical"
+                                verticalAlign="middle"
+                                align="right"
+                                iconType="circle"
+                                wrapperStyle={{ fontSize: '11px', fontWeight: 700, fill: '#64748b', paddingLeft: '10px' }}
+                            />
+                        </PieChart>
+                    </ResponsiveContainer>
                 )}
             </CardContent>
+            <div className="mt-auto px-4 py-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Metric: Cumulative Counts</span>
+                <div className="h-1.5 w-1.5 rounded-full bg-primary/20" />
+            </div>
         </Card>
     );
 }

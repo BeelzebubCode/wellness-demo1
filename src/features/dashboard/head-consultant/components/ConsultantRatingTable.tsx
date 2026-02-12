@@ -1,9 +1,8 @@
-// features/dashboard/head-consultant/components/ConsultantRatingTable.tsx
-"use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui";
-import { Star, MessageSquare } from "lucide-react";
+import { Star, MessageSquareQuote, ChevronRight, Award } from "lucide-react";
 import type { ConsultantRating } from "../hooks/useHeadConsultantDashboard";
+import { cn } from "@/lib/cn";
 
 interface Props {
     ratings: ConsultantRating[];
@@ -11,19 +10,18 @@ interface Props {
 
 function StarRating({ score, max = 5 }: { score: number; max?: number }) {
     return (
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-0.5" title={`${score} / ${max}`}>
             {Array.from({ length: max }, (_, i) => {
-                const filled = score >= i + 1;
-                const half = !filled && score > i && score < i + 1;
+                const filled = score >= i + 0.8;
                 return (
                     <Star
                         key={i}
-                        className={`h-4 w-4 ${filled
+                        className={cn(
+                            "h-3 w-3",
+                            filled
                                 ? "text-amber-400 fill-amber-400"
-                                : half
-                                    ? "text-amber-400 fill-amber-200"
-                                    : "text-gray-200 fill-gray-200"
-                            }`}
+                                : "text-slate-200 fill-slate-50"
+                        )}
                     />
                 );
             })}
@@ -32,68 +30,77 @@ function StarRating({ score, max = 5 }: { score: number; max?: number }) {
 }
 
 export function ConsultantRatingTable({ ratings }: Props) {
-    // Sort by rating desc
     const sorted = [...ratings].sort((a, b) => b.avgRating - a.avgRating);
 
     return (
-        <Card className="col-span-1">
-            <CardHeader className="flex flex-row items-center gap-3 pb-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
-                    <Star className="h-5 w-5" />
+        <Card className="col-span-1 shadow-md hover:shadow-lg transition-all duration-300 border border-slate-200 rounded-xl bg-white flex flex-col h-full overflow-hidden">
+            <CardHeader className="p-4 border-b border-slate-100 flex flex-row items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-sm text-white shrink-0">
+                    <Award className="h-4 w-4" />
                 </div>
                 <div>
-                    <CardTitle className="text-base">คะแนนผู้ให้คำปรึกษา</CardTitle>
-                    <CardDescription>คะแนนเฉลี่ยจาก Feedback ของนิสิต</CardDescription>
+                    <CardTitle className="text-base font-bold text-slate-900">
+                        ระดับความพึงพอใจ
+                    </CardTitle>
+                    <CardDescription className="text-sm font-medium text-slate-500">
+                        คะแนนรวมจากแบบประเมิน
+                    </CardDescription>
                 </div>
             </CardHeader>
-            <CardContent>
+
+            <CardContent className="p-3 flex-1 overflow-hidden flex flex-col">
                 {sorted.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-8">ยังไม่มีข้อมูล</p>
+                    <div className="flex flex-col items-center justify-center py-10 text-slate-300">
+                        <Star className="h-10 w-10 mb-2 opacity-10" />
+                        <p className="text-xs font-bold">ยังไม่มีข้อมูลการประเมิน</p>
+                    </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b border-gray-100">
-                                    <th className="text-left py-2 pr-4 font-medium text-gray-500">ชื่อ</th>
-                                    <th className="text-center py-2 px-3 font-medium text-gray-500">ฟีดแบค</th>
-                                    <th className="text-center py-2 px-3 font-medium text-gray-500">คะแนน</th>
-                                    <th className="text-right py-2 pl-3 font-medium text-gray-500">ระดับ</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {sorted.map((c) => (
-                                    <tr key={c.consultantId} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
-                                        <td className="py-3 pr-4">
-                                            <div className="flex items-center gap-2">
-                                                <div className="h-7 w-7 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                                                    {c.firstName.charAt(0)}
-                                                </div>
-                                                <span className="font-medium text-gray-800 truncate">
-                                                    {c.prefix}{c.firstName} {c.lastName}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="py-3 px-3 text-center">
-                                            <div className="inline-flex items-center gap-1 text-gray-500">
-                                                <MessageSquare className="h-3.5 w-3.5" />
-                                                <span className="tabular-nums">{c.feedbackCount}</span>
-                                            </div>
-                                        </td>
-                                        <td className="py-3 px-3 text-center">
-                                            <span className="font-semibold text-gray-900 tabular-nums">{c.avgRating.toFixed(1)}</span>
-                                        </td>
-                                        <td className="py-3 pl-3">
-                                            <div className="flex justify-end">
-                                                <StarRating score={c.avgRating} />
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                    <div className="space-y-1.5 h-[500px] overflow-y-auto custom-scrollbar pr-1">
+                        {sorted.map((c) => (
+                            <div
+                                key={c.consultantId}
+                                className="group flex items-center justify-between p-2 rounded-lg bg-white border border-slate-100 hover:border-primary/20 hover:bg-primary/5 transition-all cursor-default"
+                            >
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="h-8 w-8 rounded-lg bg-slate-900 flex items-center justify-center text-white font-bold text-xs shrink-0">
+                                        {c.firstName.charAt(0)}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h4 className="font-bold text-xs text-slate-900 truncate group-hover:text-primary transition-colors">
+                                            {c.prefix}{c.firstName} {c.lastName}
+                                        </h4>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                            <StarRating score={c.avgRating} />
+                                            <span className="text-[10px] font-bold text-slate-900">
+                                                {c.avgRating.toFixed(1)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
+                                    <div className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-200 group-hover:bg-white transition-colors">
+                                        <MessageSquareQuote className="w-3 h-3 text-slate-400 group-hover:text-primary" />
+                                        <span className="text-[10px] font-bold text-slate-700">
+                                            {c.feedbackCount.toLocaleString()}
+                                        </span>
+                                    </div>
+                                    {c.avgRating >= 4.5 && (
+                                        <div className="text-[8px] font-black uppercase text-primary bg-primary/10 px-1.5 py-0 rounded">
+                                            TOP
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 )}
             </CardContent>
+
+            <div className="mt-auto px-4 py-2 bg-slate-50 border-t border-slate-100 flex justify-between items-center shrink-0">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">REALTIME</span>
+                <ChevronRight className="w-3 h-3 text-slate-300" />
+            </div>
         </Card>
     );
 }

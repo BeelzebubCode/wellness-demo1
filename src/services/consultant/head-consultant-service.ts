@@ -4,45 +4,68 @@ export const HeadConsultantService = {
   // ──────────────────────────────────────────
   // 1️⃣  Booking Stats — นับ booking แยก status
   // ──────────────────────────────────────────
-  async getBookingStats(universityId: number) {
+  async getBookingStats(universityId: number, options?: { startDate?: Date; endDate?: Date }) {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const [pending, assigned, inProgress, completed, cancelled, totalThisMonth] =
+    const dateFilter = options?.startDate || options?.endDate ? {
+      booking_created_at: {
+        ...(options.startDate && { gte: options.startDate }),
+        ...(options.endDate && { lte: options.endDate }),
+      }
+    } : {};
+
+    const [pending, assigned, inProgress, completed, cancelled, totalInPeriod] =
       await Promise.all([
         prisma.booking.count({
-          where: { university_id: universityId, booking_status: "PENDING_ASSIGNMENT" },
+          where: { university_id: universityId, booking_status: "PENDING_ASSIGNMENT", ...dateFilter },
         }),
         prisma.booking.count({
-          where: { university_id: universityId, booking_status: "ASSIGNED" },
+          where: { university_id: universityId, booking_status: "ASSIGNED", ...dateFilter },
         }),
         prisma.booking.count({
-          where: { university_id: universityId, booking_status: "IN_PROGRESS" },
+          where: { university_id: universityId, booking_status: "IN_PROGRESS", ...dateFilter },
         }),
         prisma.booking.count({
-          where: { university_id: universityId, booking_status: "COMPLETED" },
+          where: { university_id: universityId, booking_status: "COMPLETED", ...dateFilter },
         }),
         prisma.booking.count({
-          where: { university_id: universityId, booking_status: "CANCELLED" },
+          where: { university_id: universityId, booking_status: "CANCELLED", ...dateFilter },
         }),
         prisma.booking.count({
           where: {
             university_id: universityId,
-            booking_created_at: { gte: startOfMonth },
+            ...dateFilter,
           },
         }),
       ]);
 
-    return { pending, assigned, inProgress, completed, cancelled, totalThisMonth };
+    return { 
+      pending, 
+      assigned, 
+      inProgress, 
+      completed, 
+      cancelled, 
+      totalThisMonth: totalInPeriod // Keep name for compatibility or update UI
+    };
   },
 
   // ──────────────────────────────────────────
   // 2️⃣  Problem Category Distribution
   // ──────────────────────────────────────────
-  async getProblemCategoryDistribution(universityId: number) {
+  async getProblemCategoryDistribution(universityId: number, options?: { startDate?: Date; endDate?: Date }) {
+    const where: any = { university_id: universityId };
+    
+    if (options?.startDate || options?.endDate) {
+      where.booking_created_at = {
+        ...(options.startDate && { gte: options.startDate }),
+        ...(options.endDate && { lte: options.endDate }),
+      };
+    }
+
     const groups = await prisma.booking.groupBy({
       by: ["problem_category_id"],
-      where: { university_id: universityId },
+      where,
       _count: { booking_id: true },
       orderBy: { _count: { booking_id: "desc" } },
     });
@@ -67,7 +90,7 @@ export const HeadConsultantService = {
   },
 
   // ──────────────────────────────────────────
-  // 3️⃣  Top Students by Points
+  // 3️⃣  Top Students by Points (Points are cumulative, usually not date-filtered)
   // ──────────────────────────────────────────
   async getTopStudentsByPoints(universityId: number, limit = 10) {
     const wallets = await prisma.studentPointWallet.findMany({
@@ -99,16 +122,32 @@ export const HeadConsultantService = {
     }));
   },
 
+
   // ──────────────────────────────────────────
   // 4️⃣  Consultant Ratings
   // ──────────────────────────────────────────
-  async getConsultantRatings(universityId: number) {
-    // Get all consultants with feedbacks for this university
+  async getConsultantRatings(universityId: number, options?: { startDate?: Date; endDate?: Date }) {
+    // Determine feedback date filter
+    const feedbackFilter: any = {};
+    if (options?.startDate || options?.endDate) {
+      feedbackFilter.feedback_created_at = {
+        ...(options.startDate && { gte: options.startDate }),
+        ...(options.endDate && { lte: options.endDate }),
+      };
+    }
+
+    // Get all consultants for this university (EXCLUDE HEAD)
     const consultants = await prisma.consultant.findMany({
-      where: { university_id: universityId },
+      where: { 
+        university_id: universityId,
+        account: {
+          account_role: { not: "HEAD_CONSULTANT" }
+        }
+      },
       include: {
         profile: true,
         feedbacks: {
+          where: feedbackFilter,
           include: {
             ratings: true,
           },
@@ -139,7 +178,22 @@ export const HeadConsultantService = {
   // ──────────────────────────────────────────
   // 5️⃣  Team Overview — consultants + active bookings + real ratings
   // ──────────────────────────────────────────
-  async getTeamOverview(universityId: number) {
+  async getTeamOverview(universityId: number, options?: { startDate?: Date; endDate?: Date }) {
+    const bookingFilter: any = {
+      booking_status: { in: ["ASSIGNED", "IN_PROGRESS"] },
+    };
+
+    const feedbackFilter: any = {};
+
+    if (options?.startDate || options?.endDate) {
+      const dateRange = {
+        ...(options.startDate && { gte: options.startDate }),
+        ...(options.endDate && { lte: options.endDate }),
+      };
+      bookingFilter.booking_created_at = dateRange;
+      feedbackFilter.feedback_created_at = dateRange;
+    }
+
     const consultants = await prisma.consultant.findMany({
       where: { 
         university_id: universityId,
@@ -151,13 +205,12 @@ export const HeadConsultantService = {
         profile: true,
         account: { select: { account_role: true } },
         bookings: {
-          where: {
-            booking_status: { in: ["ASSIGNED", "IN_PROGRESS"] },
-          },
-          select: { booking_id: true },
+          where: bookingFilter,
+          select: { booking_id: true, booking_created_at: true },
         },
         specializations: true,
         feedbacks: {
+          where: feedbackFilter,
           include: { ratings: true }
         }
       },

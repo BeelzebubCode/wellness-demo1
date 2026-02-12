@@ -39,6 +39,9 @@ export async function seedTimeSlots(
     for (let hour = openHour; hour < closeHour; hour++) {
       // Use toThaiDate to get the correct UTC instant for 08:00 TH
       const start = toThaiDate(date, hour, 0);
+      if (hour === 0 || hour === 8) {
+         console.log(`[DEBUG] Date: ${date.toISOString()}, Hour: ${hour}, StartUTC: ${start.toISOString()}`);
+      }
 
       const end = new Date(start);
       end.setMinutes(end.getMinutes() + SLOT_DURATION_MINUTES);

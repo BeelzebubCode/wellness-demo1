@@ -6,12 +6,22 @@ function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
 
+
 function fmtHHmm(d: Date) {
-  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  // ✅ Force Asia/Bangkok timezone
+  return d.toLocaleTimeString("en-GB", { 
+    timeZone: "Asia/Bangkok", 
+    hour: "2-digit", 
+    minute: "2-digit" 
+  });
 }
 
 function fmtISODate(d: Date) {
-  return d.toISOString().slice(0, 10);
+  // ✅ Force Asia/Bangkok date
+  // en-CA gives YYYY-MM-DD format
+  return d.toLocaleDateString("en-CA", { 
+    timeZone: "Asia/Bangkok" 
+  });
 }
 
 export function normalizeTimeSlot(raw: TimeSlot, now: Date): TimeSlotCore {

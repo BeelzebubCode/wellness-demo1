@@ -13,25 +13,17 @@ async function getUniversityId(): Promise<number | null> {
   return payload?.activeUniversityId ?? payload?.homeUniversityId ?? null;
 }
 
-export async function getBookingStats() {
+export async function getBookingStats(from?: string, to?: string) {
   try {
     const uniId = await getUniversityId();
     if (!uniId) return null;
-    return await HeadConsultantService.getBookingStats(uniId);
+    return await HeadConsultantService.getBookingStats(uniId, {
+      startDate: from ? new Date(from) : undefined,
+      endDate: to ? new Date(to) : undefined,
+    });
   } catch (err) {
     console.error("getBookingStats failed:", err);
     return null;
-  }
-}
-
-export async function getCategoryDistribution() {
-  try {
-    const uniId = await getUniversityId();
-    if (!uniId) return [];
-    return await HeadConsultantService.getProblemCategoryDistribution(uniId);
-  } catch (err) {
-    console.error("getCategoryDistribution failed:", err);
-    return [];
   }
 }
 
@@ -46,22 +38,44 @@ export async function getTopStudents(limit = 10) {
   }
 }
 
-export async function getConsultantRatings() {
+export async function getCategoryDistribution(from?: string, to?: string) {
   try {
     const uniId = await getUniversityId();
     if (!uniId) return [];
-    return await HeadConsultantService.getConsultantRatings(uniId);
+    return await HeadConsultantService.getProblemCategoryDistribution(uniId, {
+      startDate: from ? new Date(from) : undefined,
+      endDate: to ? new Date(to) : undefined,
+    });
+  } catch (err) {
+    console.error("getCategoryDistribution failed:", err);
+    return [];
+  }
+}
+
+
+
+export async function getConsultantRatings(from?: string, to?: string) {
+  try {
+    const uniId = await getUniversityId();
+    if (!uniId) return [];
+    return await HeadConsultantService.getConsultantRatings(uniId, {
+      startDate: from ? new Date(from) : undefined,
+      endDate: to ? new Date(to) : undefined,
+    });
   } catch (err) {
     console.error("getConsultantRatings failed:", err);
     return [];
   }
 }
 
-export async function getTeamOverview() {
+export async function getTeamOverview(from?: string, to?: string) {
   try {
     const uniId = await getUniversityId();
     if (!uniId) return [];
-    return await HeadConsultantService.getTeamOverview(uniId);
+    return await HeadConsultantService.getTeamOverview(uniId, {
+      startDate: from ? new Date(from) : undefined,
+      endDate: to ? new Date(to) : undefined,
+    });
   } catch (err) {
     console.error("getTeamOverview failed:", err);
     return [];

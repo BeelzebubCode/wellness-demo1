@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import {
   getBookingStats,
+
   getCategoryDistribution,
   getTopStudents,
   getConsultantRatings,
@@ -60,23 +61,31 @@ export interface TeamMember {
 }
 
 // ── Hook ───────────────────────────────────
-export function useHeadConsultantDashboard() {
+export function useHeadConsultantDashboard(dateRange?: { from?: Date; to?: Date }) {
   const [stats, setStats] = useState<BookingStats | null>(null);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [topStudents, setTopStudents] = useState<TopStudent[]>([]);
   const [ratings, setRatings] = useState<ConsultantRating[]>([]);
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     async function fetchAll() {
+      // If we already have stats, we are just refreshing
+      if (!stats) setIsLoading(true);
+      setIsRefreshing(true);
+      
       try {
+        const fromStr = dateRange?.from?.toISOString();
+        const toStr = dateRange?.to?.toISOString();
+
         const [s, c, t, r, tm] = await Promise.all([
-          getBookingStats(),
-          getCategoryDistribution(),
-          getTopStudents(),
-          getConsultantRatings(),
-          getTeamOverview(),
+          getBookingStats(fromStr, toStr),
+          getCategoryDistribution(fromStr, toStr),
+          getTopStudents(), // Points are global
+          getConsultantRatings(fromStr, toStr),
+          getTeamOverview(fromStr, toStr),
         ]);
 
         if (s) setStats(s);
@@ -88,11 +97,13 @@ export function useHeadConsultantDashboard() {
         console.error("Dashboard data fetch failed:", err);
       } finally {
         setIsLoading(false);
+        setIsRefreshing(false);
       }
     }
 
     fetchAll();
-  }, []);
+  }, [dateRange?.from?.getTime(), dateRange?.to?.getTime()]);
 
-  return { stats, categories, topStudents, ratings, team, isLoading };
+  return { stats, categories, topStudents, ratings, team, isLoading, isRefreshing };
 }
+
