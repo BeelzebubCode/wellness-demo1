@@ -359,7 +359,7 @@ export function AssignBookingModal({
                 ไม่พบที่ปรึกษา
               </div>
             ) : (
-              <div className="max-h-[320px] overflow-y-auto space-y-2 pr-1 -mr-1 scrollbar-thin">
+              <div className="max-h-[320px] overflow-y-auto space-y-2 pr-2 hide-scrollbar">
                 {sortedAssignees.map((a) => (
                   <ConsultantCard
                     key={a.id}
