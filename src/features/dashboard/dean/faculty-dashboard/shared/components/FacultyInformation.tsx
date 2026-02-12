@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { LayoutDashboard, Search } from "lucide-react";
+import { LayoutDashboard, Search, Filter } from "lucide-react";
 import { FacultyHeaderBanner, HeaderBadgeItem } from "./FacultyHeaderBanner";
 import { FacultyOverview, SummaryStat, SessionTrendItem, RiskItem, ProblemItem } from "./FacultyOverview";
 import { DepartmentListing, DepartmentStat } from "./DepartmentListing";
+import { FacultyFilterView } from "./FacultyFilterView";
 
-type TabType = "overview" | "departments";
+type TabType = "overview" | "departments" | "filters";
 
 interface Props {
   facultyName: string;
@@ -16,13 +17,16 @@ interface Props {
   overviewStats: {
     summaryStats: SummaryStat[];
     sessionTrend: SessionTrendItem[];
-    riskData: RiskItem[];
+    problemDistribution: RiskItem[];
     topProblems: ProblemItem[];
   };
   departments: DepartmentStat[];
   onSelectDepartment: (dept: DepartmentStat) => void;
   activeTab?: TabType;
   onTabChange?: (tab: TabType) => void;
+  startDate?: Date;
+  endDate?: Date;
+  onDateRangeChange?: (range: { from?: Date; to?: Date }) => void;
 }
 
 export function FacultyInformation({ 
@@ -34,11 +38,27 @@ export function FacultyInformation({
   departments,
   onSelectDepartment,
   activeTab: controlledTab,
-  onTabChange
+  onTabChange,
+  startDate: controlledStartDate,
+  endDate: controlledEndDate,
+  onDateRangeChange
 }: Props) {
   const [internalTab, setInternalTab] = useState<TabType>("overview");
-  
+  const [internalStartDate, setInternalStartDate] = useState<Date | undefined>(new Date(2026, 0, 13)); // 13/01/2569
+  const [internalEndDate, setInternalEndDate] = useState<Date | undefined>(new Date(2026, 1, 12));  // 12/02/2569
+
   const activeTab = controlledTab ?? internalTab;
+  const startDate = controlledStartDate ?? internalStartDate;
+  const endDate = controlledEndDate ?? internalEndDate;
+
+  const handleDateRangeChange = (range: { from?: Date; to?: Date }) => {
+    if (onDateRangeChange) {
+      onDateRangeChange(range);
+    } else {
+      setInternalStartDate(range.from);
+      setInternalEndDate(range.to);
+    }
+  };
   const handleTabChange = (tab: TabType) => {
     if (onTabChange) {
       onTabChange(tab);
@@ -64,13 +84,19 @@ export function FacultyInformation({
                 active={activeTab === "overview"} 
                 onClick={() => handleTabChange("overview")}
                 icon={<LayoutDashboard className="w-4 h-4" />}
-                label="ภาพรวมทั้งหมด"
+                label="Dashboard"
               />
               <TabButton 
                 active={activeTab === "departments"} 
                 onClick={() => handleTabChange("departments")}
                 icon={<Search className="w-4 h-4" />}
                 label="ภาควิชา"
+              />
+              <TabButton 
+                active={activeTab === "filters"} 
+                onClick={() => handleTabChange("filters")}
+                icon={<Filter className="w-4 h-4" />}
+                label="ตัวกรอง"
               />
            </div>
         </div>
@@ -80,16 +106,23 @@ export function FacultyInformation({
       <main className="max-w-7xl mx-auto p-6 md:p-12 pb-32">
         {activeTab === "overview" ? (
           <FacultyOverview 
+             facultyName={facultyName}
+             universityName={universityName}
              summaryStats={overviewStats.summaryStats}
              sessionTrend={overviewStats.sessionTrend}
-             riskData={overviewStats.riskData}
+             problemDistribution={overviewStats.problemDistribution}
              topProblems={overviewStats.topProblems}
+             startDate={startDate}
+             endDate={endDate}
+             onDateRangeChange={handleDateRangeChange}
           />
-        ) : (
+        ) : activeTab === "departments" ? (
           <DepartmentListing 
             departments={departments} 
             onSelect={onSelectDepartment} 
           />
+        ) : (
+          <FacultyFilterView />
         )}
       </main>
     </div>

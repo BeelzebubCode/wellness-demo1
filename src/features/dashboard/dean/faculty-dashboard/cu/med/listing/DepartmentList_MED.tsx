@@ -1,4 +1,4 @@
-// src/features/university-management/cu/med/listing/DepartmentList_MED.tsx
+// src/features/dashboard/dean/faculty-dashboard/cu/med/listing/DepartmentList_MED.tsx
 "use client";
 
 import React from "react";
@@ -243,13 +243,13 @@ export function DepartmentList_MED({ onSelect }: Props) {
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2 text-gray-600">
                     <BookOpen className="w-4 h-4 text-gray-400" />
-                    <span>Sessions</span>
+                    <span>Total Case</span>
                   </div>
                   <span className="font-semibold text-gray-900">{dept.sessions.toLocaleString()}</span>
                 </div>
 
                 <div className="flex items-center justify-between text-xs pt-2 border-t border-gray-50">
-                  <span className="text-gray-400 italic">Sessions per Student</span>
+                  <span className="text-gray-400 italic">Case per Students</span>
                   <span className="font-bold text-[rgb(var(--primary))] bg-[rgba(var(--primary),0.1)] px-2 py-0.5 rounded">
                     {dept.perStudent.toFixed(2)}
                   </span>

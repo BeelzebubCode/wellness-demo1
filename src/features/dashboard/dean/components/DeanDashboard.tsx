@@ -6,7 +6,7 @@ import { DeanAnalytics } from "./sections/DeanAnalytics";
 import { DepartmentBreakdownTable } from "./sections/DepartmentBreakdownTable";
 
 import { ExecutiveSummarySection } from "./sections/ExecutiveSummarySection";
-import { DateRangePicker } from "@/components/ui/DateRangePicker";
+import { FacultyDateRangePicker } from "@/features/dashboard/dean/faculty-dashboard/shared/components/FacultyDateRangePicker";
 
 interface DeanDashboardProps {
     facultyCode?: string;
@@ -46,15 +46,12 @@ export function DeanDashboard({ facultyCode }: DeanDashboardProps) {
             <div className="space-y-8">
                 {/* Faculty Header */}
                 <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-                    <div>
-                        <h2 className="text-2xl font-black text-slate-900">{stats.facultyName}</h2>
-                        <p className="text-sm text-slate-500 mt-0.5">{stats.universityName} · {stats.facultyCode}</p>
-                    </div>
+                    <div />
                     <div className="flex flex-col items-end gap-2">
-                        <DateRangePicker
+                        <FacultyDateRangePicker
                             startDate={dateRange?.from}
                             endDate={dateRange?.to}
-                            onChange={(range) => setDateRange(range)}
+                            onChange={(range: { from?: Date; to?: Date }) => setDateRange(range)}
                         />
 
                         <div className="text-right">

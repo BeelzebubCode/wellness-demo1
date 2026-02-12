@@ -145,7 +145,7 @@ export function DepartmentDashboard_MED({ department, onBack, onBackToList }: Pr
         </div>
 
         {/* Main Charts Area */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           
           {/* Risk Distribution (Donut) */}
           <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/30 p-6 border border-slate-100 flex flex-col">
@@ -159,8 +159,26 @@ export function DepartmentDashboard_MED({ department, onBack, onBackToList }: Pr
             
             <div className="h-[240px] relative flex items-center justify-center">
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                 <span className="text-3xl font-black text-slate-800 leading-none">{riskData.reduce((a, b) => a + b.value, 0)}</span>
-                 <p className="text-xs font-bold text-slate-400 mt-1">ราย</p>
+                {/* Total Count - Fades OUT when activeIndex is not null */}
+                <div className={`flex flex-col items-center justify-center transition-all duration-300 absolute ${activeIndex !== null ? 'opacity-0 scale-90 translate-y-2' : 'opacity-100 scale-100 translate-y-0'}`}>
+                   <span className="text-3xl font-black text-slate-800 leading-none">{riskData.reduce((a, b) => a + b.value, 0)}</span>
+                   <p className="text-xs font-bold text-slate-400 mt-1">ราย</p>
+                </div>
+
+                {/* Active Segment Value - Fades IN when activeIndex is NOT null */}
+                <div className={`flex flex-col items-center justify-center transition-all duration-300 absolute px-6 text-center ${activeIndex === null ? 'opacity-0 scale-90 -translate-y-2' : 'opacity-100 scale-100 translate-y-0'}`}>
+                   {activeIndex !== null && riskData[activeIndex] && (
+                      <>
+                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1 leading-tight line-clamp-1 max-w-[120px]">
+                            {riskData[activeIndex].name}
+                         </span>
+                         <span className="text-3xl font-black text-slate-800 leading-none tabular-nums">
+                            {riskData[activeIndex].value}
+                         </span>
+                         <p className="text-xs font-bold text-slate-400 mt-1">ราย</p>
+                      </>
+                   )}
+                </div>
               </div>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -192,18 +210,7 @@ export function DepartmentDashboard_MED({ department, onBack, onBackToList }: Pr
                       />
                     ))}
                   </Pie>
-                  <Tooltip 
-                    contentStyle={{ 
-                      borderRadius: '12px', 
-                      border: 'none', 
-                      boxShadow: '0 8px 12px -3px rgba(0,0,0,0.1)',
-                      backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                      backdropFilter: 'blur(8px)',
-                      padding: '6px 10px',
-                      fontSize: '11px',
-                      fontWeight: '700'
-                    }}
-                  />
+
                 </PieChart>
               </ResponsiveContainer>
             </div>

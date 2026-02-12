@@ -1,4 +1,4 @@
-// src/features/university-management/shared/components/FacultyHeaderBanner.tsx
+// src/features/dashboard/dean/faculty-dashboard/shared/components/FacultyHeaderBanner.tsx
 "use client";
 
 import React from "react";
@@ -26,7 +26,7 @@ export function FacultyHeaderBanner({
   return (
     <div className="bg-[#0b0f1a] text-white p-8 relative overflow-hidden">
       {/* Subtle Background Pattern/Effect */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2" />
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2" />
       
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-8 relative z-10">
         {/* Logo Container */}
@@ -41,8 +41,11 @@ export function FacultyHeaderBanner({
               }}
             />
           </div>
-          {/* Status Badge */}
-          <div className="absolute -bottom-1 -right-1 bg-[#00e676] w-5 h-5 rounded-full border-[3px] border-[#0b0f1a] shadow-[0_0_12px_rgba(0,230,118,0.6)] z-20 animate-pulse"></div>
+          {/* Layered Status Badge */}
+          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 flex items-center justify-center z-20">
+             <div className="absolute inset-0 rounded-full bg-slate-950" />
+             <div className="relative w-full h-full rounded-full bg-[#00e676] -translate-y-0.5 -translate-x-0.5 shadow-[1px_1px_4px_rgba(0,230,118,0.3)]" />
+          </div>
         </div>
 
         {/* Info Section */}

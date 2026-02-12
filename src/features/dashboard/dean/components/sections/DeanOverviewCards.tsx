@@ -56,12 +56,12 @@ export function DeanOverviewCards({ stats }: DeanOverviewCardsProps) {
             sublabel: "Total Students",
             value: stats.totalStudents.toLocaleString(),
             icon: Users,
-            iconBg: "bg-blue-50",
-            iconColor: "text-blue-600",
+            iconBg: "bg-primary/10",
+            iconColor: "text-primary",
             footer: (
-                <span className="text-slate-400 text-xs">ข้อมูลจากทะเบียน</span>
+                <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">ข้อมูลจากทะเบียน</span>
             ),
-            accent: "border-l-blue-500",
+            accent: "border-l-primary",
         },
         {
             label: "กลุ่มเสี่ยงสูง",
@@ -70,50 +70,50 @@ export function DeanOverviewCards({ stats }: DeanOverviewCardsProps) {
             valueColor: "text-red-600",
             icon: AlertTriangle,
             iconBg: "bg-red-50",
-            iconColor: "text-red-500",
+            iconColor: "text-primary",
             footer: (
-                <span className="text-slate-400 text-xs">
+                <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">
                     {stats.riskDistribution.HIGH.toLocaleString()} จาก {totalRisks.toLocaleString()} คน
                 </span>
             ),
-            accent: "border-l-red-500",
+            accent: "border-l-primary",
         },
         {
             label: "อัตราการเข้าถึง",
             sublabel: "Utilization",
             value: `${utilizationRate}%`,
             icon: Activity,
-            iconBg: "bg-indigo-50",
-            iconColor: "text-indigo-600",
+            iconBg: "bg-primary/10",
+            iconColor: "text-primary",
             footer: (
                 <div className="flex items-center gap-2">
-                    <span className={`font-bold flex items-center px-1.5 py-0.5 rounded text-xs ${trendColor}`}>
+                    <span className={`font-black flex items-center px-1.5 py-0.5 rounded text-xs ${trendColor}`}>
                         <TrendIcon className="w-3 h-3 mr-0.5" />
                         {trendVal > 0 ? '+' : ''}{stats.visitTrend}%
                     </span>
-                    <span className="text-slate-400 text-xs">จากเดือนก่อน</span>
+                    <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">จากเดือนก่อน</span>
                 </div>
             ),
-            accent: "border-l-indigo-500",
+            accent: "border-l-primary",
         },
         {
             label: "เคสที่กำลังดูแล",
             sublabel: "Active Cases",
             value: stats.activeCases.toLocaleString(),
             icon: Clock,
-            iconBg: "bg-amber-50",
-            iconColor: "text-amber-600",
+            iconBg: "bg-primary/10",
+            iconColor: "text-primary",
             footer: (
                 <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+                    <span className="text-xs font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
                         ติดตามอยู่
                     </span>
-                    <span className="text-slate-400 text-xs">
+                    <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">
                         กลับมาซ้ำ {repeatRate}%
                     </span>
                 </div>
             ),
-            accent: "border-l-amber-500",
+            accent: "border-l-primary",
         },
     ];
 
@@ -122,29 +122,31 @@ export function DeanOverviewCards({ stats }: DeanOverviewCardsProps) {
             {cards.map((card, i) => {
                 const Icon = card.icon;
                 return (
-                    <Card
+                    <div
                         key={i}
-                        className={`border shadow-sm bg-white hover:shadow-md transition-all duration-200 border-l-4 ${card.accent}`}
+                        className={`bg-white rounded-[2rem] shadow-lg shadow-slate-200/30 p-6 border border-slate-100 relative overflow-hidden group hover:scale-[1.02] transition-all duration-500 flex flex-col justify-between border-l-8 ${card.accent.replace('border-l-', 'border-')}`}
                     >
-                        <CardContent className="p-5">
-                            <div className="flex justify-between items-start">
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-slate-500 truncate">
-                                        {card.label}
-                                    </p>
-                                    <h3 className={`text-3xl font-black mt-1.5 ${card.valueColor || 'text-slate-900'}`}>
-                                        {card.value}
-                                    </h3>
-                                </div>
-                                <div className={`p-2.5 ${card.iconBg} rounded-xl flex-shrink-0`}>
-                                    <Icon className={`h-5 w-5 ${card.iconColor}`} />
-                                </div>
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="bg-slate-50 w-10 h-10 rounded-xl flex items-center justify-center ring-4 ring-white shadow-sm transition-transform group-hover:rotate-6">
+                                <Icon className={`h-5 w-5 ${card.iconColor}`} />
                             </div>
-                            <div className="mt-3 pt-3 border-t border-slate-100">
-                                {card.footer}
+                            <div className="flex-1 text-right">
+                                <p className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none">
+                                    {card.label}
+                                </p>
                             </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                        
+                        <div>
+                            <h3 className={`text-3xl font-black tracking-tight ${card.valueColor || 'text-slate-800'}`}>
+                                {card.value}
+                            </h3>
+                        </div>
+
+                        <div className="mt-4 pt-4 border-t border-slate-50/80">
+                            {card.footer}
+                        </div>
+                    </div>
                 );
             })}
         </div>

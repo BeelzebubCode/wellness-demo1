@@ -1,9 +1,9 @@
 "use client";
 
-import { DeanDashboard } from "@/features/dashboard/dean/components/DeanDashboard";
+import { Department_MED } from "@/features/dashboard/dean/faculty-dashboard/cu/med/department_MED";
 
 export default function DeanDashboardPage() {
   return (
-    <DeanDashboard />
+    <Department_MED />
   );
 }

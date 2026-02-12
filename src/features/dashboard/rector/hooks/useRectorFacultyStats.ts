@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { FacultyStats } from "../../dean/types";
 
-export function useRectorFacultyStats(facultyCode?: string) {
+export function useRectorFacultyStats(facultyCode?: string, dateRange?: { from: Date; to: Date }) {
     const [stats, setStats] = useState<FacultyStats | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -18,7 +18,15 @@ export function useRectorFacultyStats(facultyCode?: string) {
 
             try {
                 setIsLoading(true);
-                const url = `/api/v2/rector/dashboard?facultyCode=${encodeURIComponent(facultyCode)}`;
+                const params = new URLSearchParams();
+                params.append("facultyCode", facultyCode);
+
+                if (dateRange?.from && dateRange?.to) {
+                    params.append("startDate", dateRange.from.toISOString().split('T')[0]);
+                    params.append("endDate", dateRange.to.toISOString().split('T')[0]);
+                }
+
+                const url = `/api/v2/rector/dashboard?${params.toString()}`;
 
                 const response = await fetch(url);
                 const result = await response.json();
@@ -41,7 +49,7 @@ export function useRectorFacultyStats(facultyCode?: string) {
         }
 
         fetchStats();
-    }, [facultyCode]);
+    }, [facultyCode, dateRange]);
 
     return { stats, isLoading, error };
 }
