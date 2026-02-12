@@ -141,10 +141,15 @@ export async function seedAdvisors(
       });
       totalAdvisorsCreated += finalAdvisors.length;
     }
-
-    console.log(`   ✅ Processed batch ${i / BATCH_SIZE + 1}: ${finalAdvisors.length} advisors created`);
   }
+  
+  // ✅ Fetch all advisors for the seeded universities to return
+  const allAdvisors = await prisma.advisor.findMany({
+    where: { 
+      university_id: { in: universities.map(u => u.university_id) } 
+    }
+  });
 
-  console.log(`\n✅ Total advisors created: ${totalAdvisorsCreated}`);
-  return []; // Returning empty array to save memory, as we don't use the return value
+  console.log(`\n✅ Total advisors created/found: ${allAdvisors.length}`);
+  return allAdvisors;
 }

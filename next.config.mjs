@@ -15,6 +15,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'images.unsplash.com', // ✅ เพิ่มอันนี้เข้าไป (สำหรับรูป Login)
       },
+      {
+        protocol: 'https',
+        hostname: 'api.dicebear.com', // ✅ เพิ่มอันนี้เข้าไป (สำหรับรูป Avatar)
+      },
     ],
   },
 

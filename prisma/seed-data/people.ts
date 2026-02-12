@@ -170,7 +170,22 @@ function zipBilingual(th: string[], en: string[]): Bilingual[] {
   return out;
 }
 
-export const firstNamePairs = zipBilingual(firstNamesTh, firstNamesEn);
+// -------------------------
+// Split lists for gender correctness
+// -------------------------
+// Male (Indicies 0-47 in original array)
+const maleTh = firstNamesTh.slice(0, 48); 
+const femaleTh = firstNamesTh.slice(48, 79);
+const unisexTh = firstNamesTh.slice(79); // Remainder
+
+const maleEn = firstNamesEn.slice(0, 48);
+const femaleEn = firstNamesEn.slice(48, 79);
+const unisexEn = firstNamesEn.slice(79);
+
+export const firstNamePairsMale = zipBilingual(maleTh, maleEn);
+export const firstNamePairsFemale = zipBilingual(femaleTh, femaleEn);
+export const firstNamePairsUnisex = zipBilingual(unisexTh, unisexEn);
+
 export const lastNamePairs = zipBilingual(lastNamesTh, lastNamesEn);
 export const nicknamePairs = zipBilingual(nicknamesTh, nicknamesEn);
 
@@ -178,17 +193,29 @@ export function randomBilingual(list: Bilingual[]): Bilingual {
   return list[Math.floor(Math.random() * list.length)];
 }
 
-export function randomPerson() {
+export function randomPerson(gender?: "MALE" | "FEMALE") {
+  let firstPairs = firstNamePairsUnisex;
+  
+  // 50% chance to pick gender-specific name if not specified
+  // If gender specified, force it.
+  const pickSpecific = gender ? true : Math.random() < 0.7;
+  const targetGender = gender || (Math.random() < 0.5 ? "MALE" : "FEMALE");
+  
+  if (pickSpecific) {
+    if (targetGender === "MALE") firstPairs = firstNamePairsMale;
+    else firstPairs = firstNamePairsFemale;
+  }
+
   return {
-    first: randomBilingual(firstNamePairs),
+    first: randomBilingual(firstPairs),
     last: randomBilingual(lastNamePairs),
     nickname: randomBilingual(nicknamePairs),
+    gender: targetGender // Return the gender associated with name
   };
 }
 
 // -------------------------
 // Backward compatible exports
-// (ถ้าโค้ดเก่ายัง import firstNames/lastNames/nicknames)
 // -------------------------
 export const firstNames = firstNamesTh;
 export const lastNames = lastNamesTh;

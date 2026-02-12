@@ -74,11 +74,16 @@ async function main() {
   const timeSlots = await seedTimeSlots(prisma, { universities: geo.universities });
 
   const isQuickMode = process.env.SEED_QUICK_MODE === "true";
+  const isDevMode = process.env.SEED_DEV_MODE === "true";
+
+  const completedCount = isQuickMode ? 5000 : (isDevMode ? 50000 : 2000000);
+  const cancelledCount = isQuickMode ? 500 : (isDevMode ? 5000 : 300000);
+
   const bookingPlan: { status: BookingStatus; count: number }[] = [
-    { status: BookingStatus.COMPLETED, count: isQuickMode ? 5000 : 2000000 },
+    { status: BookingStatus.COMPLETED, count: completedCount },
     { status: BookingStatus.IN_PROGRESS, count: 0 },
     { status: BookingStatus.PENDING_ASSIGNMENT, count: 5000 },
-    { status: BookingStatus.CANCELLED, count: isQuickMode ? 500 : 300000 },
+    { status: BookingStatus.CANCELLED, count: cancelledCount },
   ];
 
   await seedBookings(prisma, {
@@ -131,7 +136,6 @@ async function main() {
   console.log(`👨‍🏫 Advisors: ${advisors.length} (advisor_{uni}_{dept})`);
   console.log(`👔 Deans: ${deans.length} (dean_{uni}_{faculty})`);
   console.log(`💼 Consultants: ${consultantCount} (consultant_{university_code}_1..5)`);
-  const isDevMode = process.env.SEED_DEV_MODE === "true";
   const studentCountLog = isDevMode 
     ? `${geo.universities.length * 30} (Dev Mode: 30/uni)` 
     : `~1.8M (Full Scale)`;

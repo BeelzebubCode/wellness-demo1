@@ -330,9 +330,13 @@ export async function seedBookings(
           slot = pickSlotByStatus(student.university_id, plan.status);
           if (!slot) continue;
 
-          // Prevent duplicate student+slot in same run
+          // Optimization: Skip JS-side uniqueness check (tripleKey) to save RAM/CPU.
+          // We rely on random distribution + Prisma 'skipDuplicates' to handle rare collisions.
+          
+          /* 
           const k = tripleKey(student.university_id, student.student_id, slot.time_slot_id);
           if (usedBookingTriples.has(k)) continue;
+          */
 
           // Consultant logic
           if (!isCancelledPlan && plan.status !== BookingStatus.PENDING_ASSIGNMENT) {
@@ -379,7 +383,7 @@ export async function seedBookings(
             }
           }
 
-          usedBookingTriples.add(k);
+          // usedBookingTriples.add(k); <-- removed for optimization
           if (isActiveStatus(plan.status)) {
             activeCountBySlotId.set(slot.time_slot_id, (activeCountBySlotId.get(slot.time_slot_id) ?? 0) + 1);
           }
@@ -517,8 +521,39 @@ export async function seedBookings(
       b.booking_id,
       'สรุปผลการให้คำปรึกษา (Auto-generated)',
       CASE WHEN random() < 0.5 THEN 'นัดติดตามผล' ELSE NULL END,
-      floor(random() * 3 + 1)::int
+      -- 🔥 REALISTIC RISK CALCULATION (1-5)
+      -- Base: Gaussian-ish centered around 2-3
+      -- Modifiers: University + Faculty
+      GREATEST(1, LEAST(5, (
+        floor(random() * 3 + 1)::int -- Base 1..3
+        +
+        (CASE 
+           -- High Stress Varsities (Mockup)
+           WHEN u.university_code = 'NU' THEN 1  
+           WHEN u.university_code = 'CMU' THEN 1
+           ELSE 0 
+         END)
+        +
+        (CASE
+           -- High Stress Faculties
+           WHEN f.faculty_name_en ILIKE '%Engineer%' OR f.faculty_name_th LIKE '%วิศว%' THEN 2
+           WHEN f.faculty_name_en ILIKE '%Medic%' OR f.faculty_name_th LIKE '%แพทย์%' THEN 2
+           WHEN f.faculty_name_en ILIKE '%Nurs%' OR f.faculty_name_th LIKE '%พยาบาล%' THEN 2
+           WHEN f.faculty_name_en ILIKE '%Dent%' OR f.faculty_name_th LIKE '%ทันต%' THEN 1
+           WHEN f.faculty_name_en ILIKE '%Sci%' OR f.faculty_name_th LIKE '%วิทย์%' THEN 1
+           -- Low Stress Faculties (Relaxed?)
+           WHEN f.faculty_name_en ILIKE '%Sport%' OR f.faculty_name_th LIKE '%พลศึกษา%' THEN -1
+           WHEN f.faculty_name_en ILIKE '%Art%' OR f.faculty_name_th LIKE '%ศิลป%' THEN -1
+           ELSE 0
+         END)
+        +
+        (CASE WHEN random() < 0.1 THEN 1 ELSE 0 END) -- Random spike
+      )::int))
     FROM booking b
+    JOIN university u ON b.university_id = u.university_id
+    JOIN student s ON b.student_id = s.student_id
+    LEFT JOIN student_academic sa ON s.student_id = sa.student_id
+    LEFT JOIN faculty f ON sa.faculty_id = f.faculty_id
     WHERE b.booking_status = 'COMPLETED'
     ON CONFLICT DO NOTHING;
   `);
@@ -543,27 +578,52 @@ export async function seedBookings(
   `);
 
   // 5. Ratings (Join Feedback + Criteria)
-  // Realistic ratings: Bias towards 4-5
-  console.log("   🌟 Generating Ratings (SQL)...");
-  await prisma.$executeRawUnsafe(`
-    INSERT INTO feedback_rating (
-      feedback_id, evaluation_criterion_id, feedback_rating_score
-    )
-    SELECT
-      f.feedback_id,
-      c.evaluation_criterion_id,
-      CASE 
-        -- Spread ratings: 15% (5), 25% (4), 30% (3), 20% (2), 10% (1)
-        WHEN random() < 0.15 THEN 5
-        WHEN random() < 0.40 THEN 4
-        WHEN random() < 0.70 THEN 3
-        WHEN random() < 0.90 THEN 2
-        ELSE 1
-      END
-    FROM feedback f
-    CROSS JOIN evaluation_criterion c
-    ON CONFLICT DO NOTHING;
-  `);
+  // Realistic ratings: Use Consultant Bias from temp table
+  console.log("   🌟 Generating Ratings (using Consultant Bias)...");
+
+  const biasValues = Array.from(consultantBiasById.entries())
+    .map(([id, score]) => `(${id}, ${score})`)
+    .join(",");
+
+  // Use transaction to ensure temp table persists across commands (same connection)
+  await prisma.$transaction(async (tx) => {
+    // 5.1 Create Temp Table
+    await tx.$executeRawUnsafe(`
+      CREATE TEMP TABLE _TempConsultantBias (
+        consultant_id INT PRIMARY KEY,
+        bias_score FLOAT
+      ) ON COMMIT DROP;
+    `);
+
+    // 5.2 Populate Temp Table
+    if (biasValues) {
+      await tx.$executeRawUnsafe(`
+        INSERT INTO _TempConsultantBias (consultant_id, bias_score)
+        VALUES ${biasValues};
+      `);
+    }
+
+    // 5.3 Insert Ratings using Bias
+    await tx.$executeRawUnsafe(`
+      INSERT INTO feedback_rating (
+        feedback_id, evaluation_criterion_id, feedback_rating_score
+      )
+      SELECT
+        f.feedback_id,
+        c.evaluation_criterion_id,
+        CASE 
+          WHEN t.bias_score IS NOT NULL THEN
+             GREATEST(1, LEAST(5, ROUND(t.bias_score + (random() - 0.5) * 1.5)))
+          ELSE
+             floor(random() * 3 + 3) -- 3..5
+        END
+      FROM feedback f
+      JOIN booking b ON f.booking_id = b.booking_id
+      LEFT JOIN _TempConsultantBias t ON b.consultant_id = t.consultant_id
+      CROSS JOIN evaluation_criterion c
+      ON CONFLICT DO NOTHING;
+    `);
+  });
 
   // 6. Comments (Optional, some feedbacks)
   console.log("   💬 Generating Comments (SQL)...");

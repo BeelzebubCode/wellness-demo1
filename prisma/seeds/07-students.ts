@@ -158,7 +158,9 @@ export async function seedStudents(
     for (let j = 1; j <= PER_UNI; j++) {
       const idx0 = j - 1;
       const username = `stu_${uniCodeLower}_${String(j).padStart(4, "0")}`;
-      const person = randomPerson();
+      const person = randomPerson(); 
+      // person.gender is now available from our update to people.ts
+      
       const hasEn = Math.random() < 0.6;
 
       const fnameTh = person.first.th;
@@ -169,7 +171,17 @@ export async function seedStudents(
       const lnameEn = hasEn ? person.last.en : null;
       const nickEn = hasEn ? person.nickname.en : null;
 
-      const gender = randomItem([StudentGender.MALE, StudentGender.FEMALE, StudentGender.LGBTQ_PLUS]);
+      // ✅ Fix: Use gender from name generator, or fallback if undefined (should be defined)
+      // If person.gender is "MALE" -> StudentGender.MALE
+      // If person.gender is "FEMALE" -> StudentGender.FEMALE
+      let genderStr = (person as any).gender || (Math.random() < 0.5 ? "MALE" : "FEMALE");
+      
+      // Map to Prisma Enum
+      const gender: StudentGender = genderStr === "FEMALE" ? StudentGender.FEMALE : StudentGender.MALE;
+      const prefix = gender === StudentGender.FEMALE ? "นางสาว" : "นาย";
+
+      // User complaint was "Male with Mrs". 
+      // So if Gender=Male, MUST vary prefix only if valid.
       const lineId = `U_${uniCode}_${uni.university_id}_${String(j).padStart(4, "0")}`;
       const admitYear = admitYearForIdx(idx0, YEAR_BUCKETS);
 
@@ -200,10 +212,16 @@ export async function seedStudents(
       const sessionAdvisor = advisors.find(
         (a) => a.university_id === uni.university_id && a.department_id === dep.department_id,
       );
-      // Fallback advisor if specific dept advisor not found (use any in faculty)
-      const advisor = sessionAdvisor ?? advisors.find(
+      
+      // Fallback 1: Any advisor in the same faculty
+      let advisor = sessionAdvisor ?? advisors.find(
          (a) => a.university_id === uni.university_id && a.faculty_id === dep.faculty_id
       );
+
+      // Fallback 2: Any advisor in the same university (Last Resort to ensure assignment)
+      if (!advisor) {
+        advisor = advisors.find((a) => a.university_id === uni.university_id);
+      }
 
       const provCurrent = pickCurrentProvinceForUni(uni);
       const provHome = pickHomeProvinceForUni(uni);

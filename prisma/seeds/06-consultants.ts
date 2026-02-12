@@ -44,15 +44,18 @@ function pickManyDeterministic<T>(
 function biasFromUsername(username: string, forceLow?: boolean) {
   const r01 = (hash32(`bias:${username}`) % 10000) / 10000;
 
-  if (forceLow) return 2.1 + r01 * 0.7; // 2.1-2.8
-
-  if (r01 < 0.15) {
+  if (forceLow) return 2.1 + r01 * 0.7; // 2.1-2.8 (Low: ~3 people)
+  
+  // Remaining ~17 people:
+  // User wants ~8 High, ~9-10 Mid.
+  // 8/17 is approx 0.47. Let's use 0.45 to be safe.
+  if (r01 < 0.45) {
     const rTop = (hash32(`biasTop:${username}`) % 10000) / 10000;
-    return 4.75 + rTop * 0.15; // 4.75-4.90
+    return 4.75 + rTop * 0.15; // 4.75-4.90 (High)
   }
 
   const rMid = (hash32(`biasMid:${username}`) % 10000) / 10000;
-  return 3.9 + rMid * 0.9; // 3.9-4.8
+  return 3.5 + rMid * 1.0; // 3.5-4.5 (Mid)
 }
 
 // helper: แปลง pool ให้เป็น Array ชัวร์ ๆ

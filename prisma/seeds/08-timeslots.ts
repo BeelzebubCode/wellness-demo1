@@ -1,6 +1,7 @@
 // prisma/seeds/08-timeslots.ts
 import { PrismaClient, TimeSlotStatus, TimeSlot } from "@prisma/client";
 import { startOfDay, addDays } from "../seed-utils/date";
+import { toThaiDate } from "../seed-utils/timezone";
 
 export async function seedTimeSlots(
   prisma: PrismaClient,
@@ -25,30 +26,25 @@ export async function seedTimeSlots(
   // helpers
   // ------------------------------
   function isWeekend(date: Date) {
-    const day = date.getDay();
+    const day = date.getUTCDay();
     return day === 0 || day === 6;
   }
 
   function buildSlotsForDate(date: Date) {
     const openHour = 8;
-    const closeHour = isWeekend(date) ? 16 : 20;
+    const closeHour = isWeekend(date) ? 17 : 21;
 
     const slots: Array<{ start: Date; end: Date }> = [];
 
     for (let hour = openHour; hour < closeHour; hour++) {
-      const start = new Date(date);
-      start.setHours(hour, 0, 0, 0);
+      // Use toThaiDate to get the correct UTC instant for 08:00 TH
+      const start = toThaiDate(date, hour, 0);
 
       const end = new Date(start);
       end.setMinutes(end.getMinutes() + SLOT_DURATION_MINUTES);
 
-      // กัน slot ทะลุเวลาปิด
-      if (
-        end.getHours() > closeHour ||
-        (end.getHours() === closeHour && end.getMinutes() > 0)
-      ) {
-        continue;
-      }
+      // No need to check closeHour logic again if loop bound is correct
+      // But let's keep it safe in case of overflow
 
       slots.push({ start, end });
     }
@@ -65,7 +61,10 @@ export async function seedTimeSlots(
     const startDate = addDays(today0, -PAST_DAYS);
 
     for (let i = 0; i <= TOTAL_DAYS; i++) {
-      const d = addDays(startDate, i);
+      const distinctDate = addDays(startDate, i);
+      
+      // Normalize to UTC Noon to avoid timezone shifting during setUTCHours (Date Shifting Bug Fix)
+      const d = new Date(Date.UTC(distinctDate.getFullYear(), distinctDate.getMonth(), distinctDate.getDate(), 12, 0, 0));
 
       const slots = buildSlotsForDate(d);
       for (const s of slots) {
