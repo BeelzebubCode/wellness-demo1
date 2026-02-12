@@ -35,6 +35,7 @@ export async function updateTimeSlot(
     },
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data: Record<string, any> = {};
 
   if (typeof body.capacity === "number") {

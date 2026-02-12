@@ -9,6 +9,7 @@ export async function updateBorrowRequest(params: {
   patch: {
     title?: string;
     reason?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     detailJson?: any;
     neededFrom?: Date | null;
     neededTo?: Date | null;

@@ -1,15 +1,18 @@
 // src/services/borrowRequests/validators.ts
 import type { BorrowRequestDetailJson } from "./types";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function isObj(v: unknown): v is Record<string, any> {
   return !!v && typeof v === "object" && !Array.isArray(v);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toInt(v: any, fallback: number) {
   const n = Number(v);
   return Number.isFinite(n) ? Math.trunc(n) : fallback;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toIsoOrNull(v: any) {
   if (v === null || v === undefined || v === "") return null;
   const d = new Date(String(v));
@@ -56,6 +59,7 @@ export function parseCreateBorrowRequestBody(body: unknown) {
 export function parseUpdateBorrowRequestBody(body: unknown) {
   if (!isObj(body)) throw new Error("Invalid body");
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const patch: any = {};
 
   if (body.title !== undefined) {
@@ -102,6 +106,7 @@ export function parseAssignBorrowRequestBody(body: unknown) {
   if (!isObj(body)) throw new Error("Invalid body");
   if (!Array.isArray(body.items) || body.items.length === 0) throw new Error("items is required");
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const items = body.items.map((it: any, idx: number) => {
     if (!isObj(it)) throw new Error(`items[${idx}] invalid`);
     const consultantId = toInt(it.consultantId, NaN);

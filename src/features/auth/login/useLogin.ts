@@ -3,8 +3,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "@/contexts/ThemeContext";
+import { authApi } from "@/features/auth/api";
 import {
-  LoginResponse,
   buildTargetHostFromTenantCode,
   isAdminPath,
   isAdminRole,
@@ -48,20 +48,14 @@ export function useLogin() {
       setError(null);
 
       try {
-        const res = await fetch("/api/v2/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            username: formData.username,
-            password: formData.password,
-            preferredUniversityId: formData.preferredUniversityId ?? null,
-          }),
-          credentials: "include",
+        // ✅ Use authApi client
+        const data = await authApi.login({
+          username: formData.username,
+          password: formData.password,
+          preferredUniversityId: formData.preferredUniversityId ?? undefined,
         });
 
-        const data = (await res.json()) as LoginResponse;
-
-        if (!(res.ok && data.success)) {
+        if (!data.success) {
           setError(data.error || "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
           return;
         }

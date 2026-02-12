@@ -7,9 +7,12 @@ export function rankUniversities(params: {
     university_id: number;
     university_code: string;
     university_name_th: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     university_latitude: any; // Decimal | null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     university_longitude: any; // Decimal | null
   }>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   shifts: Array<any>;
   detail: BorrowRequestDetailJson;
 }) {
@@ -21,6 +24,7 @@ export function rankUniversities(params: {
   const requiredTopics = (detail.requiredTopics ?? []).map((s) => s.trim()).filter(Boolean);
 
   // group shifts by university
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const shiftsByUni = new Map<number, any[]>();
   for (const sh of shifts) {
     const uniId = sh.consultant_university_id;
@@ -41,6 +45,7 @@ export function rankUniversities(params: {
     const uniShifts = shiftsByUni.get(u.university_id) ?? [];
 
     // Build consultant availability list
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const consultantMap = new Map<number, any>();
     for (const sh of uniShifts) {
       const c = sh.consultant;
@@ -55,6 +60,7 @@ export function rankUniversities(params: {
           : `Consultant#${id}`;
 
       const specTopics: string[] =
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (c.specializations ?? []).map((x: any) => String(x.consultant_specialization_topic));
 
       const matchedTopics = requiredTopics.length

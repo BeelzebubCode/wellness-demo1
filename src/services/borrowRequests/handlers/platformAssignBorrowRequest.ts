@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { parseAssignBorrowRequestBody } from "../validators";
 
 // ใช้ logic เดิมของคุณ แต่ทำเป็น function ย่อยสำหรับ assign ทีละ item
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function assignOne(tx: any, input: {
   borrowRequestId: number;
   assignedByAccountId: number;
@@ -84,6 +85,7 @@ export async function platformAssignBorrowRequest(params: {
   const { items } = parseAssignBorrowRequestBody(params.body);
 
   return prisma.$transaction(async (tx) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const createdAssignments: any[] = [];
 
     // ทำทีละคนตาม items
@@ -115,6 +117,7 @@ export async function platformAssignBorrowRequest(params: {
 
     await tx.borrowRequest.update({
       where: { borrow_request_id: params.borrowRequestId },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data: { borrow_request_status: nextStatus as any },
     });
 

@@ -8,6 +8,7 @@ export async function listMyBorrowRequests(input: {
   status?: string;
   q?: string;
 }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = {
     from_university_id: input.universityId,
     requested_by_account_id: input.accountId,

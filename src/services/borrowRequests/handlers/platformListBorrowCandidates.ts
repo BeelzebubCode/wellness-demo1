@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { haversineKm } from "../ranking/haversine";
 
 // ✅ Prisma Decimal -> number
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function decToNumber(v: any): number | null {
   if (v == null) return null;
   if (typeof v === "object" && typeof v.toNumber === "function") return v.toNumber();
@@ -63,7 +64,7 @@ export async function platformListBorrowCandidates(input: {
       const parsed = JSON.parse(br.borrow_request_detail);
       problemTopics = (parsed.requiredTopics || []).map((s: string) => s.trim()).filter(Boolean);
     }
-  } catch (e) {
+  } catch {
     // ถ้า parse ไม่ได้ให้เป็น array ว่าง
   }
 

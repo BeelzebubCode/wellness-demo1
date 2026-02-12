@@ -19,6 +19,7 @@ export async function listPlatformBorrowRequests(params: {
   const { status, take = 50, skip = 0 } = params;
 
   return prisma.borrowRequest.findMany({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     where: status ? { borrow_request_status: status as any } : undefined,
     orderBy: { borrow_request_created_at: "desc" },
     take,
@@ -68,6 +69,7 @@ export async function listOnCallShiftsForUniversities(params: {
   return prisma.borrowOnCallShift.findMany({
     where: {
       consultant_university_id: { in: universityIds },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       on_call_status: { in: ["SCHEDULED", "ACTIVE"] as any },
       on_call_start_at: { gte: windowStart, lte: windowEnd },
       ...(overlapFilter ?? {}),

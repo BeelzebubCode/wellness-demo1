@@ -17,15 +17,17 @@ export async function handleListConsultants(
     return NextResponse.json({ error: "Permission denied" }, { status: 403 });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const activeUniversityId = (ctx as any).activeUniversityId as number | undefined;
   if (typeof activeUniversityId !== "number") {
     return NextResponse.json({ error: "activeUniversityId missing" }, { status: 400 });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const denied = requireUniversity(ctx as any, activeUniversityId);
   if (denied) return denied;
 
-  const now = new Date();
+  // const now = new Date();
 
   // ✅ สำคัญ: default = false (ตาม requirement: head NU เห็นเฉพาะ NU)
   const includeBorrowed = input?.includeBorrowed ?? false;
@@ -47,6 +49,7 @@ export async function handleListConsultants(
                 borrowRequest: {
                   from_university_id: activeUniversityId,
                   // ✅ User request: Don't show if COMPLETED (Assignee disappears after work done)
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   borrow_request_status: { in: ["APPROVED", "ASSIGNED"] as any },
                 },
               },
@@ -88,6 +91,7 @@ export async function handleListConsultants(
         where: {
           borrowRequest: {
             from_university_id: activeUniversityId,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             borrow_request_status: { in: ["APPROVED", "ASSIGNED"] as any },
           },
           // borrow_assign_start_at: { lte: now },

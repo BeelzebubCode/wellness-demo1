@@ -13,6 +13,7 @@ export async function platformListBorrowRequests(input: {
   const pageSize = Math.min(100, Math.max(1, Number(input.pageSize || 20)));
 
   // ✅ Super Admin should NOT see DRAFT and CANCELLED
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = {
     borrow_request_status: {
       notIn: ["DRAFT", "CANCELLED"]

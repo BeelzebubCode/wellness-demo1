@@ -42,6 +42,7 @@ export async function handleGetConsultant(
   }
 
   // ✅ tenant guard (กันข้ามมหาลัย)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const denied = requireUniversity(ctx as any, c.university_id);
   if (denied) return denied;
 

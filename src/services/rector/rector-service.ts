@@ -314,6 +314,7 @@ export const RectorService = {
     async getRectorKPI(universityId: number, filters?: { startDate?: string; endDate?: string }) {
         if (!universityId) return null;
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const dateFilter: any = {};
         if (filters?.startDate && filters?.endDate) {
             dateFilter.booking_created_at = {
@@ -334,6 +335,7 @@ export const RectorService = {
             },
         });
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const highRiskDateFilter: any = {};
         if (filters?.startDate && filters?.endDate) {
             highRiskDateFilter.booking_outcome_recorded_at = {
@@ -349,6 +351,7 @@ export const RectorService = {
             },
         });
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const feedbackDateFilter: any = {};
         if (filters?.startDate && filters?.endDate) {
             feedbackDateFilter.feedback_created_at = {
@@ -384,7 +387,7 @@ export const RectorService = {
     /**
      * Get Mental Health Trends (Cases over time)
      */
-    async getMentalHealthTrends(universityId: number, filters?: { startDate?: string; endDate?: string }) {
+    async getMentalHealthTrends(universityId: number) {
         if (!universityId) return { labels: [], datasets: [] };
 
         return {
@@ -414,6 +417,7 @@ export const RectorService = {
     async getRiskDistribution(universityId: number, filters?: { startDate?: string; endDate?: string }) {
         if (!universityId) return { labels: [], datasets: [] };
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const where: any = { university_id: universityId };
         if (filters?.startDate && filters?.endDate) {
             where.booking_outcome_recorded_at = {
@@ -458,7 +462,7 @@ export const RectorService = {
     /**
      * Get Faculty Stats
      */
-    async getFacultyStats(universityId: number, filters?: { startDate?: string; endDate?: string }) {
+    async getFacultyStats(universityId: number) {
         if (!universityId) return { labels: [], datasets: [] };
 
         return {

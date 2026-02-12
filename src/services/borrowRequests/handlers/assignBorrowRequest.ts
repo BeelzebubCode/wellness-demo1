@@ -28,6 +28,7 @@ export async function assignBorrowRequest(params: {
     include: { assignments: true },
   });
   if (!req) throw new Error("BorrowRequest not found");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (!["SUBMITTED", "APPROVED", "ASSIGNED"].includes(req.borrow_request_status as any)) {
     throw new Error("Request not assignable in current status");
   }
@@ -65,6 +66,7 @@ export async function assignBorrowRequest(params: {
   const totalAssigned = req.assignments.length + 1;
   const needed = req.borrow_needed_count ?? 1;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const nextStatus = totalAssigned >= needed ? "ASSIGNED" : (req.borrow_request_status as any);
 
   const updatedReq = await prisma.borrowRequest.update({

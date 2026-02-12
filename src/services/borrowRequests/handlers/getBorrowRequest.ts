@@ -24,6 +24,7 @@ async function getBorrowWindowDays(): Promise<number> {
   return policy?.borrow_window_days ?? 14;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapBorrowRequest(pr: any) {
   return {
     borrowRequestId: pr.borrow_request_id,
@@ -74,6 +75,7 @@ function mapBorrowRequest(pr: any) {
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapAssignment(a: any) {
   const first = a.consultant?.profile?.consultant_first_name?.trim?.() ?? "";
   const last = a.consultant?.profile?.consultant_last_name?.trim?.() ?? "";
@@ -170,6 +172,7 @@ export async function getBorrowRequest(params: {
   if (!req) throw new Error("BorrowRequest not found");
 
   // ---- base detail (flat) ----
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const detail: any = {
     ...mapBorrowRequest(req),
     assignments: (req.assignments ?? []).map(mapAssignment),
@@ -216,6 +219,7 @@ export async function getBorrowRequest(params: {
   const shifts = await prisma.borrowOnCallShift.findMany({
     where: {
       consultant_university_id: { in: uniIds },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       on_call_status: { in: ["SCHEDULED", "ACTIVE"] as any },
       on_call_start_at: { gte: now, lte: windowEnd },
       ...(requestStart && requestEnd
@@ -238,6 +242,7 @@ export async function getBorrowRequest(params: {
     orderBy: { on_call_start_at: "asc" },
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const shiftsByUni = new Map<number, any[]>();
   for (const sh of shifts) {
     const uniId = sh.consultant_university_id;
@@ -257,6 +262,7 @@ export async function getBorrowRequest(params: {
 
     const uniShifts = shiftsByUni.get(u.university_id) ?? [];
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const consultantMap = new Map<number, any>();
 
     for (const sh of uniShifts) {
@@ -271,8 +277,10 @@ export async function getBorrowRequest(params: {
           `Consultant#${id}`
           : `Consultant#${id}`;
 
-      const specTopics: string[] = (c.specializations ?? []).map((x: any) =>
-        String(x.consultant_specialization_topic ?? "")
+      const specTopics: string[] = (c.specializations ?? []).map(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (x: any) =>
+          String(x.consultant_specialization_topic ?? "")
       );
 
       const matchedTopics =

@@ -62,10 +62,8 @@ export async function listDocuments(input: {
         ai_kb_document_url_hint: true,
         ai_kb_document_is_active: true,
         ai_kb_published_version_id: true,
-        ai_kb_document_created_at: true, // เพิ่มไว้ให้ครบ
+        ai_kb_document_created_at: true, 
         ai_kb_document_updated_at: true,
-        // ถ้าอยากให้ UI แสดงชื่อมหาลัยเลย ก็ join ได้:
-        // university: { select: { university_code: true, university_name_th: true } },
       },
     }),
   ]);

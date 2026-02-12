@@ -91,44 +91,36 @@ export function ToastHost() {
                   </>
                 )}
 
-                <div className="flex items-start gap-4 px-5 py-4">
+                <div className="flex items-center gap-3 px-4 py-3">
                   <div className="relative shrink-0">
-                    <div className={cn("mt-1.5 h-3 w-3 rounded-full", toneDot[n.type])} />
-                    {isReward && (
-                      <motion.div
-                        animate={{ scale: [1, 1.4, 1] }}
-                        transition={{ repeat: Infinity, duration: 2 }}
-                        className="absolute -inset-1 rounded-full bg-amber-400/20"
-                      />
-                    )}
+                    <div className={cn("mt-0 h-2 w-2 rounded-full hidden", toneDot[n.type])} />
                   </div>
 
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-50 border border-slate-100 shadow-sm">
-                    <Icon className={cn("h-6 w-6", isReward ? "text-amber-500" : "text-slate-700 opacity-85")} />
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-50 border border-slate-100 shadow-sm">
+                    <Icon className={cn("h-4 w-4", isReward ? "text-amber-500" : "text-slate-700 opacity-85")} />
                   </div>
 
-                  <div className="min-w-0 flex-1 pt-0.5">
+                  <div className="min-w-0 flex-1 flex items-center gap-2 overflow-hidden">
                     {n.title ? (
-                      <p className={cn(
-                        "text-[15px] font-bold leading-tight",
+                      <span className={cn(
+                        "text-sm font-bold whitespace-nowrap shrink-0",
                         isReward ? "text-amber-900" : "text-slate-900"
                       )}>
                         {n.title}
-                      </p>
+                      </span>
                     ) : null}
-                    <p className={cn(
-                      "text-sm leading-relaxed",
-                      n.title ? "mt-1" : "",
-                      isReward ? "text-amber-800 font-medium" : "text-slate-600"
+                    <span className={cn(
+                      "text-sm truncate",
+                      isReward ? "text-amber-800" : "text-slate-600"
                     )}>
                       {n.message}
-                    </p>
+                    </span>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => clear(n.id)}
-                    className="rounded-xl p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition shrink-0"
+                    className="rounded-lg p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition shrink-0 ml-1"
                     aria-label="close toast"
                   >
                     <X className="h-4 w-4" />

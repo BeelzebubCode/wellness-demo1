@@ -170,7 +170,6 @@ export async function handleAssignBooking(
         },
         data: {
           booking_status: BookingStatus.ASSIGNED,
-          // ถ้าเป็น local ให้ใส่ id, ถ้าข้ามมหาลัย ให้ปล่อย null (ไปดูใน BookingAssignment แทน)
           consultant_id: isLocalConsultant ? consultantId : undefined,
         },
       });
@@ -191,7 +190,6 @@ export async function handleAssignBooking(
 
           assigned_by_account_id: ctx.accountId,
           assigned_note: body?.note ?? null,
-          // assigned_at ใช้ default(now()) แล้ว
         },
       });
     });

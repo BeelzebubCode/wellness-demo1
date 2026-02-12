@@ -1,6 +1,6 @@
 // src/services/timeSlots/listByDate.ts
 import prisma from "@/lib/prisma";
-import { ACTIVE_BOOKING_STATUSES, UnavailableReason } from "./constants";
+import { UnavailableReason } from "./constants";
 import { fmtDateBkk, fmtTimeBkk, getDayRangeBangkok } from "./utils";
 import { TimeSlotStatus } from "@prisma/client";
 

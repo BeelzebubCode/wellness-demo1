@@ -1,4 +1,3 @@
-// src/features/ai/components/AiChatInput.tsx
 "use client";
 
 import { useRef, useEffect, useState } from "react";
@@ -6,6 +5,8 @@ import { ArrowUp, RotateCcw, ChevronDown, Bot, Calendar, CheckCircle2, CalendarC
 import type { useAiChat } from "@/features/ai/hooks/useAiChat";
 import { cn } from "@/lib/cn";
 import styles from "./aiChatTheme.module.css";
+import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
+import { useNotificationContext } from "@/components/notification/NotificationProvider";
 
 export type AiChatMode = "help" | "booking_agent";
 export type AiChatController = ReturnType<typeof useAiChat>;
@@ -26,6 +27,26 @@ export default function AiChatInput({
 }) {
   const { input, setInput, send, reset, isLoading, canSend } = chat;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // ✅ Auth Check
+  const { isAuthenticated } = useRoleAuth({
+    allowedRoles: ["STUDENT", "PERSONNEL", "RECTOR", "ADMIN", "SUPER_ADMIN", "CONSULTANT", "HEAD_CONSULTANT"],
+    loginToastKey: "ai_login_required",
+    guard: false,
+  });
+  const { push } = useNotificationContext();
+
+  // ✅ Force Help Mode if not Auth
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated && mode === "booking_agent") {
+      push({
+        type: "warning",
+        title: "กรุณาเข้าสู่ระบบ",
+        message: "ระบบเปลี่ยนเป็นโหมดช่วยเหลือเนื่องจากคุณยังไม่เข้าสู่ระบบ",
+      });
+      onModeChange?.("help");
+    }
+  }, [isLoading, isAuthenticated, mode, onModeChange, push]);
   
   const [isModeOpen, setIsModeOpen] = useState(false);
   const selectedMode = MODES.find((m) => m.id === mode) || MODES[0];
@@ -57,9 +78,7 @@ export default function AiChatInput({
         {/* ✅ Confirmation Card (Floating above input) */}
         {mode === "booking_agent" && chat.agent?.confirmToken && (
           <div className="mb-4 animate-in slide-in-from-bottom-5 fade-in zoom-in-95">
-             {/* ... existing confirmation card ... */}
              <div className="relative overflow-hidden rounded-2xl border border-indigo-100 bg-white p-4 shadow-xl">
-               {/* ... (keep existing content) ... */}
                <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-indigo-500 to-purple-500" />
               
                <div className="flex items-start gap-4">
@@ -302,6 +321,17 @@ export default function AiChatInput({
                     <button
                       key={m.id}
                       onClick={() => {
+                        // ✅ Auth Check
+                        if (m.id === "booking_agent" && !isAuthenticated) {
+                          push({
+                            type: "warning", // Or 'error'
+                            title: "กรุณาเข้าสู่ระบบ",
+                            message: "ฟีเจอร์จองคิวเปิดให้ใช้งานเฉพาะผู้ที่เข้าสู่ระบบแล้วเท่านั้น",
+                          });
+                          setIsModeOpen(false);
+                          return;
+                        }
+
                         onModeChange?.(m.id as AiChatMode);
                         setIsModeOpen(false);
                       }}

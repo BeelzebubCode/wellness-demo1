@@ -32,6 +32,7 @@ export type RankedUniversity = {
 };
 
 export type PlatformBorrowRequestDetail = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   request: any; // prisma object
   parsedDetail: BorrowRequestDetailJson;
   rankedUniversities: RankedUniversity[];

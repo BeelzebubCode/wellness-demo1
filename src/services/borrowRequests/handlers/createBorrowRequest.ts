@@ -17,8 +17,7 @@ export async function createBorrowRequest(params: {
 
       borrow_request_title: body.title,
       borrow_request_reason: body.reason,
-
-      // ✅ FE ส่ง detail เป็น string อยู่แล้ว (ถ้าจะเก็บ JSON ก็ stringify มาตั้งแต่ FE ได้)
+      
       borrow_request_detail: body.detail ?? null,
 
       borrow_needed_from: body.neededFrom ? new Date(body.neededFrom) : null,

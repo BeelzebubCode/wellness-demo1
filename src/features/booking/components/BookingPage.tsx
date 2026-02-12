@@ -70,7 +70,22 @@ function getSafeAreaTopPx() {
   return Number.isFinite(n) ? n : 0;
 }
 
+import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
+
+// ... existing imports ...
+
 export function BookingPage({ universityId }: { universityId?: number }) {
+  const { user, isLoading: authLoading } = useRoleAuth({
+    allowedRoles: ["STUDENT", "PERSONNEL", "RECTOR", "ADMIN", "SUPER_ADMIN", "CONSULTANT", "HEAD_CONSULTANT"],
+    loginToastKey: "booking_login_required",
+    guard: true,
+  });
+
+  if (authLoading) {
+     return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400">Loading...</div>;
+  }
+  if (!user) return null; // Redirecting...
+
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(() => new Date());
 

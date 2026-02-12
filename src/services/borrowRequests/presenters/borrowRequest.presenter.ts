@@ -5,10 +5,14 @@ import type { BorrowRequest, BorrowAssignment } from "@prisma/client";
 export function presentBorrowRequest(
   br: BorrowRequest & {
     assignments?: (BorrowAssignment & {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       consultant?: any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       consultantUniversity?: any;
     })[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     fromUniversity?: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     requestedBy?: any;
   }
 ) {

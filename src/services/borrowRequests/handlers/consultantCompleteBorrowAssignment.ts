@@ -70,6 +70,7 @@ export async function consultantCompleteBorrowAssignment(input: {
                 consultant_id: consultant.consultant_id,
                 borrowRequest: {
                     from_university_id: targetUniId,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     borrow_request_status: { in: ["APPROVED", "ASSIGNED"] as any },
                 },
                 borrow_assignment_id: { not: assignment.borrow_assignment_id },

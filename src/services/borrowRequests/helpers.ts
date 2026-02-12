@@ -1,5 +1,6 @@
 // src/services/borrowRequests/helpers.ts
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getAccountId(account: any): number {
   const id =
     account?.account_id ??
