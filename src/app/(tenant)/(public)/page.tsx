@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Heart, CalendarDays, ClipboardList, User } from "lucide-react";
 import AuthLikeBackground from "@/components/layout/background/AuthLikeBackground";
 import { PRCard } from "@/components/public/pr/PRCard";
@@ -108,13 +109,17 @@ export default function HomePage() {
             rounded-3xl overflow-hidden
             bg-white/80 backdrop-blur border
             shadow-[0_16px_45px_rgba(2,6,23,0.10)]
+            relative h-[400px]
           "
                   style={{ borderColor: "rgb(var(--border))" }}
                 >
-                  <img
+                  <Image
                     src="/images/login-illustration.png"
                     alt="Wellness Center"
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    priority
                   />
                 </div>
               </div>

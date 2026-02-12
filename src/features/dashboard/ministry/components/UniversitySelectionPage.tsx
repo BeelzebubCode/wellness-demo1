@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Search, Building2, Users, MapPin, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface University {
@@ -46,7 +47,7 @@ export function UniversitySelectionPage() {
   // Filter universities
   const filteredUniversities = universities.filter((uni) => {
     const matchesSearch = uni.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         uni.code.toLowerCase().includes(searchTerm.toLowerCase());
+      uni.code.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRegion = !selectedRegion || uni.region === selectedRegion;
     const matchesType = !selectedType || uni.type === selectedType;
     return matchesSearch && matchesRegion && matchesType;
@@ -65,7 +66,7 @@ export function UniversitySelectionPage() {
 
   const regions = [
     "Upper North",
-    "Lower North", 
+    "Lower North",
     "Upper Northeast",
     "Lower Northeast",
     "Upper Central",
@@ -114,11 +115,10 @@ export function UniversitySelectionPage() {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setSelectedRegion("")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                !selectedRegion
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${!selectedRegion
                   ? "bg-indigo-600 text-white shadow-lg"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+                }`}
             >
               All
             </button>
@@ -126,11 +126,10 @@ export function UniversitySelectionPage() {
               <button
                 key={region}
                 onClick={() => setSelectedRegion(region)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  selectedRegion === region
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedRegion === region
                     ? "bg-indigo-600 text-white shadow-lg"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
+                  }`}
               >
                 {region}
               </button>
@@ -144,11 +143,10 @@ export function UniversitySelectionPage() {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setSelectedType("")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                !selectedType
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${!selectedType
                   ? "bg-indigo-600 text-white shadow-lg"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+                }`}
             >
               All
             </button>
@@ -156,11 +154,10 @@ export function UniversitySelectionPage() {
               <button
                 key={type}
                 onClick={() => setSelectedType(type)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  selectedType === type
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedType === type
                     ? "bg-indigo-600 text-white shadow-lg"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
+                  }`}
               >
                 {type}
               </button>
@@ -186,20 +183,21 @@ export function UniversitySelectionPage() {
         {currentUniversities.map((uni) => {
           // Fix logo path
           const logoUrl = `/images/logo/${uni.code}_logo.png`;
-          
+
           return (
             <Link
               key={uni.id}
               href={`/ministry/universities/${uni.code}`}
               className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-200 hover:border-indigo-400"
             >
-              {/* Logo Header */}
               <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 flex items-center justify-center border-b border-gray-100">
-                <div className="w-24 h-24 bg-white rounded-full shadow-lg flex items-center justify-center p-2">
-                  <img
+                <div className="w-24 h-24 bg-white rounded-full shadow-lg flex items-center justify-center p-2 relative">
+                  <Image
                     src={logoUrl}
                     alt={uni.code}
-                    className="w-20 h-20 object-contain"
+                    width={80}
+                    height={80}
+                    className="object-contain"
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = "none";
                       const parent = (e.target as HTMLImageElement).parentElement;
@@ -216,7 +214,7 @@ export function UniversitySelectionPage() {
                 <h3 className="font-bold text-lg text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors line-clamp-2">
                   {uni.name}
                 </h3>
-                
+
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <MapPin className="w-4 h-4 text-gray-400" />
@@ -252,11 +250,10 @@ export function UniversitySelectionPage() {
             <button
               onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                currentPage === 1
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${currentPage === 1
                   ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                   : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg"
-              }`}
+                }`}
             >
               <ChevronLeft className="w-4 h-4" />
               Previous
@@ -266,9 +263,9 @@ export function UniversitySelectionPage() {
             <div className="flex items-center gap-2">
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
                 // Show first page, last page, current page, and pages around current
-                const showPage = 
-                  page === 1 || 
-                  page === totalPages || 
+                const showPage =
+                  page === 1 ||
+                  page === totalPages ||
                   (page >= currentPage - 1 && page <= currentPage + 1);
 
                 if (!showPage && page === currentPage - 2) {
@@ -283,11 +280,10 @@ export function UniversitySelectionPage() {
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`w-10 h-10 rounded-lg font-semibold transition-all ${
-                      currentPage === page
+                    className={`w-10 h-10 rounded-lg font-semibold transition-all ${currentPage === page
                         ? "bg-indigo-600 text-white shadow-lg"
                         : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
+                      }`}
                   >
                     {page}
                   </button>
@@ -299,11 +295,10 @@ export function UniversitySelectionPage() {
             <button
               onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                currentPage === totalPages
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${currentPage === totalPages
                   ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                   : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg"
-              }`}
+                }`}
             >
               Next
               <ChevronRight className="w-4 h-4" />

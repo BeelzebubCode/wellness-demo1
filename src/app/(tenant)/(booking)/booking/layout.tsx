@@ -2,20 +2,29 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
 import { BookingSidebar } from "@/components/layout/sidebar";
 import { BookingHeader } from "@/components/layout/header";
 import { LoadingSpinner } from "@/components/ui";
 
-import { AiChatModal } from "@/features/ai";
-import { FloatingAiButton } from "@/features/ai";
+// ✅ Dynamic imports - load AI components only when needed
+const AiChatModal = dynamic(
+  () => import("@/features/ai").then(mod => ({ default: mod.AiChatModal })),
+  { ssr: false, loading: () => null }
+);
+
+const FloatingAiButton = dynamic(
+  () => import("@/features/ai").then(mod => ({ default: mod.FloatingAiButton })),
+  { ssr: false, loading: () => null }
+);
 
 export default function BookingLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading, isAuthenticated } = useRoleAuth({
     redirectTo: "/login",
     allowedRoles: ["STUDENT"] as const,
     loginToastKey: "toast_login_required_student",
-    guard: false, // ✅ Allow public/guest access without force redirect
+    guard: false,
   });
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -53,7 +62,7 @@ export default function BookingLayout({ children }: { children: React.ReactNode 
         </div>
       </div>
 
-      {/* ✅ วางไว้ท้ายสุด เพื่อให้ลอยทับทุกอย่าง */}
+      {/* ✅ AI components loaded on-demand */}
       <AiChatModal />
       <FloatingAiButton />
     </>

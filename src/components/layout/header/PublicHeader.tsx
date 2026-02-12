@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { PUBLIC_NAV } from "@/lib/constants/public-nav";
@@ -319,7 +320,7 @@ export function PublicHeader({
                   <div className="hidden sm:flex items-center gap-2">
 
                     {/* ✅ Points (Student only) */}
-                    {isLoggedIn && <StudentPointsBadge role={auth.user.role} />} 
+                    {isLoggedIn && <StudentPointsBadge role={auth.user.role} />}
 
                     {/* Avatar + Name : สเกลเดียวกับเมนูซ้าย */}
                     <div
@@ -327,9 +328,11 @@ export function PublicHeader({
                                 border border-[rgb(var(--border)/0.70)] bg-white/45"
                     >
                       {displayAvatar ? (
-                        <img
+                        <Image
                           src={displayAvatar}
                           alt={displayName}
+                          width={24}
+                          height={24}
                           className="w-6 h-6 rounded-full object-cover"
                         />
                       ) : (

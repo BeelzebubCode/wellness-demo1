@@ -3,6 +3,7 @@
 
 import { useCallback } from "react";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import { useAiWidget } from "@/features/ai/widget/useAiWidget";
 import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
 
@@ -44,12 +45,15 @@ export default function FloatingAiButton() {
         focus:outline-none
       "
     >
-      <img
+      <Image
         src="/icons/Gif_Icon.gif"
         alt=""
+        width={128}
+        height={128}
         aria-hidden
         className="h-32 w-32 object-contain pointer-events-none select-none"
-        loading="eager"
+        priority
+        unoptimized
       />
     </button>
   );

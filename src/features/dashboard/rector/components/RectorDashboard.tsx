@@ -1,30 +1,71 @@
+// features/dashboard/rector/components/RectorDashboard.tsx
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { useUniversityStats } from "../hooks/useUniversityStats";
 import { LoadingSpinner } from "@/components/ui";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
 
-// Core Strategic Components
-import { YoYRiskTrendChart } from "./strategic/YoYRiskTrendChart";
-import { SystemLoadOverview } from "./strategic/SystemLoadOverview";
-import { WorkforceAnalysis } from "./strategic/WorkforceAnalysis";
-import { ExecutiveImpactSummary } from "./strategic/ExecutiveImpactSummary";
+// Helper for loading skeletons
+const ChartSkeleton = ({ height = "h-[300px]" }: { height?: string }) => (
+  <div className={`${height} w-full bg-slate-100/50 animate-pulse rounded-xl flex items-center justify-center`}>
+    <LoadingSpinner size="sm" className="opacity-50" />
+  </div>
+);
 
-// New Expanded Components
-import { DemographicRiskChart } from "./strategic/DemographicRiskChart";
-import { IssueFrequencyChart } from "./strategic/IssueFrequencyChart";
-import { AppointmentFunnelChart } from "./strategic/AppointmentFunnelChart";
-import { FacultyComparisonTable } from "./strategic/FacultyComparisonTable";
-import { FacultyRiskSpectrumChart } from "./strategic/FacultyRiskSpectrumChart";
-import { FacultyRiskBreakdownChart } from "./strategic/FacultyRiskBreakdownChart";
-import { FacultyHealthVerticalBarChart } from "./strategic/FacultyHealthVerticalBarChart";
+// Core Strategic Components - Dynamic Imports
+const YoYRiskTrendChart = dynamic(() => import("./strategic/YoYRiskTrendChart").then(mod => mod.YoYRiskTrendChart), {
+  loading: () => <ChartSkeleton height="h-[350px]" />, ssr: false
+});
+const SystemLoadOverview = dynamic(() => import("./strategic/SystemLoadOverview").then(mod => mod.SystemLoadOverview), {
+  loading: () => <ChartSkeleton height="h-[280px]" />, ssr: false
+});
+const WorkforceAnalysis = dynamic(() => import("./strategic/WorkforceAnalysis").then(mod => mod.WorkforceAnalysis), {
+  loading: () => <ChartSkeleton height="h-[280px]" />, ssr: false
+});
+const ExecutiveImpactSummary = dynamic(() => import("./strategic/ExecutiveImpactSummary").then(mod => mod.ExecutiveImpactSummary), {
+  loading: () => <ChartSkeleton height="h-full" />, ssr: false
+});
 
-// Visual Maps
-import { RectorFacultyHealthMap } from "./RectorFacultyHealthMap";
-import { RectorWellbeingGauge } from "./RectorWellbeingGauge";
-import { RectorStatsCards } from "./RectorStatsCards";
-import { RectorStrategicInsights } from "./RectorStrategicInsights";
+// New Expanded Components - Dynamic Imports
+const DemographicRiskChart = dynamic(() => import("./strategic/DemographicRiskChart").then(mod => mod.DemographicRiskChart), {
+  loading: () => <ChartSkeleton height="h-[350px]" />, ssr: false
+});
+const IssueFrequencyChart = dynamic(() => import("./strategic/IssueFrequencyChart").then(mod => mod.IssueFrequencyChart), {
+  loading: () => <ChartSkeleton height="h-[350px]" />, ssr: false
+});
+const AppointmentFunnelChart = dynamic(() => import("./strategic/AppointmentFunnelChart").then(mod => mod.AppointmentFunnelChart), {
+  loading: () => <ChartSkeleton height="h-[280px]" />, ssr: false
+});
+const FacultyComparisonTable = dynamic(() => import("./strategic/FacultyComparisonTable").then(mod => mod.FacultyComparisonTable), {
+  loading: () => <ChartSkeleton height="h-[400px]" />, ssr: false
+});
+const FacultyRiskSpectrumChart = dynamic(() => import("./strategic/FacultyRiskSpectrumChart").then(mod => mod.FacultyRiskSpectrumChart), {
+  loading: () => <ChartSkeleton height="h-[600px]" />, ssr: false
+});
+const FacultyRiskBreakdownChart = dynamic(() => import("./strategic/FacultyRiskBreakdownChart").then(mod => mod.FacultyRiskBreakdownChart), {
+  loading: () => <ChartSkeleton height="h-[600px]" />, ssr: false
+});
+const FacultyHealthVerticalBarChart = dynamic(() => import("./strategic/FacultyHealthVerticalBarChart").then(mod => mod.FacultyHealthVerticalBarChart), {
+  loading: () => <ChartSkeleton height="h-[450px]" />, ssr: false
+});
+
+// Visual Maps - Dynamic Imports
+const RectorFacultyHealthMap = dynamic(() => import("./RectorFacultyHealthMap").then(mod => mod.RectorFacultyHealthMap), {
+  loading: () => <ChartSkeleton height="h-[450px]" />, ssr: false
+});
+const RectorWellbeingGauge = dynamic(() => import("./RectorWellbeingGauge").then(mod => mod.RectorWellbeingGauge), {
+  loading: () => <ChartSkeleton height="h-[340px]" />, ssr: false
+});
+// Keep smaller components static or dynamic based on size
+const RectorStatsCards = dynamic(() => import("./RectorStatsCards").then(mod => mod.RectorStatsCards), {
+  loading: () => <ChartSkeleton height="h-[200px]" />, ssr: false
+});
+// RectorStrategicInsights might be text heavy, but safe to dynamic
+const RectorStrategicInsights = dynamic(() => import("./RectorStrategicInsights").then(mod => mod.RectorStrategicInsights), {
+  ssr: false
+});
 
 export function RectorDashboard() {
   // Date Range State (Default: This Month)

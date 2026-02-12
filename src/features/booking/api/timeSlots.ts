@@ -21,7 +21,7 @@ export async function getTimeSlots(
     method: "GET",
     headers,
     credentials: "include",
-    cache: "no-store",
+    next: { revalidate: 60 }, // cache 1 minute - slots change frequently
     signal: opts?.signal,
   });
 

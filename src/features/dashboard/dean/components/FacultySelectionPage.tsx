@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Search, Building2, Users, GraduationCap, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { useFaculties } from "../hooks/useFaculties";
@@ -111,13 +112,14 @@ export function FacultySelectionPage() {
                             href={`/dean/faculties/${faculty.code}`}
                             className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-200 hover:border-[rgb(var(--primary))]"
                         >
-                            {/* Logo Header */}
                             <div className="bg-[rgba(var(--primary),0.05)] p-6 flex items-center justify-center border-b border-gray-100">
-                                <div className="w-24 h-24 bg-white rounded-full shadow-lg flex items-center justify-center p-2">
-                                    <img
+                                <div className="w-24 h-24 bg-white rounded-full shadow-lg flex items-center justify-center p-2 relative">
+                                    <Image
                                         src={logoUrl}
                                         alt={faculty.code}
-                                        className="w-20 h-20 object-contain"
+                                        width={80}
+                                        height={80}
+                                        className="object-contain"
                                         onError={(e) => {
                                             (e.target as HTMLImageElement).style.display = "none";
                                             const parent = (e.target as HTMLImageElement).parentElement;

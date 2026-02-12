@@ -2,6 +2,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 
 export interface HeaderBadgeItem {
   icon: React.ReactNode;
@@ -16,10 +17,10 @@ interface Props {
   statusLabel?: string;
 }
 
-export function FacultyHeaderBanner({ 
-  facultyName, 
-  universityName, 
-  logoUrl, 
+export function FacultyHeaderBanner({
+  facultyName,
+  universityName,
+  logoUrl,
   badges,
   statusLabel = "ONLINE"
 }: Props) {
@@ -27,32 +28,34 @@ export function FacultyHeaderBanner({
     <div className="bg-[#0b0f1a] text-white p-8 relative overflow-hidden">
       {/* Subtle Background Pattern/Effect */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2" />
-      
+
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-8 relative z-10">
         {/* Logo Container */}
         <div className="relative">
-          <div className="w-24 h-24 bg-white rounded-xl flex items-center justify-center p-2 shadow-2xl">
-            <img 
-              src={logoUrl || "/images/logo/CU_logo.png"} 
-              alt="Logo" 
-              className="w-full h-full object-contain"
+          <div className="w-24 h-24 bg-white rounded-xl flex items-center justify-center p-2 shadow-2xl relative overflow-hidden">
+            <Image
+              src={logoUrl || "/images/logo/CU_logo.png"}
+              alt="Logo"
+              fill
+              className="object-contain"
+              sizes="96px"
               onError={(e) => {
-                  (e.target as HTMLImageElement).src = "https://www.chula.ac.th/wp-content/uploads/2018/01/chula-logo-600.png";
+                (e.target as HTMLImageElement).src = "https://www.chula.ac.th/wp-content/uploads/2018/01/chula-logo-600.png";
               }}
             />
           </div>
           {/* Layered Status Badge */}
           <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 flex items-center justify-center z-20">
-             <div className="absolute inset-0 rounded-full bg-slate-950" />
-             <div className="relative w-full h-full rounded-full bg-[#00e676] -translate-y-0.5 -translate-x-0.5 shadow-[1px_1px_4px_rgba(0,230,118,0.3)]" />
+            <div className="absolute inset-0 rounded-full bg-slate-950" />
+            <div className="relative w-full h-full rounded-full bg-[#00e676] -translate-y-0.5 -translate-x-0.5 shadow-[1px_1px_4px_rgba(0,230,118,0.3)]" />
           </div>
         </div>
 
         {/* Info Section */}
         <div className="text-center md:text-left space-y-2">
           <div className="flex flex-col items-center md:items-start">
-             <h1 className="text-3xl md:text-4xl font-black tracking-tight drop-shadow-lg leading-none z-10">{facultyName}</h1>
-             <p className="text-base md:text-lg font-bold text-[rgb(var(--primary))] -mt-3 md:-mt-5 relative z-0 leading-none filter drop-shadow-sm">{universityName}</p>
+            <h1 className="text-3xl md:text-4xl font-black tracking-tight drop-shadow-lg leading-none z-10">{facultyName}</h1>
+            <p className="text-base md:text-lg font-bold text-[rgb(var(--primary))] -mt-3 md:-mt-5 relative z-0 leading-none filter drop-shadow-sm">{universityName}</p>
           </div>
           <div className="flex flex-wrap justify-center md:justify-start gap-3 mt-12">
             {badges.map((badge, index) => (

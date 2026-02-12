@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { LogOut } from "lucide-react";
 import { logout } from "@/features/auth/logout";
 import { Modal } from "@/components/ui";
@@ -91,12 +92,13 @@ export default function LogoutButton({
       {/* Modal */}
       <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} size="md">
         <div className="flex flex-col items-center text-center px-6 py-8">
-          {/* Illustration */}
-          <div className="mb-6">
-            <img
+          <div className="mb-6 relative w-40 h-32">
+            <Image
               src="/images/logout-illustration.jpg"
               alt="Logout"
-              className="w-40 h-auto"
+              width={160}
+              height={128}
+              className="w-auto h-auto"
             />
           </div>
 

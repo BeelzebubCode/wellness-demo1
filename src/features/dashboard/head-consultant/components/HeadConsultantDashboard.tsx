@@ -2,10 +2,9 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { useHeadConsultantDashboard } from "../hooks/useHeadConsultantDashboard";
 import { HeadConsultantStats } from "./HeadConsultantStats";
-import { ProblemCategoryChart } from "./ProblemCategoryChart";
-import { ConsultantRatingTable } from "./ConsultantRatingTable";
 import { TopStudentsCard } from "./TopStudentsCard";
 import { TeamStatusCard } from "./TeamStatusCard";
 import { TeamMembersView } from "./TeamMembersView";
@@ -13,6 +12,31 @@ import { ConsultantHistoryView } from "./ConsultantHistoryView";
 import { LoadingSpinner } from "@/components/ui";
 import { LayoutDashboard, Users, Grid, List, Building2, Calendar, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/cn";
+
+// ✅ Dynamic imports for heavy chart components (~30-40kB)
+const ProblemCategoryChart = dynamic(
+  () => import("./ProblemCategoryChart").then(mod => ({ default: mod.ProblemCategoryChart })),
+  {
+    loading: () => (
+      <div className="h-64 bg-slate-50 animate-pulse rounded-xl flex items-center justify-center">
+        <p className="text-slate-400 text-sm">กำลังโหลดกราफ...</p>
+      </div>
+    ),
+    ssr: false
+  }
+);
+
+const ConsultantRatingTable = dynamic(
+  () => import("./ConsultantRatingTable").then(mod => ({ default: mod.ConsultantRatingTable })),
+  {
+    loading: () => (
+      <div className="h-96 bg-slate-50 animate-pulse rounded-xl flex items-center justify-center">
+        <p className="text-slate-400 text-sm">กำลังโหลดตาราง...</p>
+      </div>
+    ),
+    ssr: false
+  }
+);
 
 type DashboardTab = "overview" | "team";
 

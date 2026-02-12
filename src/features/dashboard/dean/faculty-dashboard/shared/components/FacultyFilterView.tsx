@@ -1,17 +1,18 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import Image from "next/image";
 import { FilterBar } from "@/components/filters/FilterBar";
 import { FilterDef } from "@/components/filters/types";
-import { 
-  Users, 
-  Search, 
-  MapPin, 
-  Filter, 
-  Calendar, 
-  ArrowRight, 
-  AlertTriangle, 
-  CheckCircle2, 
+import {
+  Users,
+  Search,
+  MapPin,
+  Filter,
+  Calendar,
+  ArrowRight,
+  AlertTriangle,
+  CheckCircle2,
   Clock,
   Zap,
   Brain,
@@ -160,7 +161,7 @@ export function FacultyFilterView() {
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "รายงานเคส");
-    
+
     const fileName = `รายงานเคส_${new Date().toLocaleDateString('th-TH').replace(/\//g, '-')}.xlsx`;
     XLSX.writeFile(workbook, fileName);
   };
@@ -172,7 +173,7 @@ export function FacultyFilterView() {
       if (filters.yearLevel !== "ALL" && c.year !== filters.yearLevel) return false;
       if (filters.riskLevel !== "ALL" && c.risk !== filters.riskLevel) return false;
       if (filters.gender !== "ALL" && c.gender !== filters.gender) return false;
-      
+
       if (filters.search) {
         const s = filters.search.toLowerCase();
         return c.name.toLowerCase().includes(s) || c.id.toLowerCase().includes(s) || c.problem.toLowerCase().includes(s);
@@ -180,7 +181,7 @@ export function FacultyFilterView() {
 
       // Quick Filters
       if (activeQuickFilter === "high-risk" && !["HIGH", "CRITICAL"].includes(c.risk)) return false;
-      
+
       return true;
     });
 
@@ -191,7 +192,7 @@ export function FacultyFilterView() {
     } else if (sortOrder === "risk-high-low") {
       results = [...results].sort((a, b) => riskOrder[b.risk] - riskOrder[a.risk]);
     }
-    
+
     return results;
   }, [filters, activeQuickFilter, sortOrder]);
 
@@ -201,12 +202,12 @@ export function FacultyFilterView() {
     const highRisk = filteredResults.filter(r => ["HIGH", "CRITICAL"].includes(r.risk)).length;
     const onsite = filteredResults.filter(r => r.serviceMode === "ONSITE").length;
     const online = filteredResults.filter(r => r.serviceMode === "ONLINE").length;
-    
+
     return [
       { label: "เคสที่พบ (Filtered)", value: total.toString(), sub: `จากทั้งหมด ${MOCK_CASES.length} เคส`, icon: <Search className="text-primary" /> },
-      { label: "ความเสี่ยงสูง (High Risk)", value: highRisk.toString(), sub: `${((highRisk/total || 0) * 100).toFixed(1)}% ของที่กรอง`, icon: <AlertTriangle className="text-orange-500" /> },
-      { label: "บริการ Onsite", value: onsite.toString(), sub: `${((onsite/total || 0) * 100).toFixed(1)}% ของที่กรอง`, icon: <MapPin className="text-green-500" /> },
-      { label: "บริการ Online", value: online.toString(), sub: `${((online/total || 0) * 100).toFixed(1)}% ของที่กรอง`, icon: <Zap className="text-blue-500" /> },
+      { label: "ความเสี่ยงสูง (High Risk)", value: highRisk.toString(), sub: `${((highRisk / total || 0) * 100).toFixed(1)}% ของที่กรอง`, icon: <AlertTriangle className="text-orange-500" /> },
+      { label: "บริการ Onsite", value: onsite.toString(), sub: `${((onsite / total || 0) * 100).toFixed(1)}% ของที่กรอง`, icon: <MapPin className="text-green-500" /> },
+      { label: "บริการ Online", value: online.toString(), sub: `${((online / total || 0) * 100).toFixed(1)}% ของที่กรอง`, icon: <Zap className="text-blue-500" /> },
     ];
   }, [filteredResults]);
 
@@ -214,18 +215,18 @@ export function FacultyFilterView() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       {/* Top Stats Strip */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-         {stats.map((s, i) => (
-           <div key={i} className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex items-center gap-4 transition-all hover:shadow-md hover:scale-[1.02]">
-              <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center shrink-0">
-                 {s.icon}
-              </div>
-              <div className="min-w-0">
-                 <p className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none mb-1 truncate">{s.label}</p>
-                 <h4 className="text-xl font-black text-slate-800 leading-none">{s.value}</h4>
-                 <p className="text-xs text-slate-400 font-bold mt-1 truncate">{s.sub}</p>
-              </div>
-           </div>
-         ))}
+        {stats.map((s, i) => (
+          <div key={i} className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex items-center gap-4 transition-all hover:shadow-md hover:scale-[1.02]">
+            <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center shrink-0">
+              {s.icon}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none mb-1 truncate">{s.label}</p>
+              <h4 className="text-xl font-black text-slate-800 leading-none">{s.value}</h4>
+              <p className="text-xs text-slate-400 font-bold mt-1 truncate">{s.sub}</p>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Filter Section */}
@@ -234,7 +235,7 @@ export function FacultyFilterView() {
         <div className="absolute inset-0 overflow-hidden rounded-[2.5rem] pointer-events-none">
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
         </div>
-        
+
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 relative z-10">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 bg-primary rounded-2xl shadow-lg shadow-primary/20 flex items-center justify-center rotate-3 group-hover:rotate-0 transition-transform">
@@ -247,21 +248,21 @@ export function FacultyFilterView() {
           </div>
 
           <div className="flex bg-slate-50 p-1 rounded-2xl border border-slate-100 shrink-0">
-             {quickFilters.map(sf => (
-               <button
-                 key={sf.id}
-                 onClick={() => setActiveQuickFilter(sf.id)}
-                 className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all
-                   ${activeQuickFilter === sf.id 
-                     ? "bg-white shadow-md text-primary" 
-                     : "text-slate-400 hover:text-slate-600"
-                   }
+            {quickFilters.map(sf => (
+              <button
+                key={sf.id}
+                onClick={() => setActiveQuickFilter(sf.id)}
+                className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all
+                   ${activeQuickFilter === sf.id
+                    ? "bg-white shadow-md text-primary"
+                    : "text-slate-400 hover:text-slate-600"
+                  }
                  `}
-               >
-                 {sf.icon}
-                 {sf.label}
-               </button>
-             ))}
+              >
+                {sf.icon}
+                {sf.label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -277,52 +278,52 @@ export function FacultyFilterView() {
       {/* Results Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between px-4">
-           <div className="flex items-center gap-3">
-              <div className="w-1.5 h-6 bg-primary rounded-full" />
-              <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">Case Management Results</h4>
-              <span className="bg-primary/10 text-primary text-xs font-black px-3 py-1 rounded-full border border-primary/20">พบ {filteredResults.length} เคส</span>
-           </div>
-           
-           <div className="flex items-center gap-4">
-              {/* Sort Dropdown */}
-              <div className="relative">
-                 <button 
-                    onClick={() => setShowSortMenu(!showSortMenu)}
-                    className="text-xs text-slate-600 font-bold uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 hover:bg-slate-100 transition-colors flex items-center gap-2"
-                 >
-                    เรียงตาม: {sortOrder === "latest" ? "ล่าสุด" : sortOrder === "risk-low-high" ? "เสี่ยงน้อย→มาก" : "เสี่ยงมาก→น้อย"}
-                    <ChevronDown className="w-3 h-3" />
-                 </button>
-                 {showSortMenu && (
-                    <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-2xl border border-slate-100 py-2 min-w-[200px] z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                       <button onClick={() => { setSortOrder("latest"); setShowSortMenu(false); }} className={`w-full text-left px-4 py-2 text-xs font-bold hover:bg-slate-50 transition-colors ${sortOrder === "latest" ? "text-primary bg-primary/5" : "text-slate-600"}`}>
-                          ล่าสุด
-                       </button>
-                       <button onClick={() => { setSortOrder("risk-low-high"); setShowSortMenu(false); }} className={`w-full text-left px-4 py-2 text-xs font-bold hover:bg-slate-50 transition-colors ${sortOrder === "risk-low-high" ? "text-primary bg-primary/5" : "text-slate-600"}`}>
-                          เสี่ยงน้อย → มาก (ปกติ → วิกฤต)
-                       </button>
-                       <button onClick={() => { setSortOrder("risk-high-low"); setShowSortMenu(false); }} className={`w-full text-left px-4 py-2 text-xs font-bold hover:bg-slate-50 transition-colors ${sortOrder === "risk-high-low" ? "text-primary bg-primary/5" : "text-slate-600"}`}>
-                          เสี่ยงมาก → น้อย (วิกฤต → ปกติ)
-                       </button>
-                    </div>
-                 )}
-              </div>
-              
-              {/* Excel Export Button */}
-              <button 
-                 onClick={() => exportToExcel()}
-                 className="bg-slate-900 text-white text-xs font-black px-4 py-2 rounded-xl shadow-lg shadow-slate-900/20 hover:scale-105 transition-all flex items-center gap-2 group"
+          <div className="flex items-center gap-3">
+            <div className="w-1.5 h-6 bg-primary rounded-full" />
+            <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">Case Management Results</h4>
+            <span className="bg-primary/10 text-primary text-xs font-black px-3 py-1 rounded-full border border-primary/20">พบ {filteredResults.length} เคส</span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {/* Sort Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowSortMenu(!showSortMenu)}
+                className="text-xs text-slate-600 font-bold uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 hover:bg-slate-100 transition-colors flex items-center gap-2"
               >
-                 <Download className="w-3.5 h-3.5" />
-                 ดาวน์โหลดรายงาน .XLSX
-                 <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                เรียงตาม: {sortOrder === "latest" ? "ล่าสุด" : sortOrder === "risk-low-high" ? "เสี่ยงน้อย→มาก" : "เสี่ยงมาก→น้อย"}
+                <ChevronDown className="w-3 h-3" />
               </button>
-           </div>
+              {showSortMenu && (
+                <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-2xl border border-slate-100 py-2 min-w-[200px] z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <button onClick={() => { setSortOrder("latest"); setShowSortMenu(false); }} className={`w-full text-left px-4 py-2 text-xs font-bold hover:bg-slate-50 transition-colors ${sortOrder === "latest" ? "text-primary bg-primary/5" : "text-slate-600"}`}>
+                    ล่าสุด
+                  </button>
+                  <button onClick={() => { setSortOrder("risk-low-high"); setShowSortMenu(false); }} className={`w-full text-left px-4 py-2 text-xs font-bold hover:bg-slate-50 transition-colors ${sortOrder === "risk-low-high" ? "text-primary bg-primary/5" : "text-slate-600"}`}>
+                    เสี่ยงน้อย → มาก (ปกติ → วิกฤต)
+                  </button>
+                  <button onClick={() => { setSortOrder("risk-high-low"); setShowSortMenu(false); }} className={`w-full text-left px-4 py-2 text-xs font-bold hover:bg-slate-50 transition-colors ${sortOrder === "risk-high-low" ? "text-primary bg-primary/5" : "text-slate-600"}`}>
+                    เสี่ยงมาก → น้อย (วิกฤต → ปกติ)
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Excel Export Button */}
+            <button
+              onClick={() => exportToExcel()}
+              className="bg-slate-900 text-white text-xs font-black px-4 py-2 rounded-xl shadow-lg shadow-slate-900/20 hover:scale-105 transition-all flex items-center gap-2 group"
+            >
+              <Download className="w-3.5 h-3.5" />
+              ดาวน์โหลดรายงาน .XLSX
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-4">
           {filteredResults.length > 0 ? filteredResults.map((item) => (
-            <div 
+            <div
               key={item.id}
               className="bg-white rounded-[2rem] p-5 shadow-lg shadow-slate-200/20 border border-slate-100 hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/5 transition-all group relative overflow-hidden"
             >
@@ -330,93 +331,93 @@ export function FacultyFilterView() {
               <div className={`absolute left-0 top-0 bottom-0 w-1.5 transition-colors
                  ${item.risk === 'CRITICAL' ? 'bg-red-500' : item.risk === 'HIGH' ? 'bg-orange-500' : item.risk === 'MODERATE' ? 'bg-amber-400' : 'bg-green-500'}
               `} />
-              
+
               <div className="flex flex-col md:flex-row md:items-center gap-6">
-                 {/* Avatar & ID */}
-                 <div className="flex items-center gap-4 shrink-0 md:w-72">
-                    <div className="w-16 h-16 rounded-2xl bg-slate-50 p-0.5 border border-slate-100 group-hover:scale-110 transition-transform overflow-hidden shadow-sm">
-                       <img src={item.avatar} alt="Avatar" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="min-w-0">
-                       <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-black text-primary uppercase tracking-widest leading-none">{item.id}</span>
-                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-widest
+                {/* Avatar & ID */}
+                <div className="flex items-center gap-4 shrink-0 md:w-72">
+                  <div className="w-16 h-16 rounded-2xl bg-slate-50 p-0.5 border border-slate-100 group-hover:scale-110 transition-transform overflow-hidden shadow-sm relative">
+                    <Image src={item.avatar} alt="Avatar" fill className="object-cover" sizes="64px" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-black text-primary uppercase tracking-widest leading-none">{item.id}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-widest
                              ${item.serviceMode === 'ONSITE' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}
                           `}>
-                             {item.serviceMode}
-                          </span>
-                       </div>
-                       <h5 className="font-black text-slate-800 text-lg group-hover:text-primary transition-colors truncate">{item.name}</h5>
-                       <p className="text-xs text-slate-400 font-bold uppercase tracking-wider truncate">
-                         {FILTER_DEFS.find(d => d.key === 'department')?.options?.find(o => o.value === item.department)?.label}
-                       </p>
+                        {item.serviceMode}
+                      </span>
                     </div>
-                 </div>
+                    <h5 className="font-black text-slate-800 text-lg group-hover:text-primary transition-colors truncate">{item.name}</h5>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider truncate">
+                      {FILTER_DEFS.find(d => d.key === 'department')?.options?.find(o => o.value === item.department)?.label}
+                    </p>
+                  </div>
+                </div>
 
-                 <div className="h-10 w-[1px] bg-slate-100 hidden md:block" />
+                <div className="h-10 w-[1px] bg-slate-100 hidden md:block" />
 
-                 {/* Problem & Risk */}
-                 <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center gap-3">
-                       <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center shrink-0 border border-slate-100 group-hover:bg-primary/5 group-hover:border-primary/20 transition-colors">
-                          <Brain className="w-6 h-6 text-slate-400 group-hover:text-primary transition-colors" />
-                       </div>
-                       <div>
-                           <p className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none mb-1">ปัญหาที่พบหลัก</p>
-                          <p className="text-sm font-bold text-slate-700">{item.problem}</p>
-                       </div>
+                {/* Problem & Risk */}
+                <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center shrink-0 border border-slate-100 group-hover:bg-primary/5 group-hover:border-primary/20 transition-colors">
+                      <Brain className="w-6 h-6 text-slate-400 group-hover:text-primary transition-colors" />
                     </div>
+                    <div>
+                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none mb-1">ปัญหาที่พบหลัก</p>
+                      <p className="text-sm font-bold text-slate-700">{item.problem}</p>
+                    </div>
+                  </div>
 
-                    <div className="flex items-center gap-3">
-                       <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border
+                  <div className="flex items-center gap-3">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border
                           ${item.risk === 'CRITICAL' ? 'bg-red-50 border-red-100' : item.risk === 'HIGH' ? 'bg-orange-50 border-orange-100' : item.risk === 'MODERATE' ? 'bg-amber-50 border-amber-100' : 'bg-emerald-50 border-emerald-100'}
                        `}>
-                          <AlertTriangle className={`w-6 h-6 ${item.risk === 'CRITICAL' ? 'text-red-500' : item.risk === 'HIGH' ? 'text-orange-500' : item.risk === 'MODERATE' ? 'text-amber-500' : 'text-emerald-500'}`} />
-                       </div>
-                       <div>
-                           <p className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none mb-1">ความเสี่ยง</p>
-                          <p className={`text-sm font-black ${item.risk === 'CRITICAL' ? 'text-red-600' : item.risk === 'HIGH' ? 'text-orange-600' : item.risk === 'MODERATE' ? 'text-amber-600' : 'text-emerald-600'}`}>
-                             {FILTER_DEFS.find(d => d.key === 'riskLevel')?.options?.find(o => o.value === item.risk)?.label}
-                          </p>
-                       </div>
+                      <AlertTriangle className={`w-6 h-6 ${item.risk === 'CRITICAL' ? 'text-red-500' : item.risk === 'HIGH' ? 'text-orange-500' : item.risk === 'MODERATE' ? 'text-amber-500' : 'text-emerald-500'}`} />
                     </div>
-                 </div>
+                    <div>
+                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none mb-1">ความเสี่ยง</p>
+                      <p className={`text-sm font-black ${item.risk === 'CRITICAL' ? 'text-red-600' : item.risk === 'HIGH' ? 'text-orange-600' : item.risk === 'MODERATE' ? 'text-amber-600' : 'text-emerald-600'}`}>
+                        {FILTER_DEFS.find(d => d.key === 'riskLevel')?.options?.find(o => o.value === item.risk)?.label}
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
-                 {/* Status & Action */}
-                 <div className="shrink-0 flex items-center justify-between md:justify-end gap-6 md:w-64">
-                    <div className="text-right">
-                           <p className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none mb-1">สถานะ</p>
-                       <div className="flex items-center gap-1.5 justify-end">
-                          <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${item.status === 'ฉุกเฉิน' ? 'bg-red-500' : 'bg-primary'}`} />
-                          <span className="text-xs font-black text-slate-600">{item.status}</span>
-                       </div>
+                {/* Status & Action */}
+                <div className="shrink-0 flex items-center justify-between md:justify-end gap-6 md:w-64">
+                  <div className="text-right">
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none mb-1">สถานะ</p>
+                    <div className="flex items-center gap-1.5 justify-end">
+                      <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${item.status === 'ฉุกเฉิน' ? 'bg-red-500' : 'bg-primary'}`} />
+                      <span className="text-xs font-black text-slate-600">{item.status}</span>
                     </div>
-                    <button className="bg-slate-900 group-hover:bg-primary text-white w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg shadow-slate-900/10 active:scale-95">
-                       <ArrowRight className="w-6 h-6" />
-                    </button>
-                 </div>
+                  </div>
+                  <button className="bg-slate-900 group-hover:bg-primary text-white w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg shadow-slate-900/10 active:scale-95">
+                    <ArrowRight className="w-6 h-6" />
+                  </button>
+                </div>
               </div>
             </div>
           )) : (
             /* Improved Empty State */
             <div className="mt-12 bg-white rounded-[3rem] border-2 border-dashed border-slate-100 p-20 flex flex-col items-center justify-center text-center relative overflow-hidden group">
-               <div className="absolute inset-0 bg-slate-50/30 opacity-0 group-hover:opacity-100 transition-opacity" />
-               <div className="relative z-10">
-                  <div className="w-24 h-24 bg-slate-50 rounded-[2.5rem] shadow-sm flex items-center justify-center mb-6 mx-auto border border-slate-100">
-                     <Search className="w-10 h-10 text-slate-200" />
-                  </div>
-                  <h4 className="text-2xl font-black text-slate-600 tracking-tight">ไม่พบสถิติที่ตรงตามเงื่อนไข</h4>
-                  <p className="text-slate-400 font-medium max-w-sm mt-2 mx-auto">ลองเปลี่ยนรูปแบบตัวกรองหรือใช้คำค้นหาอื่น ระบบพร้อมประมวลผลข้อมูลใหม่ให้คุณทันที</p>
-                  <button 
-                    onClick={() => {
-                        setFilters({ department: "ALL", yearLevel: "ALL", riskLevel: "ALL", problemCategory: "ALL", gender: "ALL", search: "" });
-                        setActiveQuickFilter("all");
-                    }}
-                    className="mt-8 text-primary font-black text-xs uppercase tracking-widest hover:underline"
-                  >
-                     ล้างการกรองทั้งหมด
-                  </button>
-               </div>
+              <div className="absolute inset-0 bg-slate-50/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative z-10">
+                <div className="w-24 h-24 bg-slate-50 rounded-[2.5rem] shadow-sm flex items-center justify-center mb-6 mx-auto border border-slate-100">
+                  <Search className="w-10 h-10 text-slate-200" />
+                </div>
+                <h4 className="text-2xl font-black text-slate-600 tracking-tight">ไม่พบสถิติที่ตรงตามเงื่อนไข</h4>
+                <p className="text-slate-400 font-medium max-w-sm mt-2 mx-auto">ลองเปลี่ยนรูปแบบตัวกรองหรือใช้คำค้นหาอื่น ระบบพร้อมประมวลผลข้อมูลใหม่ให้คุณทันที</p>
+                <button
+                  onClick={() => {
+                    setFilters({ department: "ALL", yearLevel: "ALL", riskLevel: "ALL", problemCategory: "ALL", gender: "ALL", search: "" });
+                    setActiveQuickFilter("all");
+                  }}
+                  className="mt-8 text-primary font-black text-xs uppercase tracking-widest hover:underline"
+                >
+                  ล้างการกรองทั้งหมด
+                </button>
+              </div>
             </div>
           )}
         </div>

@@ -21,7 +21,7 @@ export function RectorStrategicInsights({ stats, loading }: RectorStrategicInsig
     // Fix Redundancy: Regex to remove "Faculty of" if present, or "คณะ" if double
     const cleanName = (name: string) => {
         if (!name) return "";
-        let cleaned = name.replace(/Faculty of\s*/i, "").trim();
+        const cleaned = name.replace(/Faculty of\s*/i, "").trim();
         // If it DOESN'T start with "คณะ", add it. If it does, keep it.
         // But usually Thai names in DB start with "คณะ". 
         // We ensure we don't say "คณะ คณะ..." by checking.

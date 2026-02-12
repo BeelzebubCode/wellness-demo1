@@ -2,8 +2,13 @@
 
 import React, { useState } from "react";
 import { MOCK_DEPARTMENTS, DepartmentStat } from "./listing/DepartmentList_MED";
-import { DepartmentDashboard_MED } from "./detail/DepartmentDashboard_MED";
+import dynamic from "next/dynamic";
 import { HeaderBadgeItem } from "../../shared/components/FacultyHeaderBanner";
+
+const DepartmentDashboard_MED = dynamic(() => import("./detail/DepartmentDashboard_MED").then(mod => mod.DepartmentDashboard_MED), {
+  loading: () => <div className="min-h-screen bg-slate-50 animate-pulse" />,
+  ssr: false
+});
 import {
   SummaryStat,
   SessionTrendItem,

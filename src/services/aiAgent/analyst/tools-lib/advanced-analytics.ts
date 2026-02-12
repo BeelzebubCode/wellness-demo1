@@ -38,7 +38,7 @@ export const getAdvancedBookingAnalytics = {
     }
 
     let data;
-    let xAxisKey = "name";
+    const xAxisKey = "name";
 
     if (groupBy === "university") {
         const grouped = await prisma.booking.groupBy({

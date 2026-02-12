@@ -79,7 +79,7 @@ export async function seedConsultants(
   const consultantBiasById = new Map<number, number>();
 
   let lowPerformerLeft = 3;
-  const PER_UNI = 5;
+  const PER_UNI = 20;
 
   for (const uni of universities) {
     const uniCodeRaw = String(uni.university_code);

@@ -4,6 +4,8 @@
 
 'use client';
 
+import Image from 'next/image';
+
 interface ImageCardProps {
   src?: string;
   alt?: string;
@@ -30,10 +32,12 @@ export function ImageCard({
       style={{ height }}
     >
       {src ? (
-        <img
+        <Image
           src={src}
           alt={alt}
-          className="object-cover w-full h-full"
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
         />
       ) : (
         <div className="text-gray-400 text-sm">ไม่มีรูปภาพ</div>

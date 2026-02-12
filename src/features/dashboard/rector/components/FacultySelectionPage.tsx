@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Search, Building2, Users, GraduationCap, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { useFaculties } from "../hooks/useFaculties";
 import type { Faculty } from "../types";
@@ -102,13 +103,14 @@ export function FacultySelectionPage() {
                             href={`/dean/faculties/${faculty.code}`}
                             className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-200 hover:border-indigo-400"
                         >
-                            {/* Logo Header */}
                             <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 flex items-center justify-center border-b border-gray-100">
-                                <div className="w-24 h-24 bg-white rounded-full shadow-lg flex items-center justify-center p-2">
-                                    <img
+                                <div className="w-24 h-24 bg-white rounded-full shadow-lg flex items-center justify-center p-2 relative">
+                                    <Image
                                         src={logoUrl}
                                         alt={faculty.code}
-                                        className="w-20 h-20 object-contain"
+                                        width={80}
+                                        height={80}
+                                        className="object-contain"
                                         onError={(e) => {
                                             (e.target as HTMLImageElement).style.display = "none";
                                             const parent = (e.target as HTMLImageElement).parentElement;
@@ -167,8 +169,8 @@ export function FacultySelectionPage() {
                             onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                             disabled={currentPage === 1}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${currentPage === 1
-                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                    : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg"
+                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg"
                                 }`}
                         >
                             <ChevronLeft className="w-4 h-4" />
@@ -205,8 +207,8 @@ export function FacultySelectionPage() {
                                         key={page}
                                         onClick={() => setCurrentPage(page)}
                                         className={`w-10 h-10 rounded-lg font-semibold transition-all ${currentPage === page
-                                                ? "bg-indigo-600 text-white shadow-lg"
-                                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                            ? "bg-indigo-600 text-white shadow-lg"
+                                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                                             }`}
                                     >
                                         {page}
@@ -220,8 +222,8 @@ export function FacultySelectionPage() {
                             onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                             disabled={currentPage === totalPages}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${currentPage === totalPages
-                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                    : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg"
+                                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg"
                                 }`}
                         >
                             Next

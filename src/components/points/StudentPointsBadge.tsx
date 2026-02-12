@@ -15,7 +15,9 @@ export function StudentPointsBadge({ role }: { role?: string | null }) {
   const load = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/v2/me/points", { cache: "no-store" });
+      const res = await fetch("/api/v2/me/points", {
+        next: { revalidate: 30 } // cache 30 seconds - updates frequently
+      });
       const json = await res.json();
       if (!res.ok || !json?.success) throw new Error(json?.error ?? "load failed");
       setBalance(Number(json.balance ?? 0));

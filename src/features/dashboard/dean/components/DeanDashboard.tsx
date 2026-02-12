@@ -2,8 +2,13 @@ import { useState } from "react";
 import { useFacultyStats } from "../hooks/useFacultyStats";
 import { LoadingSpinner } from "@/components/ui";
 import { DeanOverviewCards } from "./sections/DeanOverviewCards";
-import { DeanAnalytics } from "./sections/DeanAnalytics";
 import { DepartmentBreakdownTable } from "./sections/DepartmentBreakdownTable";
+import dynamic from "next/dynamic";
+
+const DeanAnalytics = dynamic(() => import("./sections/DeanAnalytics").then(mod => mod.DeanAnalytics), {
+    loading: () => <div className="h-96 bg-slate-50 animate-pulse rounded-xl" />,
+    ssr: false
+});
 
 import { ExecutiveSummarySection } from "./sections/ExecutiveSummarySection";
 import { FacultyDateRangePicker } from "@/features/dashboard/dean/faculty-dashboard/shared/components/FacultyDateRangePicker";

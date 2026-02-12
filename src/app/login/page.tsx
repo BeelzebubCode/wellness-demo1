@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import {
   User,
   Lock,
@@ -105,12 +106,14 @@ export default function LoginPage() {
       style={defaultTenantVars}
       className="min-h-screen w-full bg-white relative overflow-hidden pt-8"
     >
-      {/* Full background illustration with moderate blur */}
-      <div className="absolute inset-0">
-        <img
+      <div className="absolute inset-0 z-0">
+        <Image
           src="/images/login-illustration.png"
           alt=""
-          className="w-full h-full object-cover blur-[40px] scale-105"
+          fill
+          className="object-cover blur-[40px] scale-105"
+          priority
+          sizes="100vw"
         />
       </div>
 
@@ -289,10 +292,13 @@ export default function LoginPage() {
               <div className="relative w-full h-full">
                 <div className="relative w-full h-full overflow-hidden rounded-r-[24px]">
                   <div className="relative z-10 h-full w-full">
-                    <img
+                    <Image
                       src="/images/login-illustration.png"
                       alt="login illustration"
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
+                      priority
+                      sizes="(max-width: 1024px) 0vw, 50vw"
                     />
                     {/* Soft overlay matching site theme */}
                     <div className="absolute inset-0 bg-gradient-to-br from-[rgb(var(--primary)/0.08)] via-transparent to-[rgb(var(--accent)/0.06)] pointer-events-none mix-blend-soft-light" />

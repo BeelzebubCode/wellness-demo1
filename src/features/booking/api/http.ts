@@ -28,7 +28,7 @@ export async function apiGet<T>(url: string, opts?: ApiOpts): Promise<T> {
   const res = await authFetch<T>(url, {
     method: "GET",
     headers: withUniHeader(opts),
-    cache: "no-store",
+    next: { revalidate: 60 }, // cache 1 minute for GET requests
     signal: opts?.signal,
   });
 

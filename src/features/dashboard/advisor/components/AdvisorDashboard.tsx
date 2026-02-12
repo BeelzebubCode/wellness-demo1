@@ -3,8 +3,16 @@
 import { useAdvisorStats } from "../hooks/useAdvisorStats";
 import { AdvisorStatsCards } from "./AdvisorStatsCards";
 import { StudentListTable } from "./StudentListTable";
-import { AdvisorRiskChart } from "./AdvisorRiskChart";
-import { AdvisorAnalyticsCharts } from "./AdvisorAnalyticsCharts";
+import dynamic from "next/dynamic";
+
+const AdvisorRiskChart = dynamic(() => import("./AdvisorRiskChart").then(mod => mod.AdvisorRiskChart), {
+  loading: () => <div className="h-64 bg-slate-50 animate-pulse rounded-xl" />,
+  ssr: false
+});
+const AdvisorAnalyticsCharts = dynamic(() => import("./AdvisorAnalyticsCharts").then(mod => mod.AdvisorAnalyticsCharts), {
+  loading: () => <div className="h-64 bg-slate-50 animate-pulse rounded-xl" />,
+  ssr: false
+});
 import { LoadingSpinner } from "@/components/ui";
 
 import { FilterBar } from "@/components/filters/FilterBar";

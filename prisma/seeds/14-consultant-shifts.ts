@@ -49,63 +49,70 @@ export async function seedConsultantShifts(
 
     const numConsultants = uniConsultants.length; // typically 5
 
-    // Calculate start date: 1 year ago, aligned to shift cycle
-    const historyStart = new Date(today);
-    historyStart.setDate(today.getDate() - HISTORY_DAYS);
+    // Generate shifts for EACH consultant independently (Parallel Shifts)
+    for (let cIdx = 0; cIdx < numConsultants; cIdx++) {
+      const consultant = uniConsultants[cIdx];
+      
+      // Stagger strategy: 
+      // Residents (0-4) start week 1
+      // Residents (5-9) start week 2 (offset 7 days)
+      const startOffsetDays = (cIdx % 2) * 7; 
 
-    let shiftIndex = 0;
-    let currentDate = new Date(historyStart);
+      // Calculate start date: 1 year ago + offset
+      const historyStart = new Date(today);
+      historyStart.setDate(today.getDate() - HISTORY_DAYS + startOffsetDays);
 
-    while (currentDate < new Date(today.getTime() + SHIFT_DAYS * 86400000)) {
-      const consultant = uniConsultants[shiftIndex % numConsultants];
+      let currentDate = new Date(historyStart);
 
-      const shiftStart = new Date(currentDate);
-      const shiftEnd = new Date(currentDate);
-      shiftEnd.setDate(shiftEnd.getDate() + SHIFT_DAYS - 1);
+      // Create continuous shifts (back-to-back 14 days)
+      while (currentDate < new Date(today.getTime() + SHIFT_DAYS * 86400000)) {
+        const shiftStart = new Date(currentDate);
+        const shiftEnd = new Date(currentDate);
+        shiftEnd.setDate(shiftEnd.getDate() + SHIFT_DAYS - 1);
 
-      // Determine status and progress
-      let status: string;
-      let daysWorked: number;
-      let daysRemaining: number;
-      let completedAt: Date | null = null;
+        // Determine status and progress
+        let status: string;
+        let daysWorked: number;
+        let daysRemaining: number;
+        let completedAt: Date | null = null;
 
-      if (shiftEnd < today) {
-        // Fully completed shift
-        status = "COMPLETED";
-        daysWorked = SHIFT_DAYS;
-        daysRemaining = 0;
-        completedAt = shiftEnd;
-      } else if (shiftStart <= today) {
-        // Currently active shift
-        const elapsed = Math.floor(
-          (today.getTime() - shiftStart.getTime()) / 86400000
-        );
-        status = "ACTIVE";
-        daysWorked = Math.min(elapsed, SHIFT_DAYS);
-        daysRemaining = SHIFT_DAYS - daysWorked;
-      } else {
-        // Future/upcoming shift
-        status = "ACTIVE";
-        daysWorked = 0;
-        daysRemaining = SHIFT_DAYS;
+        if (shiftEnd < today) {
+          // Fully completed shift
+          status = "COMPLETED";
+          daysWorked = SHIFT_DAYS;
+          daysRemaining = 0;
+          completedAt = shiftEnd;
+        } else if (shiftStart <= today) {
+          // Currently active shift
+          const elapsed = Math.floor(
+            (today.getTime() - shiftStart.getTime()) / 86400000
+          );
+          status = "ACTIVE";
+          daysWorked = Math.min(elapsed, SHIFT_DAYS);
+          daysRemaining = SHIFT_DAYS - daysWorked;
+        } else {
+          // Future/upcoming shift
+          status = "ACTIVE";
+          daysWorked = 0;
+          daysRemaining = SHIFT_DAYS;
+        }
+
+        shiftBatch.push({
+          consultant_id: consultant.consultant_id,
+          university_id: uni.university_id,
+          shift_start_date: shiftStart,
+          shift_end_date: shiftEnd,
+          days_worked: daysWorked,
+          days_remaining: daysRemaining,
+          status,
+          completed_at: completedAt,
+          // Metadata for borrow generation (not stored)
+          _isCompleted: status === "COMPLETED",
+          _uniId: uni.university_id,
+        });
+
+        currentDate.setDate(currentDate.getDate() + SHIFT_DAYS);
       }
-
-      shiftBatch.push({
-        consultant_id: consultant.consultant_id,
-        university_id: uni.university_id,
-        shift_start_date: shiftStart,
-        shift_end_date: shiftEnd,
-        days_worked: daysWorked,
-        days_remaining: daysRemaining,
-        status,
-        completed_at: completedAt,
-        // Metadata for borrow generation (not stored)
-        _isCompleted: status === "COMPLETED",
-        _uniId: uni.university_id,
-      });
-
-      currentDate.setDate(currentDate.getDate() + SHIFT_DAYS);
-      shiftIndex++;
     }
   }
 

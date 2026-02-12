@@ -57,7 +57,7 @@ export async function seedBookings(
     universities,
     students,
     consultants,
-    timeSlotsByUniId,
+    timeSlotsByUniId: rawTimeSlotsByUniId,
     problemCategories,
     criteria,
     headAccountIdByUniversityId,
@@ -201,36 +201,55 @@ export async function seedBookings(
   const tripleKey = (u: number, s: number, slotId: number) =>
     `${u}:${s}:${slotId}`;
 
-  function pickSlotByStatus(uniId: number, status: BookingStatus) {
-    const slots = timeSlotsByUniId.get(uniId) || [];
-    const needCapacity = isActiveStatus(status);
+  // ⚡ Optimization: Pre-filter slots by status groups to avoid repeated filtering in loop
+  const slotsCache = new Map<string, any[]>();
+  
+  function getCachedSlots(uniId: number, timeframe: 'PAST' | 'PRESENT' | 'FUTURE') {
+    const key = `${uniId}:${timeframe}`;
+    if (slotsCache.has(key)) return slotsCache.get(key)!;
 
-    const candidates = slots.filter((s) => {
+    const allSlots = rawTimeSlotsByUniId.get(uniId) || [];
+    const filtered = allSlots.filter(s => {
       if (s.time_slot_status !== TimeSlotStatus.OPEN) return false;
-
       const start = new Date(s.time_slot_start_datetime);
-
-      if (
-        status === BookingStatus.COMPLETED ||
-        status === BookingStatus.CANCELLED
-      ) {
-        if (!(start >= pastFrom && start < today0)) return false;
-      } else if (status === BookingStatus.IN_PROGRESS) {
-        if (!(start >= today0 && start < inProgressTo)) return false;
-      } else {
-        if (!(start >= today0 && start < futureTo)) return false;
-      }
-
-      if (needCapacity) {
-        const maxCap = Number(s.time_slot_max_capacity ?? 0);
-        const used = activeCountBySlotId.get(s.time_slot_id) ?? 0;
-        return maxCap > used;
-      }
-      return true;
+      
+      if (timeframe === 'PAST') return start >= pastFrom && start < today0;
+      if (timeframe === 'PRESENT') return start >= today0 && start < inProgressTo;
+      if (timeframe === 'FUTURE') return start >= today0 && start < futureTo;
+      return false;
     });
 
+    slotsCache.set(key, filtered);
+    return filtered;
+  }
+
+  function pickSlotByStatus(uniId: number, status: BookingStatus) {
+    let timeframe: 'PAST' | 'PRESENT' | 'FUTURE' = 'FUTURE';
+    if (status === BookingStatus.COMPLETED || status === BookingStatus.CANCELLED) timeframe = 'PAST';
+    else if (status === BookingStatus.IN_PROGRESS) timeframe = 'PRESENT';
+
+    const candidates = getCachedSlots(uniId, timeframe);
+    const needCapacity = isActiveStatus(status);
+
     if (candidates.length === 0) return null;
-    return randomItem(candidates);
+
+    if (!needCapacity) return randomItem(candidates);
+
+    // Try picking random items first instead of filtering the whole array (which is O(N))
+    for (let i = 0; i < 10; i++) {
+        const s = randomItem(candidates);
+        const maxCap = Number(s.time_slot_max_capacity ?? 0);
+        const used = activeCountBySlotId.get(s.time_slot_id) ?? 0;
+        if (maxCap > used) return s;
+    }
+    // Fallback
+    const valid = candidates.filter(s => {
+       const maxCap = Number(s.time_slot_max_capacity ?? 0);
+       const used = activeCountBySlotId.get(s.time_slot_id) ?? 0;
+       return maxCap > used;
+    });
+    
+    return valid.length > 0 ? randomItem(valid) : null;
   }
 
   function pickCategoryForUni(universityId: number) {
@@ -534,9 +553,12 @@ export async function seedBookings(
       f.feedback_id,
       c.evaluation_criterion_id,
       CASE 
-        WHEN random() < 0.6 THEN 5
-        WHEN random() < 0.9 THEN 4
-        ELSE floor(random() * 3 + 1)::int
+        -- Spread ratings: 15% (5), 25% (4), 30% (3), 20% (2), 10% (1)
+        WHEN random() < 0.15 THEN 5
+        WHEN random() < 0.40 THEN 4
+        WHEN random() < 0.70 THEN 3
+        WHEN random() < 0.90 THEN 2
+        ELSE 1
       END
     FROM feedback f
     CROSS JOIN evaluation_criterion c
