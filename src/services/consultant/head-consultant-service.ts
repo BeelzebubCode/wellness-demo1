@@ -137,13 +137,19 @@ export const HeadConsultantService = {
   },
 
   // ──────────────────────────────────────────
-  // 5️⃣  Team Overview — consultants + active bookings
+  // 5️⃣  Team Overview — consultants + active bookings + real ratings
   // ──────────────────────────────────────────
   async getTeamOverview(universityId: number) {
     const consultants = await prisma.consultant.findMany({
-      where: { university_id: universityId },
+      where: { 
+        university_id: universityId,
+        account: {
+          account_role: { not: "HEAD_CONSULTANT" }
+        }
+      },
       include: {
         profile: true,
+        account: { select: { account_role: true } },
         bookings: {
           where: {
             booking_status: { in: ["ASSIGNED", "IN_PROGRESS"] },
@@ -151,18 +157,99 @@ export const HeadConsultantService = {
           select: { booking_id: true },
         },
         specializations: true,
+        feedbacks: {
+          include: { ratings: true }
+        }
       },
     });
 
-    return consultants.map((c) => ({
-      consultantId: c.consultant_id,
-      prefix: c.profile?.consultant_prefix ?? "",
-      firstName: c.profile?.consultant_first_name ?? "-",
-      lastName: c.profile?.consultant_last_name ?? "-",
-      activeBookings: c.bookings.length,
-      specializations: c.specializations.map(
-        (s) => s.consultant_specialization_topic
-      ),
-    }));
+    return consultants.map((c: any) => {
+      const allScores = c.feedbacks?.flatMap((f: any) =>
+        f.ratings?.map((r: any) => r.feedback_rating_score)
+      ) ?? [];
+      
+      const avgRating =
+        allScores.length > 0
+          ? allScores.reduce((a: number, b: number) => a + b, 0) / allScores.length
+          : 0;
+
+      return {
+        consultantId: c.consultant_id,
+        prefix: c.profile?.consultant_prefix ?? "",
+        firstName: c.profile?.consultant_first_name ?? "-",
+        lastName: c.profile?.consultant_last_name ?? "-",
+        activeBookings: (c.bookings ?? []).length,
+        avgRating: Math.round(avgRating * 10) / 10,
+        feedbackCount: (c.feedbacks ?? []).length,
+        specializations: (c.specializations ?? []).map(
+          (s: any) => s.consultant_specialization_topic
+        ),
+      };
+    });
+  },
+
+  // ──────────────────────────────────────────
+  // 6️⃣  Consultant Case History (with Pagination & Filter)
+  // ──────────────────────────────────────────
+  async getConsultantCaseHistory(
+    universityId: number, 
+    consultantId: number,
+    options?: { startDate?: Date; endDate?: Date; skip?: number; take?: number }
+  ) {
+    const where: any = {
+      consultant_university_id: universityId,
+      consultant_id: consultantId,
+    };
+
+    if (options?.startDate || options?.endDate) {
+      where.booking = {
+        timeSlot: {
+          time_slot_start_datetime: {
+            ...(options.startDate && { gte: options.startDate }),
+            ...(options.endDate && { lte: options.endDate }),
+          },
+        }
+      };
+    }
+
+    const [assignments, total] = await Promise.all([
+      prisma.bookingAssignment.findMany({
+        where,
+        include: {
+          booking: {
+            include: {
+              student: {
+                include: { profile: true },
+              },
+              problemCategory: true,
+              outcome: true,
+              timeSlot: true,
+            },
+          },
+        },
+        orderBy: { assigned_at: "desc" },
+        skip: options?.skip ?? 0,
+        take: options?.take ?? 10,
+      }),
+      prisma.bookingAssignment.count({ where })
+    ]);
+
+    const items = assignments.map((a) => {
+      const b = a.booking;
+      return {
+        id: b.booking_id,
+        status: b.booking_status,
+        studentName: b.student.profile
+          ? `${b.student.profile.student_first_name_th} ${b.student.profile.student_last_name_th}`.trim()
+          : b.student.student_code ?? "Unknown Student",
+        problemType: b.problemCategory?.problem_category_name_th ?? "N/A",
+        date: b.timeSlot.time_slot_start_datetime.toISOString().split("T")[0],
+        startTime: b.timeSlot.time_slot_start_datetime.toISOString().split("T")[1].substring(0, 5),
+        endTime: b.timeSlot.time_slot_end_datetime.toISOString().split("T")[1].substring(0, 5),
+        outcomeNote: b.outcome?.booking_outcome_consultant_note ?? null,
+      };
+    });
+
+    return { items, total };
   },
 };

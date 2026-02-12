@@ -67,3 +67,23 @@ export async function getTeamOverview() {
     return [];
   }
 }
+
+export async function getConsultantHistory(
+  consultantId: number,
+  options?: { from?: string; to?: string; skip?: number; take?: number }
+) {
+  try {
+    const uniId = await getUniversityId();
+    if (!uniId) return { items: [], total: 0 };
+    
+    return await HeadConsultantService.getConsultantCaseHistory(uniId, consultantId, {
+      startDate: options?.from ? new Date(options.from) : undefined,
+      endDate: options?.to ? new Date(options.to) : undefined,
+      skip: options?.skip,
+      take: options?.take,
+    });
+  } catch (err) {
+    console.error("getConsultantHistory failed:", err);
+    return { items: [], total: 0 };
+  }
+}

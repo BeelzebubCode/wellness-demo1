@@ -54,6 +54,8 @@ export interface TeamMember {
   firstName: string;
   lastName: string;
   activeBookings: number;
+  avgRating: number;
+  feedbackCount: number;
   specializations: string[];
 }
 
