@@ -1,7 +1,7 @@
 "use client";
 
-import { FacultySelectionPage } from "@/features/dashboard/dean/components/FacultySelectionPage";
+import { Department_MED } from "@/features/university-management/cu/med/department_MED";
 
 export default function FacultiesPage() {
-    return <FacultySelectionPage />;
+    return <Department_MED />;
 }

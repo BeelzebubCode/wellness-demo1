@@ -8,9 +8,10 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Ba
 
 interface Props {
     facultyCode?: string;
+    showTable?: boolean;
 }
 
-export function FacultyDetailDashboard({ facultyCode }: Props) {
+export function FacultyDetailDashboard({ facultyCode, showTable = true }: Props) {
     const { stats, isLoading, error } = useFacultyStats(facultyCode);
 
     if (isLoading) {
@@ -52,7 +53,7 @@ export function FacultyDetailDashboard({ facultyCode }: Props) {
     const totalRisk = stats.riskDistribution.HIGH + stats.riskDistribution.MEDIUM;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+        <div className="pb-8">
             {/* Header */}
             <div className="max-w-7xl mx-auto mb-8">
                 {/* {facultyCode && (
@@ -163,39 +164,41 @@ export function FacultyDetailDashboard({ facultyCode }: Props) {
             </div>
 
             {/* Department Statistics Table */}
-            <div className="max-w-7xl mx-auto bg-white rounded-2xl shadow-lg p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Department Statistics</h3>
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="border-b-2 border-gray-200">
-                                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Department Code</th>
-                                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Department Name</th>
-                                <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Students</th>
-                                <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Counseling Sessions</th>
-                                <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Sessions per Student</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {stats.departmentStats.map((dept) => {
-                                const sessionsPerStudent = dept.studentCount > 0
-                                    ? (dept.bookingCount / dept.studentCount).toFixed(2)
-                                    : "0.00";
+            {showTable && (
+                <div className="max-w-7xl mx-auto bg-white rounded-2xl shadow-lg p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">Department Statistics</h3>
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b-2 border-gray-200">
+                                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Department Code</th>
+                                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Department Name</th>
+                                    <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Students</th>
+                                    <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Counseling Sessions</th>
+                                    <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Sessions per Student</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {stats.departmentStats.map((dept) => {
+                                    const sessionsPerStudent = dept.studentCount > 0
+                                        ? (dept.bookingCount / dept.studentCount).toFixed(2)
+                                        : "0.00";
 
-                                return (
-                                    <tr key={dept.departmentId} className="border-b border-gray-100 hover:bg-gray-50">
-                                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{dept.departmentCode}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-700">{dept.departmentName}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-900 text-right">{dept.studentCount.toLocaleString()}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-900 text-right">{dept.bookingCount.toLocaleString()}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-900 text-right">{sessionsPerStudent}</td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+                                    return (
+                                        <tr key={dept.departmentId} className="border-b border-gray-100 hover:bg-gray-50">
+                                            <td className="px-4 py-3 text-sm font-medium text-gray-900">{dept.departmentCode}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-700">{dept.departmentName}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-900 text-right">{dept.studentCount.toLocaleString()}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-900 text-right">{dept.bookingCount.toLocaleString()}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-900 text-right">{sessionsPerStudent}</td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }

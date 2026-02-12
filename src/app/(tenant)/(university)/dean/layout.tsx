@@ -48,8 +48,8 @@ export default function DeanLayout({ children }: { children: React.ReactNode }) 
                     onMenuClick={() => setIsMobileMenuOpen(true)}
                 />
 
-                <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
-                    <div className="max-w-7xl mx-auto animate-fade-in">{children}</div>
+                <main className="flex-1 overflow-x-hidden overflow-y-auto pb-20 md:pb-6">
+                    <div className="animate-fade-in">{children}</div>
                 </main>
             </div>
         </div>

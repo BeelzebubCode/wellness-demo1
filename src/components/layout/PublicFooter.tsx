@@ -21,7 +21,7 @@ export function PublicFooter() {
     "https://www.google.com/maps/place/%E0%B8%81%E0%B8%AD%E0%B8%87%E0%B8%81%E0%B8%B4%E0%B8%88%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B8%99%E0%B8%B4%E0%B8%AA%E0%B8%B4%E0%B8%95+%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%99%E0%B9%80%E0%B8%A3%E0%B8%A7%E0%B8%A3";
 
   return (
-    <footer className="relative w-full border-t border-[rgb(var(--primary),0.2)] bg-white/60 backdrop-blur-md">
+    <footer className="relative w-full bg-white/60 backdrop-blur-md">
       {/* Background elements if needed, but keeping it clean for compatibility */}
 
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12">

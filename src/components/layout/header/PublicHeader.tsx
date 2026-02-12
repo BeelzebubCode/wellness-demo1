@@ -230,8 +230,6 @@ export function PublicHeader({
           }}
         />
 
-        {/* divider */}
-        <div className="absolute inset-x-0 bottom-0 h-px bg-[rgb(var(--border)/0.60)]" />
 
         <div className="relative">
           <div className="max-w-7xl mx-auto px-4">

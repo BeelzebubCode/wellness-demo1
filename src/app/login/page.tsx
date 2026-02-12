@@ -120,7 +120,7 @@ export default function LoginPage() {
       <div className="pointer-events-none absolute top-10 right-10 h-28 w-28 rounded-full bg-[rgb(var(--primary)/0.10)] z-10" />
 
       <div className="relative z-10 min-h-screen flex items-center justify-center px-4 py-10">
-        <div className="w-full max-w-5xl rounded-[26px] bg-white shadow-[0_22px_60px_rgba(2,6,23,0.12)] border border-slate-200 overflow-hidden">
+        <div className="w-full max-w-5xl rounded-[26px] bg-white shadow-[0_22px_60px_rgba(2,6,23,0.12)] overflow-hidden">
           <div className="grid lg:grid-cols-2">
             {/* LEFT: form */}
             <div className="p-8 sm:p-10 lg:p-12">
