@@ -75,56 +75,44 @@ import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
 // ... existing imports ...
 
 export function BookingPage({ universityId }: { universityId?: number }) {
+  // ✅ CRITICAL: ALL HOOKS MUST BE AT THE TOP, BEFORE ANY CONDITIONAL RETURNS!
+
+  // State hooks
+  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
+  const [currentMonth, setCurrentMonth] = useState<Date>(() => new Date());
+  const [period, setPeriod] = useState<SlotPeriod>("MORNING");
+  const [selectedSlot, setSelectedSlot] = useState<TimeSlotCore | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  // Ref hooks
+  const slotsSectionRef = useRef<HTMLDivElement>(null);
+  const didMountRef = useRef(false);
+  const prevDateStrRef = useRef<string | null>(null);
+  const scrollCooldownRef = useRef<number>(0);
+
+  // Memoized values
+  const dateStr = useMemo(() => toISODate(selectedDate), [selectedDate]);
+
+  // Custom hooks
   const { user, isLoading: authLoading } = useRoleAuth({
     allowedRoles: ["STUDENT", "PERSONNEL", "RECTOR", "ADMIN", "SUPER_ADMIN", "CONSULTANT", "HEAD_CONSULTANT"],
     loginToastKey: "booking_login_required",
     guard: true,
   });
 
-  if (authLoading) {
-     return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400">Loading...</div>;
-  }
-  if (!user) return null; // Redirecting...
-
-  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
-  const [currentMonth, setCurrentMonth] = useState<Date>(() => new Date());
-
-  const [period, setPeriod] = useState<SlotPeriod>("MORNING");
-  const [selectedSlot, setSelectedSlot] = useState<TimeSlotCore | null>(null);
-
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [successOpen, setSuccessOpen] = useState(false);
-
-  // ✅ transition
-  const [isPending, startTransition] = useTransition();
-
-  // ✅ IMPORTANT: ref ต้องชี้ DOM จริง (อย่าชี้ Card ถ้าไม่ forwardRef)
-  const slotsSectionRef = useRef<HTMLDivElement>(null);
-
-  // ✅ กัน scroll ตอน mount + กันยิงซ้ำ
-  const didMountRef = useRef(false);
-  const prevDateStrRef = useRef<string | null>(null);
-  const scrollCooldownRef = useRef<number>(0);
-
-  const dateStr = useMemo(() => toISODate(selectedDate), [selectedDate]);
-
   const { slots, loading, error, refetch } = useTimeSlots(dateStr, universityId);
-
-  const { submitBooking, loading: bookingLoading, error: bookingError } =
-    useBooking(universityId);
-
-  // ✅ Load ONLY active appointments to check for active booking status (Performance Optimized)
+  const { submitBooking, loading: bookingLoading, error: bookingError } = useBooking(universityId);
   const { activeBooking: existingActiveBooking, isLoading: appointmentsLoading } = useMyAppointments({
     universityId,
     statusGroup: "ACTIVE",
-    limit: 5, // We only need enough to see if ANY exist
+    limit: 5,
   });
 
+  // Computed values (memoized)
   const hasActiveBooking = useMemo(() => {
-    // 1. Check loaded data
     if (existingActiveBooking) return true;
-
-    // 2. Check error from recent submission (fallback)
     const t = String(bookingError ?? "");
     return (
       t.includes("active booking") ||
@@ -140,7 +128,8 @@ export function BookingPage({ universityId }: { universityId?: number }) {
     );
   }, [slots, period]);
 
-  // ✅ เปลี่ยนวัน/ช่วง -> เคลียร์ slot ที่เลือก
+  // ✅ Effect hooks (must be after all other hooks but before conditional returns)
+  // เปลี่ยนวัน/ช่วง -> เคลียร์ slot ที่เลือก
   useEffect(() => {
     setSelectedSlot(null);
   }, [selectedDate, period]);
@@ -204,6 +193,13 @@ export function BookingPage({ universityId }: { universityId?: number }) {
     };
   }, [dateStr, isPending, loading]);
 
+  // ✅ NOW it's safe to do conditional returns AFTER all hooks
+  if (authLoading) {
+    return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400">Loading...</div>;
+  }
+  if (!user) return null; // Redirecting...
+
+
   const handleToday = () => {
     const today = new Date();
     startTransition(() => {
@@ -247,102 +243,102 @@ export function BookingPage({ universityId }: { universityId?: number }) {
           </div>
         </Card>
 
-<section className="grid md:grid-cols-5 gap-4 items-stretch">
-  {/* LEFT: Calendar */}
-  <div className="md:col-span-2 h-full">
-    <Card className="rounded-2xl bg-white shadow-sm overflow-hidden h-full flex flex-col">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-        <div className="flex items-center gap-2">
-          <CalendarClock className="w-4 h-4 text-primary-600" />
-          <span className="text-sm font-semibold text-gray-900">
-            ปฏิทินการจอง
-          </span>
-          {isPending || appointmentsLoading ? (
-            <span className="ml-2 text-[11px] text-gray-400 animate-pulse">
-              กำลังตรวจสอบสถานะ...
-            </span>
-          ) : null}
-        </div>
+        <section className="grid md:grid-cols-5 gap-4 items-stretch">
+          {/* LEFT: Calendar */}
+          <div className="md:col-span-2 h-full">
+            <Card className="rounded-2xl bg-white shadow-sm overflow-hidden h-full flex flex-col">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <CalendarClock className="w-4 h-4 text-primary-600" />
+                  <span className="text-sm font-semibold text-gray-900">
+                    ปฏิทินการจอง
+                  </span>
+                  {isPending || appointmentsLoading ? (
+                    <span className="ml-2 text-[11px] text-gray-400 animate-pulse">
+                      กำลังตรวจสอบสถานะ...
+                    </span>
+                  ) : null}
+                </div>
 
-        <button
-          type="button"
-          onClick={handleToday}
-          disabled={isPending}
-          className={cn(
-            "text-xs px-3 py-1 border border-gray-200 rounded-full",
-            "flex items-center gap-1 text-gray-700 hover:bg-gray-50",
-            isPending && "opacity-60 cursor-not-allowed",
-          )}
-        >
-          <RotateCcw className="w-3 h-3" />
-          วันนี้
-        </button>
-      </div>
+                <button
+                  type="button"
+                  onClick={handleToday}
+                  disabled={isPending}
+                  className={cn(
+                    "text-xs px-3 py-1 border border-gray-200 rounded-full",
+                    "flex items-center gap-1 text-gray-700 hover:bg-gray-50",
+                    isPending && "opacity-60 cursor-not-allowed",
+                  )}
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  วันนี้
+                </button>
+              </div>
 
-      {/* content กินพื้นที่ที่เหลือ */}
-      <div className="p-5 flex-1">
-        <BookingCalendar
-          embedded
-          selectedDate={selectedDate}
-          onSelectDate={(d) => {
-            startTransition(() => {
-              setSelectedDate(d);
-              setCurrentMonth(new Date(d.getFullYear(), d.getMonth(), 1));
-            });
-          }}
-          currentMonth={currentMonth}
-          onPreviousMonth={handlePreviousMonth}
-          onNextMonth={handleNextMonth}
-          minDate={startOfDay(new Date())}
-          maxDate={startOfDay(addDays(new Date(), 7))}
-        />
-      </div>
-    </Card>
-  </div>
-
-{/* RIGHT: Slots */}
-<div className="md:col-span-3 h-full">
-  <div ref={slotsSectionRef} className="scroll-mt-20 h-full">
-    <Card className="rounded-2xl bg-white shadow-sm overflow-hidden h-full flex flex-col">
-      {/* Header */}
-      <div className="px-5 py-4 border-b border-gray-100">
-        <TimePeriodTabs value={period} onChange={setPeriod} />
-      </div>
-
-      {/* Content */}
-      <div className="p-5 pt-4 flex-1 flex flex-col">
-        {hasActiveBooking ? (
-          <div className="mb-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">
-            คุณมีการจองที่กำลังดำเนินการอยู่ (คิวค้าง)
-            กรุณารอให้เสร็จสิ้นหรือยกเลิกก่อนจองใหม่
+              {/* content กินพื้นที่ที่เหลือ */}
+              <div className="p-5 flex-1">
+                <BookingCalendar
+                  embedded
+                  selectedDate={selectedDate}
+                  onSelectDate={(d) => {
+                    startTransition(() => {
+                      setSelectedDate(d);
+                      setCurrentMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+                    });
+                  }}
+                  currentMonth={currentMonth}
+                  onPreviousMonth={handlePreviousMonth}
+                  onNextMonth={handleNextMonth}
+                  minDate={startOfDay(new Date())}
+                  maxDate={startOfDay(addDays(new Date(), 7))}
+                />
+              </div>
+            </Card>
           </div>
-        ) : null}
 
-        {/* 👇 กินพื้นที่ที่เหลือให้เต็มเท่าฝั่งซ้าย */}
-        <div className="flex-1">
-          <TimeSlotGrid
-            embedded
-            selectedDate={selectedDate}
-            slots={filtered}
-            isLoading={loading || isPending}
-            hasActiveBooking={hasActiveBooking}
-            onSelectSlot={(s) => {
-              if (hasActiveBooking) return;
-              setSelectedSlot(s);
-              setConfirmOpen(true);
-            }}
-          />
-        </div>
+          {/* RIGHT: Slots */}
+          <div className="md:col-span-3 h-full">
+            <div ref={slotsSectionRef} className="scroll-mt-20 h-full">
+              <Card className="rounded-2xl bg-white shadow-sm overflow-hidden h-full flex flex-col">
+                {/* Header */}
+                <div className="px-5 py-4 border-b border-gray-100">
+                  <TimePeriodTabs value={period} onChange={setPeriod} />
+                </div>
 
-        {error ? (
-          <div className="mt-3 text-sm text-red-600">{error}</div>
-        ) : null}
-      </div>
-    </Card>
-  </div>
-</div>
+                {/* Content */}
+                <div className="p-5 pt-4 flex-1 flex flex-col">
+                  {hasActiveBooking ? (
+                    <div className="mb-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                      คุณมีการจองที่กำลังดำเนินการอยู่ (คิวค้าง)
+                      กรุณารอให้เสร็จสิ้นหรือยกเลิกก่อนจองใหม่
+                    </div>
+                  ) : null}
 
-</section>
+                  {/* 👇 กินพื้นที่ที่เหลือให้เต็มเท่าฝั่งซ้าย */}
+                  <div className="flex-1">
+                    <TimeSlotGrid
+                      embedded
+                      selectedDate={selectedDate}
+                      slots={filtered}
+                      isLoading={loading || isPending}
+                      hasActiveBooking={hasActiveBooking}
+                      onSelectSlot={(s) => {
+                        if (hasActiveBooking) return;
+                        setSelectedSlot(s);
+                        setConfirmOpen(true);
+                      }}
+                    />
+                  </div>
+
+                  {error ? (
+                    <div className="mt-3 text-sm text-red-600">{error}</div>
+                  ) : null}
+                </div>
+              </Card>
+            </div>
+          </div>
+
+        </section>
 
         <BookingConfirmModal
           open={confirmOpen}

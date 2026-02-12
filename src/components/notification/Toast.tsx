@@ -100,21 +100,21 @@ export function ToastHost() {
                     <Icon className={cn("h-4 w-4", isReward ? "text-amber-500" : "text-slate-700 opacity-85")} />
                   </div>
 
-                  <div className="min-w-0 flex-1 flex items-center gap-2 overflow-hidden">
+                  <div className="min-w-0 flex-1 overflow-hidden">
                     {n.title ? (
-                      <span className={cn(
-                        "text-sm font-bold whitespace-nowrap shrink-0",
+                      <p className={cn(
+                        "text-sm font-bold leading-snug",
                         isReward ? "text-amber-900" : "text-slate-900"
                       )}>
                         {n.title}
-                      </span>
+                      </p>
                     ) : null}
-                    <span className={cn(
-                      "text-sm truncate",
-                      isReward ? "text-amber-800" : "text-slate-600"
+                    <p className={cn(
+                      "text-[13px] leading-snug",
+                      isReward ? "text-amber-700/80" : "text-slate-500"
                     )}>
                       {n.message}
-                    </span>
+                    </p>
                   </div>
 
                   <button

@@ -195,7 +195,9 @@ export async function seedStatic(prisma: PrismaClient) {
     criteria,
     tplCreated,
     tplAssigned,
-    pointRule: safePointRule,
+    pointRules: {
+      FEEDBACK_SUBMITTED: await prisma.pointRule.findUnique({ where: { point_rule_code: "FEEDBACK_SUBMITTED" } }),
+    },
     pointAmount,
   };
 }

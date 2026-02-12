@@ -173,9 +173,36 @@ export async function seedStudents(
       const lineId = `U_${uniCode}_${uni.university_id}_${String(j).padStart(4, "0")}`;
       const admitYear = admitYearForIdx(idx0, YEAR_BUCKETS);
 
-      const dep = uniDeptList[idx0 % uniDeptList.length];
-      const advisor = advisors.find(
+      // 🔀 WEIGHTED DISTRIBUTION (Semi-realistic)
+      // Most students in Eng, Sci, Bus, Nurse
+      // assign weights once
+      let weightedDepts = (uniDeptList as any)._weightedDepts;
+      
+      if (!weightedDepts) {
+        let sum = 0;
+        weightedDepts = uniDeptList.map((d: any) => {
+          let w = 1;
+          const name = (d.department_name_en || "").toLowerCase() + (d.department_name_th || "");
+          if (name.match(/engineer|วิศว|sci|vidya|wit|pharm|nurse|medic|dent|tech/i)) w = 5;
+          else if (name.match(/bus|account|manage|admin|econ|comm/i)) w = 4;
+          else if (name.match(/edu|human|art|social|law|poli/i)) w = 3;
+          
+          sum += w;
+          return { dep: d, weight: w, cum: sum };
+        });
+        (uniDeptList as any)._weightedDepts = weightedDepts;
+      }
+      
+      const r = Math.random() * weightedDepts[weightedDepts.length - 1].cum;
+      const selected = weightedDepts.find((item: any) => item.cum >= r);
+      const dep = selected ? selected.dep : uniDeptList[0];
+      
+      const sessionAdvisor = advisors.find(
         (a) => a.university_id === uni.university_id && a.department_id === dep.department_id,
+      );
+      // Fallback advisor if specific dept advisor not found (use any in faculty)
+      const advisor = sessionAdvisor ?? advisors.find(
+         (a) => a.university_id === uni.university_id && a.faculty_id === dep.faculty_id
       );
 
       const provCurrent = pickCurrentProvinceForUni(uni);

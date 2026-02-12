@@ -42,7 +42,7 @@ export async function seedBookings(
     headAccountIdByUniversityId: Map<number, number>;
     tplCreated: any;
     tplAssigned: any;
-    pointRule: any;
+    pointRules: any;
     pointAmount: number;
     consultantBiasById: Map<number, number>;
     bookingPlan: { status: BookingStatus; count: number }[];
@@ -63,7 +63,7 @@ export async function seedBookings(
     headAccountIdByUniversityId,
     tplCreated,
     tplAssigned,
-    pointRule,
+    pointRules,
     pointAmount,
     consultantBiasById,
     bookingPlan,
@@ -338,27 +338,45 @@ export async function seedBookings(
             bookingCreatedAt = addMinutes(slotStart, -randomInt(10, 24 * 60));
           }
 
-          // Service Mode
-          const serviceMode = consultantId && plan.status !== BookingStatus.PENDING_ASSIGNMENT
-            ? ServiceMode.ONLINE
-            : ServiceMode.ONSITE;
+          // Service Mode Case Mix
+          // If assigned to a consultant, mix Online (~70%) and Onsite (~30%)
+          let serviceMode: ServiceMode = ServiceMode.ONSITE;
+          let channel = null;
+          
+          if (consultantId && plan.status !== BookingStatus.PENDING_ASSIGNMENT) {
+            const isOnline = Math.random() < 0.7;
+            serviceMode = isOnline ? ServiceMode.ONLINE : ServiceMode.ONSITE;
+            
+            if (isOnline) {
+              // Diversify channels
+              const channels = [
+                OnlineChannel.LINE_CALL, 
+                OnlineChannel.GOOGLE_MEET, 
+                OnlineChannel.ZOOM, 
+                OnlineChannel.MICROSOFT_TEAMS,
+                OnlineChannel.PHONE
+              ];
+              channel = randomItem(channels);
+            }
+          }
 
           usedBookingTriples.add(k);
           if (isActiveStatus(plan.status)) {
             activeCountBySlotId.set(slot.time_slot_id, (activeCountBySlotId.get(slot.time_slot_id) ?? 0) + 1);
           }
 
+          const channelText = channel ? ` (ผ่าน ${channel})` : "";
           batchBookings.push({
             university_id: student.university_id,
             student_id: student.student_id,
             consultant_id: consultantId,
             time_slot_id: slot.time_slot_id,
             problem_category_id: category.problem_category_id,
-            booking_detail_text: `รายละเอียดการขอรับคำปรึกษา - ${category.problem_category_name_th}`,
+            booking_detail_text: `รายละเอียดการขอรับคำปรึกษา - ${category.problem_category_name_th}${channelText}`,
             booking_status: plan.status,
             booking_created_at: bookingCreatedAt,
             booking_service_mode: serviceMode,
-            booking_online_channel: serviceMode === ServiceMode.ONLINE ? OnlineChannel.LINE_CALL : null,
+            booking_online_channel: channel,
           });
 
           break; // success
@@ -422,16 +440,53 @@ export async function seedBookings(
       b.booking_id,
       b.consultant_id,
       b.university_id, -- Simplification: Assume same uni for seed optimization
-      NULL, -- System auto-assign or lookup head (Expensive to join, using NULL for speed/safety)
+      a.account_id,
       'มอบหมายผู้ให้คำปรึกษา (System Seed)',
       b.booking_created_at + interval '30 minutes'
     FROM booking b
+    JOIN account a ON a.account_home_university_id = b.university_id 
+      AND a.account_role = 'HEAD_CONSULTANT'
     WHERE b.booking_status IN ('ASSIGNED', 'IN_PROGRESS', 'COMPLETED')
       AND b.consultant_id IS NOT NULL
     ON CONFLICT DO NOTHING;
   `);
 
-  // 3. Outcomes (Completed only)
+  // 3. Sessions (Links & Locations)
+  // logic: Provide actual join links or location text for students
+  console.log("   🔗 Generating Booking Sessions (SQL)...");
+  await prisma.$executeRawUnsafe(`
+    INSERT INTO booking_session (
+      university_id, booking_id, booking_session_mode, 
+      booking_session_online_channel, booking_session_join_url,
+      booking_session_location_text, booking_session_is_link_visible,
+      provided_by_account_id, provided_at
+    )
+    SELECT
+      b.university_id,
+      b.booking_id,
+      b.booking_service_mode,
+      b.booking_online_channel,
+      CASE 
+        WHEN b.booking_online_channel = 'GOOGLE_MEET' THEN 'https://meet.google.com/abc-' || round(random()*1000)::text || '-xyz'
+        WHEN b.booking_online_channel = 'ZOOM' THEN 'https://zoom.us/j/' || round(random()*1000000000)::text
+        WHEN b.booking_online_channel = 'LINE_CALL' THEN 'https://line.me/R/ti/p/@wellness_line'
+        WHEN b.booking_online_channel = 'MICROSOFT_TEAMS' THEN 'https://teams.microsoft.com/l/meetup-join/dummy-' || b.booking_id::text
+        ELSE NULL
+      END as join_url,
+      CASE 
+        WHEN b.booking_service_mode = 'ONSITE' THEN 'ห้องให้คำปรึกษา ชั้น 2 อาคารบริการ (System Seed)'
+        ELSE NULL
+      END as location_text,
+      true,
+      c.account_id,
+      b.booking_created_at + interval '10 minutes'
+    FROM booking b
+    JOIN consultant c ON b.consultant_id = c.consultant_id
+    WHERE b.booking_status IN ('ASSIGNED', 'IN_PROGRESS', 'COMPLETED')
+    ON CONFLICT DO NOTHING;
+  `);
+
+  // 4. Outcomes (Completed only)
   console.log("   📊 Generating Outcomes (SQL)...");
   await prisma.$executeRawUnsafe(`
     INSERT INTO booking_outcome (
@@ -503,25 +558,28 @@ export async function seedBookings(
   `);
 
   // 7. Point Transactions & Wallet
-  // Insert transactions
-  console.log("   💰 Generating Point Transactions (SQL)...");
-  await prisma.$executeRawUnsafe(`
-    INSERT INTO student_point_transaction (
-      student_id, point_rule_id, booking_university_id, booking_id,
-      student_point_txn_type, student_point_amount, student_point_note
-    )
-    SELECT
-      b.student_id,
-      ${pointRule.point_rule_id},
-      b.university_id,
-      b.booking_id,
-      'EARN',
-      ${pointAmount},
-      'Reward points for completed booking'
-    FROM booking b
-    WHERE b.booking_status = 'COMPLETED'
-    ON CONFLICT DO NOTHING;
-  `);
+  // Insert transactions for FEEDBACK_SUBMITTED
+  if (pointRules.FEEDBACK_SUBMITTED) {
+    console.log("   💰 Generating Point Transactions (Feedback Submitted)...");
+    await prisma.$executeRawUnsafe(`
+      INSERT INTO student_point_transaction (
+        student_id, point_rule_id, booking_university_id, booking_id,
+        student_point_txn_type, student_point_amount, student_point_note
+      )
+      SELECT
+        b.student_id,
+        ${pointRules.FEEDBACK_SUBMITTED.point_rule_id},
+        b.university_id,
+        b.booking_id,
+        'EARN',
+        ${pointRules.FEEDBACK_SUBMITTED.point_rule_points},
+        'Reward points for feedback submission'
+      FROM booking b
+      JOIN feedback f ON b.booking_id = f.booking_id
+      WHERE b.booking_status = 'COMPLETED'
+      ON CONFLICT DO NOTHING;
+    `);
+  }
 
   // Update Wallets (Aggregate)
   console.log("   💳 Updating Wallets (SQL Aggregate)...");
@@ -529,14 +587,14 @@ export async function seedBookings(
   await prisma.$executeRawUnsafe(`
     INSERT INTO student_point_wallet (university_id, student_id, student_point_balance)
     SELECT 
-      university_id, 
-      student_id, 
-      count(*) * ${pointAmount}
-    FROM booking
-    WHERE booking_status = 'COMPLETED'
-    GROUP BY university_id, student_id
+      student.university_id, 
+      student.student_id, 
+      COALESCE(SUM(student_point_amount), 0)
+    FROM student
+    LEFT JOIN student_point_transaction txn ON student.student_id = txn.student_id
+    GROUP BY student.university_id, student.student_id
     ON CONFLICT (university_id, student_id) 
-    DO UPDATE SET student_point_balance = student_point_wallet.student_point_balance + EXCLUDED.student_point_balance;
+    DO UPDATE SET student_point_balance = EXCLUDED.student_point_balance;
   `);
 
   console.log("   ✅ All phases complete.");

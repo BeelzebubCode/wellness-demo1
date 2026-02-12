@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { generateToken, verifyPassword } from "@/lib/auth/jwt";
+import { tenantFromHost, getSharedCookieDomain, isLocalHostLike } from "@/config/tenant-domains";
+import { verifyToken } from "@/lib/auth/token";
 
 /* =========================================================
   Tenant Helpers
@@ -8,19 +11,16 @@ import { generateToken, verifyPassword } from "@/lib/auth/jwt";
 function parseHost(req: NextRequest) {
   const hostHeader = req.headers.get("host") || ""; // nu.wellness.local:3000
   const host = hostHeader.split(":")[0].toLowerCase();
+  
+  if (isLocalHostLike(host)) {
+    return { hostHeader, host, subdomain: null, baseDomain: host };
+  }
+
   const parts = host.split(".");
   const hasSubdomain = parts.length >= 3;
   const subdomain = hasSubdomain ? parts[0] : null; // nu/kku/cu
   const baseDomain = hasSubdomain ? parts.slice(1).join(".") : host; // wellness.local
   return { hostHeader, host, subdomain, baseDomain };
-}
-
-function isLocalHostLike(domain: string) {
-  return (
-    domain === "localhost" ||
-    domain === "127.0.0.1" ||
-    domain.endsWith(".localhost")
-  );
 }
 
 function normalizeRootDomain(baseDomain: string) {
@@ -29,11 +29,6 @@ function normalizeRootDomain(baseDomain: string) {
   return d.split(":")[0];
 }
 
-function cookieDomainFor(rootDomain: string) {
-  const d = normalizeRootDomain(rootDomain);
-  if (!d || isLocalHostLike(d)) return undefined;
-  return `.${d}`; // .wellness.local
-}
 
 /* =========================================================
   Service Logic
@@ -70,8 +65,8 @@ export async function handleLogin(request: NextRequest) {
     /* =========================================================
       ✅ Cookie domain computed once (ใช้ทั้งกรณี super และปกติ)
     ========================================================= */
-    const rootDomain = normalizeRootDomain(process.env.ROOT_DOMAIN || baseDomain);
-    const cookieDomain = cookieDomainFor(rootDomain);
+    const cookieDomain = getSharedCookieDomain(hostHeader);
+    const rootDomain = hostHeader.split(":")[0]; // For debug
 
     // 1) tenant from subdomain (optional)
     const requestedUni = subdomain

@@ -8,11 +8,21 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "3000:3000"
+      - "9999:3000"
     environment:
       - DATABASE_URL=postgresql://postgres:postgrespassword@db:5432/wellness_db?schema=public
+      - REDIS_URL=redis://redis:6379
+      - AI_BASE_URL=http://host.docker.internal:11434
+      - AI_MODEL=qwen2.5:7b
+      - AI_API_KEY=ollama
+      - NODE_ENV=production
+      - HOSTNAME=0.0.0.0
+      - NEXT_PUBLIC_APP_URL=http://wellness.local:9999
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - db
+      - redis
 
   db:
     container_name: wellness-db
@@ -23,9 +33,16 @@ services:
       POSTGRES_PASSWORD: postgrespassword
       POSTGRES_DB: wellness_db
     ports:
-      - "5434:5432" 
+      - "5434:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+
+  redis:
+    container_name: wellness-redis
+    image: redis:alpine
+    restart: always
+    ports:
+      - "6379:6379"
 
   pgadmin:
     container_name: wellness-admin

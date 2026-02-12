@@ -40,8 +40,9 @@ export function RectorWellbeingGauge({ score, loading }: RectorWellbeingGaugePro
                 ],
                 borderWidth: 0,
                 cutout: "75%",
-                borderRadius: 30, // Highly rounded ends
-                spacing: -10 // Slight overlap/tightness
+                // ✅ ป้องกัน negative radius: ปรับ borderRadius ให้เล็กลงเมื่อ score น้อย
+                borderRadius: Math.min(20, Math.max(score, 100 - score) * 0.3),
+                spacing: 0 // เปลี่ยนจาก -10 เป็น 0 เพื่อกันปัญหา
             },
         ],
     };

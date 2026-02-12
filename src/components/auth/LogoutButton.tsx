@@ -19,7 +19,8 @@ function getCentralOriginFromHost() {
   const hostname = window.location.hostname.toLowerCase();
   const port = window.location.port;
 
-  if (hostname === "localhost" || hostname === "127.0.0.1") {
+  const isIp = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(hostname);
+  if (hostname === "localhost" || hostname === "127.0.0.1" || isIp) {
     return window.location.origin;
   }
 
@@ -50,11 +51,13 @@ export default function LogoutButton({
       localStorage.removeItem("auth_user");
       clearTenantTheme();
 
-      window.dispatchEvent(new Event("auth-changed"));
-      setIsOpen(false);
+      // ✅ กัน toast "กรุณาเข้าสู่ระบบ" ซ้อนตอน redirect ไปหน้า login
+      try { sessionStorage.setItem("suppress_login_toast_once", "1"); } catch { }
 
+      // ✅ redirect ทันทีไม่ต้องรอ — กัน DEFAULT tenant flash
+      setIsOpen(false);
       const central = getCentralOriginFromHost();
-      window.location.assign(`${central}${redirectTo}`);
+      window.location.href = `${central}${redirectTo}`;
     } catch (err) {
       console.error(err);
       push({

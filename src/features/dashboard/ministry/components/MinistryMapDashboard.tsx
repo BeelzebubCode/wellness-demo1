@@ -4,8 +4,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MINISTRY_NAV } from "@/lib/constants/ministry-nav";
-import { LogOut, Shield } from "lucide-react";
+import { Shield } from "lucide-react";
 import dynamic from "next/dynamic";
+import LogoutButton from "@/components/auth/LogoutButton";
 
 const ThailandMap = dynamic(
   () => import("./map/ThailandMap").then((mod) => ({ default: mod.ThailandMap })),
@@ -14,10 +15,6 @@ const ThailandMap = dynamic(
 
 export function MinistryMapDashboard() {
   const router = useRouter();
-
-  const handleLogout = () => {
-    router.push("/login");
-  };
 
   return (
     <div className="h-screen w-full bg-tenant flex flex-col overflow-hidden">
@@ -63,13 +60,11 @@ export function MinistryMapDashboard() {
 
         {/* Right: Logout - Minimal */}
         <div className="flex items-center gap-4">
-            <button 
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all"
-            >
-                <LogOut className="w-4 h-4" />
-                ออกจากระบบ
-            </button>
+            <LogoutButton 
+                redirectTo="/login"
+                label="ออกจากระบบ"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all font-sans"
+            />
         </div>
       </header>
 

@@ -91,7 +91,7 @@ async function main() {
     headAccountIdByUniversityId: accounts.headAccountIdByUniversityId,
     tplCreated: st.tplCreated,
     tplAssigned: st.tplAssigned,
-    pointRule: st.pointRule,
+    pointRules: st.pointRules,
     pointAmount: st.pointAmount,
     consultantBiasById: consultants.consultantBiasById,
     bookingPlan,

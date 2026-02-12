@@ -1,7 +1,7 @@
 // middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { tenantFromHost } from "@/config/tenant-domains";
+import { tenantFromHost, getSharedCookieDomain } from "@/config/tenant-domains";
 import { verifyToken } from "@/lib/auth/token";
 
 // ✅ Public paths that do not require authentication
@@ -42,8 +42,13 @@ export async function middleware(req: NextRequest) {
     request: { headers: requestHeaders },
   });
 
-  // ✅ cookie ไว้ debug/ฝั่ง client ใช้ได้
-  res.cookies.set("tenant_code", tenant, { path: "/", sameSite: "lax" });
+  // ✅ cookie ไว้ debug/ฝั่ง client ใช้ได้ (ใช้ shared domain เพื่อไม่ให้ clash)
+  const cookieDomain = getSharedCookieDomain(host);
+  res.cookies.set("tenant_code", tenant, { 
+    path: "/", 
+    sameSite: "lax",
+    ...(cookieDomain ? { domain: cookieDomain } : {})
+  });
 
   // ===== admin guard (ของเดิม) =====
   if (pathname.startsWith("/admin")) {
