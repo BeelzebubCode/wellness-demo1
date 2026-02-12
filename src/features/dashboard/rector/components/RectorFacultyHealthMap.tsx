@@ -94,7 +94,7 @@ export function RectorFacultyHealthMap({ data, loading }: RectorFacultyHealthMap
                     color: "#94a3b8",
                     font: { size: 11, weight: 'bold' }
                 },
-                min: 1,
+                min: 0,
                 max: 5,
                 grid: {
                     color: "#f1f5f9",
@@ -102,7 +102,8 @@ export function RectorFacultyHealthMap({ data, loading }: RectorFacultyHealthMap
                 },
                 ticks: {
                     color: "#64748b",
-                    font: { size: 11 }
+                    font: { size: 11 },
+                    stepSize: 1
                 },
                 border: { display: false }
             }

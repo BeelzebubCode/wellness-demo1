@@ -1,11 +1,9 @@
 "use client";
 
-import { Bar } from "react-chartjs-2";
+import { Doughnut } from "react-chartjs-2";
 import {
     Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    BarElement,
+    ArcElement,
     Title,
     Tooltip,
     Legend
@@ -13,7 +11,7 @@ import {
 import { Card, CardContent } from "@/components/ui/Card";
 import { AlertTriangle } from "lucide-react";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+ChartJS.register(ArcElement, Title, Tooltip, Legend);
 
 interface FacultyData {
     name: string;
@@ -41,13 +39,16 @@ export function FacultyHealthVerticalBarChart({ data: externalData }: FacultyHea
             {
                 label: "Risk Index",
                 data: mockData.map(f => f.riskScore),
-                backgroundColor: mockData.map(f => {
-                    if (f.riskScore >= 4) return "#F43F5E"; // Rose
-                    if (f.riskScore >= 3) return "#F59E0B"; // Amber
-                    return "#10B981"; // Emerald
-                }),
-                borderRadius: 8,
-                barThickness: 20,
+                backgroundColor: [
+                    "#F43F5E", // Rose - High Risk (วิศวกรรมศาสตร์)
+                    "#FB923C", // Orange-400 (สถาปัตยกรรมศาสตร์)
+                    "#FBBF24", // Amber-400 (พาณิชยศาสตร์)
+                    "#4ADE80", // Green-400 (นิเทศศาสตร์)
+                    "#10B981"  // Emerald-500 - Low Risk (วิทยาศาสตร์)
+                ],
+                borderColor: "#ffffff",
+                borderWidth: 3,
+                hoverOffset: 10,
             }
         ]
     };
@@ -55,27 +56,40 @@ export function FacultyHealthVerticalBarChart({ data: externalData }: FacultyHea
     const options = {
         responsive: true,
         maintainAspectRatio: false,
+        cutout: '60%', // Makes it a doughnut chart
         plugins: {
-            legend: { display: false },
+            legend: {
+                display: true,
+                position: 'bottom' as const,
+                labels: {
+                    boxWidth: 12,
+                    boxHeight: 12,
+                    padding: 12,
+                    font: {
+                        size: 11,
+                        family: 'system-ui, -apple-system, sans-serif',
+                        weight: 'bold' as const
+                    },
+                    color: '#475569',
+                    usePointStyle: true,
+                    pointStyle: 'circle'
+                }
+            },
             tooltip: {
                 backgroundColor: "#1e293b",
                 padding: 12,
                 cornerRadius: 8,
+                bodyFont: {
+                    size: 13,
+                    weight: 600
+                },
                 callbacks: {
-                    label: (ctx: any) => `Risk Index: ${ctx.raw}`
+                    label: (ctx: any) => {
+                        const label = ctx.label || '';
+                        const value = ctx.parsed || 0;
+                        return `${label}: ${value.toFixed(1)}`;
+                    }
                 }
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: true,
-                max: 5,
-                grid: { color: "#f1f5f9" },
-                border: { display: false }
-            },
-            x: {
-                grid: { display: false },
-                border: { display: false }
             }
         }
     };
@@ -92,8 +106,10 @@ export function FacultyHealthVerticalBarChart({ data: externalData }: FacultyHea
                         <p className="text-xs text-slate-400">คณะที่มีความเสี่ยงสูงสุด</p>
                     </div>
                 </div>
-                <div className="flex-1 w-full min-h-[200px]">
-                    <Bar data={chartData} options={options} />
+                <div className="flex-1 w-full min-h-[200px] flex items-center justify-center">
+                    <div className="w-full max-w-[280px] h-[280px]">
+                        <Doughnut data={chartData} options={options} />
+                    </div>
                 </div>
             </CardContent>
         </Card>

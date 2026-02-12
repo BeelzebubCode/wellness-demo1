@@ -49,11 +49,20 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        // 3. Get university-wide statistics using RectorService
+        // 3. Extract optional date range from query parameters
+        const { searchParams } = new URL(req.url);
+        const startDateStr = searchParams.get("startDate");
+        const endDateStr = searchParams.get("endDate");
+
+        // Parse dates if provided
+        const startDate = startDateStr ? new Date(startDateStr) : undefined;
+        const endDate = endDateStr ? new Date(endDateStr) : undefined;
+
+        // 4. Get university-wide statistics using RectorService
         const [stats, wellbeing, healthMap] = await Promise.all([
-            RectorService.getUniversityStats(account.account_home_university_id),
-            RectorService.getUniversityWellbeing(account.account_home_university_id),
-            RectorService.getFacultyHealthMap(account.account_home_university_id)
+            RectorService.getUniversityStats(account.account_home_university_id, startDate, endDate),
+            RectorService.getUniversityWellbeing(account.account_home_university_id, startDate, endDate),
+            RectorService.getFacultyHealthMap(account.account_home_university_id, startDate, endDate)
         ]);
 
         return NextResponse.json({

@@ -49,7 +49,12 @@ interface UniversityStats {
     }>;
 }
 
-export function useUniversityStats() {
+interface DateRange {
+    from?: Date;
+    to?: Date;
+}
+
+export function useUniversityStats(dateRange?: DateRange) {
     const [stats, setStats] = useState<UniversityStats | null>(null);
     const [analytics, setAnalytics] = useState<any>(null);
     const [facultyBreakdown, setFacultyBreakdown] = useState<any[]>([]);
@@ -61,7 +66,19 @@ export function useUniversityStats() {
         async function fetchData() {
             setIsLoading(true);
             try {
-                const response = await fetch("/api/v2/rector/university-stats");
+                // Build query string with date parameters
+                const params = new URLSearchParams();
+                if (dateRange?.from) {
+                    params.append("startDate", dateRange.from.toISOString());
+                }
+                if (dateRange?.to) {
+                    params.append("endDate", dateRange.to.toISOString());
+                }
+
+                const queryString = params.toString();
+                const url = `/api/v2/rector/university-stats${queryString ? `?${queryString}` : ''}`;
+
+                const response = await fetch(url);
                 const result = await response.json();
 
                 if (!response.ok) {
@@ -112,7 +129,7 @@ export function useUniversityStats() {
         }
 
         fetchData();
-    }, []);
+    }, [dateRange?.from, dateRange?.to]); // Re-fetch when date range changes
 
     return { stats, analytics, facultyBreakdown, riskTrends, isLoading, error };
 }

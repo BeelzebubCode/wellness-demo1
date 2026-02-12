@@ -78,7 +78,7 @@ export function RectorRiskTrendChart() {
                 padding: 12,
                 displayColors: true,
                 usePointStyle: true,
-                titleFont: { family: 'sans-serif', size: 13, weight: 'bold' },
+                titleFont: { family: 'sans-serif', size: 13, weight: 'bold' as const },
                 bodyFont: { family: 'sans-serif', size: 12 },
                 callbacks: {
                     labelColor: (context: any) => {
@@ -95,7 +95,7 @@ export function RectorRiskTrendChart() {
                 grid: { display: false },
                 ticks: {
                     color: "#94a3b8",
-                    font: { size: 11, family: 'sans-serif', weight: '500' },
+                    font: { size: 11, family: 'sans-serif', weight: 500 },
                     padding: 10
                 },
                 border: { display: false }

@@ -5,20 +5,40 @@ export const RectorService = {
      * Get aggregated university-wide statistics for Rector's dashboard
      * Includes all faculties in the university
      */
-    async getUniversityStats(universityId: number) {
+    async getUniversityStats(universityId: number, startDate?: Date, endDate?: Date) {
         // Legacy wrapper for backward compatibility if needed, 
         // but primarily we use the new specific functions below.
-        return await this.getLegacyStats(universityId);
+        return await this.getLegacyStats(universityId, startDate, endDate);
     },
 
     // Independent function to get the "University Health Pulse"
-    async getUniversityWellbeing(universityId: number) {
+    async getUniversityWellbeing(universityId: number, startDate?: Date, endDate?: Date) {
         if (!universityId) return null;
+
+        // Build date filter
+        const dateFilter = startDate && endDate ? {
+            booking: {
+                booking_appointment_datetime: {
+                    gte: startDate,
+                    lte: endDate
+                }
+            }
+        } : {};
 
         // 1. Risk Score (Inverse of High Risk %)
         const riskQuery = await prisma.bookingOutcome.groupBy({
             by: ['booking_outcome_risk_level'],
-            where: { university_id: universityId },
+            where: {
+                university_id: universityId,
+                ...(startDate && endDate ? {
+                    booking: {
+                        booking_appointment_datetime: {
+                            gte: startDate,
+                            lte: endDate
+                        }
+                    }
+                } : {})
+            },
             _count: true
         });
 
@@ -39,7 +59,19 @@ export const RectorService = {
 
         // 2. Satisfaction Score (0-5 -> 0-100)
         const ratings = await prisma.feedbackRating.aggregate({
-            where: { feedback: { university_id: universityId } },
+            where: startDate && endDate ? {
+                feedback: {
+                    university_id: universityId,
+                    booking: {
+                        booking_appointment_datetime: {
+                            gte: startDate,
+                            lte: endDate
+                        }
+                    }
+                }
+            } : {
+                feedback: { university_id: universityId }
+            },
             _avg: { feedback_rating_score: true }
         });
         const satisfaction = ratings._avg.feedback_rating_score || 0;
@@ -48,9 +80,18 @@ export const RectorService = {
         // 3. Engagement Score (Active Students / Total Students)
         // Active = Has at least 1 booking
         const totalStudents = await prisma.student.count({ where: { university_id: universityId } });
+
+        const bookingDateFilter = startDate && endDate ? {
+            university_id: universityId,
+            booking_appointment_datetime: {
+                gte: startDate,
+                lte: endDate
+            }
+        } : { university_id: universityId };
+
         const activeStudents = await prisma.booking.groupBy({
             by: ['student_id'],
-            where: { university_id: universityId },
+            where: bookingDateFilter,
         }); // Returns array of unique student_ids
 
         const engagementRate = totalStudents > 0 ? (activeStudents.length / totalStudents) : 0;
@@ -75,7 +116,7 @@ export const RectorService = {
         };
     },
 
-    async getFacultyHealthMap(universityId: number) {
+    async getFacultyHealthMap(universityId: number, startDate?: Date, endDate?: Date) {
         // Get list of faculties
         const faculties = await prisma.faculty.findMany({
             where: { university_id: universityId },
@@ -85,20 +126,39 @@ export const RectorService = {
         });
 
         const healthMap = await Promise.all(faculties.map(async (faculty) => {
+            // Build booking date filter for this faculty
+            const facultyBookingFilter = startDate && endDate ? {
+                university_id: universityId,
+                booking_appointment_datetime: {
+                    gte: startDate,
+                    lte: endDate
+                },
+                student: { academic: { faculty_id: faculty.faculty_id } }
+            } : {
+                university_id: universityId,
+                student: { academic: { faculty_id: faculty.faculty_id } }
+            };
+
             // 1. Engagement
             const activeStudents = await prisma.booking.groupBy({
                 by: ['student_id'],
-                where: {
-                    university_id: universityId,
-                    student: { academic: { faculty_id: faculty.faculty_id } } // Updated filter
-                }
+                where: facultyBookingFilter
             });
             const studentCount = faculty._count.studentAcademics || 1; // Avoid div by 0
             const engagementRate = (activeStudents.length / studentCount) * 100;
 
             // 2. Risk Index (Average Risk Level)
             const riskStats = await prisma.bookingOutcome.aggregate({
-                where: {
+                where: startDate && endDate ? {
+                    university_id: universityId,
+                    booking: {
+                        booking_appointment_datetime: {
+                            gte: startDate,
+                            lte: endDate
+                        },
+                        student: { academic: { faculty_id: faculty.faculty_id } }
+                    }
+                } : {
                     university_id: universityId,
                     booking: { student: { academic: { faculty_id: faculty.faculty_id } } }
                 },
@@ -107,9 +167,18 @@ export const RectorService = {
             const riskIndex = riskStats._avg.booking_outcome_risk_level || 0;
 
             // 3. High Risk Volume (Bubble Size or Color)
-            // Count unique high risk students or total high risk cases? Cases is easier.
             const highRiskCount = await prisma.bookingOutcome.count({
-                where: {
+                where: startDate && endDate ? {
+                    university_id: universityId,
+                    booking_outcome_risk_level: { gte: 4 },
+                    booking: {
+                        booking_appointment_datetime: {
+                            gte: startDate,
+                            lte: endDate
+                        },
+                        student: { academic: { faculty_id: faculty.faculty_id } }
+                    }
+                } : {
                     university_id: universityId,
                     booking_outcome_risk_level: { gte: 4 },
                     booking: { student: { academic: { faculty_id: faculty.faculty_id } } }

@@ -27,13 +27,13 @@ import { RectorStatsCards } from "./RectorStatsCards";
 import { RectorStrategicInsights } from "./RectorStrategicInsights";
 
 export function RectorDashboard() {
-  const { stats, isLoading, error } = useUniversityStats();
-
   // Date Range State (Default: This Month)
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
     from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
     to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
   });
+
+  const { stats, isLoading, error } = useUniversityStats(dateRange);
 
   // Use wellbeing score if available, else fallback
   const wellbeingScore = stats?.wellbeing?.overallScore || 72;

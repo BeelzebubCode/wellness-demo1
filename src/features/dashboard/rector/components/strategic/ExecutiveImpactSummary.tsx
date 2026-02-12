@@ -9,8 +9,6 @@ export function ExecutiveImpactSummary() {
 
     return (
         <div className="h-full flex flex-col gap-4 font-sans">
-            <h3 className="text-lg font-bold text-slate-800">คุณภาพการให้บริการ (Service Quality)</h3>
-
             {/* Real Data Hero: Satisfaction (Feedback Table) */}
             <Card className="border-none shadow-md shadow-indigo-100 bg-indigo-600 text-white rounded-[2rem] relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-20">
@@ -18,6 +16,7 @@ export function ExecutiveImpactSummary() {
                 </div>
                 <CardContent className="p-6 relative z-10 flex flex-col justify-between h-full">
                     <div>
+                        <h5 className="text-lg font-bold text-white mb-4">คุณภาพการให้บริการ <br></br>(Service Quality)</h5>
                         <span className="text-xs font-bold text-indigo-100 uppercase tracking-widest">ความพึงพอใจนิสิต (Satisfaction)</span>
                         <div className="text-4xl font-black mt-2 mb-1">
                             {impact.avgSatisfaction.toFixed(1)} <span className="text-xl font-medium text-indigo-200">/ 5.0</span>
@@ -43,7 +42,7 @@ export function ExecutiveImpactSummary() {
                 </Card>
 
                 {/* Safety/Compliance */}
-                <Card className="border-none shadow-sm rounded-[2rem] bg-slate-50">
+                <Card className="border-none shadow-sm rounded-[2rem] bg-white">
                     <CardContent className="p-5 flex flex-col items-center justify-center h-full text-center">
                         <div className="p-3 bg-white text-slate-500 rounded-full mb-2 shadow-sm">
                             <ShieldCheck size={20} />

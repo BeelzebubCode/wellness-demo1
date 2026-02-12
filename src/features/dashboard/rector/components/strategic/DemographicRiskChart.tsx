@@ -66,12 +66,10 @@ export function DemographicRiskChart() {
         },
         scales: {
             x: {
-                stacked: true,
                 grid: { display: false },
                 ticks: { font: { family: 'sans-serif' } }
             },
             y: {
-                stacked: true,
                 grid: { color: "#f1f5f9" },
                 border: { display: false }
             }
