@@ -40,7 +40,11 @@ const ConsultantRatingTable = dynamic(
 
 type DashboardTab = "overview" | "team";
 
-export function HeadConsultantDashboard() {
+export function HeadConsultantDashboard({
+  universityName = "มหาวิทยาลัยขอนแก่น", // Fallback for safety/dev
+}: {
+  universityName?: string;
+}) {
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({
     from: (() => {
       const d = new Date();
@@ -87,7 +91,7 @@ export function HeadConsultantDashboard() {
                 ศูนย์สุขภาวะทางจิต
               </h1>
               <div className="flex flex-wrap items-center gap-3 text-white/60 text-sm font-bold uppercase tracking-widest">
-                <span>มหาวิทยาลัยขอนแก่น</span>
+                <span>{universityName}</span>
                 <span className="h-1 w-1 rounded-full bg-primary/40" />
                 <span className="text-primary">Head Consultant Portal</span>
               </div>
