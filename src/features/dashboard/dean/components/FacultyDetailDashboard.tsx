@@ -14,9 +14,13 @@ interface Props {
 }
 
 export function FacultyDetailDashboard({ facultyCode, showTable = true }: Props) {
-    const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({
-        from: new Date(2026, 0, 13), // 13/01/2569
-        to: new Date(2026, 1, 12),   // 12/02/2569
+    const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>(() => {
+        const to = new Date();
+        to.setHours(23, 59, 59, 999);
+        const from = new Date(to);
+        from.setDate(from.getDate() - 30);
+        from.setHours(0, 0, 0, 0);
+        return { from, to };
     });
     const { stats, isLoading, error } = useFacultyStats(facultyCode, dateRange as { from: Date; to: Date } | undefined);
 

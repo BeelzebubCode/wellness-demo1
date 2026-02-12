@@ -1,14 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { MOCK_DEPARTMENTS, DepartmentStat } from "./listing/DepartmentList_MED";
-import dynamic from "next/dynamic";
+import { MOCK_DEPARTMENTS_KKU_AGRI, DepartmentStat } from "./listing/DepartmentList_AGRI";
+import { DepartmentDashboard_AGRI } from "./detail/DepartmentDashboard_AGRI";
 import { HeaderBadgeItem } from "../../shared/components/FacultyHeaderBanner";
-
-const DepartmentDashboard_MED = dynamic(() => import("./detail/DepartmentDashboard_MED").then(mod => mod.DepartmentDashboard_MED), {
-  loading: () => <div className="min-h-screen bg-slate-50 animate-pulse" />,
-  ssr: false
-});
 import {
   SummaryStat,
   SessionTrendItem,
@@ -24,13 +19,14 @@ import {
   Users,
   BarChart3,
   AlertTriangle,
+  Sprout,
 } from "lucide-react";
 import { useDeanFacultyData } from "../../shared/hooks/useDeanFacultyData";
 
 
-export function Department_MED() {
+export function Department_AGRI() {
   const { data, loading, error } = useDeanFacultyData();
-  const [selectedDept, setSelectedDept] = useState<DepartmentStat | null>(null);
+  const [activeDepartment, setActiveDepartment] = useState<DepartmentStat | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "departments" | "filters">(
     "overview",
   );
@@ -51,18 +47,18 @@ export function Department_MED() {
     );
   }
 
-  if (selectedDept) {
+  if (activeDepartment) {
     return (
-      <DepartmentDashboard_MED
-        department={selectedDept}
+      <DepartmentDashboard_AGRI 
+        department={activeDepartment} 
         facultyName={data.facultyName}
         universityName={data.universityName}
         onBack={() => {
-          setSelectedDept(null);
+          setActiveDepartment(null);
           setActiveTab("overview");
         }}
         onBackToList={() => {
-          setSelectedDept(null);
+          setActiveDepartment(null);
           setActiveTab("departments");
         }}
       />
@@ -75,25 +71,25 @@ export function Department_MED() {
       icon: <Users />,
       title: "นิสิตในสังกัด",
       value: data.totalStudents.toLocaleString(),
-      borderClass: "border-l-primary",
+      borderClass: "border-l-orange-500",
       footer: <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">ข้อมูลจากทะเบียน</span>,
     },
     {
       icon: <AlertTriangle />,
       title: "กลุ่มเสี่ยงสูง",
       value: data.riskDistribution.HIGH.toLocaleString(),
-      valueColor: "text-red-600",
-      borderClass: "border-l-primary",
+      valueColor: "text-red-500",
+      borderClass: "border-l-orange-500",
       footer: <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">{data.riskDistribution.HIGH} จาก {data.totalStudents} คน</span>,
     },
     {
       icon: <Activity />,
       title: "อัตราการเข้าถึง",
       value: `${((data.totalBookings / (data.totalStudents || 1)) * 100).toFixed(1)}%`,
-      borderClass: "border-l-primary",
+      borderClass: "border-l-orange-500",
       footer: (
         <div className="flex items-center gap-2">
-          <span className={`${parseFloat(data.visitTrend) >= 0 ? 'text-green-500 bg-green-50' : 'text-red-500 bg-red-50'} px-1.5 py-0.5 rounded text-[11px] font-black flex items-center`}>
+          <span className={`${parseFloat(data.visitTrend) >= 0 ? 'text-emerald-500 bg-emerald-50' : 'text-red-500 bg-red-50'} px-1.5 py-0.5 rounded text-[11px] font-black flex items-center`}>
             {parseFloat(data.visitTrend) >= 0 ? "↗" : "↘"} {data.visitTrend}%
           </span>
           <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">จากเดือนก่อน</span>
@@ -101,18 +97,16 @@ export function Department_MED() {
       ),
     },
     {
-      icon: <Building2 />,
+      icon: <Sprout />,
       title: "เคสที่กำลังดูแล",
       value: data.activeCases.toLocaleString(),
-      borderClass: "border-l-primary",
+      borderClass: "border-l-orange-500",
       footer: (
         <div className="flex items-center gap-2">
-          <span className="text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded text-[11px] font-black">
+          <span className="text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded text-[11px] font-black">
             ติดตามอยู่
           </span>
-          <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">
-            กลับมาซ้ำ {((data.repeatStats.repeat / (data.totalBookings || 1)) * 100).toFixed(1)}%
-          </span>
+          <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">Active Cases</span>
         </div>
       ),
     },
@@ -131,7 +125,7 @@ export function Department_MED() {
     .map(([name, value], index) => ({
       name,
       value: value as number,
-      color: index === 0 ? "rgb(var(--primary))" : ["#8b5cf6", "#ec4899", "#f59e0b", "#10b981"][index - 1],
+      color: ["#f97316", "#fb923c", "#fdba74", "#f59e0b", "#cbd5e1"][index] || "#cbd5e1",
     }));
 
   // Map Top Problems
@@ -166,7 +160,7 @@ export function Department_MED() {
     sessions: d.bookingCount,
     perStudent: d.bookingCount / (d.studentCount || 1),
     riskData: [
-      { name: "สูง (High Risk)", value: d.riskDistribution.HIGH, color: "#ef4444" },
+      { name: "วิกฤต (Critical)", value: d.riskDistribution.HIGH, color: "#ef4444" },
       { name: "ปกติ (Normal)", value: d.studentCount - d.riskDistribution.HIGH, color: "#10b981" },
     ],
     trendData: Object.entries(d.visitsByMonth || {}).map(([month, count]) => ({
@@ -193,7 +187,7 @@ export function Department_MED() {
         }
       });
       return acc;
-    }, []).sort((a, b) => b.total - a.total).slice(0, 8)
+    }, []).sort((a, b) => b.total - a.total).slice(0, 5)
   }));
 
   const headerBadges: HeaderBadgeItem[] = [
@@ -207,19 +201,18 @@ export function Department_MED() {
       universityName={data.universityName}
       logoUrl={data.universityLogoUrl}
       badges={headerBadges}
+      departments={departments}
+      onSelectDepartment={setActiveDepartment}
+      activeTab={activeTab}
+      onTabChange={(t) => setActiveTab(t)}
+      recentCases={data.recentCases}
+      strategicAnalysis={data.strategicAnalysis}
       overviewStats={{
         summaryStats,
         sessionTrend,
         problemDistribution,
         topProblems,
       }}
-      recentCases={data.recentCases}
-      strategicAnalysis={data.strategicAnalysis}
-      departments={departments}
-      onSelectDepartment={setSelectedDept}
-      activeTab={activeTab}
-      onTabChange={(t) => setActiveTab(t)}
     />
   );
 }
-

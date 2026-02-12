@@ -41,6 +41,17 @@ interface Props {
   sessionTrend: SessionTrendItem[];
   problemDistribution: RiskItem[];
   topProblems: ProblemItem[];
+  strategicAnalysis?: {
+    riskGroup: { name: string; count: number; sub: string };
+    topProblem: { name: string; count: number; sub: string };
+  };
+  departmentComparison?: {
+    name: string;
+    code: string;
+    students: number;
+    sessions: number;
+    accessRate: number;
+  }[];
   overviewTitle?: string;
   facultyName: string;
   universityName: string;
@@ -56,6 +67,8 @@ export function FacultyOverview({
   sessionTrend,
   problemDistribution,
   topProblems,
+  strategicAnalysis,
+  departmentComparison,
   overviewTitle = "ภาพรวม",
   facultyName,
   universityName,
@@ -64,6 +77,26 @@ export function FacultyOverview({
   onDateRangeChange
 }: Props) {
   const [activeIndex, setActiveIndex] = React.useState<number | null>(null);
+
+  // Derive gender totals from topProblems
+  const genderTotals = React.useMemo(() => {
+    return topProblems.reduce((acc, p) => ({
+      male: acc.male + p.male,
+      female: acc.female + p.female,
+      other: acc.other + p.other,
+      total: acc.total + p.total
+    }), { male: 0, female: 0, other: 0, total: 0 });
+  }, [topProblems]);
+
+  const malePercent = genderTotals.total > 0 ? Math.round((genderTotals.male / genderTotals.total) * 100) : 0;
+  const femalePercent = genderTotals.total > 0 ? Math.round((genderTotals.female / genderTotals.total) * 100) : 0;
+  const otherPercent = genderTotals.total > 0 ? Math.max(0, 100 - malePercent - femalePercent) : 0;
+
+  // Derive department highlights
+  const depts = departmentComparison || [];
+  const maxSessionsDept = depts.length > 0 ? [...depts].sort((a, b) => b.sessions - a.sessions)[0] : null;
+  const maxAccessRateDept = depts.length > 0 ? [...depts].sort((a, b) => b.accessRate - a.accessRate)[0] : null;
+  const minAccessRateDept = depts.length > 0 ? [...depts].sort((a, b) => a.accessRate - b.accessRate)[0] : null;
 
   const onPieEnter = (_: any, index: number) => {
     setActiveIndex(index);
@@ -122,11 +155,13 @@ export function FacultyOverview({
           <div className="lg:col-span-2 bg-white rounded-[2rem] shadow-lg shadow-slate-200/30 p-8 border border-slate-100 flex flex-col">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
               <div className="space-y-1">
-                <h3 className="text-2xl font-black text-slate-800 tracking-tight">กราฟสถิติการรับบริการคำปรึกษา</h3>
+                <h3 className="text-2xl font-black text-slate-800 tracking-tight">กราฟสถิติการเข้ารับการปรึกษา</h3>
                 <p className="text-sm text-slate-400 font-bold uppercase tracking-wider">Weekly Case Analytics</p>
               </div>
               <div className="flex flex-col items-end">
-                <div className="text-4xl font-black text-primary tracking-tighter tabular-nums">269</div>
+                <div className="text-4xl font-black text-primary tracking-tighter tabular-nums">
+                  {sessionTrend.reduce((sum, item) => sum + item.sessions, 0).toLocaleString()}
+                </div>
                 <div className="text-xs text-slate-400 font-bold uppercase tracking-wider">จำนวนครั้งทั้งหมด</div>
               </div>
             </div>
@@ -310,8 +345,6 @@ export function FacultyOverview({
               <Tooltip 
                 cursor={{ fill: '#f8fafc', radius: 4 }}
                 contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)', padding: '12px' }}
-                allowEscapeViewBox={{ x: false, y: true }}
-                position={{ y: 0 }}
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
                     const data = payload[0].payload;
@@ -367,9 +400,9 @@ export function FacultyOverview({
           <HighlightCard 
             icon={<BookOpen />}
             title="ภาควิชาที่ใช้บริการมากที่สุด"
-            dept="อายุรศาสตร์"
-            value="54 ครั้ง"
-            note="20.1%"
+            dept={maxSessionsDept?.name || "ไม่ระบุ"}
+            value={`${maxSessionsDept?.sessions || 0} ครั้ง`}
+            note={maxSessionsDept ? `${((maxSessionsDept.sessions / (genderTotals.total || 1)) * 100).toFixed(1)}%` : "0%"}
             themeColor="text-primary"
             borderColor="border-primary/20"
             bgColor="bg-primary/5"
@@ -377,8 +410,8 @@ export function FacultyOverview({
           <HighlightCard 
             icon={<AlertCircle />}
             title="อัตราเข้าถึงสูงสุด"
-            dept="จิตเวชศาสตร์"
-            value="10.9%"
+            dept={maxAccessRateDept?.name || "ไม่ระบุ"}
+            value={`${maxAccessRateDept?.accessRate.toFixed(1) || 0}%`}
             note="อาจต้องเพิ่ม capacity"
             themeColor="text-primary"
             borderColor="border-primary/20"
@@ -387,8 +420,8 @@ export function FacultyOverview({
           <HighlightCard 
             icon={<TrendingUp />}
             title="อัตราเข้าถึงต่ำสุด"
-            dept="ศัลยศาสตร์"
-            value="5.9%"
+            dept={minAccessRateDept?.name || "ไม่ระบุ"}
+            value={`${minAccessRateDept?.accessRate.toFixed(1) || 0}%`}
             note="อาจต้องเพิ่มการเข้าถึง"
             themeColor="text-primary"
             borderColor="border-primary/20"
@@ -403,7 +436,7 @@ export function FacultyOverview({
           <h3 className="text-xl font-black text-slate-600 uppercase tracking-widest">เปรียบเทียบแยกรายภาควิชา</h3>
           <div className="flex items-center gap-2 text-xs font-black text-slate-400">
              <Users className="w-3 h-3" />
-             8 ภาควิชา — 3,145 รายทั้งหมด
+             {depts.length} ภาควิชา — {depts.reduce((sum: number, d) => sum + d.students, 0).toLocaleString()} รายทั้งหมด
           </div>
         </div>
         <div className="bg-white rounded-[2rem] shadow-lg shadow-slate-200/30 border border-slate-100 overflow-hidden">
@@ -418,7 +451,7 @@ export function FacultyOverview({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {DEPARTMENT_COMPARISON.map((dept, idx) => (
+              {depts.map((dept, idx) => (
                 <tr key={idx} className="group hover:bg-slate-50/30 transition-colors">
                   <td className="px-8 py-4 text-xs font-bold text-slate-400">{idx + 1}</td>
                   <td className="px-8 py-4">
@@ -427,17 +460,17 @@ export function FacultyOverview({
                       <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{dept.code}</span>
                     </div>
                   </td>
-                  <td className="px-8 py-4 text-sm font-bold text-slate-400 text-center">{dept.students}</td>
-                  <td className="px-8 py-4 text-sm font-black text-primary text-center">{dept.sessions}</td>
+                  <td className="px-8 py-4 text-sm font-bold text-slate-400 text-center">{dept.students.toLocaleString()}</td>
+                  <td className="px-8 py-4 text-sm font-black text-primary text-center">{dept.sessions.toLocaleString()}</td>
                   <td className="px-8 py-4">
                     <div className="flex items-center gap-4">
                       <div className="flex-grow h-1.5 bg-slate-100 rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-primary rounded-full transition-all duration-1000" 
-                          style={{ width: `${dept.accessRate}%` }}
+                           className="h-full bg-primary rounded-full transition-all duration-1000" 
+                           style={{ width: `${Math.min(100, dept.accessRate)}%` }}
                         />
                       </div>
-                      <span className="text-xs font-black text-slate-800 shrink-0 w-10 text-right">{dept.accessRate}%</span>
+                      <span className="text-xs font-black text-slate-800 shrink-0 w-10 text-right">{dept.accessRate.toFixed(1)}%</span>
                     </div>
                   </td>
                 </tr>
@@ -462,11 +495,11 @@ export function FacultyOverview({
                 <span className="text-sm font-black uppercase tracking-wider opacity-80">กลุ่มเสี่ยงสูงสุด</span>
              </div>
              <div className="relative z-10">
-                <div className="text-3xl font-black mb-2 tracking-tighter">N/A</div>
-                <p className="text-sm font-bold opacity-70">จำนวน 0 คน</p>
+                <div className="text-3xl font-black mb-2 tracking-tighter truncate">{strategicAnalysis?.riskGroup.name || "N/A"}</div>
+                <p className="text-sm font-bold text-white/90">{strategicAnalysis?.riskGroup.sub || "จำนวน 0 คน"}</p>
              </div>
              <div className="relative z-10 mt-6">
-                <span className="px-3 py-1.5 bg-white/10 rounded-xl text-xs font-black uppercase tracking-widest backdrop-blur-md">จากสถิติการใช้งาน</span>
+                <span className="px-3 py-1.5 bg-white/10 rounded-xl text-xs font-black uppercase tracking-widest backdrop-blur-md">สถิติกลุ่มเปราะบาง</span>
              </div>
              {/* Background Watermark Icon */}
              <GraduationCap className="absolute -right-8 -bottom-8 w-48 h-48 opacity-10 -rotate-12 pointer-events-none group-hover:scale-110 transition-transform duration-700" />
@@ -479,11 +512,11 @@ export function FacultyOverview({
                 <span className="text-sm font-black uppercase tracking-wider opacity-80">ปัญหาที่พบมากที่สุด</span>
              </div>
              <div className="relative z-10">
-                <div className="text-xl font-black mb-2 leading-tight tracking-tight">สุขภาพจิต/อารมณ์</div>
-                <p className="text-sm font-bold opacity-70">จำนวน 86 เคส</p>
+                <div className="text-xl font-black mb-2 leading-tight tracking-tight line-clamp-2">{strategicAnalysis?.topProblem.name || "สุขภาพจิต/อารมณ์"}</div>
+                <p className="text-sm font-bold text-white/90">{strategicAnalysis?.topProblem.sub || "จำนวน 0 เคส"}</p>
              </div>
              <div className="relative z-10 mt-6">
-                <span className="px-3 py-1.5 bg-white/10 rounded-xl text-xs font-black uppercase tracking-widest backdrop-blur-md">ความกังวลหลัก</span>
+                <span className="px-3 py-1.5 bg-white/10 rounded-xl text-xs font-black uppercase tracking-widest backdrop-blur-md">ความกังวลสูงสุด</span>
              </div>
              {/* Background Watermark Icon */}
              <Brain className="absolute -right-8 -bottom-8 w-48 h-48 opacity-10 -rotate-12 pointer-events-none group-hover:scale-110 transition-transform duration-700" />
@@ -502,49 +535,49 @@ export function FacultyOverview({
                 {/* Male */}
                 <div className="space-y-2">
                    <div className="flex justify-between items-end">
-                       <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">ชาย</span>
-                      <span className="text-sm font-black text-white">31%</span>
+                       <span className="text-xs font-bold text-white/60 uppercase tracking-widest">ชาย</span>
+                      <span className="text-sm font-black text-white">{malePercent}%</span>
                    </div>
-                   <div className="h-1.5 bg-slate-400/20 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-400 w-[31%]" />
+                   <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-400" style={{ width: `${malePercent}%` }} />
                    </div>
                 </div>
                 {/* Female */}
                 <div className="space-y-2">
                    <div className="flex justify-between items-end">
-                       <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">หญิง</span>
-                      <span className="text-sm font-black text-white">32%</span>
+                       <span className="text-xs font-bold text-white/60 uppercase tracking-widest">หญิง</span>
+                      <span className="text-sm font-black text-white">{femalePercent}%</span>
                    </div>
-                   <div className="h-1.5 bg-slate-400/20 rounded-full overflow-hidden">
-                      <div className="h-full bg-pink-400 w-[32%]" />
+                   <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div className="h-full bg-pink-400" style={{ width: `${femalePercent}%` }} />
                    </div>
                 </div>
                 {/* Other */}
                 <div className="space-y-2">
                    <div className="flex justify-between items-end">
-                       <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">อื่นๆ</span>
-                      <span className="text-sm font-black text-white">38%</span>
+                       <span className="text-xs font-bold text-white/60 uppercase tracking-widest">อื่นๆ</span>
+                      <span className="text-sm font-black text-white">{otherPercent}%</span>
                    </div>
-                   <div className="h-1.5 bg-slate-400/20 rounded-full overflow-hidden">
-                      <div className="h-full bg-purple-400 w-[38%]" />
+                   <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div className="h-full bg-purple-400" style={{ width: `${otherPercent}%` }} />
                    </div>
                 </div>
              </div>
 
              <div className="mt-8 flex items-center justify-between border-t border-white/5 pt-5">
-                 <p className="text-xs font-black text-slate-400 uppercase tracking-widest">รวม 269 คน</p>
+                 <p className="text-xs font-black text-white/60 uppercase tracking-widest">รวม {genderTotals.total.toLocaleString()} ราย</p>
                 <div className="flex items-center gap-3">
                    <div className="flex items-center gap-1.5">
                       <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                       <span className="text-[11px] font-black text-slate-400">ช</span>
+                       <span className="text-[11px] font-black text-white/60">ช</span>
                    </div>
                    <div className="flex items-center gap-1.5">
                       <div className="w-1.5 h-1.5 rounded-full bg-pink-400" />
-                       <span className="text-[11px] font-black text-slate-400">ญ</span>
+                       <span className="text-[11px] font-black text-white/60">ญ</span>
                    </div>
                    <div className="flex items-center gap-1.5">
                       <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-                       <span className="text-[11px] font-black text-slate-400">อ</span>
+                       <span className="text-[11px] font-black text-white/60">อ</span>
                    </div>
                 </div>
              </div>

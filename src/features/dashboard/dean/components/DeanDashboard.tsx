@@ -56,13 +56,28 @@ export function DeanDashboard({ facultyCode }: DeanDashboardProps) {
                         <FacultyDateRangePicker
                             startDate={dateRange?.from}
                             endDate={dateRange?.to}
-                            onChange={(range: { from?: Date; to?: Date }) => setDateRange(range)}
+                            onChange={(range: { from?: Date; to?: Date }) => {
+                                if (!range.from && !range.to) {
+                                    setDateRange(undefined);
+                                } else {
+                                    setDateRange(range);
+                                }
+                            }}
                         />
 
                         <div className="text-right">
-                            {stats.academicYear && !dateRange && (
+                            {stats.academicYear && (!dateRange || (!dateRange.from && !dateRange.to)) ? (
                                 <span className="inline-block px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-lg mb-1">
                                     ปีการศึกษา {stats.academicYear}
+                                </span>
+                            ) : (dateRange?.from || dateRange?.to) && (
+                                <span className="inline-block px-2.5 py-1 bg-primary/10 text-primary text-xs font-bold rounded-lg mb-1">
+                                    {(dateRange.from && dateRange.to) 
+                                        ? `${dateRange.from.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} - ${dateRange.to.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                                        : dateRange.from 
+                                            ? `ตั้งแต่ ${dateRange.from.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                                            : `ถึง ${dateRange.to?.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                                    }
                                 </span>
                             )}
                             <p className="text-xs text-slate-400">

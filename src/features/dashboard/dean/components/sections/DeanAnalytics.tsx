@@ -48,7 +48,13 @@ export function DeanAnalytics({ stats }: DeanAnalyticsProps) {
     const sortedMonths = Object.keys(stats.visitsByMonth || {}).sort();
     const trendData: ChartData<'line'> = {
         labels: sortedMonths.map(m => {
-            const [, month] = m.split('-');
+            const parts = m.split('-');
+            if (parts.length === 3) {
+                // YYYY-MM-DD
+                const [, month, day] = parts;
+                return `${parseInt(day)} ${monthsTH[parseInt(month) - 1]}`;
+            }
+            const [, month] = parts;
             return monthsTH[parseInt(month) - 1] || m;
         }),
         datasets: [
@@ -97,8 +103,13 @@ export function DeanAnalytics({ stats }: DeanAnalyticsProps) {
                 callbacks: {
                     title: (items) => {
                         const idx = items[0].dataIndex;
-                        const monthKey = sortedMonths[idx];
-                        const [year, month] = monthKey.split('-');
+                        const key = sortedMonths[idx];
+                        const parts = key.split('-');
+                        if (parts.length === 3) {
+                            const [year, month, day] = parts;
+                            return `📅 ${parseInt(day)} ${monthsTH[parseInt(month) - 1]} ${parseInt(year) + 543}`;
+                        }
+                        const [year, month] = parts;
                         return `📅 ${monthsTH[parseInt(month) - 1]} ${parseInt(year) + 543}`;
                     },
                     label: (item) => {

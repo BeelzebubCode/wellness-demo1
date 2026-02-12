@@ -3,7 +3,7 @@ import {
   ArrowLeft, Users, BookOpen, AlertCircle, TrendingUp, BarChart3, 
   PieChart as PieIcon, GraduationCap, Activity, Heart, Calendar, Home
 } from "lucide-react";
-import { DepartmentStat } from "../listing/DepartmentList_MED";
+import { DepartmentStat } from "../listing/DepartmentList_BUS";
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, 
   XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area, BarChart, Bar
@@ -24,10 +24,10 @@ const RISK_COLORS = {
   Normal: "#10b981",
 };
 
-export function DepartmentDashboard_MED({ 
+export function DepartmentDashboard_BUS({ 
   department, 
-  facultyName = "คณะแพทยศาสตร์", 
-  universityName = "จุฬาลงกรณ์มหาวิทยาลัย",
+  facultyName = "Martin de Tours School of Management and Economics", 
+  universityName = "Assumption University", 
   onBack, 
   onBackToList 
 }: Props) {
@@ -62,12 +62,12 @@ export function DepartmentDashboard_MED({
                     <>
                         <button
                         onClick={onBackToList}
-                        className="group flex items-center gap-2 text-slate-400 hover:text-[rgb(var(--primary))] transition-all font-bold text-sm"
+                        className="group flex items-center gap-2 text-slate-400 hover:text-red-600 transition-all font-bold text-sm"
                         >
-                        <div className="p-1.5 rounded-lg bg-white shadow-sm border border-slate-100 group-hover:border-[rgb(var(--primary))]">
+                        <div className="p-1.5 rounded-lg bg-white shadow-sm border border-slate-100 group-hover:border-red-600">
                             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
                         </div>
-                        ย้อนกลับ
+                        Back
                         </button>
                         <div className="w-px h-4 bg-slate-300"></div>
                     </>
@@ -75,22 +75,22 @@ export function DepartmentDashboard_MED({
 
                 <button
                 onClick={onBack}
-                className="group flex items-center gap-2 text-slate-400 hover:text-[rgb(var(--primary))] transition-all font-bold text-sm"
+                className="group flex items-center gap-2 text-slate-400 hover:text-red-600 transition-all font-bold text-sm"
                 >
-                <div className="p-1.5 rounded-lg bg-white shadow-sm border border-slate-100 group-hover:border-[rgb(var(--primary))]">
+                <div className="p-1.5 rounded-lg bg-white shadow-sm border border-slate-100 group-hover:border-red-600">
                     <Home className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
                 </div>
-                กลับหน้าหลัก
+                Home
                 </button>
             </div>
             <div className="flex items-center gap-4">
-               <div className="w-16 h-16 bg-white rounded-2xl shadow-lg border border-slate-100 flex items-center justify-center text-[rgb(var(--primary))]">
+               <div className="w-16 h-16 bg-white rounded-2xl shadow-lg border border-slate-100 flex items-center justify-center text-red-600">
                   <GraduationCap className="w-8 h-8" />
                </div>
                <div className="flex flex-col">
                   <div className="flex items-center gap-3 mb-2 whitespace-nowrap">
                     <div className="text-4xl font-black text-slate-900 tracking-tight">{department.name}</div>
-                    <span className="text-sm font-black text-primary bg-[rgb(var(--primary)/0.08)] border border-[rgb(var(--primary)/0.15)] px-2.5 py-0.5 rounded-lg uppercase tracking-wider shrink-0 transform translate-y-[4px]">{department.code}</span>
+                    <span className="text-sm font-black text-red-600 bg-red-50 border border-red-100 px-2.5 py-0.5 rounded-lg uppercase tracking-wider shrink-0 transform translate-y-[4px]">{department.code}</span>
                   </div>
                   <p className="text-slate-500 font-bold text-lg leading-none">{facultyName} {universityName}</p>
                </div>
@@ -106,36 +106,36 @@ export function DepartmentDashboard_MED({
         {/* Quick Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard 
-            icon={<Users className="w-5 h-5 text-blue-500" />} 
-            title="จำนวนนิสิตทั้งหมด" 
+            icon={<Users className="w-5 h-5 text-red-600" />} 
+            title="Total Students" 
             value={department.students.toLocaleString()} 
-            label="คน (Students)"
-            bgColor="bg-blue-50"
-            ringColor="ring-blue-100/50"
+            label="Students"
+            bgColor="bg-red-50"
+            ringColor="ring-red-100/50"
           />
           <StatCard 
-            icon={<BookOpen className="w-5 h-5 text-indigo-500" />} 
-            title="จำนวนการเข้าพบ" 
+            icon={<BookOpen className="w-5 h-5 text-rose-500" />} 
+            title="Total Sessions" 
             value={department.sessions.toLocaleString()} 
-            label="ครั้ง (Sessions)"
-            bgColor="bg-indigo-50"
-            ringColor="ring-indigo-100/50"
-          />
-          <StatCard 
-            icon={<Activity className="w-5 h-5 text-emerald-500" />} 
-            title="ความถี่เฉลี่ย" 
-            value={department.perStudent.toFixed(2)} 
-            label="ครั้ง/คน (Avg.)"
-            bgColor="bg-emerald-50"
-            ringColor="ring-emerald-100/50"
-          />
-          <StatCard 
-            icon={<AlertCircle className="w-5 h-5 text-rose-500" />} 
-            title="แจ้งเตือนที่ต้องดูแล" 
-            value="7" 
-            label="รายการ (Alerts)"
+            label="Sessions"
             bgColor="bg-rose-50"
             ringColor="ring-rose-100/50"
+          />
+          <StatCard 
+            icon={<Activity className="w-5 h-5 text-orange-500" />} 
+            title="Avg. Frequency" 
+            value={department.perStudent.toFixed(2)} 
+            label="Times/Std"
+            bgColor="bg-orange-50"
+            ringColor="ring-orange-100/50"
+          />
+          <StatCard 
+            icon={<AlertCircle className="w-5 h-5 text-amber-500" />} 
+            title="Active Alerts" 
+            value="5" 
+            label="Alerts"
+            bgColor="bg-amber-50"
+            ringColor="ring-amber-100/50"
           />
         </div>
 
@@ -147,9 +147,9 @@ export function DepartmentDashboard_MED({
             <div className="mb-6">
               <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <PieIcon className="w-4 h-4 text-amber-500" />
-                สถานะความเสี่ยงของนิสิต
+                Risk Status Distribution
               </h3>
-              <p className="text-xs text-slate-400 font-medium">Risk Status Distribution</p>
+              <p className="text-xs text-slate-400 font-medium">Student Risk Assessment</p>
             </div>
             
             <div className="h-[240px] relative flex items-center justify-center">
@@ -157,7 +157,7 @@ export function DepartmentDashboard_MED({
                 {/* Total Count - Fades OUT when activeIndex is not null */}
                 <div className={`flex flex-col items-center justify-center transition-all duration-300 absolute ${activeIndex !== null ? 'opacity-0 scale-90 translate-y-2' : 'opacity-100 scale-100 translate-y-0'}`}>
                    <span className="text-3xl font-black text-slate-800 leading-none">{riskData.reduce((a, b) => a + b.value, 0)}</span>
-                   <p className="text-xs font-bold text-slate-400 mt-1">ราย</p>
+                   <p className="text-xs font-bold text-slate-400 mt-1">Students</p>
                 </div>
 
                 {/* Active Segment Value - Fades IN when activeIndex is NOT null */}
@@ -170,7 +170,7 @@ export function DepartmentDashboard_MED({
                          <span className="text-3xl font-black text-slate-800 leading-none tabular-nums">
                             {riskData[activeIndex].value}
                          </span>
-                         <p className="text-xs font-bold text-slate-400 mt-1">ราย</p>
+                         <p className="text-xs font-bold text-slate-400 mt-1">Students</p>
                       </>
                    )}
                 </div>
@@ -225,12 +225,12 @@ export function DepartmentDashboard_MED({
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
               <div className="space-y-0.5">
                 <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-indigo-500" />
-                  แนวโน้มการเข้ารับคำปรึกษา
+                  <TrendingUp className="w-5 h-5 text-red-500" />
+                  Counseling Trends
                 </h3>
                 <p className="text-xs text-slate-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis">Counseling Engagement Trend (Last 6 Months)</p>
               </div>
-              <div className="px-4 py-2 bg-indigo-50 rounded-2xl border border-indigo-100 text-indigo-600 text-xs font-black flex items-center gap-2 shrink-0">
+              <div className="px-4 py-2 bg-red-50 rounded-2xl border border-red-100 text-red-600 text-xs font-black flex items-center gap-2 shrink-0">
                 <Calendar className="w-3.5 h-3.5" />
                 Updated Today
               </div>
@@ -240,9 +240,9 @@ export function DepartmentDashboard_MED({
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="colorSessionsDept" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="rgb(var(--primary))" stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor="rgb(var(--primary))" stopOpacity={0}/>
+                    <linearGradient id="colorSessionsDeptBUS" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -256,17 +256,15 @@ export function DepartmentDashboard_MED({
                   <YAxis axisLine={false} tickLine={false} tick={{ fill: "#94a3b8", fontSize: 13 }} />
                   <Tooltip 
                     contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}
-                    allowEscapeViewBox={{ x: true, y: true }}
-                    animationDuration={200}
                   />
                   <Area 
                     type="monotone" 
                     dataKey="sessions" 
-                    stroke="rgb(var(--primary))" 
+                    stroke="#ef4444" 
                     strokeWidth={5}
                     fillOpacity={1} 
-                    fill="url(#colorSessionsDept)" 
-                    dot={{ r: 6, fill: "rgb(var(--primary))", strokeWidth: 3, stroke: "#fff" }}
+                    fill="url(#colorSessionsDeptBUS)" 
+                    dot={{ r: 6, fill: "#ef4444", strokeWidth: 3, stroke: "#fff" }}
                     activeDot={{ r: 8, strokeWidth: 0 }}
                     animationDuration={2000}
                   />
@@ -282,17 +280,17 @@ export function DepartmentDashboard_MED({
             <div className="flex w-full items-start justify-between">
               <div className="space-y-1">
                 <h3 className="text-xl font-black text-slate-800 tracking-tight">
-                  ประเภทปัญหาที่พบ
+                  Problem Categories
                 </h3>
                 <p className="text-xs text-slate-400 font-bold">
-                  แยกตามเพศ — หมวดหมู่ปัญหาที่พบ
+                  By Gender — Issues Reported
                 </p>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-black text-indigo-600">
+                <div className="text-2xl font-black text-red-600">
                   {(department.topProblems || []).reduce((sum, p) => sum + p.total, 0)}
                 </div>
-                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">รายทั้งหมด</div>
+                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Issues</div>
               </div>
             </div>
           </div>
@@ -301,15 +299,15 @@ export function DepartmentDashboard_MED({
             <div className="flex justify-end gap-4 mb-6 mt-2 px-4">
               <div className="flex items-center gap-1.5">
                 <div className="w-3 h-3 rounded-full bg-[#3b82f6]" />
-                <span className="text-[10px] font-bold text-slate-500">ชาย</span>
+                <span className="text-[10px] font-bold text-slate-500">Male</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-3 h-3 rounded-full bg-[#ec4899]" />
-                <span className="text-[10px] font-bold text-slate-500">หญิง</span>
+                <span className="text-[10px] font-bold text-slate-500">Female</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-3 h-3 rounded-full bg-[#a855f7]" />
-                <span className="text-[10px] font-bold text-slate-500">อื่นๆ</span>
+                <span className="text-[10px] font-bold text-slate-500">Other</span>
               </div>
             </div>
 
@@ -335,8 +333,6 @@ export function DepartmentDashboard_MED({
                   <Tooltip 
                     cursor={{ fill: '#f8fafc', radius: 4 }}
                     contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)', padding: '12px' }}
-                    allowEscapeViewBox={{ x: true, y: true }}
-                    animationDuration={200}
                     content={({ active, payload, label }) => {
                       if (active && payload && payload.length) {
                         const data = payload[0].payload;
@@ -345,20 +341,20 @@ export function DepartmentDashboard_MED({
                             <p className="text-sm font-black text-slate-800 mb-3">{label}</p>
                             <div className="space-y-2">
                               <div className="flex items-center justify-between gap-6 text-xs font-bold">
-                                <span className="text-blue-500">ชาย</span>
-                                <span className="text-slate-700">{data.male} คน</span>
+                                <span className="text-blue-500">Male</span>
+                                <span className="text-slate-700">{data.male}</span>
                               </div>
                               <div className="flex items-center justify-between gap-6 text-xs font-bold">
-                                <span className="text-pink-500">หญิง</span>
-                                <span className="text-slate-700">{data.female} คน</span>
+                                <span className="text-pink-500">Female</span>
+                                <span className="text-slate-700">{data.female}</span>
                               </div>
                               <div className="flex items-center justify-between gap-6 text-xs font-bold">
-                                <span className="text-purple-500">อื่นๆ</span>
-                                <span className="text-slate-700">{data.other} คน</span>
+                                <span className="text-purple-500">Other</span>
+                                <span className="text-slate-700">{data.other}</span>
                               </div>
                               <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs font-black">
-                                <span className="text-slate-400">รวม</span>
-                                <span className="text-indigo-600">{data.total} คน</span>
+                                <span className="text-slate-400">Total</span>
+                                <span className="text-red-600">{data.total}</span>
                               </div>
                             </div>
                           </div>

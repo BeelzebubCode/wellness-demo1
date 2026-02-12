@@ -44,6 +44,7 @@ interface FacultyStats {
         name: string;
         count: number;
     }>;
+    recentCases: any[];
     activeCases: number;
     visitTrend: string;
 }
@@ -78,13 +79,17 @@ export function useFacultyStats(facultyCode?: string, dateRange?: { from: Date; 
                 const params = new URLSearchParams();
                 if (facultyCode) params.append("facultyCode", facultyCode);
 
-                if (dateRange?.from && dateRange?.to) {
-                    // Format as YYYY-MM-DD
+                if (dateRange?.from) {
                     const startDate = dateRange.from.toISOString().split('T')[0];
-                    const endDate = dateRange.to.toISOString().split('T')[0];
                     params.append("startDate", startDate);
+                }
+                if (dateRange?.to) {
+                    const endDate = dateRange.to.toISOString().split('T')[0];
                     params.append("endDate", endDate);
-                    console.log('[useFacultyStats] Date range:', startDate, 'to', endDate);
+                }
+                
+                if (dateRange?.from || dateRange?.to) {
+                    console.log('[useFacultyStats] Date range:', dateRange.from?.toISOString().split('T')[0], 'to', dateRange.to?.toISOString().split('T')[0]);
                 }
 
                 const url = `/api/v2/dean/dashboard?${params.toString()}`;
@@ -129,6 +134,7 @@ export function useFacultyStats(facultyCode?: string, dateRange?: { from: Date; 
                         visitsByMonth: data.visitsByMonth,
                         repeatStats: data.repeatStats,
                         consultantStats: data.consultantStats,
+                        recentCases: data.recentCases,
                         activeCases: data.activeCases,
                         visitTrend: data.visitTrend,
                     });

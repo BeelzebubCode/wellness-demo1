@@ -23,7 +23,13 @@ interface FacultyDateRangePickerProps {
 
 export function FacultyDateRangePicker({ startDate, endDate, onChange }: FacultyDateRangePickerProps) {
     const [activePicker, setActivePicker] = useState<"start" | "end" | null>(null);
+    const [tempRange, setTempRange] = useState<{ from?: Date; to?: Date }>({ from: startDate, to: endDate });
     const containerRef = useRef<HTMLDivElement>(null);
+
+    // Sync internal state with props when props change or picker opens
+    useEffect(() => {
+        setTempRange({ from: startDate, to: endDate });
+    }, [startDate, endDate, activePicker]);
 
     // Close when clicking outside
     useEffect(() => {
@@ -42,6 +48,35 @@ export function FacultyDateRangePicker({ startDate, endDate, onChange }: Faculty
         const m = (date.getMonth() + 1).toString().padStart(2, "0");
         const y = (date.getFullYear() + 543).toString();
         return `${d}/${m}/${y}`;
+    };
+
+    const handleSelectDate = (date: Date) => {
+        if (activePicker === "start") {
+            setTempRange(prev => ({ ...prev, from: date }));
+            // Optional: Auto switch to "end" if "from" is selected? 
+            // The user didn't ask for it, but it's a common pattern.
+            // Let's keep it manual for now to match the user's specific request structure.
+        } else {
+            setTempRange(prev => ({ ...prev, to: date }));
+        }
+    };
+
+    const handleClearAll = () => {
+        setTempRange({ from: undefined, to: undefined });
+    };
+
+    const handleSetToday = () => {
+        const today = new Date();
+        if (activePicker === "start") {
+            setTempRange(prev => ({ ...prev, from: today }));
+        } else {
+            setTempRange(prev => ({ ...prev, to: today }));
+        }
+    };
+
+    const handleApply = () => {
+        onChange(tempRange);
+        setActivePicker(null);
     };
 
     return (
@@ -95,40 +130,27 @@ export function FacultyDateRangePicker({ startDate, endDate, onChange }: Faculty
                         </div>
                         
                         <CalendarContent 
-                            selectedDate={activePicker === "start" ? startDate : endDate}
-                            onSelect={(date) => {
-                                if (activePicker === "start") {
-                                    onChange({ from: date, to: endDate });
-                                } else {
-                                    onChange({ from: startDate, to: date });
-                                }
-                            }}
+                            selectedDate={activePicker === "start" ? tempRange.from : tempRange.to}
+                            onSelect={handleSelectDate}
                         />
 
                         {/* Footer */}
                         <div className="mt-8 flex items-center justify-between border-t border-slate-50 pt-5">
                             <button 
-                                onClick={() => {
-                                    if (activePicker === "start") onChange({ from: undefined, to: endDate });
-                                    else onChange({ from: startDate, to: undefined });
-                                }}
+                                onClick={handleClearAll}
                                 className="text-sm font-black text-rose-500 hover:text-rose-600 px-2"
                             >
                                 ล้าง
                             </button>
                             <div className="flex items-center gap-4">
                                 <button 
-                                    onClick={() => {
-                                        const today = new Date();
-                                        if (activePicker === "start") onChange({ from: today, to: endDate });
-                                        else onChange({ from: startDate, to: today });
-                                    }}
+                                    onClick={handleSetToday}
                                     className="text-sm font-black text-primary hover:text-primary/80 px-2"
                                 >
                                     วันนี้
                                 </button>
                                 <button 
-                                    onClick={() => setActivePicker(null)}
+                                    onClick={handleApply}
                                     className="flex items-center gap-2 bg-primary text-white px-5 py-2 rounded-xl text-sm font-black shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all"
                                 >
                                     <Check className="w-4 h-4" />

@@ -98,18 +98,21 @@ export const DeanService = {
    *   - faculty_id (คณะ) via student_academic JOIN
    *   - academic year time range (ปีการศึกษา)
    */
-  async getFacultyStats(facultyId: number, universityId: number, dateRange?: { start: Date; end: Date }) {
+  async getFacultyStats(facultyId: number, universityId: number, dateRange?: { start?: Date; end?: Date }) {
     let ayStart: Date, ayEnd: Date, ayLabel: string;
+    const defaultRange = getAcademicYearRange();
 
-    if (dateRange) {
-      ayStart = dateRange.start;
-      ayEnd = dateRange.end;
-      ayLabel = `${dateRange.start.toLocaleDateString('th-TH')} - ${dateRange.end.toLocaleDateString('th-TH')}`;
+    if (dateRange && (dateRange.start || dateRange.end)) {
+      ayStart = dateRange.start || defaultRange.start;
+      ayEnd = dateRange.end || defaultRange.end;
+      
+      const startStr = ayStart.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+      const endStr = ayEnd.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+      ayLabel = `${startStr} - ${endStr}`;
     } else {
-      const range = getAcademicYearRange();
-      ayStart = range.start;
-      ayEnd = range.end;
-      ayLabel = `ปีการศึกษา ${range.label}`;
+      ayStart = defaultRange.start;
+      ayEnd = defaultRange.end;
+      ayLabel = `ปีการศึกษา ${defaultRange.label}`;
     }
 
     // 1. Get faculty info
@@ -254,11 +257,15 @@ export const DeanService = {
       }
     });
 
-    // ─── 6. Visits by Month (this academic year) ───
-    // Scoped: university_id + faculty_id + academic year
-    const visitsQuery = await prisma.$queryRaw<{ month: string, count: bigint }[]>`
+    // ─── 6. Visits by Data Point (Daily or Monthly) ───
+    // If range <= 62 days, show daily. Else show monthly.
+    const diffDays = Math.ceil((ayEnd.getTime() - ayStart.getTime()) / (1000 * 60 * 60 * 24));
+    const isDaily = diffDays <= 62;
+    const format = isDaily ? 'YYYY-MM-DD' : 'YYYY-MM';
+
+    const visitsQuery = await prisma.$queryRaw<{ point: string, count: bigint }[]>`
         SELECT 
-            TO_CHAR(b.booking_created_at, 'YYYY-MM') as month,
+            TO_CHAR(b.booking_created_at, ${format}) as point,
             COUNT(*)::int as count
         FROM "booking" b
         JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
@@ -266,12 +273,12 @@ export const DeanService = {
         AND sa.faculty_id = ${facultyId}
         AND b.booking_created_at >= ${ayStart}
         AND b.booking_created_at <= ${ayEnd}
-        GROUP BY TO_CHAR(b.booking_created_at, 'YYYY-MM')
-        ORDER BY month
+        GROUP BY TO_CHAR(b.booking_created_at, ${format})
+        ORDER BY point
     `;
     const visitsByMonth: Record<string, number> = {};
     visitsQuery.forEach(v => {
-      if (v.month) visitsByMonth[v.month] = Number(v.count);
+      if (v.point) visitsByMonth[v.point] = Number(v.count);
     });
 
     // ─── 7. Repeat Visits (this academic year) ───
@@ -301,6 +308,57 @@ export const DeanService = {
     // ─── 8. Department Stats (this academic year for bookings) ───
     // Student count: all-time (population), Bookings: this academic year
     // Scoped: university_id + faculty_id via department → faculty
+    
+    // 8.1. Fetch Risk distribution for each department
+    const deptRiskStats = await prisma.$queryRaw<{ department_id: number, risk: number, count: bigint }[]>`
+        SELECT 
+            sa.department_id,
+            bo.booking_outcome_risk_level as risk,
+            COUNT(*)::int as count
+        FROM "booking" b
+        JOIN "booking_outcome" bo ON b.university_id = bo.university_id AND b.booking_id = bo.booking_id
+        JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
+        WHERE b.university_id = ${universityId}
+        AND sa.faculty_id = ${facultyId}
+        AND b.booking_created_at >= ${ayStart}
+        AND b.booking_created_at <= ${ayEnd}
+        GROUP BY sa.department_id, bo.booking_outcome_risk_level
+    `;
+
+    // 8.2. Fetch Problem stats for each department
+    const deptProblemStats = await prisma.$queryRaw<{ department_id: number, name: string, gender: string, count: bigint }[]>`
+        SELECT 
+            sa.department_id,
+            COALESCE(pc.problem_category_name_th, 'อื่นๆ') as name,
+            sp.student_gender as gender,
+            COUNT(*)::int as count
+        FROM "booking" b
+        LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
+        JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
+        LEFT JOIN "student_profile" sp ON b.student_id = sp.student_id AND b.university_id = sp.university_id
+        WHERE b.university_id = ${universityId}
+        AND sa.faculty_id = ${facultyId}
+        AND b.booking_created_at >= ${ayStart}
+        AND b.booking_created_at <= ${ayEnd}
+        GROUP BY sa.department_id, pc.problem_category_name_th, sp.student_gender
+    `;
+
+    // 8.3. Fetch Visits by month for each department
+    const deptVisitsQuery = await prisma.$queryRaw<{ department_id: number, month: string, count: bigint }[]>`
+        SELECT 
+            sa.department_id,
+            TO_CHAR(b.booking_created_at, 'YYYY-MM') as month,
+            COUNT(*)::int as count
+        FROM "booking" b
+        JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
+        WHERE b.university_id = ${universityId}
+        AND sa.faculty_id = ${facultyId}
+        AND b.booking_created_at >= ${ayStart}
+        AND b.booking_created_at <= ${ayEnd}
+        GROUP BY sa.department_id, TO_CHAR(b.booking_created_at, 'YYYY-MM')
+    `;
+
+    // 8.4. Base department info
     const deptStatsQuery = await prisma.$queryRaw<{
       department_id: number,
       department_code: string,
@@ -335,14 +393,52 @@ export const DeanService = {
         WHERE d.faculty_id = ${facultyId} AND d.university_id = ${universityId}
     `;
 
-    const departmentStats = deptStatsQuery.map(d => ({
-      departmentId: d.department_id,
-      departmentCode: d.department_code,
-      departmentName: d.department_name_th,
-      departmentNameEn: d.department_name_en,
-      studentCount: Number(d.student_count),
-      bookingCount: Number(d.booking_count)
-    }));
+    const departmentStats = deptStatsQuery.map(d => {
+      const deptId = d.department_id;
+      
+      // Filter risk distribution for this dept
+      const riskDist = { HIGH: 0, MEDIUM: 0, LOW: 0, NORMAL: 0 };
+      deptRiskStats.filter(r => r.department_id === deptId).forEach(r => {
+        if (r.risk >= 4) riskDist.HIGH += Number(r.count);
+        else if (r.risk === 3) riskDist.MEDIUM += Number(r.count);
+        else if (r.risk === 2) riskDist.LOW += Number(r.count);
+        else riskDist.NORMAL += Number(r.count);
+      });
+
+      // Filter problem stats for this dept
+      const pStats: Record<string, number> = {};
+      const gPStats: Record<string, Record<string, number>> = { Male: {}, Female: {}, Other: {} };
+      deptProblemStats.filter(p => p.department_id === deptId).forEach(row => {
+        const count = Number(row.count);
+        pStats[row.name] = (pStats[row.name] || 0) + count;
+        if (row.gender === 'MALE') {
+          gPStats.Male[row.name] = (gPStats.Male[row.name] || 0) + count;
+        } else if (row.gender === 'FEMALE') {
+          gPStats.Female[row.name] = (gPStats.Female[row.name] || 0) + count;
+        } else {
+          gPStats.Other[row.name] = (gPStats.Other[row.name] || 0) + count;
+        }
+      });
+
+      // Filter visits for this dept
+      const vByMonth: Record<string, number> = {};
+      deptVisitsQuery.filter(v => v.department_id === deptId).forEach(v => {
+        if (v.month) vByMonth[v.month] = Number(v.count);
+      });
+
+      return {
+        departmentId: d.department_id,
+        departmentCode: d.department_code,
+        departmentName: d.department_name_th,
+        departmentNameEn: d.department_name_en,
+        studentCount: Number(d.student_count),
+        bookingCount: Number(d.booking_count),
+        riskDistribution: riskDist,
+        problemStats: pStats,
+        genderProblemStats: gPStats,
+        visitsByMonth: vByMonth
+      };
+    });
 
     // Total Departments
     const totalDepartmentsQuery = await prisma.$queryRaw<{ count: bigint }[]>`
@@ -418,6 +514,7 @@ export const DeanService = {
       facultyNameEn: faculty.faculty_name_en,
       universityCode: faculty.university.university_code,
       universityName: faculty.university.university_name_th,
+      universityLogoUrl: `/images/logo/${faculty.university.university_code}_logo.png`,
       educationFieldGroup: faculty.educationFieldGroup?.field_group_name_en || null,
       academicYear: ayLabel,
       totalStudents,
@@ -433,6 +530,134 @@ export const DeanService = {
       repeatStats,
       departmentStats,
       consultantStats,
+      recentCases: await this.getRecentCases(facultyId, universityId, ayStart, ayEnd),
+      strategicAnalysis: await this.getStrategicAnalysis(facultyId, universityId, ayStart, ayEnd, departmentStats),
+    };
+  },
+
+  async getRecentCases(facultyId: number, universityId: number, ayStart: Date, ayEnd: Date) {
+    const recentBookings = await prisma.$queryRaw<any[]>`
+      SELECT 
+        b.booking_id as id,
+        b.student_id,
+        b.booking_created_at as "createdAt",
+        b.booking_status as status,
+        b.booking_service_mode as "serviceMode",
+        sa.student_admit_academic_year as "admitYear",
+        d.department_name_th as "departmentName",
+        d.department_code as "departmentCode",
+        pc.problem_category_name_th as "problemName",
+        bo.booking_outcome_risk_level as "riskLevel",
+        sp.student_gender as gender
+      FROM "booking" b
+      JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
+      LEFT JOIN "department" d ON sa.department_id = d.department_id AND sa.university_id = d.university_id
+      LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
+      LEFT JOIN "booking_outcome" bo ON b.university_id = bo.university_id AND b.booking_id = bo.booking_id
+      LEFT JOIN "student_profile" sp ON b.student_id = sp.student_id AND b.university_id = sp.university_id
+      WHERE b.university_id = ${universityId}
+      AND sa.faculty_id = ${facultyId}
+      AND b.booking_created_at >= ${ayStart}
+      AND b.booking_created_at <= ${ayEnd}
+      ORDER BY b.booking_created_at DESC
+    `;
+
+    console.log(`[DeanService] getRecentCases (Raw SQL) found ${recentBookings.length} bookings for faculty ${facultyId}`);
+
+    return recentBookings.map((b) => {
+      const riskLevel = Number(b.riskLevel) || 1;
+      let risk: "NORMAL" | "MODERATE" | "HIGH" | "CRITICAL" = "NORMAL";
+      if (riskLevel >= 4) risk = "CRITICAL";
+      else if (riskLevel === 3) risk = "HIGH";
+      else if (riskLevel === 2) risk = "MODERATE";
+
+      const currentYear = new Date().getFullYear() + 543;
+      const yearLevel = b.admitYear 
+        ? Math.min(5, currentYear - Number(b.admitYear) + 1)
+        : 1;
+
+      return {
+        id: `CASE-${b.id}`,
+        name: `นิสิตชั้นปีที่ ${yearLevel} - ${b.departmentName || "ไม่ระบุ"}`,
+        risk,
+        problem: b.problemName || "ไม่ระบุ",
+        date: new Date(b.createdAt).toLocaleDateString("th-TH", { day: "2-digit", month: "short", year: "numeric" }),
+        status: b.status === "COMPLETED" ? "ปิดเคสแล้ว" : (b.status === "PENDING_ASSIGNMENT" ? "รอรับบัตร" : "กำลังดำเนินการ"),
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${b.student_id}`,
+        department: b.departmentCode || "UNKNOWN",
+        year: `YEAR_${yearLevel}`,
+        serviceMode: b.serviceMode,
+        gender: b.gender || "OTHER",
+      };
+    });
+  },
+
+  async getStrategicAnalysis(facultyId: number, universityId: number, ayStart: Date, ayEnd: Date, deptStats: any[]) {
+    // 1. Highest Risk Group (Department or Year)
+    const topRiskDept = [...deptStats].sort((a, b) => b.riskDistribution.HIGH - a.riskDistribution.HIGH)[0];
+
+    const yearRiskStats = await prisma.$queryRaw<{ year_level: number, high_risk_count: bigint }[]>`
+      SELECT 
+        CASE 
+          WHEN sa.student_admit_academic_year IS NULL THEN 0
+          WHEN (${new Date().getFullYear() + 543} - sa.student_admit_academic_year + 1) > 4 THEN 5
+          ELSE (${new Date().getFullYear() + 543} - sa.student_admit_academic_year + 1)
+        END as year_level,
+        COUNT(*)::int as high_risk_count
+      FROM "booking" b
+      JOIN "booking_outcome" bo ON b.university_id = bo.university_id AND b.booking_id = bo.booking_id
+      JOIN "student" s ON b.student_id = s.student_id AND b.university_id = s.university_id
+      JOIN "student_academic" sa ON s.student_id = sa.student_id AND s.university_id = sa.university_id
+      WHERE b.university_id = ${universityId}
+      AND sa.faculty_id = ${facultyId}
+      AND bo.booking_outcome_risk_level >= 3
+      GROUP BY year_level
+      ORDER BY high_risk_count DESC
+      LIMIT 1
+    `;
+
+    const topRiskYear = yearRiskStats[0];
+
+    let riskGroup = { name: "N/A", count: 0, sub: "ไม่พบข้อมูล" };
+    if (topRiskDept && topRiskDept.riskDistribution.HIGH > (Number(topRiskYear?.high_risk_count) || 0)) {
+      riskGroup = {
+        name: topRiskDept.departmentName,
+        count: topRiskDept.riskDistribution.HIGH,
+        sub: `พบกลุ่มเสี่ยง ${topRiskDept.riskDistribution.HIGH} ราย`
+      };
+    } else if (topRiskYear) {
+      riskGroup = {
+        name: `นิสิตชั้นปีที่ ${topRiskYear.year_level === 5 ? '5 ขึ้นไป' : topRiskYear.year_level}`,
+        count: Number(topRiskYear.high_risk_count),
+        sub: `พบกลุ่มเสี่ยง ${topRiskYear.high_risk_count} ราย`
+      };
+    }
+
+    // 2. Most Common Problem
+    const problemStatsResult = await prisma.$queryRaw<{ name: string, count: bigint }[]>`
+      SELECT 
+        pc.problem_category_name_th as name,
+        COUNT(*)::int as count
+      FROM "booking" b
+      JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
+      JOIN "student" s ON b.student_id = s.student_id AND b.university_id = s.university_id
+      JOIN "student_academic" sa ON s.student_id = sa.student_id AND s.university_id = sa.university_id
+      WHERE b.university_id = ${universityId}
+      AND sa.faculty_id = ${facultyId}
+      GROUP BY pc.problem_category_name_th
+      ORDER BY count DESC
+      LIMIT 1
+    `;
+
+    const topProblem = problemStatsResult[0] ? {
+      name: problemStatsResult[0].name,
+      count: Number(problemStatsResult[0].count),
+      sub: `จำนวน ${problemStatsResult[0].count} เคส`
+    } : { name: "ไม่พบข้อมูล", count: 0, sub: "เริ่มบันทึกข้อมูลเพื่อวิเคราะห์" };
+
+    return {
+      riskGroup,
+      topProblem
     };
   },
 

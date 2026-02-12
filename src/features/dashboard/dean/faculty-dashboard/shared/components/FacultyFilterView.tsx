@@ -18,6 +18,10 @@ import {
   Brain,
   MoreHorizontal,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Download
 } from "lucide-react";
 import * as XLSX from 'xlsx';
@@ -110,6 +114,12 @@ interface CaseItem {
   gender: "MALE" | "FEMALE" | "OTHER";
 }
 
+interface FacultyFilterViewProps {
+  cases?: CaseItem[];
+}
+
+const ITEMS_PER_PAGE = 15;
+
 const MOCK_CASES: CaseItem[] = [
   { id: "CASE-8821", name: "นิสิตปี 2 - อายุรศาสตร์", risk: "HIGH", problem: "ความเครียดจากการเรียน", date: "12 ก.พ. 2569", status: "กำลังดำเนินการ", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=A", department: "MED_MED", year: "YEAR_2", serviceMode: "ONSITE", gender: "MALE" },
   { id: "CASE-8819", name: "นิสิตปี 1 - ศัลยศาสตร์", risk: "CRITICAL", problem: "ปัญหาสุขภาพจิต/อารมณ์", date: "11 ก.พ. 2569", status: "ติดตามผล", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=B", department: "MED_SUR", year: "YEAR_1", serviceMode: "ONLINE", gender: "FEMALE" },
@@ -123,7 +133,7 @@ const MOCK_CASES: CaseItem[] = [
   { id: "CASE-8775", name: "นิสิตปี 3 - ศัลยศาสตร์", risk: "HIGH", problem: "ความเครียดจากการเรียน", date: "03 ก.พ. 2569", status: "ปิดเคสแล้ว", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=J", department: "MED_SUR", year: "YEAR_3", serviceMode: "ONLINE", gender: "FEMALE" },
 ];
 
-export function FacultyFilterView() {
+export function FacultyFilterView({ cases: initialCases = [] }: FacultyFilterViewProps) {
   const [filters, setFilters] = useState<FacultyFilters>({
     department: "ALL",
     yearLevel: "ALL",
@@ -136,6 +146,7 @@ export function FacultyFilterView() {
   const [activeQuickFilter, setActiveQuickFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState<"latest" | "risk-low-high" | "risk-high-low">("latest");
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const quickFilters = [
     { id: "all", label: "ทั้งหมด", icon: <Users className="w-3.5 h-3.5" /> },
@@ -145,7 +156,7 @@ export function FacultyFilterView() {
 
   // Excel Export Function
   const exportToExcel = () => {
-    const exportData = filteredResults.map(item => ({
+    const exportData = filteredResults.map((item: CaseItem) => ({
       'รหัสเคส': item.id,
       'ชื่อนิสิต': item.name,
       'ภาควิชา': FILTER_DEFS.find(d => d.key === 'department')?.options?.find(o => o.value === item.department)?.label,
@@ -168,7 +179,7 @@ export function FacultyFilterView() {
 
   // Advanced Dynamic Filtering Logic with Sorting
   const filteredResults = useMemo(() => {
-    let results = MOCK_CASES.filter(c => {
+    let results = initialCases.filter((c: CaseItem) => {
       if (filters.department !== "ALL" && c.department !== filters.department) return false;
       if (filters.yearLevel !== "ALL" && c.year !== filters.yearLevel) return false;
       if (filters.riskLevel !== "ALL" && c.risk !== filters.riskLevel) return false;
@@ -185,8 +196,14 @@ export function FacultyFilterView() {
       return true;
     });
 
+    // Reset page when filters change
+    // This is handled by a useEffect or by manually resetting when setFilters is called.
+    // However, since useMemo only depends on filters, we can just reset inside setter or use a watcher.
+    // To be clean, we'll reset page in the FilterBar's onChange if we wrap it, 
+    // but better to just do it here if possible or use a separate useEffect.
+    
     // Apply Sorting
-    const riskOrder = { "NORMAL": 1, "MODERATE": 2, "HIGH": 3, "CRITICAL": 4 };
+    const riskOrder: Record<string, number> = { "NORMAL": 1, "MODERATE": 2, "HIGH": 3, "CRITICAL": 4 };
     if (sortOrder === "risk-low-high") {
       results = [...results].sort((a, b) => riskOrder[a.risk] - riskOrder[b.risk]);
     } else if (sortOrder === "risk-high-low") {
@@ -196,18 +213,29 @@ export function FacultyFilterView() {
     return results;
   }, [filters, activeQuickFilter, sortOrder]);
 
+  // Reset page whenever results change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, activeQuickFilter, sortOrder]);
+
+  const totalPages = Math.ceil(filteredResults.length / ITEMS_PER_PAGE);
+  const paginatedResults = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredResults.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredResults, currentPage]);
+
   // Reactive Stats Calculation
   const stats = useMemo(() => {
     const total = filteredResults.length;
-    const highRisk = filteredResults.filter(r => ["HIGH", "CRITICAL"].includes(r.risk)).length;
-    const onsite = filteredResults.filter(r => r.serviceMode === "ONSITE").length;
-    const online = filteredResults.filter(r => r.serviceMode === "ONLINE").length;
-
+    const highRisk = filteredResults.filter((r: CaseItem) => ["HIGH", "CRITICAL"].includes(r.risk)).length;
+    const onsite = filteredResults.filter((r: CaseItem) => r.serviceMode === "ONSITE").length;
+    const online = filteredResults.filter((r: CaseItem) => r.serviceMode === "ONLINE").length;
+    
     return [
-      { label: "เคสที่พบ (Filtered)", value: total.toString(), sub: `จากทั้งหมด ${MOCK_CASES.length} เคส`, icon: <Search className="text-primary" /> },
-      { label: "ความเสี่ยงสูง (High Risk)", value: highRisk.toString(), sub: `${((highRisk / total || 0) * 100).toFixed(1)}% ของที่กรอง`, icon: <AlertTriangle className="text-orange-500" /> },
-      { label: "บริการ Onsite", value: onsite.toString(), sub: `${((onsite / total || 0) * 100).toFixed(1)}% ของที่กรอง`, icon: <MapPin className="text-green-500" /> },
-      { label: "บริการ Online", value: online.toString(), sub: `${((online / total || 0) * 100).toFixed(1)}% ของที่กรอง`, icon: <Zap className="text-blue-500" /> },
+      { label: "เคสที่พบ (Filtered)", value: total.toString(), sub: `จากทั้งหมด ${initialCases.length} เคส`, icon: <Search className="text-primary" /> },
+      { label: "ความเสี่ยงสูง (High Risk)", value: highRisk.toString(), sub: `${((highRisk/total || 0) * 100).toFixed(1)}% ของที่กรอง`, icon: <AlertTriangle className="text-orange-500" /> },
+      { label: "บริการ Onsite", value: onsite.toString(), sub: `${((onsite/total || 0) * 100).toFixed(1)}% ของที่กรอง`, icon: <MapPin className="text-green-500" /> },
+      { label: "บริการ Online", value: online.toString(), sub: `${((online/total || 0) * 100).toFixed(1)}% ของที่กรอง`, icon: <Zap className="text-blue-500" /> },
     ];
   }, [filteredResults]);
 
@@ -322,7 +350,7 @@ export function FacultyFilterView() {
         </div>
 
         <div className="grid grid-cols-1 gap-4">
-          {filteredResults.length > 0 ? filteredResults.map((item) => (
+          {paginatedResults.length > 0 ? paginatedResults.map((item) => (
             <div
               key={item.id}
               className="bg-white rounded-[2rem] p-5 shadow-lg shadow-slate-200/20 border border-slate-100 hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/5 transition-all group relative overflow-hidden"
@@ -421,6 +449,78 @@ export function FacultyFilterView() {
             </div>
           )}
         </div>
+
+        {/* Pagination UI */}
+        {totalPages > 1 && (
+          <div className="mt-12 flex flex-col md:flex-row items-center justify-between gap-6 px-4">
+            <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
+              Showing <span className="text-slate-900">{(currentPage - 1) * ITEMS_PER_PAGE + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredResults.length)}</span> of <span className="text-slate-900">{filteredResults.length}</span> cases
+            </p>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-primary hover:border-primary/40 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:border-slate-100 transition-all shadow-sm"
+              >
+                <ChevronsLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-primary hover:border-primary/40 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:border-slate-100 transition-all shadow-sm"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              <div className="flex items-center gap-1 mx-2">
+                {[...Array(totalPages)].map((_, i) => {
+                  const pg = i + 1;
+                  // Show current, first, last, and neighbors
+                  if (
+                    pg === 1 ||
+                    pg === totalPages ||
+                    (pg >= currentPage - 1 && pg <= currentPage + 1)
+                  ) {
+                    return (
+                      <button
+                        key={pg}
+                        onClick={() => setCurrentPage(pg)}
+                        className={`w-10 h-10 rounded-xl text-sm font-black transition-all
+                          ${currentPage === pg
+                            ? "bg-slate-950 text-white shadow-lg shadow-slate-900/20 scale-110"
+                            : "bg-white text-slate-400 hover:bg-slate-50 border border-slate-100"
+                          }
+                        `}
+                      >
+                        {pg}
+                      </button>
+                    );
+                  }
+                  if (pg === currentPage - 2 || pg === currentPage + 2) {
+                    return <span key={pg} className="px-1 text-slate-300">...</span>;
+                  }
+                  return null;
+                })}
+              </div>
+
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-primary hover:border-primary/40 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:border-slate-100 transition-all shadow-sm"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-primary hover:border-primary/40 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:border-slate-100 transition-all shadow-sm"
+              >
+                <ChevronsRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

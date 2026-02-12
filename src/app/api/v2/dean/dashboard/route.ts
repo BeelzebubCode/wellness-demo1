@@ -60,19 +60,26 @@ export async function GET(req: NextRequest) {
     const startDateParam = searchParams.get("startDate");
     const endDateParam = searchParams.get("endDate");
 
-    let dateRange: { start: Date; end: Date } | undefined;
+    let dateRange: { start?: Date; end?: Date } | undefined;
 
-    if (startDateParam && endDateParam) {
-      const start = new Date(startDateParam); // Expected format: YYYY-MM-DD
-      const end = new Date(endDateParam);
-
-      // Validate dates
-      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-        // Adjust end date to end of day if it's just a date string (00:00)
-        // If user picks "2024-01-01" to "2024-01-01", we want 00:00 to 23:59:59
-        const adjustedEnd = new Date(end);
-        adjustedEnd.setHours(23, 59, 59, 999);
-        dateRange = { start, end: adjustedEnd };
+    if (startDateParam || endDateParam) {
+      dateRange = {};
+      if (startDateParam) {
+        const start = new Date(startDateParam);
+        if (!isNaN(start.getTime())) dateRange.start = start;
+      }
+      if (endDateParam) {
+        const end = new Date(endDateParam);
+        if (!isNaN(end.getTime())) {
+          const adjustedEnd = new Date(end);
+          adjustedEnd.setHours(23, 59, 59, 999);
+          dateRange.end = adjustedEnd;
+        }
+      }
+      
+      // If none were valid, reset to undefined
+      if (Object.keys(dateRange).length === 0) {
+        dateRange = undefined;
       }
     }
 

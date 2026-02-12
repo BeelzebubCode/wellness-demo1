@@ -3,7 +3,7 @@ import {
   ArrowLeft, Users, BookOpen, AlertCircle, TrendingUp, BarChart3, 
   PieChart as PieIcon, GraduationCap, Activity, Heart, Calendar, Home
 } from "lucide-react";
-import { DepartmentStat } from "../listing/DepartmentList_MED";
+import { DepartmentStat } from "../listing/DepartmentList_ENG";
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, 
   XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area, BarChart, Bar
@@ -24,10 +24,10 @@ const RISK_COLORS = {
   Normal: "#10b981",
 };
 
-export function DepartmentDashboard_MED({ 
+export function DepartmentDashboard_ENG({ 
   department, 
-  facultyName = "คณะแพทยศาสตร์", 
-  universityName = "จุฬาลงกรณ์มหาวิทยาลัย",
+  facultyName = "คณะวิศวกรรมศาสตร์", 
+  universityName = "จุฬาลงกรณ์มหาวิทยาลัย", 
   onBack, 
   onBackToList 
 }: Props) {
@@ -62,9 +62,9 @@ export function DepartmentDashboard_MED({
                     <>
                         <button
                         onClick={onBackToList}
-                        className="group flex items-center gap-2 text-slate-400 hover:text-[rgb(var(--primary))] transition-all font-bold text-sm"
+                        className="group flex items-center gap-2 text-slate-400 hover:text-blue-600 transition-all font-bold text-sm"
                         >
-                        <div className="p-1.5 rounded-lg bg-white shadow-sm border border-slate-100 group-hover:border-[rgb(var(--primary))]">
+                        <div className="p-1.5 rounded-lg bg-white shadow-sm border border-slate-100 group-hover:border-blue-600">
                             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
                         </div>
                         ย้อนกลับ
@@ -75,22 +75,22 @@ export function DepartmentDashboard_MED({
 
                 <button
                 onClick={onBack}
-                className="group flex items-center gap-2 text-slate-400 hover:text-[rgb(var(--primary))] transition-all font-bold text-sm"
+                className="group flex items-center gap-2 text-slate-400 hover:text-blue-600 transition-all font-bold text-sm"
                 >
-                <div className="p-1.5 rounded-lg bg-white shadow-sm border border-slate-100 group-hover:border-[rgb(var(--primary))]">
+                <div className="p-1.5 rounded-lg bg-white shadow-sm border border-slate-100 group-hover:border-blue-600">
                     <Home className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
                 </div>
                 กลับหน้าหลัก
                 </button>
             </div>
             <div className="flex items-center gap-4">
-               <div className="w-16 h-16 bg-white rounded-2xl shadow-lg border border-slate-100 flex items-center justify-center text-[rgb(var(--primary))]">
+               <div className="w-16 h-16 bg-white rounded-2xl shadow-lg border border-slate-100 flex items-center justify-center text-blue-600">
                   <GraduationCap className="w-8 h-8" />
                </div>
                <div className="flex flex-col">
                   <div className="flex items-center gap-3 mb-2 whitespace-nowrap">
                     <div className="text-4xl font-black text-slate-900 tracking-tight">{department.name}</div>
-                    <span className="text-sm font-black text-primary bg-[rgb(var(--primary)/0.08)] border border-[rgb(var(--primary)/0.15)] px-2.5 py-0.5 rounded-lg uppercase tracking-wider shrink-0 transform translate-y-[4px]">{department.code}</span>
+                    <span className="text-sm font-black text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-0.5 rounded-lg uppercase tracking-wider shrink-0 transform translate-y-[4px]">{department.code}</span>
                   </div>
                   <p className="text-slate-500 font-bold text-lg leading-none">{facultyName} {universityName}</p>
                </div>
@@ -241,8 +241,8 @@ export function DepartmentDashboard_MED({
                 <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorSessionsDept" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="rgb(var(--primary))" stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor="rgb(var(--primary))" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -262,11 +262,11 @@ export function DepartmentDashboard_MED({
                   <Area 
                     type="monotone" 
                     dataKey="sessions" 
-                    stroke="rgb(var(--primary))" 
+                    stroke="#2563eb" 
                     strokeWidth={5}
                     fillOpacity={1} 
                     fill="url(#colorSessionsDept)" 
-                    dot={{ r: 6, fill: "rgb(var(--primary))", strokeWidth: 3, stroke: "#fff" }}
+                    dot={{ r: 6, fill: "#2563eb", strokeWidth: 3, stroke: "#fff" }}
                     activeDot={{ r: 8, strokeWidth: 0 }}
                     animationDuration={2000}
                   />

@@ -25,6 +25,11 @@ interface Props {
     problemDistribution: RiskItem[];
     topProblems: ProblemItem[];
   };
+  recentCases: any[];
+  strategicAnalysis?: {
+    riskGroup: { name: string; count: number; sub: string };
+    topProblem: { name: string; count: number; sub: string };
+  };
   departments: DepartmentStat[];
   onSelectDepartment: (dept: DepartmentStat) => void;
   activeTab?: TabType;
@@ -40,6 +45,8 @@ export function FacultyInformation({
   logoUrl,
   badges,
   overviewStats,
+  recentCases,
+  strategicAnalysis,
   departments,
   onSelectDepartment,
   activeTab: controlledTab,
@@ -49,8 +56,17 @@ export function FacultyInformation({
   onDateRangeChange
 }: Props) {
   const [internalTab, setInternalTab] = useState<TabType>("overview");
-  const [internalStartDate, setInternalStartDate] = useState<Date | undefined>(new Date(2026, 0, 13)); // 13/01/2569
-  const [internalEndDate, setInternalEndDate] = useState<Date | undefined>(new Date(2026, 1, 12));  // 12/02/2569
+  const [internalStartDate, setInternalStartDate] = useState<Date | undefined>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+  const [internalEndDate, setInternalEndDate] = useState<Date | undefined>(() => {
+    const d = new Date();
+    d.setHours(23, 59, 59, 999);
+    return d;
+  });
 
   const activeTab = controlledTab ?? internalTab;
   const startDate = controlledStartDate ?? internalStartDate;
@@ -59,10 +75,11 @@ export function FacultyInformation({
   const handleDateRangeChange = (range: { from?: Date; to?: Date }) => {
     if (onDateRangeChange) {
       onDateRangeChange(range);
-    } else {
-      setInternalStartDate(range.from);
-      setInternalEndDate(range.to);
-    }
+    } 
+    
+    // Always update internal state to keep UI in sync
+    setInternalStartDate(range.from);
+    setInternalEndDate(range.to);
   };
   const handleTabChange = (tab: TabType) => {
     if (onTabChange) {
@@ -110,16 +127,24 @@ export function FacultyInformation({
       {/* Content Area */}
       <main className="max-w-7xl mx-auto p-6 md:p-12 pb-32">
         {activeTab === "overview" ? (
-          <FacultyOverview
-            facultyName={facultyName}
-            universityName={universityName}
-            summaryStats={overviewStats.summaryStats}
-            sessionTrend={overviewStats.sessionTrend}
-            problemDistribution={overviewStats.problemDistribution}
-            topProblems={overviewStats.topProblems}
-            startDate={startDate}
-            endDate={endDate}
-            onDateRangeChange={handleDateRangeChange}
+          <FacultyOverview 
+             facultyName={facultyName}
+             universityName={universityName}
+             summaryStats={overviewStats.summaryStats}
+             sessionTrend={overviewStats.sessionTrend}
+             problemDistribution={overviewStats.problemDistribution}
+             topProblems={overviewStats.topProblems}
+             strategicAnalysis={strategicAnalysis}
+             departmentComparison={departments.map(d => ({
+               name: d.name,
+               code: d.code,
+               students: d.students,
+               sessions: d.sessions,
+               accessRate: d.students > 0 ? (d.sessions / d.students) * 100 : 0
+             }))}
+             startDate={startDate}
+             endDate={endDate}
+             onDateRangeChange={handleDateRangeChange}
           />
         ) : activeTab === "departments" ? (
           <DepartmentListing
@@ -127,7 +152,7 @@ export function FacultyInformation({
             onSelect={onSelectDepartment}
           />
         ) : (
-          <FacultyFilterView />
+          <FacultyFilterView cases={recentCases} />
         )}
       </main>
     </div>
