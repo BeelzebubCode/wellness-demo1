@@ -3,13 +3,18 @@
 
 import { useHeadConsultantDashboard } from "../hooks/useHeadConsultantDashboard";
 import { HeadConsultantStats } from "./HeadConsultantStats";
+import { ProblemCategoryChart } from "./ProblemCategoryChart";
+import { ConsultantRatingTable } from "./ConsultantRatingTable";
+import { TopStudentsCard } from "./TopStudentsCard";
 import { TeamStatusCard } from "./TeamStatusCard";
-import { LoadingSpinner, Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui";
+import { LoadingSpinner } from "@/components/ui";
+import { LayoutDashboard } from "lucide-react";
 
 export function HeadConsultantDashboard() {
-  const { stats, team, isLoading } = useHeadConsultantDashboard();
+  const { stats, categories, topStudents, ratings, team, isLoading } =
+    useHeadConsultantDashboard();
 
-  if (isLoading || !stats) {
+  if (isLoading) {
     return (
       <div className="h-64 flex items-center justify-center">
         <LoadingSpinner />
@@ -18,28 +23,35 @@ export function HeadConsultantDashboard() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-gray-900">แผงควบคุมหัวหน้าผู้ให้คำปรึกษา</h1>
-        <p className="text-gray-500">ภาพรวมการทำงานของทีมผู้ให้คำปรึกษาและสถิติเคส</p>
+    <div className="space-y-6 pb-8">
+      {/* ── Header ─────────────────────────── */}
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-md">
+          <LayoutDashboard className="h-5 w-5" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            แผงควบคุมหัวหน้าผู้ให้คำปรึกษา
+          </h1>
+          <p className="text-sm text-gray-500">
+            ภาพรวมเคส ประเภทปัญหา คะแนน Consultant และแต้มสะสมนิสิต
+          </p>
+        </div>
       </div>
 
-      <HeadConsultantStats stats={stats} />
+      {/* ── Stats Row ──────────────────────── */}
+      {stats && <HeadConsultantStats stats={stats} />}
 
+      {/* ── Middle Row: Category + Rating ──── */}
       <div className="grid gap-6 md:grid-cols-2">
-        <TeamStatusCard team={team} />
+        <ProblemCategoryChart categories={categories} />
+        <ConsultantRatingTable ratings={ratings} />
+      </div>
 
-        <Card className="col-span-1">
-          <CardHeader>
-            <CardTitle>งานที่มอบหมายล่าสุด</CardTitle>
-            <CardDescription>การกระจายงานให้กับทีม</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-sm text-gray-500 text-center py-8">
-              ยังไม่มีการมอบหมายงานล่าสุด
-            </div>
-          </CardContent>
-        </Card>
+      {/* ── Bottom Row: Students + Team ─────── */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <TopStudentsCard students={topStudents} />
+        <TeamStatusCard team={team} />
       </div>
     </div>
   );

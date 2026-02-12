@@ -10,8 +10,12 @@ async function safeJson(res: Response) {
   return data;
 }
 
-export async function fetchAssignees(): Promise<AssigneeOption[]> {
-  const res = await fetch(`/api/v2/consultants?includeBorrowed=true`, { credentials: "include" });
+export async function fetchAssignees(date?: string): Promise<AssigneeOption[]> {
+  const url = date 
+    ? `/api/v2/consultants?includeBorrowed=true&date=${date}`
+    : `/api/v2/consultants?includeBorrowed=true`;
+
+  const res = await fetch(url, { credentials: "include" });
   const data = await safeJson(res);
 
   const raw = (data.consultants ?? []) as any[];
@@ -35,7 +39,15 @@ export async function fetchAssignees(): Promise<AssigneeOption[]> {
         id: consultantId,
         name,
         borrowAssignmentId: Number.isFinite(borrowAssignmentId) ? borrowAssignmentId : undefined,
+        activeBookings: typeof c.activeBookings === "number" ? c.activeBookings : 0,
+        avgRating: typeof c.avgRating === "number" ? c.avgRating : null,
+        feedbackCount: typeof c.feedbackCount === "number" ? c.feedbackCount : 0,
+        accountRole: c.accountRole ?? null,
+        specializations: c.specializations ?? [],
+        busySlots: c.busySlots ?? [],
       } as AssigneeOption;
     })
-    .filter(Boolean) as AssigneeOption[];
+    .filter((c): c is AssigneeOption => c !== null)
+    // ✅ Filter out HEAD_CONSULTANT — head should not assign work to themselves
+    .filter((c) => c.accountRole !== "HEAD_CONSULTANT");
 }

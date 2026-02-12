@@ -28,7 +28,17 @@ export type AdminBookingRow = BookingCore & {
   cancellation?: BookingCancellationCore | null;
 };
 
-export type AssigneeOption = { id: number; name: string; borrowAssignmentId?: number };
+export type AssigneeOption = {
+  id: number;
+  name: string;
+  borrowAssignmentId?: number;
+  activeBookings?: number;
+  avgRating?: number | null;
+  feedbackCount?: number;
+  accountRole?: string | null;
+  specializations?: string[];
+  busySlots?: { start: string; end: string }[];
+};
 
 export type AdminBookingStatusFilter = BookingStatus | "ALL";
 export type { BookingStatus };

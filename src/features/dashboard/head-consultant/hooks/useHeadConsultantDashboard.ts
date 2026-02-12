@@ -2,48 +2,95 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import {
+  getBookingStats,
+  getCategoryDistribution,
+  getTopStudents,
+  getConsultantRatings,
+  getTeamOverview,
+} from "../actions";
 
-export interface DashboardStats {
-  pendingCases: number;
-  activeCases: number;
-  closedCases: number;
-  highRiskCases: number;
+// ── Types ──────────────────────────────────
+export interface BookingStats {
+  pending: number;
+  assigned: number;
+  inProgress: number;
+  completed: number;
+  cancelled: number;
+  totalThisMonth: number;
+}
+
+export interface CategoryItem {
+  categoryId: number;
+  code: string;
+  nameTh: string;
+  nameEn: string | null;
+  count: number;
+}
+
+export interface TopStudent {
+  rank: number;
+  studentId: number;
+  studentCode: string | null;
+  username: string;
+  firstName: string;
+  lastName: string;
+  nickname: string | null;
+  points: number;
+}
+
+export interface ConsultantRating {
+  consultantId: number;
+  firstName: string;
+  lastName: string;
+  prefix: string;
+  feedbackCount: number;
+  avgRating: number;
 }
 
 export interface TeamMember {
-  id: string;
-  name: string;
-  status: "active" | "busy" | "offline";
+  consultantId: number;
+  prefix: string;
+  firstName: string;
+  lastName: string;
+  activeBookings: number;
+  specializations: string[];
 }
 
-const MOCK_STATS: DashboardStats = {
-  pendingCases: 3,
-  activeCases: 12,
-  closedCases: 45,
-  highRiskCases: 2,
-};
-
-const MOCK_TEAM: TeamMember[] = [
-  { id: "1", name: "Dr. A", status: "active" },
-  { id: "2", name: "Dr. B", status: "busy" },
-  { id: "3", name: "Dr. C", status: "active" },
-  { id: "4", name: "Dr. D", status: "offline" },
-  { id: "5", name: "Dr. E", status: "active" },
-];
-
+// ── Hook ───────────────────────────────────
 export function useHeadConsultantDashboard() {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [stats, setStats] = useState<BookingStats | null>(null);
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const [topStudents, setTopStudents] = useState<TopStudent[]>([]);
+  const [ratings, setRatings] = useState<ConsultantRating[]>([]);
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate API
-    setTimeout(() => {
-      setStats(MOCK_STATS);
-      setTeam(MOCK_TEAM);
-      setIsLoading(false);
-    }, 600);
+    async function fetchAll() {
+      try {
+        const [s, c, t, r, tm] = await Promise.all([
+          getBookingStats(),
+          getCategoryDistribution(),
+          getTopStudents(),
+          getConsultantRatings(),
+          getTeamOverview(),
+        ]);
+
+        if (s) setStats(s);
+        setCategories(c);
+        setTopStudents(t);
+        setRatings(r);
+        setTeam(tm);
+      } catch (err) {
+        console.error("Dashboard data fetch failed:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchAll();
   }, []);
 
-  return { stats, team, isLoading };
+  return { stats, categories, topStudents, ratings, team, isLoading };
 }

@@ -37,7 +37,9 @@ export default function HeadConsultantBookingsPage() {
     problemCategoryId: problemCategoryId || undefined,
   });
 
-  const { assignees, isLoading: isLoadingAssignees } = useAssigneesQuery();
+  const { assignees, isLoading: isLoadingAssignees } = useAssigneesQuery(
+    selectedDate ? toYMD(selectedDate) : undefined
+  );
   const { categories } = useProblemCategoriesQuery();
 
   const { doAssign, doReschedule } = useBookingActions();
@@ -56,12 +58,12 @@ export default function HeadConsultantBookingsPage() {
   }, [rows, search]);
 
   const filterValue: AdminBookingsFilters = useMemo(
-    () => ({ 
-        date: selectedDate ? toYMD(selectedDate) : "", 
-        status: statusFilter as any, 
-        search,
-        consultantId,
-        problemCategoryId
+    () => ({
+      date: selectedDate ? toYMD(selectedDate) : "",
+      status: statusFilter as any,
+      search,
+      consultantId,
+      problemCategoryId
     }),
     [selectedDate, statusFilter, search, consultantId, problemCategoryId],
   );
