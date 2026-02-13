@@ -18,6 +18,10 @@ services:
       - NODE_ENV=production
       - HOSTNAME=0.0.0.0
       - NEXT_PUBLIC_APP_URL=http://wellness.local:9999
+      - JWT_SECRET=your-super-secret-jwt-key-change-this
+      - PASSWORD_SALT=your-password-salt-change-this
+      - ROOT_DOMAIN=wellness.local
+      - NODE_ENV=production
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:

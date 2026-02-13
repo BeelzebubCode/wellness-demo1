@@ -273,7 +273,7 @@ export const DeanService = {
         AND sa.faculty_id = ${facultyId}
         AND b.booking_created_at >= ${ayStart}
         AND b.booking_created_at <= ${ayEnd}
-        GROUP BY TO_CHAR(b.booking_created_at, ${format})
+        GROUP BY point
         ORDER BY point
     `;
     const visitsByMonth: Record<string, number> = {};
@@ -355,7 +355,7 @@ export const DeanService = {
         AND sa.faculty_id = ${facultyId}
         AND b.booking_created_at >= ${ayStart}
         AND b.booking_created_at <= ${ayEnd}
-        GROUP BY sa.department_id, TO_CHAR(b.booking_created_at, 'YYYY-MM')
+        GROUP BY sa.department_id, month
     `;
 
     // 8.4. Base department info
