@@ -107,6 +107,30 @@ export async function seedStatic(prisma: PrismaClient) {
   }
 
   // =========================
+  // Online Channel Categories (rerun-safe)
+  // =========================
+  const onlineChannelsData = [
+    { code: "LINE_CALL", name_th: "LINE Call", name_en: "LINE Call" },
+    { code: "GOOGLE_MEET", name_th: "Google Meet", name_en: "Google Meet" },
+    { code: "ZOOM", name_th: "Zoom", name_en: "Zoom" },
+    { code: "MICROSOFT_TEAMS", name_th: "Microsoft Teams", name_en: "Microsoft Teams" },
+    { code: "PHONE", name_th: "โทรศัพท์", name_en: "Phone" },
+    { code: "OTHER", name_th: "อื่นๆ", name_en: "Other" },
+  ];
+
+  await prisma.onlineChannelCategory.createMany({
+    data: onlineChannelsData.map((c) => ({
+      online_channel_code: c.code,
+      online_channel_name_th: c.name_th,
+      online_channel_name_en: c.name_en,
+      is_active: true,
+    })),
+    skipDuplicates: true,
+  });
+  
+  const onlineChannels = await prisma.onlineChannelCategory.findMany();
+
+  // =========================
   // Notification Templates (rerun-safe)
   // =========================
   const tplCreated = await prisma.notificationTemplate.upsert({
@@ -199,5 +223,6 @@ export async function seedStatic(prisma: PrismaClient) {
       FEEDBACK_SUBMITTED: await prisma.pointRule.findUnique({ where: { point_rule_code: "FEEDBACK_SUBMITTED" } }),
     },
     pointAmount,
+    onlineChannels,
   };
 }

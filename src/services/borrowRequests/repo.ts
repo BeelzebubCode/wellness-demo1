@@ -46,46 +46,7 @@ export async function listActiveUniversitiesExclude(universityId: number) {
   });
 }
 
-export async function listOnCallShiftsForUniversities(params: {
-  universityIds: number[];
-  requestStart?: Date | null;
-  requestEnd?: Date | null;
-  windowStart: Date;
-  windowEnd: Date;
-}) {
-  const { universityIds, requestStart, requestEnd, windowStart, windowEnd } = params;
 
-  // overlap with request range if provided
-  const overlapFilter =
-    requestStart && requestEnd
-      ? {
-          AND: [
-            { on_call_start_at: { lt: requestEnd } },
-            { on_call_end_at: { gt: requestStart } },
-          ],
-        }
-      : undefined;
-
-  return prisma.borrowOnCallShift.findMany({
-    where: {
-      consultant_university_id: { in: universityIds },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      on_call_status: { in: ["SCHEDULED", "ACTIVE"] as any },
-      on_call_start_at: { gte: windowStart, lte: windowEnd },
-      ...(overlapFilter ?? {}),
-    },
-    include: {
-      consultant: {
-        include: {
-          profile: true,
-          specializations: true,
-        },
-      },
-      university: true,
-    },
-    orderBy: { on_call_start_at: "asc" },
-  });
-}
 
 export async function getBorrowWindowDays(universityId?: number | null) {
   // priority: policy เฉพาะมหาลัย → fallback global

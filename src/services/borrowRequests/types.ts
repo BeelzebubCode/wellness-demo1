@@ -1,9 +1,9 @@
-import type { ServiceMode, OnlineChannel } from "@prisma/client";
+import type { ServiceMode } from "@prisma/client";
 
 export type BorrowRequestDetailJson = {
   serviceMode?: ServiceMode; // ONLINE | ONSITE
   requiredTopics?: string[];
-  onlineChannel?: OnlineChannel | string | null;
+  onlineChannel?: string | null;
   onsiteLocationText?: string | null;
   notes?: string | null;
 };
@@ -14,7 +14,7 @@ export type RankedConsultant = {
   consultantName: string;
   matchedTopics: string[];
   shifts: Array<{
-    borrowOnCallShiftId: number;
+    id?: number;
     startAt: string;
     endAt: string;
     status: string;

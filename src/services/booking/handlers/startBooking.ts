@@ -52,7 +52,9 @@ export async function handleStartBooking(
       consultant_id: true,
       booking_status: true,
       booking_service_mode: true,
-      booking_online_channel: true,
+      onlineChannel: {
+        select: { online_channel_code: true }
+      },
       // ถ้าคุณมี field แยก url/note ก็ select เพิ่มได้
       // booking_online_channel_url: true,
       // booking_online_channel_note: true,
@@ -118,14 +120,14 @@ export async function handleStartBooking(
 
   // ✅ ถ้าเป็น ONLINE และยังไม่มีช่องทาง -> ให้ FE เปิด modal กรอกลิงก์
   const isOnline = upper(booking.booking_service_mode) === "ONLINE";
-  const hasChannel = !!String(booking.booking_online_channel ?? "").trim();
+  const hasChannel = !!booking.onlineChannel?.online_channel_code;
 
   return NextResponse.json({
     success: true,
     status: BookingStatus.IN_PROGRESS,
     requireOnlineChannel: isOnline && !hasChannel,
     serviceMode: booking.booking_service_mode ?? null,
-    onlineChannelUrl: booking.booking_online_channel ?? null,
+    onlineChannelUrl: booking.onlineChannel?.online_channel_code ?? null,
     onlineChannelNote: null,
   });
 }

@@ -1,16 +1,26 @@
+
 // src/lib/constants/booking-service.ts
 
-import { OnlineChannelEnum } from "@/shared/types/service";
+export const OnlineChannelCode = {
+  LINE_CALL: "LINE_CALL",
+  GOOGLE_MEET: "GOOGLE_MEET",
+  ZOOM: "ZOOM",
+  MICROSOFT_TEAMS: "MICROSOFT_TEAMS",
+  PHONE: "PHONE",
+  OTHER: "OTHER",
+} as const;
+
+export type OnlineChannelCode = (typeof OnlineChannelCode)[keyof typeof OnlineChannelCode];
 
 /**
  * ช่องทางที่ "อนุญาตให้เลือก" ในหน้า Booking
  */
 export const PICKABLE_ONLINE_CHANNELS = [
-  OnlineChannelEnum.LINE_CALL,
-  OnlineChannelEnum.GOOGLE_MEET,
-  OnlineChannelEnum.ZOOM,
-  OnlineChannelEnum.MICROSOFT_TEAMS,
-  OnlineChannelEnum.PHONE,
+  OnlineChannelCode.LINE_CALL,
+  OnlineChannelCode.GOOGLE_MEET,
+  OnlineChannelCode.ZOOM,
+  OnlineChannelCode.MICROSOFT_TEAMS,
+  OnlineChannelCode.PHONE,
 ] as const;
 
 export type PickableOnlineChannel = (typeof PICKABLE_ONLINE_CHANNELS)[number];
@@ -39,29 +49,29 @@ export type OnlineChannelMeta = Readonly<{
 /**
  * Meta สำหรับแสดงผล
  */
-export const ONLINE_CHANNEL_META = {
-  [OnlineChannelEnum.LINE_CALL]: {
+export const ONLINE_CHANNEL_META: Record<PickableOnlineChannel, OnlineChannelMeta> = {
+  [OnlineChannelCode.LINE_CALL]: {
     label: "LINE Call",
     shortLabel: "LINE",
     iconKey: OnlineChannelIconKeyEnum.line,
   },
-  [OnlineChannelEnum.GOOGLE_MEET]: {
+  [OnlineChannelCode.GOOGLE_MEET]: {
     label: "Google Meet",
     shortLabel: "Meet",
     iconKey: OnlineChannelIconKeyEnum.meet,
   },
-  [OnlineChannelEnum.ZOOM]: {
+  [OnlineChannelCode.ZOOM]: {
     label: "Zoom",
     iconKey: OnlineChannelIconKeyEnum.zoom,
   },
-  [OnlineChannelEnum.MICROSOFT_TEAMS]: {
+  [OnlineChannelCode.MICROSOFT_TEAMS]: {
     label: "Microsoft Teams",
     shortLabel: "Teams",
     iconKey: OnlineChannelIconKeyEnum.teams,
   },
-  [OnlineChannelEnum.PHONE]: {
+  [OnlineChannelCode.PHONE]: {
     label: "Phone Call",
     shortLabel: "Phone",
     iconKey: OnlineChannelIconKeyEnum.phone,
   },
-} satisfies Record<PickableOnlineChannel, OnlineChannelMeta>;
+};

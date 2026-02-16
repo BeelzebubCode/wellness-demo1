@@ -4,7 +4,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 
-import { OnlineChannelEnum, ServiceModeEnum } from "@/shared/types/service";
+import { ServiceModeEnum } from "@/shared/types/service";
 
 import { Building2, Laptop } from "lucide-react";
 
@@ -61,7 +61,7 @@ export function ServiceModePicker({
             active={mode === ServiceModeEnum.ONSITE}
             disabled={disabled}
             onClick={() =>
-              onChange({ mode: ServiceModeEnum.ONSITE, onlineChannel: null })
+              onChange({ mode: ServiceModeEnum.ONSITE, onlineChannelCode: null })
             }
             icon={<Building2 className="h-5 w-5" />}
             label="On-site"
@@ -74,8 +74,8 @@ export function ServiceModePicker({
             onClick={() =>
               onChange({
                 mode: ServiceModeEnum.ONLINE,
-                onlineChannel:
-                  value.onlineChannel ?? OnlineChannelEnum.LINE_CALL,
+                onlineChannelCode:
+                  value.onlineChannelCode ?? PICKABLE_ONLINE_CHANNELS[0], // Default to first available
               })
             }
             icon={<Laptop className="h-5 w-5" />}
@@ -94,7 +94,7 @@ export function ServiceModePicker({
           <div className="grid grid-cols-3 gap-3">
             {PICKABLE_ONLINE_CHANNELS.map((key) => {
               const meta = ONLINE_CHANNEL_META[key];
-              const active = value.onlineChannel === key;
+              const active = value.onlineChannelCode === key;
               const bubbleOpen = bubbleOpenKey === key;
 
               return (
@@ -105,7 +105,7 @@ export function ServiceModePicker({
                     onClick={() => {
                       onChange({
                         mode: ServiceModeEnum.ONLINE,
-                        onlineChannel: key,
+                        onlineChannelCode: key,
                       });
                       setBubbleOpenKey(key);
                     }}

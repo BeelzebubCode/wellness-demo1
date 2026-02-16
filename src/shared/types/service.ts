@@ -6,12 +6,13 @@ export const ServiceModeEnum = {
 } as const;
 export type ServiceMode = (typeof ServiceModeEnum)[keyof typeof ServiceModeEnum];
 
-export const OnlineChannelEnum = {
-  LINE_CALL: "LINE_CALL",
-  GOOGLE_MEET: "GOOGLE_MEET",
-  ZOOM: "ZOOM",
-  MICROSOFT_TEAMS: "MICROSOFT_TEAMS",
-  PHONE: "PHONE",
-  OTHER: "OTHER",
-} as const;
-export type OnlineChannel = (typeof OnlineChannelEnum)[keyof typeof OnlineChannelEnum];
+
+export interface OnlineChannelCategory {
+  id: number;
+  code: string;
+  nameTh: string;
+  nameEn: string | null;
+}
+
+// Compat alias if needed, or just remove
+export type OnlineChannel = OnlineChannelCategory;

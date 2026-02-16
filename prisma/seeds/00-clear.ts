@@ -22,6 +22,7 @@ export async function clearDatabase(prisma: PrismaClient) {
         booking_assignment,
         booking,
         time_slot,
+
         student_point_transaction,
         student_point_wallet,
         point_rule,

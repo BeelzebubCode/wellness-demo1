@@ -120,33 +120,31 @@ export async function platformListBorrowCandidates(input: {
     },
   });
 
-  // ✅ 3.5) โหลด BorrowOnCallShift สำหรับ consultant ทั้งหมด (filter ตาม shift overlap)
+  // ✅ 3.5) โหลด ConsultantBorrowAvailability (Active) เพื่อดูว่าใครติดเวรไปแล้วบ้าง
   const consultantIds = consultants.map((c) => c.consultant_id);
 
-  const shifts = await prisma.borrowOnCallShift.findMany({
+  const shifts = await prisma.consultantBorrowAvailability.findMany({
     where: {
       consultant_id: { in: consultantIds },
-      on_call_status: { in: ["SCHEDULED", "ACTIVE"] }, // ✅ เฉพาะ shift ที่ active
-      // ✅ Shift overlap logic: shift.start <= borrow.end AND shift.end >= borrow.start
+      status: "ACTIVE", // ✅ เฉพาะ shift ที่ active (ถูกยืมตัวอยู่)
+      // ✅ Shift overlap logic: shift.start < borrow.end AND shift.end > borrow.start
+      // Note: borrow_needed using inclusive/exclusive logic might need care, but general overlap is simplest
       ...(br.borrow_needed_from && br.borrow_needed_to
         ? {
-          on_call_start_at: { lte: br.borrow_needed_to },
-          on_call_end_at: { gte: br.borrow_needed_from },
+          availability_start_date: { lt: br.borrow_needed_to },
+          availability_end_date: { gt: br.borrow_needed_from },
         }
         : {}),
     },
     select: {
-      borrow_on_call_shift_id: true,
+      consultant_borrow_availability_id: true,
       consultant_id: true,
-      on_call_start_at: true,
-      on_call_end_at: true,
-      on_call_status: true,
-      // ✅ ดูว่า shift นี้ถูกยืมไปแล้วหรือยัง
-      borrowAssignments: {
+      availability_start_date: true,
+      availability_end_date: true,
+      status: true,
+      targetUniversity: {
         select: {
-          borrow_assignment_id: true,
-          borrow_assign_start_at: true,
-          borrow_assign_end_at: true,
+          university_name_th: true,
         },
       },
     },
@@ -207,6 +205,7 @@ export async function platformListBorrowCandidates(input: {
           endAt: string;
           status: string;
           currentBorrowCount: number;
+          targetUniversityName?: string;
         }>;
       }>;
     }
@@ -262,12 +261,14 @@ export async function platformListBorrowCandidates(input: {
 
     // ✅ ดึง shift info สำหรับ consultant นี้
     const consultantShifts = shiftsByConsultant.get(c.consultant_id) || [];
-    const shifts = consultantShifts.map((shift) => ({
-      shiftId: shift.borrow_on_call_shift_id,
-      startAt: shift.on_call_start_at.toISOString(),
-      endAt: shift.on_call_end_at.toISOString(),
-      status: shift.on_call_status,
-      currentBorrowCount: shift.borrowAssignments.length, // จำนวนครั้งที่ถูกยืมใน shift นี้
+    const mappedShifts = consultantShifts.map((shift) => ({
+      shiftId: shift.consultant_borrow_availability_id,
+      startAt: shift.availability_start_date.toISOString(),
+      endAt: shift.availability_end_date.toISOString(),
+      status: shift.status,
+      // If active shift exists, they are borrowed somewhere else
+      currentBorrowCount: 1, 
+      targetUniversityName: shift.targetUniversity.university_name_th,
     }));
 
     map.get(uniId)!.consultants.push({
@@ -277,7 +278,7 @@ export async function platformListBorrowCandidates(input: {
       specializations,
       topicMatchCount,
       alreadyAssigned: alreadyAssignedSet.has(c.consultant_id), // ✅ flag ถูกมอบหมายแล้ว
-      shifts,
+      shifts: mappedShifts,
     });
   }
 

@@ -56,7 +56,8 @@ export async function getMyBookings(params: GetMyBookingsParams) {
         include: {
           problemCategory: true,
           timeSlot: true,
-          BookingSession: true,
+          BookingSession: { include: { onlineChannel: true } },
+          onlineChannel: true,
           feedback: { select: { feedback_id: true } },
         },
         orderBy: { booking_created_at: "desc" },
@@ -71,7 +72,7 @@ export async function getMyBookings(params: GetMyBookingsParams) {
 
       const session = sess ? {
         mode: sess.booking_session_mode ?? b.booking_service_mode,
-        onlineChannel: sess.booking_session_online_channel ?? b.booking_online_channel ?? null,
+        onlineChannel: sess.onlineChannel?.online_channel_code ?? b.onlineChannel?.online_channel_code ?? null,
         joinUrl: sess.booking_session_join_url ?? null,
         phoneNumber: sess.booking_session_phone_number ?? null,
         extraDetail: sess.booking_session_extra_detail ?? null,
@@ -84,7 +85,7 @@ export async function getMyBookings(params: GetMyBookingsParams) {
         universityId: b.university_id,
         status: b.booking_status,
         serviceMode: b.booking_service_mode ?? "IN_PERSON",
-        onlineChannel: sess?.booking_session_online_channel ?? b.booking_online_channel ?? null,
+        onlineChannel: sess?.onlineChannel?.online_channel_code ?? b.onlineChannel?.online_channel_code ?? null,
         startAt: slot?.time_slot_start_datetime?.toISOString() ?? "",
         endAt: slot?.time_slot_end_datetime?.toISOString() ?? "",
         problemCategoryNameTh: b.problemCategory?.problem_category_name_th ?? null,
@@ -140,7 +141,8 @@ export async function getMyBookings(params: GetMyBookingsParams) {
         problemCategory: true,
         timeSlot: true,
         student: { include: { profile: true } },
-        BookingSession: true,
+        BookingSession: { include: { onlineChannel: true } },
+        onlineChannel: true,
         university: { select: { university_name_th: true, university_code: true } },
       },
       orderBy: { booking_updated_at: "desc" },
@@ -156,7 +158,7 @@ export async function getMyBookings(params: GetMyBookingsParams) {
 
     const session = sess ? {
       mode: sess.booking_session_mode ?? b.booking_service_mode,
-      onlineChannel: sess.booking_session_online_channel ?? b.booking_online_channel ?? null,
+      onlineChannel: sess.onlineChannel?.online_channel_code ?? b.onlineChannel?.online_channel_code ?? null,
       joinUrl: sess.booking_session_join_url ?? null,
       phoneNumber: sess.booking_session_phone_number ?? null,
       extraDetail: sess.booking_session_extra_detail ?? null,
@@ -171,7 +173,7 @@ export async function getMyBookings(params: GetMyBookingsParams) {
       universityCode: b.university?.university_code ?? null,
       status: b.booking_status,
       serviceMode: b.booking_service_mode ?? "IN_PERSON",
-      onlineChannel: sess?.booking_session_online_channel ?? b.booking_online_channel ?? null,
+      onlineChannel: sess?.onlineChannel?.online_channel_code ?? b.onlineChannel?.online_channel_code ?? null,
       startAt: slot?.time_slot_start_datetime?.toISOString() ?? "",
       endAt: slot?.time_slot_end_datetime?.toISOString() ?? "",
       problemCategoryNameTh: b.problemCategory?.problem_category_name_th ?? null,

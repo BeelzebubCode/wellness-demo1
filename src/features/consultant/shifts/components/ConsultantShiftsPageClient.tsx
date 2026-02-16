@@ -38,11 +38,10 @@ export function ConsultantShiftsPageClient() {
     );
   }
 
-  const { currentShift, upcomingShifts, completedShifts } = data.data!;
+  const { currentShift, historyShifts } = data.data!;
   const allShifts = [
     ...(currentShift ? [currentShift] : []),
-    ...upcomingShifts,
-    ...completedShifts,
+    ...historyShifts,
   ];
 
   if (allShifts.length === 0) {

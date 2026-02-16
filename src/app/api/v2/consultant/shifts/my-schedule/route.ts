@@ -1,6 +1,8 @@
+
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth/jwt";
+import { BorrowAvailabilityStatus } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   try {
@@ -40,80 +42,66 @@ export async function GET(req: NextRequest) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // 3. Fetch shifts with borrow periods
-    const shifts = await prisma.consultantShift.findMany({
+    // 3. Fetch shifts (Now ConsultantBorrowAvailability)
+    const shifts = await prisma.consultantBorrowAvailability.findMany({
       where: {
         consultant_id: consultantId,
       },
       include: {
-        borrowPeriods: {
-          include: {
-            borrowedToUniversity: {
-              select: {
+        homeUniversity: {
+            select: {
                 university_name_th: true,
                 university_name_en: true,
-                university_code: true,
-              },
-            },
-          },
-          orderBy: {
-            borrow_start_date: "asc",
-          },
+            }
         },
-        university: {
+        targetUniversity: {
           select: {
+            university_id: true,
             university_name_th: true,
             university_name_en: true,
+            university_code: true,
           },
         },
       },
       orderBy: {
-        shift_start_date: "desc",
+        availability_start_date: "desc",
       },
     });
 
     // 4. Categorize shifts
     const currentShift = shifts.find(
       (s) =>
-        s.shift_start_date <= today &&
-        s.shift_end_date >= today &&
-        (s.status === "ACTIVE" || s.status === "ON_LOAN")
+        s.availability_start_date <= today &&
+        s.availability_end_date >= today &&
+        s.status === BorrowAvailabilityStatus.ACTIVE
     );
 
-    const upcomingShifts = shifts.filter(
-      (s) => s.shift_start_date > today
-    );
-
-    const completedShifts = shifts.filter(
-      (s) => s.status === "COMPLETED" || s.status === "CANCELLED"
+    // History = Completed, Cancelled, or Past Active
+    const historyShifts = shifts.filter(
+        (s) => s.consultant_borrow_availability_id !== currentShift?.consultant_borrow_availability_id
     );
 
     // 5. Format response
-    const formatShift = (shift: any) => ({
-      shiftId: shift.shift_id,
-      startDate: shift.shift_start_date.toISOString().split("T")[0],
-      endDate: shift.shift_end_date.toISOString().split("T")[0],
-      daysWorked: shift.days_worked,
-      daysRemaining: shift.days_remaining,
+    const formatShift = (shift: typeof shifts[number]) => ({
+      // Map new DB fields to API response keys (keeping old keys for frontend compat if needed, or updating to new)
+      // User said "API พัง" => 500 error. I will align response keys to what they likely expect or were using
+      // But clearer to use new names? I will keep "borrowShiftId" as key to avoid breaking frontend that expects it,
+      // mapping it from the new ID.
+      borrowShiftId: shift.consultant_borrow_availability_id, 
+      borrowPlanId: shift.borrow_plan_id,
+      startDate: shift.availability_start_date.toISOString().split("T")[0],
+      endDate: shift.availability_end_date.toISOString().split("T")[0],
       status: shift.status,
       homeUniversity: {
-        nameTh: shift.university.university_name_th,
-        nameEn: shift.university.university_name_en,
+        nameTh: shift.homeUniversity.university_name_th,
+        nameEn: shift.homeUniversity.university_name_en,
       },
-      borrowPeriods: shift.borrowPeriods.map((bp: any) => ({
-        periodId: bp.period_id,
-        borrowedToUniversity: {
-          nameTh: bp.borrowedToUniversity.university_name_th,
-          nameEn: bp.borrowedToUniversity.university_name_en,
-          code: bp.borrowedToUniversity.university_code,
-        },
-        startDate: bp.borrow_start_date.toISOString().split("T")[0],
-        endDate: bp.borrow_end_date.toISOString().split("T")[0],
-        actualReturnDate: bp.actual_return_date
-          ? bp.actual_return_date.toISOString().split("T")[0]
-          : null,
-        status: bp.status,
-      })),
+      targetUniversity: {
+          id: shift.targetUniversity.university_id,
+          nameTh: shift.targetUniversity.university_name_th,
+          nameEn: shift.targetUniversity.university_name_en,
+          code: shift.targetUniversity.university_code,
+      },
       createdAt: shift.created_at.toISOString(),
       completedAt: shift.completed_at?.toISOString() || null,
     });
@@ -122,8 +110,7 @@ export async function GET(req: NextRequest) {
       success: true,
       data: {
         currentShift: currentShift ? formatShift(currentShift) : null,
-        upcomingShifts: upcomingShifts.map(formatShift),
-        completedShifts: completedShifts.map(formatShift),
+        historyShifts: historyShifts.map(formatShift),
       },
     });
   } catch (error) {

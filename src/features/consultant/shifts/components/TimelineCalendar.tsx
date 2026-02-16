@@ -1,17 +1,18 @@
+
 "use client";
 
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Briefcase } from "lucide-react";
 import { useMemo, useState } from "react";
-import type { ConsultantShift, ShiftBorrowPeriod } from "../types";
+import type { BorrowShift } from "../types";
+import { cn } from "@/lib/cn";
 
 interface TimelineCalendarProps {
-  shifts: ConsultantShift[];
+  shifts: BorrowShift[];
 }
 
 type DayInfo = {
-  shift: ConsultantShift;
-  type: "home" | "borrowed";
-  borrowPeriod?: ShiftBorrowPeriod;
+  shift: BorrowShift;
+  type: "borrowed"; // Only borrowed logic remains
 };
 
 function dateToKey(d: Date) {
@@ -23,16 +24,15 @@ function parseYMD(s: string): Date {
   return new Date(y, m - 1, d);
 }
 
+// Status handling
 const statusLabel: Record<string, string> = {
-  ACTIVE: "กำลังทำงาน",
-  ON_LOAN: "ถูกยืมตัว",
+  ACTIVE: "กำลังยืมตัว",
   COMPLETED: "เสร็จสิ้น",
   CANCELLED: "ยกเลิก",
 };
 
 const statusColor: Record<string, string> = {
-  ACTIVE: "bg-emerald-500",
-  ON_LOAN: "bg-amber-500",
+  ACTIVE: "bg-amber-500",
   COMPLETED: "bg-slate-400",
   CANCELLED: "bg-red-400",
 };
@@ -71,36 +71,18 @@ export function TimelineCalendar({ shifts }: TimelineCalendarProps) {
     const map = new Map<string, DayInfo[]>();
 
     for (const shift of shifts) {
+      if (shift.status === 'CANCELLED') continue; // Don't show cancelled shifts on calendar grid? Or maybe separate visual?
+
       const start = parseYMD(shift.startDate);
       const end = parseYMD(shift.endDate);
 
-      // Build set of borrowed date keys
-      const borrowedDates = new Set<string>();
-      const borrowByDate = new Map<string, ShiftBorrowPeriod>();
-
-      for (const bp of shift.borrowPeriods) {
-        if (bp.status === "CANCELLED") continue;
-        const bpStart = parseYMD(bp.startDate);
-        const bpEnd = parseYMD(bp.endDate);
-        const cursor = new Date(bpStart);
-        while (cursor <= bpEnd) {
-          const key = dateToKey(cursor);
-          borrowedDates.add(key);
-          borrowByDate.set(key, bp);
-          cursor.setDate(cursor.getDate() + 1);
-        }
-      }
-
-      // Iterate each day within this shift
       const cursor = new Date(start);
       while (cursor <= end) {
         const key = dateToKey(cursor);
-        const isBorrowed = borrowedDates.has(key);
 
         const info: DayInfo = {
           shift,
-          type: isBorrowed ? "borrowed" : "home",
-          borrowPeriod: isBorrowed ? borrowByDate.get(key) : undefined,
+          type: "borrowed",
         };
 
         const existing = map.get(key) || [];
@@ -169,17 +151,10 @@ export function TimelineCalendar({ shifts }: TimelineCalendarProps) {
         {/* Legend */}
         <div className="px-6 pt-4 pb-2 flex flex-wrap gap-4 text-xs text-gray-600">
           <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full bg-emerald-500" />
-            ประจำการ
-          </span>
-          <span className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-full bg-amber-500" />
-            ถูกยืมตัว
+            ถูกยืมตัว (Borrow)
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full bg-slate-400" />
-            เสร็จสิ้น
-          </span>
+          {/* Home shift removed, so no legend for it */}
         </div>
 
         {/* Week Header */}
@@ -209,9 +184,8 @@ export function TimelineCalendar({ shifts }: TimelineCalendarProps) {
                 const isSelected = selectedDate === key;
                 const hasShift = infos.length > 0;
 
-                // Determine dominant type for background
+                // Only borrowed logic now
                 const hasBorrow = infos.some((i) => i.type === "borrowed");
-                const hasHome = infos.some((i) => i.type === "home");
                 const isCompleted = infos.length > 0 && infos.every((i) => i.shift.status === "COMPLETED");
 
                 let cellBg = "bg-gray-50 border-gray-200";
@@ -220,8 +194,6 @@ export function TimelineCalendar({ shifts }: TimelineCalendarProps) {
                     cellBg = "bg-slate-100 border-slate-300";
                   } else if (hasBorrow) {
                     cellBg = "bg-amber-50 border-amber-300";
-                  } else if (hasHome) {
-                    cellBg = "bg-emerald-50 border-emerald-300";
                   }
                 }
 
@@ -229,18 +201,19 @@ export function TimelineCalendar({ shifts }: TimelineCalendarProps) {
                   <div
                     key={colIndex}
                     onClick={() => hasShift && setSelectedDate(isSelected ? null : key)}
-                    className={`
-                      h-20 rounded-xl border flex flex-col items-start p-2
-                      transition-all duration-200
-                      ${cellBg}
-                      ${hasShift ? "cursor-pointer hover:shadow-md hover:-translate-y-0.5" : ""}
-                      ${isToday ? "ring-2 ring-primary-500" : ""}
-                      ${isSelected ? "ring-2 ring-primary-600 shadow-lg" : ""}
-                    `}
+                    className={cn(
+                      "h-20 rounded-xl border flex flex-col items-start p-2 transition-all duration-200",
+                      cellBg,
+                      hasShift ? "cursor-pointer hover:shadow-md hover:-translate-y-0.5" : "",
+                      isToday ? "ring-2 ring-primary-500" : "",
+                      isSelected ? "ring-2 ring-primary-600 shadow-lg" : ""
+                    )}
                   >
                     <span
-                      className={`text-sm font-semibold ${isToday ? "text-primary-700" : hasShift ? "text-gray-800" : "text-gray-400"
-                        }`}
+                      className={cn(
+                        "text-sm font-semibold",
+                        isToday ? "text-primary-700" : hasShift ? "text-gray-800" : "text-gray-400"
+                      )}
                     >
                       {date.getDate()}
                     </span>
@@ -252,11 +225,6 @@ export function TimelineCalendar({ shifts }: TimelineCalendarProps) {
                           <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-200 text-amber-800">
                             <Briefcase className="w-2.5 h-2.5" />
                             ยืม
-                          </span>
-                        )}
-                        {hasHome && !hasBorrow && !isCompleted && (
-                          <span className="inline-flex px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-200 text-emerald-800">
-                            เวร
                           </span>
                         )}
                         {isCompleted && (
@@ -294,19 +262,17 @@ export function TimelineCalendar({ shifts }: TimelineCalendarProps) {
             {selectedInfo.map((info, idx) => (
               <div
                 key={idx}
-                className={`rounded-xl border p-4 ${info.type === "borrowed"
-                    ? "border-amber-200 bg-amber-50"
-                    : info.shift.status === "COMPLETED"
-                      ? "border-slate-200 bg-slate-50"
-                      : "border-emerald-200 bg-emerald-50"
-                  }`}
+                className={cn(
+                  "rounded-xl border p-4",
+                  info.shift.status === "COMPLETED" ? "border-slate-200 bg-slate-50" : "border-amber-200 bg-amber-50"
+                )}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className={`w-2.5 h-2.5 rounded-full ${statusColor[info.shift.status] || "bg-gray-400"}`} />
                       <span className="text-sm font-bold text-gray-900">
-                        {info.type === "borrowed" ? "ถูกยืมตัว" : "ประจำการ"}
+                        {info.type === "borrowed" ? "ถูกยืมตัว (Borrowed)" : "Other"}
                       </span>
                       <span className="text-xs text-gray-500 bg-white/70 px-2 py-0.5 rounded-full">
                         {statusLabel[info.shift.status] || info.shift.status}
@@ -315,30 +281,18 @@ export function TimelineCalendar({ shifts }: TimelineCalendarProps) {
 
                     <div className="text-xs text-gray-600 space-y-1">
                       <p>
-                        <span className="font-medium">เวร:</span>{" "}
+                        <span className="font-medium">ช่วงเวลา:</span>{" "}
                         {parseYMD(info.shift.startDate).toLocaleDateString("th-TH", { day: "numeric", month: "short" })}
                         {" - "}
                         {parseYMD(info.shift.endDate).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })}
                       </p>
                       <p>
-                        <span className="font-medium">มหาวิทยาลัย:</span>{" "}
+                        <span className="font-medium">สังกัด (Home):</span>{" "}
                         {info.shift.homeUniversity.nameTh}
                       </p>
-                      {info.borrowPeriod && (
-                        <p>
-                          <span className="font-medium">ยืมไป:</span>{" "}
-                          {info.borrowPeriod.borrowedToUniversity.nameTh}
-                          {" ("}
-                          {parseYMD(info.borrowPeriod.startDate).toLocaleDateString("th-TH", { day: "numeric", month: "short" })}
-                          {" - "}
-                          {parseYMD(info.borrowPeriod.endDate).toLocaleDateString("th-TH", { day: "numeric", month: "short" })}
-                          {")"}
-                        </p>
-                      )}
                       <p>
-                        <span className="font-medium">ทำแล้ว:</span> {info.shift.daysWorked} วัน
-                        {" • "}
-                        <span className="font-medium">เหลือ:</span> {info.shift.daysRemaining} วัน
+                        <span className="font-medium">ยืมไป (Target):</span>{" "}
+                        {info.shift.targetUniversity.nameTh}
                       </p>
                     </div>
                   </div>

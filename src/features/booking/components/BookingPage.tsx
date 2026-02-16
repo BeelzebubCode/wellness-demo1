@@ -104,7 +104,7 @@ export function BookingPage({ universityId }: { universityId?: number }) {
 
   const { slots, loading, error, refetch } = useTimeSlots(dateStr, universityId);
   const { submitBooking, loading: bookingLoading, error: bookingError } = useBooking(universityId);
-  const { activeBooking: existingActiveBooking, isLoading: appointmentsLoading } = useMyAppointments({
+  const { activeBooking: existingActiveBooking, isLoading: appointmentsLoading, refetch: refetchAppointments } = useMyAppointments({
     universityId,
     statusGroup: "ACTIVE",
     limit: 5,
@@ -350,12 +350,22 @@ export function BookingPage({ universityId }: { universityId?: number }) {
             try {
               const res = await submitBooking(payload);
               if (res && res.success === true) {
+                // ✅ Refetch slots
                 await refetch();
+                // ✅ Refetch user appointments (active/pending status)
+                await refetchAppointments();
+
+                // ✅ Notify other components (e.g. Sidebar)
+                if (typeof window !== "undefined") {
+                  window.dispatchEvent(new Event("booking:changed"));
+                }
+
                 setConfirmOpen(false);
                 setSuccessOpen(true);
               }
             } catch {
               await refetch();
+              await refetchAppointments();
             }
           }}
         />

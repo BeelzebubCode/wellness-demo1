@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import type { AccountContext } from "@/lib/auth/context";
 import { requireUniversity } from "@/lib/auth/guard";
-import { AccountRole, BookingStatus, OnlineChannel, ServiceMode } from "@prisma/client";
+import { AccountRole, BookingStatus, ServiceMode } from "@prisma/client";
+import { OnlineChannelCode } from "@/lib/constants/booking-service";
 
 type Body = { url?: string; note?: string };
 
@@ -13,18 +14,18 @@ const normNote = (v: any) => {
   return s ? s : null;
 };
 
-function detectChannelFromUrl(url: string): OnlineChannel {
+function detectChannelFromUrl(url: string): OnlineChannelCode {
   const u = url.toLowerCase().trim();
-  if (u.includes("meet.google.com")) return OnlineChannel.GOOGLE_MEET;
-  if (u.includes("zoom.us") || u.includes("zoom.com")) return OnlineChannel.ZOOM;
-  if (u.includes("teams.microsoft.com")) return OnlineChannel.MICROSOFT_TEAMS;
+  if (u.includes("meet.google.com")) return OnlineChannelCode.GOOGLE_MEET;
+  if (u.includes("zoom.us") || u.includes("zoom.com")) return OnlineChannelCode.ZOOM;
+  if (u.includes("teams.microsoft.com")) return OnlineChannelCode.MICROSOFT_TEAMS;
   
   // ✅ Detect phone: tel: or starts with digits (e.g. 02, 08, 09)
   if (u.startsWith("tel:") || /^[0-9+ ]{3,15}$/.test(u.replace(/[-\s]/g, ""))) {
-    return OnlineChannel.PHONE;
+    return OnlineChannelCode.PHONE;
   }
 
-  return OnlineChannel.OTHER;
+  return OnlineChannelCode.OTHER;
 }
 
 export async function handleSetOnlineChannel(
@@ -104,8 +105,13 @@ export async function handleSetOnlineChannel(
     );
   }
 
-  const channel = detectChannelFromUrl(url);
-  const isPhone = channel === OnlineChannel.PHONE;
+  const channelCode = detectChannelFromUrl(url);
+  const isPhone = channelCode === OnlineChannelCode.PHONE;
+
+  const category = await prisma.onlineChannelCategory.findFirst({
+      where: { online_channel_code: channelCode }
+  });
+  const categoryId = category?.online_channel_category_id ?? null;
 
   // ✅ ของ schema ใหม่: เก็บลง BookingSession (upsert)
   await prisma.bookingSession.upsert({
@@ -120,7 +126,7 @@ export async function handleSetOnlineChannel(
       booking_id: bookingId,
 
       booking_session_mode: ServiceMode.ONLINE,
-      booking_session_online_channel: channel,
+      online_channel_category_id: categoryId,
 
       booking_session_join_url: isPhone ? null : url,
       booking_session_phone_number: isPhone ? url.replace("tel:", "") : null,
@@ -131,7 +137,7 @@ export async function handleSetOnlineChannel(
     },
     update: {
       booking_session_mode: ServiceMode.ONLINE,
-      booking_session_online_channel: channel,
+      online_channel_category_id: categoryId,
 
       booking_session_join_url: isPhone ? null : url,
       booking_session_phone_number: isPhone ? url.replace("tel:", "") : null,
@@ -142,18 +148,7 @@ export async function handleSetOnlineChannel(
     },
   });
 
-  // ✅ optional: sync enum กลับไปที่ Booking ด้วย (ไม่บังคับ แต่ช่วย query ง่าย)
-  await prisma.booking.update({
-    where: {
-      university_id_booking_id: {
-        university_id: activeUniversityId,
-        booking_id: bookingId,
-      },
-    },
-    data: {
-      booking_online_channel: channel,
-    },
-  });
+  // ✅ optional: sync enum กลับไปที่ Booking ด้วย => ยกเลิกเพราะ field ถูกลบแล้ว
 
   return NextResponse.json({ success: true });
 }

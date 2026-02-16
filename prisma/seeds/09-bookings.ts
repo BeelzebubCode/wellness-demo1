@@ -5,7 +5,6 @@ import {
   TimeSlotStatus,
   PointTxnType,
   ServiceMode,
-  OnlineChannel,
 } from "@prisma/client";
 
 import {
@@ -49,6 +48,7 @@ export async function seedBookings(
 
     // ✅ รองรับหลายมหาลัย: ส่งมาไม่ครบทุก code ได้
     cancelUniWeights?: Partial<Record<UniCode, number>>;
+    onlineChannels: any[];
   },
 ) {
   console.log("📅 Creating bookings...");
@@ -68,6 +68,7 @@ export async function seedBookings(
     consultantBiasById,
     bookingPlan,
     cancelUniWeights,
+    onlineChannels,
   } = args;
 
   // ------------------------------
@@ -372,14 +373,7 @@ export async function seedBookings(
             
             if (isOnline) {
               // Diversify channels
-              const channels = [
-                OnlineChannel.LINE_CALL, 
-                OnlineChannel.GOOGLE_MEET, 
-                OnlineChannel.ZOOM, 
-                OnlineChannel.MICROSOFT_TEAMS,
-                OnlineChannel.PHONE
-              ];
-              channel = randomItem(channels);
+              channel = randomItem(onlineChannels);
             }
           }
 
@@ -388,7 +382,7 @@ export async function seedBookings(
             activeCountBySlotId.set(slot.time_slot_id, (activeCountBySlotId.get(slot.time_slot_id) ?? 0) + 1);
           }
 
-          const channelText = channel ? ` (ผ่าน ${channel})` : "";
+          const channelText = channel ? ` (ผ่าน ${channel.online_channel_name_th})` : "";
           batchBookings.push({
             university_id: student.university_id,
             student_id: student.student_id,
@@ -399,7 +393,7 @@ export async function seedBookings(
             booking_status: plan.status,
             booking_created_at: bookingCreatedAt,
             booking_service_mode: serviceMode,
-            booking_online_channel: channel,
+            online_channel_category_id: channel?.online_channel_category_id ?? null,
           });
 
           break; // success
@@ -480,7 +474,7 @@ export async function seedBookings(
   await prisma.$executeRawUnsafe(`
     INSERT INTO booking_session (
       university_id, booking_id, booking_session_mode, 
-      booking_session_online_channel, booking_session_join_url,
+      online_channel_category_id, booking_session_join_url,
       booking_session_location_text, booking_session_is_link_visible,
       provided_by_account_id, provided_at
     )
@@ -488,12 +482,12 @@ export async function seedBookings(
       b.university_id,
       b.booking_id,
       b.booking_service_mode,
-      b.booking_online_channel,
+      b.online_channel_category_id,
       CASE 
-        WHEN b.booking_online_channel = 'GOOGLE_MEET' THEN 'https://meet.google.com/abc-' || round(random()*1000)::text || '-xyz'
-        WHEN b.booking_online_channel = 'ZOOM' THEN 'https://zoom.us/j/' || round(random()*1000000000)::text
-        WHEN b.booking_online_channel = 'LINE_CALL' THEN 'https://line.me/R/ti/p/@wellness_line'
-        WHEN b.booking_online_channel = 'MICROSOFT_TEAMS' THEN 'https://teams.microsoft.com/l/meetup-join/dummy-' || b.booking_id::text
+        WHEN oc.online_channel_code = 'GOOGLE_MEET' THEN 'https://meet.google.com/abc-' || round(random()*1000)::text || '-xyz'
+        WHEN oc.online_channel_code = 'ZOOM' THEN 'https://zoom.us/j/' || round(random()*1000000000)::text
+        WHEN oc.online_channel_code = 'LINE_CALL' THEN 'https://line.me/R/ti/p/@wellness_line'
+        WHEN oc.online_channel_code = 'MICROSOFT_TEAMS' THEN 'https://teams.microsoft.com/l/meetup-join/dummy-' || b.booking_id::text
         ELSE NULL
       END as join_url,
       CASE 
@@ -505,6 +499,7 @@ export async function seedBookings(
       b.booking_created_at + interval '10 minutes'
     FROM booking b
     JOIN consultant c ON b.consultant_id = c.consultant_id
+    LEFT JOIN online_channel_category oc ON b.online_channel_category_id = oc.online_channel_category_id
     WHERE b.booking_status IN ('ASSIGNED', 'IN_PROGRESS', 'COMPLETED')
     ON CONFLICT DO NOTHING;
   `);

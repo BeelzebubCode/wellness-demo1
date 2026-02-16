@@ -42,6 +42,9 @@ model University {
   university_created_at DateTime        @default(now())
   university_type       UniversityType? @default(PUBLIC)
 
+  rector_account_id Int?
+  rector            Account? @relation("UniversityRector", fields: [rector_account_id], references: [account_id])
+
   province             Province @relation(fields: [province_id], references: [province_id])
   university_latitude  Decimal? @db.Decimal(9, 6)
   university_longitude Decimal? @db.Decimal(9, 6)
@@ -60,16 +63,17 @@ model University {
   aiKbChunks       AiKbChunk[]       @relation("UniversityAiKbChunks")
   aiFeedbackEvents AiFeedbackEvent[] @relation("UniversityAiFeedbackEvents")
 
-  borrowRequestsFrom                      BorrowRequest[]
-  borrowAssignmentsAsConsultantUniversity BorrowAssignment[]
-  borrowWindowPolicies                    BorrowWindowPolicy[]
-  BookingAssignment                       BookingAssignment[]
-  BorrowOnCallShift                       BorrowOnCallShift[]
+  borrowRequestsFrom BorrowRequest[]
 
-  connectionsFrom    UniversityConnection[] @relation("SourceUniversity")
-  connectionsTo      UniversityConnection[] @relation("TargetUniversity")
-  consultantShifts   ConsultantShift[]
-  shiftBorrowPeriods ShiftBorrowPeriod[]
+  borrowWindowPolicies BorrowWindowPolicy[]
+  BookingAssignment    BookingAssignment[]
+
+  connectionsFrom UniversityConnection[] @relation("SourceUniversity")
+  connectionsTo   UniversityConnection[] @relation("TargetUniversity")
+
+  homeBorrowAvailabilities   ConsultantBorrowAvailability[] @relation("BorrowAvailabilityHomeUniversity")
+  targetBorrowAvailabilities ConsultantBorrowAvailability[] @relation("BorrowAvailabilityTargetUniversity")
+  borrowAssignments          BorrowAssignment[]
 
   @@index([province_id])
   @@index([university_is_active])
@@ -122,18 +126,19 @@ model Account {
   student                Student?
   aiFeedbackEvents       AiFeedbackEvent[]
   facultiesDean          Faculty[]             @relation("FacultyDean") // [NEW] Faculties where this account is Dean
+  rectorOfUniversities   University[]          @relation("UniversityRector")
 
   borrowRequestsRequested BorrowRequest[] @relation("BorrowRequestedBy")
   borrowRequestsSubmitted BorrowRequest[] @relation("BorrowSubmittedBy")
   borrowRequestsApproved  BorrowRequest[] @relation("BorrowApprovedBy")
   borrowRequestsRejected  BorrowRequest[] @relation("BorrowRejectedBy")
 
-  borrowAssignmentsMade   BorrowAssignment[]        @relation("BorrowAssignedBy")
-  BookingAssignment       BookingAssignment[]
-  BookingConsentSignature BookingConsentSignature[]
-  BorrowOnCallShift       BorrowOnCallShift[]
-  BookingSession          BookingSession[]
-  faculties               Faculty[]
+  borrowAssignmentsMade BorrowAssignment[]  @relation("BorrowAssignedBy")
+  BookingAssignment     BookingAssignment[]
+
+  BookingSession BookingSession[]
+
+  borrowAvailabilities ConsultantBorrowAvailability[]
 
   @@index([account_role])
   @@index([account_home_university_id])
@@ -162,6 +167,7 @@ model Student {
 
   pointWallet       StudentPointWallet?
   pointTransactions StudentPointTransaction[]
+  consentSignatures BookingConsentSignature[]
 
   @@unique([university_id, student_id])
   @@unique([university_id, student_code])
@@ -277,11 +283,9 @@ model Faculty {
   university University @relation(fields: [university_id], references: [university_id])
   dean       Account?   @relation("FacultyDean", fields: [dean_account_id], references: [account_id])
 
-  advisors          Advisor[]
-  departments       Department[]
-  studentAcademics  StudentAcademic[]
-  account           Account?          @relation(fields: [accountAccount_id], references: [account_id])
-  accountAccount_id Int?
+  advisors         Advisor[]
+  departments      Department[]
+  studentAcademics StudentAcademic[]
 
   @@unique([university_id, faculty_id])
   @@unique([university_id, faculty_code])
@@ -356,8 +360,7 @@ model Consultant {
   organization_id       Int
   consultant_created_at DateTime @default(now())
 
-  bookings           Booking[]
-  borrowOnCallShifts BorrowOnCallShift[]
+  bookings Booking[]
 
   account      Account      @relation(fields: [account_id], references: [account_id])
   university   University   @relation(fields: [university_id], references: [university_id])
@@ -368,9 +371,9 @@ model Consultant {
   specializations   ConsultantSpecialization[]
   feedbacks         Feedback[]
   borrowAssignments BorrowAssignment[]
-  timeSlotShifts    TimeSlotShift[]
-  BookingAssignment BookingAssignment[]
-  shifts            ConsultantShift[] // [NEW] 14-day shifts
+
+  BookingAssignment    BookingAssignment[]
+  borrowAvailabilities ConsultantBorrowAvailability[]
 
   @@unique([university_id, consultant_id])
   @@index([organization_id])
@@ -435,9 +438,8 @@ model TimeSlot {
   time_slot_max_capacity   Int            @default(1)
   time_slot_status         TimeSlotStatus @default(OPEN)
 
-  university University      @relation(fields: [university_id], references: [university_id])
+  university University @relation(fields: [university_id], references: [university_id])
   bookings   Booking[]
-  shifts     TimeSlotShift[]
 
   @@unique([university_id, time_slot_id])
   @@unique([university_id, time_slot_start_datetime, time_slot_end_datetime])
@@ -445,25 +447,21 @@ model TimeSlot {
   @@map("time_slot")
 }
 
-model TimeSlotShift {
-  time_slot_shift_id      Int                 @id @default(autoincrement())
-  university_id           Int
-  time_slot_id            Int
-  consultant_shift_id     Int
-  consultant_id           Int
-  capacity_for_this_shift Int                 @default(1)
-  link_status             TimeSlotShiftStatus @default(ACTIVE)
-  created_at              DateTime            @default(now()) @db.Timestamptz(3)
+// ==========================================
+// 📅 ONLINE CHANNEL
+// ==========================================
 
-  timeSlot   TimeSlot   @relation(fields: [university_id, time_slot_id], references: [university_id, time_slot_id], onDelete: Cascade)
-  consultant Consultant @relation(fields: [consultant_id], references: [consultant_id])
+model OnlineChannelCategory {
+  online_channel_category_id Int     @id @default(autoincrement())
+  online_channel_code        String  @unique @db.VarChar(50) // LINE_CALL, GOOGLE_MEET, etc.
+  online_channel_name_th     String  @db.VarChar(100)
+  online_channel_name_en     String? @db.VarChar(100)
+  is_active                  Boolean @default(true)
 
-  @@unique([university_id, time_slot_id, consultant_shift_id])
-  @@unique([university_id, time_slot_id, consultant_id])
-  @@index([university_id, time_slot_id])
-  @@index([consultant_id])
-  @@index([consultant_shift_id])
-  @@map("time_slot_shift")
+  bookings        Booking[]
+  bookingSessions BookingSession[]
+
+  @@map("online_channel_category")
 }
 
 // ==========================================
@@ -477,8 +475,8 @@ model Booking {
   time_slot_id        Int
   problem_category_id Int
 
-  booking_service_mode   ServiceMode
-  booking_online_channel OnlineChannel? // ใช้เมื่อ ONLINE
+  booking_service_mode       ServiceMode
+  online_channel_category_id Int? // [NEW] Link to OnlineChannelCategory
 
   booking_detail_text String?       @db.Text
   booking_status      BookingStatus @default(PENDING_ASSIGNMENT)
@@ -489,17 +487,18 @@ model Booking {
   student    Student     @relation(fields: [university_id, student_id], references: [university_id, student_id])
   consultant Consultant? @relation(fields: [consultant_id], references: [consultant_id])
 
-  timeSlot        TimeSlot        @relation(fields: [university_id, time_slot_id], references: [university_id, time_slot_id])
-  problemCategory ProblemCategory @relation(fields: [problem_category_id], references: [problem_category_id])
+  timeSlot        TimeSlot               @relation(fields: [university_id, time_slot_id], references: [university_id, time_slot_id])
+  problemCategory ProblemCategory        @relation(fields: [problem_category_id], references: [problem_category_id])
+  onlineChannel   OnlineChannelCategory? @relation(fields: [online_channel_category_id], references: [online_channel_category_id])
 
-  assignments             BookingAssignment[]
-  cancellation            BookingCancellation?
-  outcome                 BookingOutcome?
-  feedback                Feedback?
-  notifications           Notification[]
-  pointTransactions       StudentPointTransaction[] @relation("BookingPointTx")
-  BookingConsentSignature BookingConsentSignature[]
-  BookingSession          BookingSession?
+  assignments       BookingAssignment[]
+  cancellation      BookingCancellation?
+  outcome           BookingOutcome?
+  feedback          Feedback?
+  notifications     Notification[]
+  pointTransactions StudentPointTransaction[] @relation("BookingPointTx")
+  consentSignature  BookingConsentSignature?
+  BookingSession    BookingSession?
 
   @@id([university_id, booking_id])
   // @@unique([university_id, student_id, time_slot_id]) -- Removed to allow re-booking after cancellation
@@ -521,8 +520,8 @@ model BookingSession {
   booking_id    Int
 
   // ✅ ยืนยันตามที่รับเคสจริง (ส่วนใหญ่จะ = booking_service_mode แต่เผื่อเปลี่ยนได้)
-  booking_session_mode           ServiceMode
-  booking_session_online_channel OnlineChannel?
+  booking_session_mode       ServiceMode
+  online_channel_category_id Int?
 
   // ✅ สิ่งที่ consultant ส่งจริง
   booking_session_join_url      String? @db.Text // meet/zoom link
@@ -537,8 +536,9 @@ model BookingSession {
   provided_by_account_id Int?
   provided_at            DateTime? @db.Timestamptz(3)
 
-  booking    Booking  @relation(fields: [university_id, booking_id], references: [university_id, booking_id], onDelete: Cascade)
-  providedBy Account? @relation(fields: [provided_by_account_id], references: [account_id])
+  booking       Booking                @relation(fields: [university_id, booking_id], references: [university_id, booking_id], onDelete: Cascade)
+  providedBy    Account?               @relation(fields: [provided_by_account_id], references: [account_id])
+  onlineChannel OnlineChannelCategory? @relation(fields: [online_channel_category_id], references: [online_channel_category_id])
 
   @@unique([university_id, booking_id]) // 1 booking มี session เดียวพอ (ถ้าจะให้แก้หลายครั้งก็ update แทน)
   @@index([provided_by_account_id, provided_at])
@@ -605,30 +605,19 @@ model BookingConsentSignature {
   university_id Int
   booking_id    Int
 
-  signed_by_account_id Int?
-  student_id           Int?
+  // ✅ ใครเซ็น
+  student_id Int
 
-  signature_method    ConsentSignatureMethod @default(CHECKBOX)
-  consent_doc_code    String                 @db.VarChar(50) // เช่น TELEHEALTH_CONSENT
-  consent_doc_version Int
-  consent_doc_hash    String                 @db.VarChar(128) // hash ของข้อความ/ไฟล์
+  // ✅ รูปวาด (strokes) เก็บเป็น JSON
+  signature_method  ConsentSignatureMethod @default(DRAW)
+  signature_payload Json
 
-  sign_status       ConsentSignStatus @default(SIGNED)
-  signature_payload Json? // หรือ Text ถ้าเป็น base64
-  signature_hash    String?           @db.VarChar(128)
+  booking Booking @relation(fields: [university_id, booking_id], references: [university_id, booking_id], onDelete: Cascade)
+  student Student @relation(fields: [university_id, student_id], references: [university_id, student_id])
 
-  verified_at DateTime? @db.Timestamptz(3)
-  signed_at   DateTime  @default(now()) @db.Timestamptz(3)
-
-  ip_address String? @db.VarChar(64)
-  user_agent String? @db.Text
-
-  booking  Booking  @relation(fields: [university_id, booking_id], references: [university_id, booking_id], onDelete: Cascade)
-  signedBy Account? @relation(fields: [signed_by_account_id], references: [account_id])
-
-  @@unique([university_id, booking_id, consent_doc_code, consent_doc_version])
-  @@index([university_id, booking_id])
-  @@index([signed_by_account_id, signed_at])
+  // ✅ บังคับ 1 booking ต่อ 1 signature
+  @@unique([university_id, booking_id])
+  @@index([university_id, student_id])
   @@map("booking_consent_signature")
 }
 
@@ -1012,8 +1001,6 @@ model BorrowAssignment {
   consultant_university_id Int
 
   // ✅ อ้างอิงเวรที่ใช้ยืมจริง
-  borrow_on_call_shift_id Int?
-
   borrow_assign_start_at DateTime @db.Timestamptz(3)
   borrow_assign_end_at   DateTime @db.Timestamptz(3)
 
@@ -1026,99 +1013,51 @@ model BorrowAssignment {
   consultantUniversity University    @relation(fields: [consultant_university_id], references: [university_id])
   assignedBy           Account       @relation("BorrowAssignedBy", fields: [borrow_assigned_by_account_id], references: [account_id])
 
-  onCallShift       BorrowOnCallShift?  @relation(fields: [borrow_on_call_shift_id], references: [borrow_on_call_shift_id])
-  BookingAssignment BookingAssignment[]
-  shiftBorrowPeriod ShiftBorrowPeriod? // [NEW] Optional link from shift borrow period
+  BookingAssignment    BookingAssignment[]
+  borrowAvailabilities ConsultantBorrowAvailability[] // [NEW] Link to borrow availabilities (one-to-many)
 
   @@unique([borrow_request_id, consultant_id])
   @@index([consultant_id, borrow_assign_start_at])
   @@index([consultant_university_id, borrow_assign_start_at])
-  @@index([borrow_on_call_shift_id])
   @@map("borrow_assignment")
 }
 
-model BorrowOnCallShift {
-  borrow_on_call_shift_id Int @id @default(autoincrement())
+model ConsultantBorrowAvailability {
+  consultant_borrow_availability_id Int @id @default(autoincrement())
 
-  consultant_id            Int
-  consultant_university_id Int
+  borrow_plan_id String @default(uuid()) @db.Uuid // Grouping for multi-segment plans
 
-  on_call_start_at DateTime @db.Timestamptz(3)
-  on_call_end_at   DateTime @db.Timestamptz(3)
+  consultant_id        Int
+  home_university_id   Int // Renamed from university_id
+  target_university_id Int // Borrowed to this university
 
-  on_call_status BorrowOnCallStatus @default(SCHEDULED)
-  on_call_note   String?            @db.Text
+  borrow_assignment_id Int? // Link to assignment (optional, not unique anymore)
 
+  // Borrow period (end-exclusive)
+  availability_start_date DateTime @db.Date
+  availability_end_date   DateTime @db.Date
+
+  // Status
+  status BorrowAvailabilityStatus @default(ACTIVE)
+  note   String?                  @db.Text
+
+  // Timestamps
   created_by_account_id Int?
-  created_at            DateTime           @default(now()) @db.Timestamptz(3)
-  updated_at            DateTime           @default(now()) @updatedAt @db.Timestamptz(3)
-  borrowAssignments     BorrowAssignment[]
+  created_at            DateTime  @default(now()) @db.Timestamptz(3)
+  updated_at            DateTime  @default(now()) @updatedAt @db.Timestamptz(3)
+  completed_at          DateTime? @db.Timestamptz(3)
 
-  consultant Consultant @relation(fields: [consultant_university_id, consultant_id], references: [university_id, consultant_id])
-  university University @relation(fields: [consultant_university_id], references: [university_id])
-  createdBy  Account?   @relation(fields: [created_by_account_id], references: [account_id])
+  consultant       Consultant        @relation(fields: [consultant_id], references: [consultant_id])
+  homeUniversity   University        @relation("BorrowAvailabilityHomeUniversity", fields: [home_university_id], references: [university_id])
+  targetUniversity University        @relation("BorrowAvailabilityTargetUniversity", fields: [target_university_id], references: [university_id])
+  borrowAssignment BorrowAssignment? @relation(fields: [borrow_assignment_id], references: [borrow_assignment_id])
+  createdBy        Account?          @relation(fields: [created_by_account_id], references: [account_id])
 
-  @@unique([consultant_id, on_call_start_at, on_call_end_at])
-  @@index([consultant_university_id, on_call_start_at])
-  @@index([consultant_id, on_call_start_at])
-  @@map("borrow_on_call_shift")
-}
-
-// [NEW] Consultant 14-day shift tracking
-model ConsultantShift {
-  shift_id      Int @id @default(autoincrement())
-  consultant_id Int
-  university_id Int // Home university
-
-  // 14-day shift period
-  shift_start_date DateTime @db.Date
-  shift_end_date   DateTime @db.Date
-
-  // Progress tracking
-  days_worked    Int @default(0) // 0-14
-  days_remaining Int @default(14) // 14-0
-
-  // Status
-  status ConsultantShiftStatus @default(ACTIVE)
-
-  // Timestamps
-  created_at   DateTime  @default(now()) @db.Timestamptz(3)
-  completed_at DateTime? @db.Timestamptz(3)
-
-  consultant    Consultant          @relation(fields: [consultant_id], references: [consultant_id])
-  university    University          @relation(fields: [university_id], references: [university_id])
-  borrowPeriods ShiftBorrowPeriod[]
-
-  @@index([consultant_id, status])
-  @@index([shift_start_date, shift_end_date])
-  @@map("consultant_shift")
-}
-
-// [NEW] Borrow periods within a shift
-model ShiftBorrowPeriod {
-  period_id            Int  @id @default(autoincrement())
-  shift_id             Int
-  borrow_assignment_id Int? @unique // Optional link to existing BorrowAssignment
-
-  // Borrowing details
-  borrowed_to_university_id Int // Which university borrowed them
-  borrow_start_date         DateTime  @db.Date
-  borrow_end_date           DateTime  @db.Date
-  actual_return_date        DateTime? @db.Date
-
-  // Status
-  status BorrowPeriodStatus @default(ACTIVE)
-
-  // Timestamps
-  created_at DateTime @default(now()) @db.Timestamptz(3)
-
-  shift                ConsultantShift   @relation(fields: [shift_id], references: [shift_id])
-  borrowedToUniversity University        @relation(fields: [borrowed_to_university_id], references: [university_id])
-  borrowAssignment     BorrowAssignment? @relation(fields: [borrow_assignment_id], references: [borrow_assignment_id])
-
-  @@index([shift_id])
+  @@index([borrow_plan_id])
+  @@index([target_university_id, availability_start_date])
+  @@index([consultant_id, availability_start_date])
   @@index([status])
-  @@map("shift_borrow_period")
+  @@map("consultant_borrow_availability")
 }
 
 model BorrowWindowPolicy {
@@ -1139,7 +1078,6 @@ model BorrowWindowPolicy {
 // ==========================================
 // ENUMS
 // ==========================================
-
 enum AccountRole {
   STUDENT
   CONSULTANT
@@ -1177,22 +1115,6 @@ enum StudentGender {
   MALE
   FEMALE
   LGBTQ_PLUS
-}
-
-// [NEW] Shift status for consultant 14-day shifts
-enum ConsultantShiftStatus {
-  ACTIVE // Currently working at home university
-  ON_LOAN // Borrowed to another university
-  PAUSED // Temporarily paused
-  COMPLETED // Finished all 14 days
-  CANCELLED // Shift cancelled
-}
-
-// [NEW] Borrow period status
-enum BorrowPeriodStatus {
-  ACTIVE //Currently borrowed
-  RETURNED // Returned to home university
-  CANCELLED // Borrow cancelled
 }
 
 enum StudentAddressType {
@@ -1254,16 +1176,6 @@ enum AiFeedbackStatus {
   IGNORED
 }
 
-enum BorrowRequestStatus {
-  DRAFT
-  SUBMITTED
-  APPROVED
-  REJECTED
-  ASSIGNED
-  COMPLETED
-  CANCELLED
-}
-
 enum ShiftStatus {
   SCHEDULED // วางตารางไว้แล้ว
   ON_DUTY // เข้าเวรแล้ว (หรือระบบถือว่า active)
@@ -1276,17 +1188,13 @@ enum ServiceMode {
   ONLINE
 }
 
-enum OnlineChannel {
-  LINE_CALL
-  GOOGLE_MEET
-  ZOOM
-  MICROSOFT_TEAMS
-  PHONE
-  OTHER
-}
-
-enum TimeSlotShiftStatus {
-  ACTIVE
+enum BorrowRequestStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  ASSIGNED
+  COMPLETED
   CANCELLED
 }
 
@@ -1296,15 +1204,20 @@ enum BorrowOnCallStatus {
   CANCELLED
 }
 
+// [NEW] Status for borrow availabilities
+enum BorrowAvailabilityStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
 enum ConsentSignStatus {
   SIGNED
   REVOKED
 }
 
 enum ConsentSignatureMethod {
-  CHECKBOX
   DRAW
-  UPLOAD
 }
 
 // University Network Connections (for proximity visualization)

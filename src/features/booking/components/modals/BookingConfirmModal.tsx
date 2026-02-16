@@ -4,7 +4,8 @@
 import { useMemo, useState } from "react";
 
 import type { TimeSlotCore } from "@/shared/types/timeSlot";
-import type { OnlineChannel, ServiceMode } from "@/shared/types/service";
+import type { ServiceMode } from "@/shared/types/service";
+import type { OnlineChannelCode } from "@/lib/constants/booking-service";
 
 import { Modal, Button } from "@/components/ui";
 import { AlertBox } from "@/components/notification/AlertBox";
@@ -21,7 +22,7 @@ import { SignaturePad } from "@/features/booking/components/forms/SignaturePad";
 
 type ServicePick = {
   mode: ServiceMode;
-  onlineChannel?: OnlineChannel | null;
+  onlineChannelCode?: OnlineChannelCode | null;
 };
 
 export function BookingConfirmModal({
@@ -40,7 +41,7 @@ export function BookingConfirmModal({
     problemCategoryId: number;
     bookingDetailText: string;
     serviceMode: ServiceMode;
-    onlineChannel?: OnlineChannel | null;
+    onlineChannelCode?: OnlineChannelCode | null;
     consentChecked: boolean;
     consentSignatureDataUrl?: string | null;
   }) => Promise<void> | void;
@@ -72,7 +73,7 @@ export function BookingConfirmModal({
   const canSubmit = useMemo(() => {
     if (!slot) return false;
     if (!consentChecked) return false;
-    if (needsOnlineChannel && !service.onlineChannel) return false;
+    if (needsOnlineChannel && !service.onlineChannelCode) return false;
     if (needsSignature && !consentSignature) return false;
     if (!formOk) return false;
     return true;
@@ -80,7 +81,7 @@ export function BookingConfirmModal({
     slot,
     consentChecked,
     needsOnlineChannel,
-    service.onlineChannel,
+    service.onlineChannelCode,
     needsSignature,
     consentSignature,
     formOk,
@@ -119,7 +120,7 @@ export function BookingConfirmModal({
                       }
                     }}
                   />
-                  {needsOnlineChannel && !service.onlineChannel && (
+                  {needsOnlineChannel && !service.onlineChannelCode && (
                     <div className="mt-3">
                       <AlertBox type="warning" message="กรุณาเลือกช่องทางออนไลน์ก่อนทำการจอง" />
                     </div>
@@ -221,8 +222,8 @@ export function BookingConfirmModal({
                   problemCategoryId: Number(form.problemCategoryId),
                   bookingDetailText: form.problemDescription,
                   serviceMode: service.mode,
-                  onlineChannel: needsOnlineChannel
-                    ? service.onlineChannel ?? null
+                  onlineChannelCode: needsOnlineChannel
+                    ? service.onlineChannelCode ?? null
                     : null,
                   consentChecked,
                   consentSignatureDataUrl:

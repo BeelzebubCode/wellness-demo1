@@ -7,7 +7,7 @@ export async function assignBorrowRequest(params: {
   assignedByAccountId: number;
   consultantId: number;
   consultantUniversityId: number;
-  onCallShiftId?: number;
+
   assignStartAt: Date;
   assignEndAt: Date;
   note?: string;
@@ -17,7 +17,7 @@ export async function assignBorrowRequest(params: {
     assignedByAccountId,
     consultantId,
     consultantUniversityId,
-    onCallShiftId,
+
     assignStartAt,
     assignEndAt,
     note,
@@ -33,34 +33,57 @@ export async function assignBorrowRequest(params: {
     throw new Error("Request not assignable in current status");
   }
 
-  // guard: if onCallShiftId provided, ensure shift belongs to that consultant + time overlaps
-  if (onCallShiftId) {
-    const shift = await prisma.borrowOnCallShift.findUnique({
-      where: { borrow_on_call_shift_id: onCallShiftId },
-    });
-    if (!shift) throw new Error("OnCallShift not found");
-    if (shift.consultant_id !== consultantId) throw new Error("Shift consultant mismatch");
-    if (shift.consultant_university_id !== consultantUniversityId) throw new Error("Shift university mismatch");
+  // 1. Check for overlapping ACTIVE shifts
+  const overlap = await prisma.consultantBorrowAvailability.findFirst({
+    where: {
+      consultant_id: consultantId,
+      status: "ACTIVE",
+      availability_start_date: { lt: assignEndAt },
+      availability_end_date: { gt: assignStartAt },
+    },
+  });
 
-    // ensure assigned time fits within shift window
-    if (!(assignStartAt >= shift.on_call_start_at && assignEndAt <= shift.on_call_end_at)) {
-      throw new Error("Assigned range must be within on-call shift range");
-    }
+  if (overlap) {
+    throw new Error("Consultant is already borrowed during this period");
   }
 
-  // create assignment (unique borrow_request_id + consultant_id already enforced by schema)
+  // 2. Create Assignment
   const assignment = await prisma.borrowAssignment.create({
     data: {
       borrow_request_id: borrowRequestId,
       consultant_id: consultantId,
       consultant_university_id: consultantUniversityId,
-      borrow_on_call_shift_id: onCallShiftId ?? null,
       borrow_assign_start_at: assignStartAt,
       borrow_assign_end_at: assignEndAt,
       borrow_assigned_by_account_id: assignedByAccountId,
       borrow_assignment_note: note ?? null,
     },
   });
+
+  // 3. Create ConsultantBorrowAvailability (The actual borrow block)
+  try {
+     await prisma.consultantBorrowAvailability.create({
+      data: {
+        consultant_id: consultantId,
+        home_university_id: consultantUniversityId,
+        target_university_id: req.from_university_id, // The borrower
+        borrow_assignment_id: assignment.borrow_assignment_id,
+        availability_start_date: assignStartAt,
+        availability_end_date: assignEndAt,
+        status: "ACTIVE",
+        created_by_account_id: assignedByAccountId,
+      }
+    });
+  } catch (err) {
+    // If borrow shift creation fails (e.g. trigger limit), rollback assignment?
+    // In a real app we should use $transaction.
+    // For now, let's wrap in transaction if possible, or just throw.
+    // Since we didn't use transaction above, we might leave partial state.
+    // Let's rewrite to use transaction in next step if needed, or assume basic flow for now.
+    // Re-throwing so caller sees error.
+    await prisma.borrowAssignment.delete({ where: { borrow_assignment_id: assignment.borrow_assignment_id } });
+    throw err;
+  }
 
   // update request status: ถ้า assign ครบตาม needed_count ค่อย ASSIGNED
   const totalAssigned = req.assignments.length + 1;

@@ -35,7 +35,7 @@ export type BookingPayload = {
   bookingDetailText?: string | null;
 
   serviceMode: ServiceMode;
-  onlineChannel?: OnlineChannel | null;
+  onlineChannelCode?: string | null;
 
   consentChecked?: boolean;
   consentSignatureDataUrl?: string | null;
@@ -75,7 +75,7 @@ export type MyBookingDto = {
   status: BookingStatus;
 
   serviceMode: ServiceMode;
-  onlineChannel?: OnlineChannel | null;
+  onlineChannel?: OnlineChannel | null; // Now refers to { id, code, nameTh... } from shared/types/service
 
   // ⏰ จาก time_slot (timestamptz)
   startAt: string; // ISO

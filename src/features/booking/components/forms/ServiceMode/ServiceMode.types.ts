@@ -1,8 +1,9 @@
 // src/features/booking/components/forms/ServiceMode/ServiceMode.types.ts
 
-import type { OnlineChannel, ServiceMode } from "@/shared/types/service";
+import type { ServiceMode } from "@/shared/types/service";
+import type { OnlineChannelCode } from "@/lib/constants/booking-service";
 
 export type ServicePick = {
   mode: ServiceMode;
-  onlineChannel?: OnlineChannel | null;
+  onlineChannelCode?: OnlineChannelCode | null;
 };

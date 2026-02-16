@@ -3,13 +3,13 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import type { AccountContext } from "@/lib/auth/context";
 import { requireUniversity } from "@/lib/auth/guard";
-import { BookingStatus, ServiceMode, OnlineChannel } from "@prisma/client";
+import { BookingStatus, ServiceMode } from "@prisma/client";
 import crypto from "crypto";
 
 type CreateBookingInput = {
   timeSlotId: number;
   serviceMode: ServiceMode; // ONLINE | ONSITE
-  onlineChannel?: OnlineChannel | null; // ใช้เมื่อ ONLINE
+  onlineChannelCode?: string | null; // ใช้เมื่อ ONLINE
   problemCategoryId: number;
 
   bookingDetailText?: string | null;
@@ -62,7 +62,7 @@ export async function handleCreateBooking(
   const problemCategoryId = Number(input.problemCategoryId);
 
   const serviceMode = input.serviceMode;
-  const onlineChannel = input.onlineChannel ?? null;
+  const onlineChannelCode = input.onlineChannelCode ? String(input.onlineChannelCode) : null;
 
   const bookingDetailText = input.bookingDetailText
     ? String(input.bookingDetailText)
@@ -93,9 +93,9 @@ export async function handleCreateBooking(
   }
 
   if (serviceMode === "ONLINE") {
-    if (!onlineChannel) {
+    if (!onlineChannelCode) {
       return NextResponse.json(
-        { error: "onlineChannel is required for ONLINE booking" },
+        { error: "onlineChannelCode is required for ONLINE booking" },
         { status: 400 },
       );
     }
@@ -171,6 +171,17 @@ export async function handleCreateBooking(
         });
       }
 
+      let onlineChannelCategoryId: number | null = null;
+      if (serviceMode === 'ONLINE' && onlineChannelCode) {
+          const channel = await tx.onlineChannelCategory.findFirst({
+              where: { online_channel_code: onlineChannelCode }
+          });
+          if (!channel) {
+              throw Object.assign(new Error("Invalid online channel code"), { status: 400 });
+          }
+          onlineChannelCategoryId = channel.online_channel_category_id;
+      }
+
       const booking = await tx.booking.create({
         data: {
           university_id: activeUniversityId,
@@ -178,8 +189,7 @@ export async function handleCreateBooking(
           time_slot_id: timeSlotId,
 
           booking_service_mode: serviceMode,
-          booking_online_channel:
-            serviceMode === "ONLINE" ? onlineChannel : null,
+          online_channel_category_id: onlineChannelCategoryId,
 
           problem_category_id: problemCategoryId,
           booking_detail_text: bookingDetailText,
@@ -188,36 +198,24 @@ export async function handleCreateBooking(
         select: { booking_id: true, university_id: true },
       });
 
-      // ✅ ถ้า ONLINE -> เก็บลายเซ็นลง booking_consent_signature
-      if (serviceMode === "ONLINE") {
-        const consentDocHash = sha256Hex(CONSENT_DOC_TEXT);
-        const signatureHash = sha256Hex(consentSignatureDataUrl!);
+        if (serviceMode === "ONLINE") {
+          // consentSignatureDataUrl is required for ONLINE
+          if (!consentSignatureDataUrl) {
+             throw new Error("Signature is required for online booking");
+          }
 
-        await tx.bookingConsentSignature.create({
-          data: {
-            university_id: booking.university_id,
-            booking_id: booking.booking_id,
+          // Create the consent signature record
+          await tx.bookingConsentSignature.create({
+            data: {
+              university_id: booking.university_id,
+              booking_id: booking.booking_id,
+              student_id: studentId, // Required by new schema
+              signature_method: "DRAW",
+              signature_payload: { dataUrl: consentSignatureDataUrl }, // Store as JSON
+            },
+          });
+        }
 
-            signed_by_account_id:
-              (ctx as any).account_id ?? (ctx as any).accountId ?? null,
-
-            student_id: studentId,
-
-            signature_method: "DRAW",
-            consent_doc_code: CONSENT_DOC_CODE,
-            consent_doc_version: CONSENT_DOC_VERSION,
-            consent_doc_hash: consentDocHash,
-
-            sign_status: "SIGNED",
-            signature_payload: { dataUrl: consentSignatureDataUrl },
-            signature_hash: signatureHash,
-
-            verified_at: new Date(),
-            ip_address: ipAddress,
-            user_agent: userAgent,
-          },
-        });
-      }
 
       return booking;
     });

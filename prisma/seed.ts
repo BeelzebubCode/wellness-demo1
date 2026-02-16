@@ -15,7 +15,7 @@ import { seedUniversityTypes } from "./seeds/10-university-types";
 import { seedUniversityConnections } from "./seeds/11-university-connections";
 import { seedManualConnections } from "./seeds/12-manual-connections";
 import { seedDeans } from "./seeds/13-deans";
-import { seedConsultantShifts } from "./seeds/14-consultant-shifts";
+
 
 const prisma = new PrismaClient();
 
@@ -100,6 +100,7 @@ async function main() {
     pointAmount: st.pointAmount,
     consultantBiasById: consultants.consultantBiasById,
     bookingPlan,
+    onlineChannels: st.onlineChannels,
   });
 
   console.log("\\n🏛️  Seeding university types...");
@@ -109,11 +110,7 @@ async function main() {
   await seedUniversityConnections(prisma);
   await seedManualConnections(prisma);
 
-  // Seed consultant shifts
-  await seedConsultantShifts(prisma, {
-    consultants: consultants.consultants,
-    universities: geo.universities,
-  });
+
 
   // =========================
   // Summary (รองรับทุกมหาลัย)
