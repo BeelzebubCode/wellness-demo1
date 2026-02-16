@@ -20,13 +20,13 @@ export const BOOKING_NAV: NavItem[] = [
     icon: History,
   },
   {
-    href: "/booking/profile",
-    label: "โปรไฟล์",
-    icon: User,
-  },
-  {
     href: "/help/ai",
     label: "AI ผู้ช่วย",
     icon: Bot,
+  },
+  {
+    href: "/booking/profile",
+    label: "โปรไฟล์",
+    icon: User,
   },
 ];
