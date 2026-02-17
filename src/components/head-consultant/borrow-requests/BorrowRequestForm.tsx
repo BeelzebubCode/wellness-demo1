@@ -96,7 +96,7 @@ export function BorrowRequestForm({
   loading,
   initialValues,
   problemCategories,
-  problemCategoriesEndpoint = "/api/v1/problem-categories",
+  problemCategoriesEndpoint = "/api/v2/master/problem-categories",
 }: Props) {
   const isEdit = !!initialValues;
 

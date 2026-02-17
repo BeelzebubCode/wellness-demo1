@@ -650,7 +650,7 @@ export const RectorService = {
     /**
      * Get Mental Health Trends (Cases over time)
      */
-    async getMentalHealthTrends(universityId: number) {
+    async getMentalHealthTrends(universityId: number, _filters?: { startDate?: string; endDate?: string }) {
         if (!universityId) return { labels: [], datasets: [] };
 
         return {
@@ -725,7 +725,7 @@ export const RectorService = {
     /**
      * Get Faculty Stats
      */
-    async getFacultyStats(universityId: number) {
+    async getFacultyStats(universityId: number, _filters?: { startDate?: string; endDate?: string }) {
         if (!universityId) return { labels: [], datasets: [] };
 
         return {

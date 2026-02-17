@@ -5,8 +5,7 @@ export const HeadConsultantService = {
   // 1️⃣  Booking Stats — นับ booking แยก status
   // ──────────────────────────────────────────
   async getBookingStats(universityId: number, options?: { startDate?: Date; endDate?: Date }) {
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
 
     const dateFilter = options?.startDate || options?.endDate ? {
       booking_created_at: {
@@ -54,6 +53,7 @@ export const HeadConsultantService = {
   // 2️⃣  Problem Category Distribution
   // ──────────────────────────────────────────
   async getProblemCategoryDistribution(universityId: number, options?: { startDate?: Date; endDate?: Date }) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = { university_id: universityId };
     
     if (options?.startDate || options?.endDate) {
@@ -128,6 +128,8 @@ export const HeadConsultantService = {
   // ──────────────────────────────────────────
   async getConsultantRatings(universityId: number, options?: { startDate?: Date; endDate?: Date }) {
     // Determine feedback date filter
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const feedbackFilter: any = {};
     if (options?.startDate || options?.endDate) {
       feedbackFilter.feedback_created_at = {
@@ -179,10 +181,13 @@ export const HeadConsultantService = {
   // 5️⃣  Team Overview — consultants + active bookings + real ratings
   // ──────────────────────────────────────────
   async getTeamOverview(universityId: number, options?: { startDate?: Date; endDate?: Date }) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const bookingFilter: any = {
       booking_status: { in: ["ASSIGNED", "IN_PROGRESS"] },
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const feedbackFilter: any = {};
 
     if (options?.startDate || options?.endDate) {
@@ -216,9 +221,9 @@ export const HeadConsultantService = {
       },
     });
 
-    return consultants.map((c: any) => {
-      const allScores = c.feedbacks?.flatMap((f: any) =>
-        f.ratings?.map((r: any) => r.feedback_rating_score)
+    return consultants.map((c) => {
+      const allScores = c.feedbacks?.flatMap((f) =>
+        f.ratings?.map((r) => r.feedback_rating_score)
       ) ?? [];
       
       const avgRating =
@@ -235,7 +240,7 @@ export const HeadConsultantService = {
         avgRating: Math.round(avgRating * 10) / 10,
         feedbackCount: (c.feedbacks ?? []).length,
         specializations: (c.specializations ?? []).map(
-          (s: any) => s.consultant_specialization_topic
+          (s) => s.consultant_specialization_topic
         ),
       };
     });
@@ -249,6 +254,7 @@ export const HeadConsultantService = {
     consultantId: number,
     options?: { startDate?: Date; endDate?: Date; skip?: number; take?: number }
   ) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {
       consultant_university_id: universityId,
       consultant_id: consultantId,

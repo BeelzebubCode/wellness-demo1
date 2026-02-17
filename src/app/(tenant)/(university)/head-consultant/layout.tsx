@@ -18,7 +18,7 @@ export default function HeadConsultantLayout({
 
   // ✅ counseling admin = พวกดูแล/จัดการงานให้คำปรึกษา
   // ปรับ roles ตามที่นายต้องการได้เลย
-  const { user, isLoading, isAuthenticated } = useRoleAuth({
+  const { user, isLoading, isAuthenticated: _isAuthenticated } = useRoleAuth({
     redirectTo: "/login",
     allowedRoles: ["HEAD_CONSULTANT", "SUPER_ADMIN", "RECTOR"] as const,
     loginToastKey: "toast_login_required_head_consultant",
@@ -31,7 +31,7 @@ export default function HeadConsultantLayout({
   // ✅ หน้า login ก็ปล่อยผ่าน
   if (isLoginPage) return <>{children}</>;
 
-  if (isLoading || !isAuthenticated) {
+  if (isLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <LoadingSpinner size="xl" label="กำลังตรวจสอบสิทธิ์..." />

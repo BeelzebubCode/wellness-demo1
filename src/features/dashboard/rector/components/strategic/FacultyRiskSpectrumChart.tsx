@@ -106,13 +106,13 @@ export function FacultyRiskSpectrumChart({ data: externalData }: FacultySpectrum
             x: {
                 grid: {
                     color: "rgba(241, 245, 249, 0.8)",
-                    drawBorder: false,
+                    // drawBorder: false,
                 },
                 ticks: {
                     font: {
                         family: 'system-ui, -apple-system, sans-serif',
                         size: 12,
-                        weight: '500' as const
+                        weight: 'bold' as const
                     },
                     color: "#94a3b8",
                     padding: 8
@@ -134,7 +134,7 @@ export function FacultyRiskSpectrumChart({ data: externalData }: FacultySpectrum
                 ticks: {
                     font: {
                         family: 'system-ui, -apple-system, sans-serif',
-                        weight: '600' as const,
+                        weight: 'bold' as const,
                         size: 13
                     },
                     color: "#334155",

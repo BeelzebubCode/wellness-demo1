@@ -8,14 +8,14 @@ import { BookingStatus, AccountRole } from "@prisma/client";
 type CompleteBody = {
   consultantNote?: string;
   nextStep?: string | null;
-  riskLevel?: any;
+  riskLevel?: unknown;
 };
 
-function normalizeNextStep(v: any): string | null {
+function normalizeNextStep(v: unknown): string | null {
   const s = String(v ?? "").trim();
   return s ? s : null;
 }
-function normalizeRiskLevel(v: any): number | null {
+function normalizeRiskLevel(v: unknown): number | null {
   if (v === null || v === undefined || v === "") return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
@@ -31,20 +31,20 @@ export async function handleCompleteBooking(
     return NextResponse.json({ error: "Invalid booking ID" }, { status: 400 });
   }
 
-  const activeUniversityId = (ctx as any).activeUniversityId as number | undefined;
+  const activeUniversityId = ctx.activeUniversityId;
   if (typeof activeUniversityId !== "number") {
     return NextResponse.json({ error: "activeUniversityId missing" }, { status: 400 });
   }
 
   // tenant guard
-  const denied = requireUniversity(ctx as any, activeUniversityId);
+  const denied = requireUniversity(ctx, activeUniversityId);
   if (denied) return denied;
 
   const role = ctx.role as AccountRole;
   if (role !== "CONSULTANT") {
     return NextResponse.json({ error: "Permission denied" }, { status: 403 });
   }
-  if (typeof (ctx as any).consultantId !== "number") {
+  if (typeof ctx.consultantId !== "number") {
     return NextResponse.json({ error: "Missing consultant id" }, { status: 400 });
   }
 
@@ -79,12 +79,12 @@ export async function handleCompleteBooking(
     return NextResponse.json({ error: "ไม่พบรายการจอง" }, { status: 404 });
   }
 
-  let isAuthorized = booking.consultant_id === (ctx as any).consultantId;
+  let isAuthorized = booking.consultant_id === ctx.consultantId;
   if (!isAuthorized) {
     const assignment = await prisma.bookingAssignment.findFirst({
       where: {
         booking_id: bookingId,
-        consultant_id: (ctx as any).consultantId,
+        consultant_id: ctx.consultantId,
       },
       select: { booking_assignment_id: true },
     });

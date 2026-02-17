@@ -80,7 +80,7 @@ export function BookingForm({
         setIsCatLoading(true);
         setCatError(null);
 
-        const res = await fetch("/api/v1/problem-categories", {
+        const res = await fetch("/api/v2/master/problem-categories", {
           next: { revalidate: 86400 } // cache 1 day
         });
         const data = await res.json();

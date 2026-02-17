@@ -127,6 +127,9 @@ export function FacultyOverview({
         onFilterChange={setFilters}
         activeQuickFilter={activeQuickFilter}
         onQuickFilterChange={setActiveQuickFilter}
+        startDate={startDate}
+        endDate={endDate}
+        onDateRangeChange={onDateRangeChange}
       />
 
       {/* Summary Stats Section */}

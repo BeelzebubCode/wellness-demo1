@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 
 export async function createVersionFromUpload(input: {
@@ -5,7 +6,7 @@ export async function createVersionFromUpload(input: {
   file: File;
   contentType: "MARKDOWN" | "JSON";
 }): Promise<
-  | { ok: true; version: any }
+  | { ok: true; version: unknown }
   | { ok: false; status: 400 | 404 | 409; error: "NOT_FOUND" | "DOC_INACTIVE" | "BAD_FILE" | "CONFLICT" }
 > {
   const doc = await prisma.aiKbDocument.findUnique({
@@ -27,7 +28,7 @@ export async function createVersionFromUpload(input: {
 
   // แปลงเป็น md/json
   const sourceMd = input.contentType === "MARKDOWN" ? text : null;
-  let sourceJson: any = null;
+  let sourceJson: unknown = null;
 
   if (input.contentType === "JSON") {
     try {
@@ -53,15 +54,16 @@ export async function createVersionFromUpload(input: {
           ai_kb_version_status: "DRAFT",
           ai_kb_index_status: "PENDING",
           ai_kb_source_md: sourceMd,
-          ai_kb_source_json: sourceJson,
+          ai_kb_source_json: sourceJson as Prisma.InputJsonValue,
           ai_kb_source_path: input.file.name, // เก็บชื่อไฟล์ไว้ก่อน (optional)
         },
       });
     });
 
     return { ok: true, version: created };
-  } catch (e: any) {
-    if (e?.code === "P2002") return { ok: false, status: 409, error: "CONFLICT" };
+  } catch (e: unknown) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((e as any)?.code === "P2002") return { ok: false, status: 409, error: "CONFLICT" };
     throw e;
   }
 }

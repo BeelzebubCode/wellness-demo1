@@ -28,7 +28,6 @@ export async function generateDefaultSlotsForUniversity(dateStr: string, univers
 
   const data = ranges.map((r) => {
     // start time in Thai timezone for matching
-    const hour = r.start.getUTCHours() + 7; // Quick & dirty assuming Asia/Bangkok is +7
     // Actually, it's better to use more robust logic if possible, 
     // but the seed used a similar hour-based check.
     

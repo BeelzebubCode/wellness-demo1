@@ -7,10 +7,9 @@ import {
 } from "lucide-react";
 import { useDeanFacultyData } from "@/features/dashboard/dean/hooks/useDeanFacultyData";
 import { FacultyInformation } from "./FacultyInformation";
-import { UnifiedDepartmentDashboard } from "./UnifiedDepartmentDashboard";
-import { DepartmentStat } from "./DepartmentListing";
 import { SummaryStat, SessionTrendItem, RiskItem, ProblemItem } from "./FacultyOverview";
 import { HeaderBadgeItem } from "./FacultyHeaderBanner";
+import { DepartmentStat } from "./DepartmentListing";
 
 interface Props {
   facultyCode?: string;
@@ -21,8 +20,6 @@ export function UnifiedFacultyDashboard({ facultyCode }: Props) {
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
   const { data, loading, error, refetch } = useDeanFacultyData(facultyCode, startDate, endDate);
-  const [activeDepartment, setActiveDepartment] = useState<DepartmentStat | null>(null);
-  const [activeTab, setActiveTab] = useState<"overview" | "departments" | "filters">("overview");
 
   const handleDateRangeChange = useCallback((range: { from?: Date; to?: Date }) => {
     setStartDate(range.from);
@@ -54,24 +51,6 @@ export function UnifiedFacultyDashboard({ facultyCode }: Props) {
       <div className="p-8 text-center text-slate-500">
         <p>ไม่พบข้อมูล</p>
       </div>
-    );
-  }
-
-  if (activeDepartment) {
-    return (
-      <UnifiedDepartmentDashboard 
-        department={activeDepartment} 
-        facultyName={data.facultyName}
-        universityName={data.universityName}
-        onBack={() => {
-          setActiveDepartment(null);
-          setActiveTab("overview");
-        }}
-        onBackToList={() => {
-          setActiveDepartment(null);
-          setActiveTab("departments");
-        }}
-      />
     );
   }
 
@@ -241,9 +220,6 @@ export function UnifiedFacultyDashboard({ facultyCode }: Props) {
       logoUrl={data.universityLogoUrl}
       badges={headerBadges}
       departments={departments}
-      onSelectDepartment={setActiveDepartment}
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
       recentCases={data.recentCases}
       strategicAnalysis={data.strategicAnalysis}
       overviewStats={{

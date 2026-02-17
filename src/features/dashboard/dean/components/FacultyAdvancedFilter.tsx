@@ -3,6 +3,7 @@
 import React from "react";
 import { FilterBar } from "@/components/filters/FilterBar";
 import { FilterDef } from "@/components/filters/types";
+import { FacultyDateRangePicker } from "./FacultyDateRangePicker";
 import {
   Users,
   Search,
@@ -90,13 +91,19 @@ interface FacultyAdvancedFilterProps {
   onFilterChange: (filters: FacultyFilters) => void;
   activeQuickFilter: string;
   onQuickFilterChange: (id: string) => void;
+  startDate?: Date;
+  endDate?: Date;
+  onDateRangeChange?: (range: { from?: Date; to?: Date }) => void;
 }
 
 export function FacultyAdvancedFilter({ 
   filters, 
   onFilterChange, 
   activeQuickFilter, 
-  onQuickFilterChange 
+  onQuickFilterChange,
+  startDate,
+  endDate,
+  onDateRangeChange
 }: FacultyAdvancedFilterProps) {
   
   const quickFilters = [
@@ -112,7 +119,7 @@ export function FacultyAdvancedFilter({
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
       </div>
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 relative z-10">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8 relative z-10 flex-wrap">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-primary rounded-2xl shadow-lg shadow-primary/20 flex items-center justify-center rotate-3 group-hover:rotate-0 transition-transform">
             <Filter className="w-7 h-7 text-white" />
@@ -123,22 +130,35 @@ export function FacultyAdvancedFilter({
           </div>
         </div>
 
-        <div className="flex bg-slate-50 p-1 rounded-2xl border border-slate-100 shrink-0">
-          {quickFilters.map(sf => (
-            <button
-              key={sf.id}
-              onClick={() => onQuickFilterChange(sf.id)}
-              className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all
-                 ${activeQuickFilter === sf.id
-                  ? "bg-white shadow-md text-primary"
-                  : "text-slate-400 hover:text-slate-600"
-                }
-               `}
-            >
-              {sf.icon}
-              {sf.label}
-            </button>
-          ))}
+        <div className="flex flex-col xl:flex-row xl:items-center gap-4 flex-wrap justify-end">
+          <div className="flex-1 hidden xl:block"></div>
+          {/* Quick Filters */}
+          <div className="flex bg-slate-50 p-1 rounded-2xl border border-slate-100 shrink-0 overflow-x-auto max-w-full">
+            {quickFilters.map(sf => (
+              <button
+                key={sf.id}
+                onClick={() => onQuickFilterChange(sf.id)}
+                className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all whitespace-nowrap
+                   ${activeQuickFilter === sf.id
+                    ? "bg-white shadow-md text-primary"
+                    : "text-slate-400 hover:text-slate-600"
+                  }
+                 `}
+              >
+                {sf.icon}
+                {sf.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Date Range Picker */}
+          <div className="flex-shrink-0">
+            <FacultyDateRangePicker 
+              startDate={startDate} 
+              endDate={endDate} 
+              onChange={onDateRangeChange || (() => {})}
+            />
+          </div>
         </div>
       </div>
 

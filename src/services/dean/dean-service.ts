@@ -705,7 +705,7 @@ export const DeanService = {
   },
 
   async getRecentCases(facultyId: number, universityId: number, ayStart: Date, ayEnd: Date) {
-    const recentBookings = await prisma.$queryRaw<any[]>`
+    const recentBookings = await prisma.$queryRaw<unknown[]>`
       SELECT 
         b.booking_id as id,
         b.student_id,
@@ -733,7 +733,8 @@ export const DeanService = {
 
     console.log(`[DeanService] getRecentCases (Raw SQL) found ${recentBookings.length} bookings for faculty ${facultyId}`);
 
-    return recentBookings.map((b) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return recentBookings.map((b: any) => {
       const riskLevel = Number(b.riskLevel) || 1;
       let risk: "NORMAL" | "MODERATE" | "HIGH" | "CRITICAL" = "NORMAL";
       if (riskLevel >= 4) risk = "CRITICAL";
@@ -761,7 +762,7 @@ export const DeanService = {
     });
   },
 
-  async getStrategicAnalysis(facultyId: number, universityId: number, ayStart: Date, ayEnd: Date, deptStats: any[]) {
+  async getStrategicAnalysis(facultyId: number, universityId: number, ayStart: Date, ayEnd: Date, deptStats: { departmentName: string; riskDistribution: { HIGH: number }; [key: string]: unknown }[]) {
     // 1. Highest Risk Group (Department or Year)
     const topRiskDept = [...deptStats].sort((a, b) => b.riskDistribution.HIGH - a.riskDistribution.HIGH)[0];
 

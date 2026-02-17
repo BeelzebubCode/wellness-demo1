@@ -38,7 +38,7 @@ export function ProblemCategoryFilter({ selected, onChange }: ProblemCategoryFil
     async function fetchCategories() {
       try {
         setLoading(true);
-        const res = await fetch("/api/v1/problem-categories");
+        const res = await fetch("/api/v2/master/problem-categories");
 
         if (!res.ok) {
           throw new Error(`Failed to fetch: ${res.statusText}`);
@@ -100,14 +100,14 @@ export function ProblemCategoryFilter({ selected, onChange }: ProblemCategoryFil
       </label>
 
       {/* Beautiful Custom Dropdown Trigger */}
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className={`
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`
             w-full px-3 py-2.5 text-[10px] xl:text-xs font-medium border-2 rounded-xl flex items-center justify-between text-left transition-all
             ${isOpen ? "border-primary ring-4 ring-primary/10 shadow-md bg-white" : "border-gray-200 bg-white hover:border-gray-400 hover:shadow-sm"}
           `}
-        >
+      >
         <span className={selected.length === 0 ? "text-gray-500" : "text-gray-900 font-semibold"}>
           {selected.length === 0 ? "เลือกประเภทปัญหา" : `${selected.length} รายการ`}
         </span>

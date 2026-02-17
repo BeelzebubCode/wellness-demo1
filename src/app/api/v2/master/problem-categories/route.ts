@@ -1,10 +1,10 @@
-// src/app/api/v1/problem-categories/route.ts
+// src/app/api/v2/master/problem-categories/route.ts
 // ✅ Uses ProblemCategory model from schema
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-// GET /api/v1/problem-categories
+// GET /api/v2/master/problem-categories
 export async function GET() {
   try {
     const categories = await prisma.problemCategory.findMany({
@@ -32,7 +32,7 @@ export async function GET() {
   }
 }
 
-// POST /api/v1/problem-categories
+// POST /api/v2/master/problem-categories
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();

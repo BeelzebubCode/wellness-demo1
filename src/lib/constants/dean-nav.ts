@@ -4,7 +4,18 @@ import type { NavItem } from "@/components/layout/sidebar/types";
 export const DEAN_NAV: NavItem[] = [
     {
         href: "/dean",
-        label: "ข้อมูลคณะ",
+        label: "Dashboard",
+        icon: School,
+        exact: true,
+    },
+    {
+        href: "/dean/subject-group",
+        label: "Subject Group",
+        icon: School,
+    },
+    {
+        href: "/dean/filter",
+        label: "Filter",
         icon: School,
     },
 ];

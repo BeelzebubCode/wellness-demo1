@@ -79,16 +79,18 @@ export default function AdminSchedulePage() {
   );
 
   const handleAddSlotsBatch = async (
-    payload: Array<{ startTime: string; endTime: string; maxCapacity: number }>
+    _payload: Array<{ startTime: string; endTime: string; maxCapacity: number }>
   ) => {
-    await fetch("/api/v1/time-slots/batch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        date: toISODateString(selectedDate),
-        slots: payload,
-      }),
-    });
+    // TODO: Implement batch endpoint in v2 if needed
+    console.warn("Batch endpoint not implemented yet");
+    // await fetch("/api/v2/master/time-slots/batch", {
+    //   method: "POST",
+    //   headers: { "Content-Type": "application/json" },
+    //   body: JSON.stringify({
+    //     date: toISODateString(selectedDate),
+    //     slots: payload,
+    //   }),
+    // });
   };
 
   const handleEditSlot = useCallback(
