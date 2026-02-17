@@ -1,45 +1,46 @@
 "use client";
 
-import React, { useState } from "react";
-import { MOCK_DEPARTMENTS_MU_MED, DepartmentStat } from "./listing/DepartmentList_MED";
-import { DepartmentDashboard_MED } from "./detail/DepartmentDashboard_MED";
-import { HeaderBadgeItem } from "../../shared/components/FacultyHeaderBanner";
-import {
-  SummaryStat,
-  SessionTrendItem,
-  RiskItem,
-  ProblemItem,
-} from "../../shared/components/FacultyOverview";
-import { FacultyInformation } from "../../shared/components/FacultyInformation";
-import {
-  Building2,
-  GraduationCap,
-  Heart,
-  Activity,
-  Users,
-  BarChart3,
-  AlertTriangle,
-  Stethoscope,
+import React, { useState, useCallback } from "react";
+import { 
+  Building2, GraduationCap, Heart, Activity, Users, 
+  AlertTriangle, Sprout, Stethoscope, Beaker, Briefcase, Settings, Calendar
 } from "lucide-react";
-import { useDeanFacultyData } from "../../shared/hooks/useDeanFacultyData";
+import { useDeanFacultyData } from "@/features/dashboard/dean/hooks/useDeanFacultyData";
+import { FacultyInformation } from "./FacultyInformation";
+import { UnifiedDepartmentDashboard } from "./UnifiedDepartmentDashboard";
+import { DepartmentStat } from "./DepartmentListing";
+import { SummaryStat, SessionTrendItem, RiskItem, ProblemItem } from "./FacultyOverview";
+import { HeaderBadgeItem } from "./FacultyHeaderBanner";
 
+interface Props {
+  facultyCode?: string;
+}
 
-export function Department_MED() {
-  const { data, loading, error } = useDeanFacultyData();
+export function UnifiedFacultyDashboard({ facultyCode }: Props) {
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+
+  const { data, loading, error, refetch } = useDeanFacultyData(facultyCode, startDate, endDate);
   const [activeDepartment, setActiveDepartment] = useState<DepartmentStat | null>(null);
-  const [activeTab, setActiveTab] = useState<"overview" | "departments" | "filters">(
-    "overview",
-  );
+  const [activeTab, setActiveTab] = useState<"overview" | "departments" | "filters">("overview");
 
-  if (loading) {
+  const handleDateRangeChange = useCallback((range: { from?: Date; to?: Date }) => {
+    setStartDate(range.from);
+    setEndDate(range.to);
+    refetch(range.from, range.to);
+  }, [refetch]);
+
+  // Only show loading on initial load (no data yet)
+  if (loading && !data) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[rgb(var(--primary))]"></div>
       </div>
     );
   }
 
-  if (error || !data) {
+  // Show error only if no data available
+  if (error && !data) {
     return (
       <div className="p-8 text-center text-red-500">
         <p>เกิดข้อผิดพลาดในการโหลดข้อมูล: {error || "ไม่พบข้อมูล"}</p>
@@ -47,9 +48,18 @@ export function Department_MED() {
     );
   }
 
+  // If still no data after loading, show error
+  if (!data) {
+    return (
+      <div className="p-8 text-center text-slate-500">
+        <p>ไม่พบข้อมูล</p>
+      </div>
+    );
+  }
+
   if (activeDepartment) {
     return (
-      <DepartmentDashboard_MED 
+      <UnifiedDepartmentDashboard 
         department={activeDepartment} 
         facultyName={data.facultyName}
         universityName={data.universityName}
@@ -65,28 +75,57 @@ export function Department_MED() {
     );
   }
 
+  // Branding Logic
+  const getFacultyBranding = (code: string) => {
+    const c = code.toLowerCase();
+    if (c.includes("med")) return { icon: <Stethoscope />, color: "border-l-green-600", chartColors: ["#16a34a", "#22c55e", "#4ade80", "#86efac", "#cbd5e1"] };
+    if (c.includes("eng")) return { icon: <Settings />, color: "border-l-rose-600", chartColors: ["#e11d48", "#f43f5e", "#fb7185", "#fda4af", "#cbd5e1"] };
+    if (c.includes("agri")) return { icon: <Sprout />, color: "border-l-orange-500", chartColors: ["#f97316", "#fb923c", "#fdba74", "#fcd34d", "#cbd5e1"] };
+    if (c.includes("bus")) return { icon: <Briefcase />, color: "border-l-blue-600", chartColors: ["#2563eb", "#3b82f6", "#60a5fa", "#93c5fd", "#cbd5e1"] };
+    if (c.includes("sci")) return { icon: <Beaker />, color: "border-l-purple-600", chartColors: ["#9333ea", "#a855f7", "#c084fc", "#d8b4fe", "#cbd5e1"] };
+    return { icon: <GraduationCap />, color: "border-l-[rgb(var(--primary))]", chartColors: ["#6366f1", "#818cf8", "#a5b4fc", "#c7d2fe", "#cbd5e1"] };
+  };
+
+  const branding = getFacultyBranding(data.facultyCode);
+
+  // Calculate students per day
+  const calculateStudentsPerDay = () => {
+    if (!startDate || !endDate) return 0;
+    const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    const days = Math.max(1, daysDiff); // At least 1 day
+    return (data.totalBookings / days).toFixed(1);
+  };
+
   // Map Summary Stats
   const summaryStats: SummaryStat[] = [
     {
       icon: <Users />,
       title: "นิสิตในสังกัด",
       value: data.totalStudents.toLocaleString(),
-      borderClass: "border-l-green-600",
+      borderClass: branding.color,
       footer: <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">ข้อมูลจากทะเบียน</span>,
+    },
+    {
+      icon: <Calendar />,
+      title: "นิสิตต่อวัน",
+      value: calculateStudentsPerDay(),
+      valueColor: "text-primary",
+      borderClass: branding.color,
+      footer: <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">คนต่อวันที่เข้ารับการปรึกษา</span>,
     },
     {
       icon: <AlertTriangle />,
       title: "กลุ่มเสี่ยงสูง",
       value: data.riskDistribution.HIGH.toLocaleString(),
-      valueColor: "text-orange-500",
-      borderClass: "border-l-green-600",
+      valueColor: "text-red-500",
+      borderClass: branding.color,
       footer: <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">{data.riskDistribution.HIGH} จาก {data.totalStudents} คน</span>,
     },
     {
       icon: <Activity />,
       title: "อัตราการเข้าถึง",
       value: `${((data.totalBookings / (data.totalStudents || 1)) * 100).toFixed(1)}%`,
-      borderClass: "border-l-green-600",
+      borderClass: branding.color,
       footer: (
         <div className="flex items-center gap-2">
           <span className={`${parseFloat(data.visitTrend) >= 0 ? 'text-emerald-500 bg-emerald-50' : 'text-red-500 bg-red-50'} px-1.5 py-0.5 rounded text-[11px] font-black flex items-center`}>
@@ -97,13 +136,13 @@ export function Department_MED() {
       ),
     },
     {
-      icon: <Heart />,
+      icon: branding.icon,
       title: "เคสที่กำลังดูแล",
       value: data.activeCases.toLocaleString(),
-      borderClass: "border-l-green-600",
+      borderClass: branding.color,
       footer: (
         <div className="flex items-center gap-2">
-          <span className="text-green-600 bg-green-50 px-1.5 py-0.5 rounded text-[11px] font-black">
+          <span className="text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded text-[11px] font-black">
             ติดตามอยู่
           </span>
           <span className="text-slate-400 text-[11px] font-bold uppercase tracking-wider">Active Cases</span>
@@ -118,14 +157,14 @@ export function Department_MED() {
     sessions: count as number,
   }));
 
-  // Map Problem Distribution (Top 5 categories)
+  // Map Problem Distribution
   const problemDistribution: RiskItem[] = Object.entries(data.problemStats)
     .sort(([, a], [, b]) => (b as number) - (a as number))
     .slice(0, 5)
     .map(([name, value], index) => ({
       name,
       value: value as number,
-      color: ["#16a34a", "#22c55e", "#4ade80", "#86efac", "#cbd5e1"][index] || "#cbd5e1",
+      color: branding.chartColors[index] || "#cbd5e1",
     }));
 
   // Map Top Problems
@@ -160,7 +199,7 @@ export function Department_MED() {
     sessions: d.bookingCount,
     perStudent: d.bookingCount / (d.studentCount || 1),
     riskData: [
-      { name: "สูง (High Risk)", value: d.riskDistribution.HIGH, color: "#ef4444" },
+      { name: "วิกฤต (Critical)", value: d.riskDistribution.HIGH, color: "#ef4444" },
       { name: "ปกติ (Normal)", value: d.studentCount - d.riskDistribution.HIGH, color: "#10b981" },
     ],
     trendData: Object.entries(d.visitsByMonth || {}).map(([month, count]) => ({
@@ -187,7 +226,7 @@ export function Department_MED() {
         }
       });
       return acc;
-    }, []).sort((a, b) => b.total - a.total).slice(0, 8)
+    }, []).sort((a, b) => b.total - a.total).slice(0, 5)
   }));
 
   const headerBadges: HeaderBadgeItem[] = [
@@ -204,7 +243,7 @@ export function Department_MED() {
       departments={departments}
       onSelectDepartment={setActiveDepartment}
       activeTab={activeTab}
-      onTabChange={(t) => setActiveTab(t)}
+      onTabChange={setActiveTab}
       recentCases={data.recentCases}
       strategicAnalysis={data.strategicAnalysis}
       overviewStats={{
@@ -213,6 +252,9 @@ export function Department_MED() {
         problemDistribution,
         topProblems,
       }}
+      startDate={startDate}
+      endDate={endDate}
+      onDateRangeChange={handleDateRangeChange}
     />
   );
 }

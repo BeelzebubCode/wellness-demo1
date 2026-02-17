@@ -5,6 +5,7 @@ import {
 } from "recharts";
 import { TrendingUp, AlertTriangle, Users, Heart, ArrowRight, Activity, Building2, Search, Zap, ShieldCheck, Calendar, ChevronDown, GraduationCap, Brain, AlertCircle, BookOpen } from "lucide-react";
 import { FacultyDateRangePicker } from "./FacultyDateRangePicker";
+import { FacultyAdvancedFilter, FacultyFilters } from "./FacultyAdvancedFilter";
 
 export interface SummaryStat {
   icon: React.ReactNode;
@@ -78,6 +79,17 @@ export function FacultyOverview({
 }: Props) {
   const [activeIndex, setActiveIndex] = React.useState<number | null>(null);
 
+  // Advanced Filter State
+  const [filters, setFilters] = React.useState<FacultyFilters>({
+    department: "ALL",
+    yearLevel: "ALL",
+    riskLevel: "ALL",
+    problemCategory: "ALL",
+    gender: "ALL",
+    search: ""
+  });
+  const [activeQuickFilter, setActiveQuickFilter] = React.useState("all");
+
   // Derive gender totals from topProblems
   const genderTotals = React.useMemo(() => {
     return topProblems.reduce((acc, p) => ({
@@ -108,20 +120,14 @@ export function FacultyOverview({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
-        <div />
-        <div className="flex flex-col items-end gap-2">
-          <FacultyDateRangePicker 
-            startDate={startDate}
-            endDate={endDate}
-            onChange={onDateRangeChange || (() => {})}
-          />
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider text-right">
-            อัปเดตล่าสุด: {new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}
-          </p>
-        </div>
-      </div>
+
+      {/* Advanced Filter Section */}
+      <FacultyAdvancedFilter 
+        filters={filters}
+        onFilterChange={setFilters}
+        activeQuickFilter={activeQuickFilter}
+        onQuickFilterChange={setActiveQuickFilter}
+      />
 
       {/* Summary Stats Section */}
       <section>
@@ -129,19 +135,34 @@ export function FacultyOverview({
           <h3 className="text-xl font-black text-slate-600 uppercase tracking-widest">{overviewTitle}</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {summaryStats.map((stat, index) => (
-            <OverviewCard 
-              key={index}
-              icon={stat.icon}
-              title={stat.title}
-              value={stat.value}
-              trend={stat.trend}
-              borderClass={stat.borderClass}
-              footer={stat.footer}
-              valueColor={stat.valueColor}
-            />
-          ))}
+        <div className="bg-white rounded-[2rem] shadow-lg shadow-slate-200/30 border border-slate-100 overflow-hidden">
+          <div className="flex divide-x divide-slate-100">
+            {summaryStats.map((stat, index) => (
+              <div 
+                key={index} 
+                className="flex-1 p-6 min-w-0 text-center"
+              >
+                <div className="flex flex-col items-center gap-3 mb-4">
+                  <div className={`p-2 rounded-xl bg-slate-50 text-slate-600 flex-shrink-0`}>
+                    {stat.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 truncate">
+                      {stat.title}
+                    </p>
+                    <h3 className={`text-4xl font-black tracking-tight ${stat.valueColor || 'text-slate-800'} tabular-nums`}>
+                      {stat.value}
+                    </h3>
+                  </div>
+                </div>
+                {stat.footer && (
+                  <div className="mt-3 pt-3 border-t border-slate-50">
+                    {stat.footer}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

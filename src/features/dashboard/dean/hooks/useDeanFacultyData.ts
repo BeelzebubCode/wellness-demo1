@@ -8,7 +8,7 @@ export interface DeanFacultyStats {
   universityCode: string;
   universityName: string;
   universityLogoUrl: string;
-  subjectGroupCategory: string | null;
+  educationFieldGroup: string | null;
   academicYear: string;
   totalStudents: number;
   totalDepartments: number;
@@ -77,7 +77,7 @@ export interface DeanFacultyStats {
   };
 }
 
-export function useDeanFacultyData(facultyCode?: string) {
+export function useDeanFacultyData(facultyCode?: string, initialStart?: Date, initialEnd?: Date) {
   const [data, setData] = useState<DeanFacultyStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -88,8 +88,12 @@ export function useDeanFacultyData(facultyCode?: string) {
       let url = "/api/v2/dean/dashboard";
       const params = new URLSearchParams();
       if (facultyCode) params.append("facultyCode", facultyCode);
-      if (start) params.append("startDate", start.toISOString().split("T")[0]);
-      if (end) params.append("endDate", end.toISOString().split("T")[0]);
+      
+      const s = start || initialStart;
+      const e = end || initialEnd;
+
+      if (s) params.append("startDate", s.toISOString().split("T")[0]);
+      if (e) params.append("endDate", e.toISOString().split("T")[0]);
       
       if (params.toString()) url += `?${params.toString()}`;
 
@@ -107,7 +111,7 @@ export function useDeanFacultyData(facultyCode?: string) {
     } finally {
       setLoading(false);
     }
-  }, [facultyCode]);
+  }, [facultyCode, initialStart, initialEnd]);
 
   useEffect(() => {
     fetchData();

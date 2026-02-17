@@ -1,19 +1,15 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Department_MED as Department_CU_MED } from "@/features/dashboard/dean/faculty-dashboard/cu/med/department_MED";
-import { Department_ENG } from "@/features/dashboard/dean/faculty-dashboard/cu/eng/department_ENG";
-import { Department_MED as Department_MU_MED } from "@/features/dashboard/dean/faculty-dashboard/mu/med/department_MED";
-import { Department_SCI } from "@/features/dashboard/dean/faculty-dashboard/nu/sci/department_SCI";
-import { Department_AGRI } from "@/features/dashboard/dean/faculty-dashboard/kku/agri/department_AGRI";
-import { Department_BUS } from "@/features/dashboard/dean/faculty-dashboard/abac/bus/department_BUS";
+import { UnifiedFacultyDashboard } from "@/features/dashboard/dean/components";
 import { Loader2 } from "lucide-react";
 
 export default function DeanDashboardPage() {
-  const [dashboard, setDashboard] = useState<React.ReactNode | null>(null);
+  const [facultyCode, setFacultyCode] = useState<string | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    // Read auth_user from localStorage to determine which dashboard to show
+    // Read auth_user from localStorage to determine which faculty dashboard to show
     try {
       const authUserStr = localStorage.getItem("auth_user");
       if (authUserStr) {
@@ -22,40 +18,27 @@ export default function DeanDashboardPage() {
 
         console.log("Dean Dashboard: Detected user", username);
 
-        // Match username to dashboard component
-        switch (username) {
-          case "dean_cu_eng":
-            setDashboard(<Department_ENG />);
-            break;
-          case "dean_mu_med":
-            setDashboard(<Department_MU_MED />);
-            break;
-          case "dean_nu_sci":
-            setDashboard(<Department_SCI />);
-            break;
-          case "dean_kku_agr": // Note: login page uses 'agr'
-            setDashboard(<Department_AGRI />);
-            break;
-          case "dean_abac_bus":
-            setDashboard(<Department_BUS />);
-            break;
-          case "dean_cu_med":
-          default:
-            // Default to CU MED if user is Dean (or fallback)
-            setDashboard(<Department_CU_MED />);
-            break;
+        // Map username/user context to facultyCode for the unified component
+        // This keeps the logic flexible and data-driven
+        if (username.startsWith("dean_")) {
+          // Parse faculty code from username pattern: dean_university_faculty
+          // e.g. dean_cu_med -> med, dean_kku_agr -> agri (normalized)
+          const parts = username.split("_");
+          if (parts.length >= 3) {
+            let code = parts[2].toUpperCase();
+            if (code === "AGR") code = "AGRI"; // Normalize
+            setFacultyCode(code);
+          }
         }
-      } else {
-        // Fallback for dev/testing without login
-        setDashboard(<Department_CU_MED />);
       }
     } catch (e) {
       console.error("Error parsing auth_user", e);
-      setDashboard(<Department_CU_MED />);
+    } finally {
+      setIsLoaded(true);
     }
   }, []);
 
-  if (!dashboard) {
+  if (!isLoaded) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50">
         <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
@@ -63,6 +46,8 @@ export default function DeanDashboardPage() {
     );
   }
 
-  return dashboard;
+  // The unified component will automatically fetch the correct data
+  // using the facultyCode (or handle the default if null)
+  return <UnifiedFacultyDashboard facultyCode={facultyCode || undefined} />;
 }
 

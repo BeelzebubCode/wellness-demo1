@@ -22,13 +22,16 @@ interface FacultyDateRangePickerProps {
 }
 
 export function FacultyDateRangePicker({ startDate, endDate, onChange }: FacultyDateRangePickerProps) {
+    console.log("FacultyDateRangePicker rendering with:", { startDate, endDate });
     const [activePicker, setActivePicker] = useState<"start" | "end" | null>(null);
     const [tempRange, setTempRange] = useState<{ from?: Date; to?: Date }>({ from: startDate, to: endDate });
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Sync internal state with props when props change or picker opens
+    // Sync internal state with props only when NOT choosing a date
     useEffect(() => {
-        setTempRange({ from: startDate, to: endDate });
+        if (!activePicker) {
+            setTempRange({ from: startDate, to: endDate });
+        }
     }, [startDate, endDate, activePicker]);
 
     // Close when clicking outside
@@ -53,16 +56,16 @@ export function FacultyDateRangePicker({ startDate, endDate, onChange }: Faculty
     const handleSelectDate = (date: Date) => {
         if (activePicker === "start") {
             setTempRange(prev => ({ ...prev, from: date }));
-            // Optional: Auto switch to "end" if "from" is selected? 
-            // The user didn't ask for it, but it's a common pattern.
-            // Let's keep it manual for now to match the user's specific request structure.
         } else {
             setTempRange(prev => ({ ...prev, to: date }));
         }
     };
 
     const handleClearAll = () => {
-        setTempRange({ from: undefined, to: undefined });
+        const resetRange = { from: undefined, to: undefined };
+        setTempRange(resetRange);
+        onChange(resetRange);
+        setActivePicker(null);
     };
 
     const handleSetToday = () => {
@@ -88,11 +91,11 @@ export function FacultyDateRangePicker({ startDate, endDate, onChange }: Faculty
                     onClick={() => setActivePicker(activePicker === "start" ? null : "start")}
                     className={cn(
                         "flex items-center gap-3 px-4 py-2.5 transition-all text-sm font-bold min-w-[150px]",
-                        startDate ? "bg-white text-primary" : "bg-white text-slate-400 hover:bg-slate-50"
+                        tempRange.from ? "bg-white text-primary" : "bg-white text-slate-400 hover:bg-slate-50"
                     )}
                 >
-                    <Calendar className={cn("w-4 h-4", startDate ? "text-primary" : "text-slate-300")} />
-                    <span className="tabular-nums">{formatDisplayDate(startDate)}</span>
+                    <Calendar className={cn("w-4 h-4", tempRange.from ? "text-primary" : "text-slate-300")} />
+                    <span className="tabular-nums">{formatDisplayDate(tempRange.from)}</span>
                 </button>
 
                 {/* Arrow */}
@@ -105,11 +108,11 @@ export function FacultyDateRangePicker({ startDate, endDate, onChange }: Faculty
                     onClick={() => setActivePicker(activePicker === "end" ? null : "end")}
                     className={cn(
                         "flex items-center gap-3 px-4 py-2.5 transition-all text-sm font-bold min-w-[150px]",
-                        endDate ? "bg-white text-primary" : "bg-white text-slate-400 hover:bg-slate-50"
+                        tempRange.to ? "bg-white text-primary" : "bg-white text-slate-400 hover:bg-slate-50"
                     )}
                 >
-                    <Calendar className={cn("w-4 h-4", endDate ? "text-primary" : "text-slate-300")} />
-                    <span className="tabular-nums">{formatDisplayDate(endDate)}</span>
+                    <Calendar className={cn("w-4 h-4", tempRange.to ? "text-primary" : "text-slate-300")} />
+                    <span className="tabular-nums">{formatDisplayDate(tempRange.to)}</span>
                 </button>
             </div>
 
@@ -151,7 +154,13 @@ export function FacultyDateRangePicker({ startDate, endDate, onChange }: Faculty
                                 </button>
                                 <button 
                                     onClick={handleApply}
-                                    className="flex items-center gap-2 bg-primary text-white px-5 py-2 rounded-xl text-sm font-black shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all"
+                                    disabled={!tempRange.from || !tempRange.to}
+                                    className={cn(
+                                        "flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-black shadow-lg transition-all",
+                                        tempRange.from && tempRange.to 
+                                            ? "bg-primary text-white shadow-primary/20 hover:bg-primary/90" 
+                                            : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
+                                    )}
                                 >
                                     <Check className="w-4 h-4" />
                                     เสร็จสิ้น

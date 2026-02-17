@@ -3,7 +3,7 @@
 
 import { useRectorFacultyStats } from "../hooks/useRectorFacultyStats";
 import { Users, BookOpen, AlertTriangle, GraduationCap, TrendingUp, ArrowLeft, Building2, Activity } from "lucide-react";
-import { FacultyDateRangePicker } from "@/features/dashboard/dean/faculty-dashboard/shared/components/FacultyDateRangePicker";
+import { FacultyDateRangePicker } from "@/features/dashboard/dean/components/FacultyDateRangePicker";
 import { useState } from "react";
 import Link from "next/link";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";

@@ -11,7 +11,7 @@ const DeanAnalytics = dynamic(() => import("./sections/DeanAnalytics").then(mod 
 });
 
 import { ExecutiveSummarySection } from "./sections/ExecutiveSummarySection";
-import { FacultyDateRangePicker } from "@/features/dashboard/dean/faculty-dashboard/shared/components/FacultyDateRangePicker";
+import { FacultyDateRangePicker } from "./FacultyDateRangePicker";
 
 interface DeanDashboardProps {
     facultyCode?: string;

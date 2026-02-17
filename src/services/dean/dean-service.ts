@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 // Helper: Get current Thai academic year date range
 // Thai academic year: June 1 → May 31
@@ -34,6 +35,15 @@ function getAcademicYearRange(): { start: Date; end: Date; label: string } {
     end,
     label: `${startYear + 543}`, // Buddhist Era
   };
+}
+
+export interface FacultyFilters {
+  department?: string;
+  yearLevel?: string;
+  riskLevel?: string;
+  problemCategory?: string;
+  gender?: string;
+  search?: string;
 }
 
 export const DeanService = {
@@ -98,7 +108,7 @@ export const DeanService = {
    *   - faculty_id (คณะ) via student_academic JOIN
    *   - academic year time range (ปีการศึกษา)
    */
-  async getFacultyStats(facultyId: number, universityId: number, dateRange?: { start?: Date; end?: Date }) {
+  async getFacultyStats(facultyId: number, universityId: number, dateRange?: { start?: Date; end?: Date }, filters?: FacultyFilters) {
     let ayStart: Date, ayEnd: Date, ayLabel: string;
     const defaultRange = getAcademicYearRange();
 
@@ -142,33 +152,181 @@ export const DeanService = {
       throw new Error("Faculty not found");
     }
 
-    // ─── 2. Total Students in Faculty ───
-    // Scoped: university_id + faculty_id
-    // This is "Population", so it usually ignores time range (unless we want active students only)
-    const totalStudentsQuery = await prisma.$queryRaw<{ count: bigint }[]>`
-        SELECT COUNT(*)::int as count
-        FROM "student_academic"
-        WHERE "university_id" = ${universityId}
-        AND "faculty_id" = ${facultyId}
-    `;
-    const totalStudents = Number(totalStudentsQuery[0]?.count || 0);
+    // FILTER LOGIC
+    const currentYear = new Date().getFullYear();
+    const currentBuddhistYear = currentYear + 543;
 
-    // ─── 3. Total Bookings (in selected range) ───
-    // Scoped: university_id + faculty_id + time range
+    // Filters Construction
+    const whereDept = filters?.department && filters.department !== 'ALL' 
+      ? Prisma.sql`AND d.department_code = ${filters.department}` 
+      : Prisma.empty;
+
+    const whereYear = filters?.yearLevel && filters.yearLevel !== 'ALL'
+      ? (filters.yearLevel === 'YEAR_5_PLUS' 
+          ? Prisma.sql`AND (${currentBuddhistYear} - sa.student_admit_academic_year + 1) > 4` 
+          : Prisma.sql`AND (${currentBuddhistYear} - sa.student_admit_academic_year + 1) = ${Number(filters.yearLevel.replace('YEAR_', ''))}`)
+      : Prisma.empty;
+
+    const whereRisk = filters?.riskLevel && filters.riskLevel !== 'ALL'
+      ? (filters.riskLevel === 'CRITICAL' ? Prisma.sql`AND bo.booking_outcome_risk_level >= 4`
+        : (filters.riskLevel === 'HIGH' ? Prisma.sql`AND bo.booking_outcome_risk_level = 3`
+        : (filters.riskLevel === 'MODERATE' ? Prisma.sql`AND bo.booking_outcome_risk_level = 2`
+        : (filters.riskLevel === 'NORMAL' ? Prisma.sql`AND bo.booking_outcome_risk_level = 1`
+        : Prisma.empty))))
+      : Prisma.empty;
+
+    const whereProblem = filters?.problemCategory && filters.problemCategory !== 'ALL'
+      // Note: Problem Category filtering logic needs careful mapping. 
+      // Assuming 'MENTAL' -> 'ด้านสุขภาพจิตและจิตเวช', etc.
+      // Or if frontend passes EXACT Thai name, use that.
+      // Here assuming partial match or exact if provided.
+      ? Prisma.sql`AND pc.problem_category_name_th LIKE ${'%' + filters.problemCategory + '%'}`
+      : Prisma.empty;
+
+    const whereGender = filters?.gender && filters.gender !== 'ALL'
+      ? Prisma.sql`AND sp.student_gender = ${filters.gender}`
+      : Prisma.empty;
+
+    const whereSearch = filters?.search
+      ? Prisma.sql`AND (
+          sp.first_name LIKE ${'%' + filters.search + '%'} OR 
+          sp.last_name LIKE ${'%' + filters.search + '%'} OR 
+          sa.student_id LIKE ${'%' + filters.search + '%'} OR
+          CAST(b.booking_id AS TEXT) LIKE ${'%' + filters.search + '%'}
+        )`
+      : Prisma.empty;
+
+    // Common WHERE for bookings
+    const commonConditions = Prisma.sql`
+      b.university_id = ${universityId}
+      AND sa.faculty_id = ${facultyId}
+      AND b.booking_created_at >= ${ayStart}
+      AND b.booking_created_at <= ${ayEnd}
+      ${whereDept}
+      ${whereYear}
+      ${whereRisk}
+      ${whereProblem}
+      ${whereGender}
+      ${whereSearch}
+    `;
+
+    const commonWhereBooking = Prisma.sql`WHERE ${commonConditions}`;
+
+    // ─── 2. Total Students (Filtered Population) ───
+    // If filters rely on booking (risk, problem, search booking ID), we must join booking.
+    // If only student filters (dept, year, gender, name), we don't strictly need booking, but for consistency "Filtered Dashboard" implies
+    // showing students related to the context. 
+    // Usually "Total Students" means "Total Students in Faculty". 
+    // But if I filter "High Risk", I expect "Total High Risk Students".
+    // So distinct students FROM booking + student_academic is safest for booking-related filters.
+    // However, if NO booking filters are applied (only Dept/Year/Gender), we want ALL students in that Dept/Year/Gender, even if no booking?
+    // User requirement: "Filter Dashboard". Usually means filter the *Dataset* being visualized.
+    // If "High Risk" is selected, "Total Students" = Students with High Risk.
+    
+    // Logic: 
+    // If booking-specific filters (Risk, Problem, Search Booking ID) are active, or Date Range is active -> Count Distinct Students from Bookings.
+    // If only static filters (Dept, Year, Gender) active -> Count from Student Academic?
+    // Actually, consistency is key. Currently dashboard shows "Total Students" = 4030 (Population).
+    // "Total Bookings" = 0.
+    // If I filter "High Risk", Bookings -> 0, Students -> ?
+    // If I filter "High Risk", I expect to see stats for High Risk cases.
+    // So "Total Students" should be "Students with High Risk".
+    // AND "Total Bookings" should be "High Risk Bookings".
+    
+    // Thus, I will use Query based on BookingContext for everything IF any booking-related filter is present.
+    // BUT what if simply filtering by "Department"? Use Population of Department?
+    // Yes.
+    // So, two strategies:
+    // A) Always filter based on Student Population (Dept, Year, Gender) -> Base Population.
+    //    AND Apply Booking filters (Risk, Problem, Date) to the specific charts.
+    // B) Apply ALL filters to EVERYTHING.
+    //    Strategy B is what "Advanced Multi-dimensional Data Filtering" usually implies.
+    //    If I toggle "High Risk", I want to see "99 Students, 100 Bookings".
+    
+    // So I will use the `commonWhereBooking` for everything that counts booking-related entities.
+    
+    // For "Total Students" specifically:
+    // If Risk/Problem/Date/Search is used -> Count DISTINCT students from Booking query.
+    // If ONLY Dept/Year/Gender used (and no date range?), we might want total population.
+    // BUT dashboard ALWAYS has a Date Range (Academic Year).
+    // So we are ALWAYS looking at "Activity in this period".
+    // Wait, the original `totalStudentsQuery` was:
+    // SELECT COUNT(*) FROM student_academic WHERE faculty_id = ... (No date range).
+    // It showed "Total Students in Faculty" (Population).
+    // If I select "Year 1", I want "Total Year 1 Students".
+    // If I select "High Risk", I want "Total High Risk Students" (who had high risk booking in this period).
+    
+    // So:
+    // 1. Base Student Filter (Dept, Year, Gender, Name Search)
+    const baseStudentFilter = Prisma.sql`
+        AND sa.faculty_id = ${facultyId}
+        AND sa.university_id = ${universityId}
+        ${whereDept}
+        ${whereYear}
+        ${whereGender}
+        ${filters?.search ? Prisma.sql`AND (sp.first_name LIKE ${'%' + filters.search + '%'} OR sp.last_name LIKE ${'%' + filters.search + '%'} OR sa.student_id LIKE ${'%' + filters.search + '%'})` : Prisma.empty}
+    `;
+
+    // 2. Booking Filter (Risk, Problem, Date, BookingID Search)
+    const hasBookingFilters = (filters?.riskLevel && filters.riskLevel !== 'ALL') || 
+                              (filters?.problemCategory && filters.problemCategory !== 'ALL') ||
+                              (filters?.search && !isNaN(Number(filters.search))) || // heuristic
+                              true; // Actually we always have Date Range.
+    
+    // Let's stick to: "Total Students" = Population matching Dept/Year/Gender.
+    // "Active Students" / "Risk Students" = Subsets.
+    // BUT if "High Risk" is selected, the "Total Students" text probably explicitly means "Students matching filter".
+    
+    // To simplify: I will apply `commonWhereBooking` to `totalStudentsQuery` as well?
+    // If I do, then "Total Students" becomes "Active Students in Period" (since it requires a booking).
+    // That might be confusing if usually it shows 4000, and suddenly shows 50 (active).
+    
+    // Compromise: 
+    // If Risk/Problem filters are active -> Use Booking-based count.
+    // If only Dept/Year/Gender active -> Use Population-based count.
+    
+    const useBookingContext = (filters?.riskLevel && filters.riskLevel !== 'ALL') || 
+                              (filters?.problemCategory && filters.problemCategory !== 'ALL');
+
+    let totalStudents = 0;
+    if (useBookingContext) {
+         const q = await prisma.$queryRaw<{ count: bigint }[]>`
+            SELECT COUNT(DISTINCT sa.student_id)::int as count
+            FROM "booking" b
+            JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
+            JOIN "student_profile" sp ON b.student_id = sp.student_id AND b.university_id = sp.university_id
+            LEFT JOIN "department" d ON sa.department_id = d.department_id AND sa.university_id = d.university_id
+            LEFT JOIN "booking_outcome" bo ON b.university_id = bo.university_id AND b.booking_id = bo.booking_id
+            LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
+            ${commonWhereBooking}
+         `;
+         totalStudents = Number(q[0]?.count || 0);
+    } else {
+         const q = await prisma.$queryRaw<{ count: bigint }[]>`
+            SELECT COUNT(DISTINCT sa.student_id)::int as count
+            FROM "student_academic" sa
+            JOIN "student_profile" sp ON sa.student_id = sp.student_id AND sa.university_id = sp.university_id
+            LEFT JOIN "department" d ON sa.department_id = d.department_id AND sa.university_id = d.university_id
+            WHERE sa.university_id = ${universityId}
+            ${baseStudentFilter}
+         `;
+         totalStudents = Number(q[0]?.count || 0);
+    }
+
+    // ─── 3. Total Bookings ───
     const totalBookingsQuery = await prisma.$queryRaw<{ count: bigint }[]>`
         SELECT COUNT(b.booking_id)::int as count
         FROM "booking" b
         JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
-        WHERE b.university_id = ${universityId}
-        AND sa.faculty_id = ${facultyId}
-        AND b.booking_created_at >= ${ayStart}
-        AND b.booking_created_at <= ${ayEnd}
+        JOIN "student_profile" sp ON b.student_id = sp.student_id AND b.university_id = sp.university_id
+        LEFT JOIN "department" d ON sa.department_id = d.department_id AND sa.university_id = d.university_id
+        LEFT JOIN "booking_outcome" bo ON b.university_id = bo.university_id AND b.booking_id = bo.booking_id
+        LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
+        ${commonWhereBooking}
     `;
     const totalBookings = Number(totalBookingsQuery[0]?.count || 0);
 
     // ─── 4. Risk Distribution (in selected range) ───
-    // Scoped: university_id + faculty_id + time range
-    // Fixed: booking_outcome JOIN includes university_id (composite PK)
     const riskStats = await prisma.$queryRaw<{ risk: number, count: bigint }[]>`
         SELECT 
             bo.booking_outcome_risk_level as risk,
@@ -176,10 +334,10 @@ export const DeanService = {
         FROM "booking" b
         JOIN "booking_outcome" bo ON b.university_id = bo.university_id AND b.booking_id = bo.booking_id
         JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
-        WHERE b.university_id = ${universityId}
-        AND sa.faculty_id = ${facultyId}
-        AND b.booking_created_at >= ${ayStart}
-        AND b.booking_created_at <= ${ayEnd}
+        JOIN "student_profile" sp ON b.student_id = sp.student_id AND b.university_id = sp.university_id
+        LEFT JOIN "department" d ON sa.department_id = d.department_id AND sa.university_id = d.university_id
+        LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
+        ${commonWhereBooking}
         GROUP BY bo.booking_outcome_risk_level
     `;
 
@@ -192,10 +350,6 @@ export const DeanService = {
     });
 
     // ─── 4.5. Year Level Distribution (in selected range) ───
-    // Calculate current year level based on admit year
-    const currentYear = new Date().getFullYear();
-    const currentBuddhistYear = currentYear + 543;
-
     const yearLevelQuery = await prisma.$queryRaw<{ year_level: number, count: bigint }[]>`
         SELECT 
             CASE 
@@ -206,10 +360,11 @@ export const DeanService = {
             COUNT(DISTINCT b.student_id)::int as count
         FROM "booking" b
         JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
-        WHERE b.university_id = ${universityId}
-        AND sa.faculty_id = ${facultyId}
-        AND b.booking_created_at >= ${ayStart}
-        AND b.booking_created_at <= ${ayEnd}
+        JOIN "student_profile" sp ON b.student_id = sp.student_id AND b.university_id = sp.university_id
+        LEFT JOIN "department" d ON sa.department_id = d.department_id AND sa.university_id = d.university_id
+        LEFT JOIN "booking_outcome" bo ON b.university_id = bo.university_id AND b.booking_id = bo.booking_id
+        LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
+        ${commonWhereBooking}
         GROUP BY year_level
     `;
 
@@ -225,7 +380,6 @@ export const DeanService = {
     });
 
     // ─── 5. Problem Stats & Gender (this academic year) ───
-    // Scoped: university_id + faculty_id + academic year
     const problemGenderStats = await prisma.$queryRaw<{ name: string, gender: string, count: bigint }[]>`
         SELECT 
             COALESCE(pc.problem_category_name_th, 'อื่นๆ') as name,
@@ -234,11 +388,10 @@ export const DeanService = {
         FROM "booking" b
         LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
         JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
-        LEFT JOIN "student_profile" sp ON b.student_id = sp.student_id AND b.university_id = sp.university_id
-        WHERE b.university_id = ${universityId}
-        AND sa.faculty_id = ${facultyId}
-        AND b.booking_created_at >= ${ayStart}
-        AND b.booking_created_at <= ${ayEnd}
+        JOIN "student_profile" sp ON b.student_id = sp.student_id AND b.university_id = sp.university_id
+        LEFT JOIN "department" d ON sa.department_id = d.department_id AND sa.university_id = d.university_id
+        LEFT JOIN "booking_outcome" bo ON b.university_id = bo.university_id AND b.booking_id = bo.booking_id
+        ${commonWhereBooking}
         GROUP BY pc.problem_category_name_th, sp.student_gender
     `;
 
@@ -269,10 +422,11 @@ export const DeanService = {
             COUNT(*)::int as count
         FROM "booking" b
         JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
-        WHERE b.university_id = ${universityId}
-        AND sa.faculty_id = ${facultyId}
-        AND b.booking_created_at >= ${ayStart}
-        AND b.booking_created_at <= ${ayEnd}
+        JOIN "student_profile" sp ON b.student_id = sp.student_id AND b.university_id = sp.university_id
+        LEFT JOIN "department" d ON sa.department_id = d.department_id AND sa.university_id = d.university_id
+        LEFT JOIN "booking_outcome" bo ON b.university_id = bo.university_id AND b.booking_id = bo.booking_id
+        LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
+        ${commonWhereBooking}
         GROUP BY point
         ORDER BY point
     `;
@@ -282,7 +436,6 @@ export const DeanService = {
     });
 
     // ─── 7. Repeat Visits (this academic year) ───
-    // Scoped: university_id + faculty_id + academic year
     const repeatQuery = await prisma.$queryRaw<{ visit_count: number, student_count: bigint }[]>`
         SELECT 
             visit_count,
@@ -291,14 +444,16 @@ export const DeanService = {
             SELECT b.student_id, COUNT(*) as visit_count
             FROM "booking" b
             JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
-            WHERE b.university_id = ${universityId}
-            AND sa.faculty_id = ${facultyId}
-            AND b.booking_created_at >= ${ayStart}
-            AND b.booking_created_at <= ${ayEnd}
+            JOIN "student_profile" sp ON b.student_id = sp.student_id AND b.university_id = sp.university_id
+            LEFT JOIN "department" d ON sa.department_id = d.department_id AND sa.university_id = d.university_id
+            LEFT JOIN "booking_outcome" bo ON b.university_id = bo.university_id AND b.booking_id = bo.booking_id
+            LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
+            ${commonWhereBooking}
             GROUP BY b.student_id
         ) as sub
         GROUP BY visit_count
     `;
+
     const repeatStats = { single: 0, repeat: 0 };
     repeatQuery.forEach(r => {
       if (r.visit_count === 1) repeatStats.single += Number(r.student_count);
@@ -318,10 +473,10 @@ export const DeanService = {
         FROM "booking" b
         JOIN "booking_outcome" bo ON b.university_id = bo.university_id AND b.booking_id = bo.booking_id
         JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
-        WHERE b.university_id = ${universityId}
-        AND sa.faculty_id = ${facultyId}
-        AND b.booking_created_at >= ${ayStart}
-        AND b.booking_created_at <= ${ayEnd}
+        JOIN "student_profile" sp ON b.student_id = sp.student_id AND b.university_id = sp.university_id
+        LEFT JOIN "department" d ON sa.department_id = d.department_id AND sa.university_id = d.university_id
+        LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
+        ${commonWhereBooking}
         GROUP BY sa.department_id, bo.booking_outcome_risk_level
     `;
 
@@ -335,11 +490,10 @@ export const DeanService = {
         FROM "booking" b
         LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
         JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
-        LEFT JOIN "student_profile" sp ON b.student_id = sp.student_id AND b.university_id = sp.university_id
-        WHERE b.university_id = ${universityId}
-        AND sa.faculty_id = ${facultyId}
-        AND b.booking_created_at >= ${ayStart}
-        AND b.booking_created_at <= ${ayEnd}
+        JOIN "student_profile" sp ON b.student_id = sp.student_id AND b.university_id = sp.university_id
+        LEFT JOIN "department" d ON sa.department_id = d.department_id AND sa.university_id = d.university_id
+        LEFT JOIN "booking_outcome" bo ON b.university_id = bo.university_id AND b.booking_id = bo.booking_id
+        ${commonWhereBooking}
         GROUP BY sa.department_id, pc.problem_category_name_th, sp.student_gender
     `;
 
@@ -351,10 +505,11 @@ export const DeanService = {
             COUNT(*)::int as count
         FROM "booking" b
         JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
-        WHERE b.university_id = ${universityId}
-        AND sa.faculty_id = ${facultyId}
-        AND b.booking_created_at >= ${ayStart}
-        AND b.booking_created_at <= ${ayEnd}
+        JOIN "student_profile" sp ON b.student_id = sp.student_id AND b.university_id = sp.university_id
+        LEFT JOIN "department" d ON sa.department_id = d.department_id AND sa.university_id = d.university_id
+        LEFT JOIN "booking_outcome" bo ON b.university_id = bo.university_id AND b.booking_id = bo.booking_id
+        LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
+        ${commonWhereBooking}
         GROUP BY sa.department_id, month
     `;
 
@@ -373,24 +528,35 @@ export const DeanService = {
             d.department_name_th,
             d.department_name_en,
             (
-                SELECT COUNT(*)::int
+                SELECT COUNT(DISTINCT sa.student_id)::int
                 FROM "student_academic" sa
                 WHERE sa.department_id = d.department_id 
                 AND sa.university_id = ${universityId}
                 AND sa.faculty_id = ${facultyId}
+                ${useBookingContext ? Prisma.sql`
+                   AND EXISTS (
+                      SELECT 1 FROM "booking" b 
+                      JOIN "student_profile" sp ON b.student_id = sp.student_id AND b.university_id = sp.university_id
+                      LEFT JOIN "booking_outcome" bo ON b.university_id = bo.university_id AND b.booking_id = bo.booking_id
+                      LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
+                      WHERE b.student_id = sa.student_id AND b.university_id = sa.university_id
+                      AND ${commonConditions}
+                   )
+                ` : Prisma.empty}
             ) as student_count,
             (
                 SELECT COUNT(*)::int
                 FROM "booking" b
                 JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
+                JOIN "student_profile" sp ON b.student_id = sp.student_id AND b.university_id = sp.university_id
+                LEFT JOIN "booking_outcome" bo ON b.university_id = bo.university_id AND b.booking_id = bo.booking_id
+                LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
                 WHERE sa.department_id = d.department_id 
-                AND b.university_id = ${universityId}
-                AND sa.faculty_id = ${facultyId}
-                AND b.booking_created_at >= ${ayStart}
-                AND b.booking_created_at <= ${ayEnd}
+                AND ${commonConditions}
             ) as booking_count
         FROM "department" d
         WHERE d.faculty_id = ${facultyId} AND d.university_id = ${universityId}
+        ${whereDept}
     `;
 
     const departmentStats = deptStatsQuery.map(d => {
@@ -442,19 +608,22 @@ export const DeanService = {
 
     // Total Departments
     const totalDepartmentsQuery = await prisma.$queryRaw<{ count: bigint }[]>`
-        SELECT COUNT(*)::int as count FROM "department" 
-        WHERE "faculty_id" = ${facultyId} AND "university_id" = ${universityId}
+        SELECT COUNT(*)::int as count FROM "department" d
+        WHERE d.faculty_id = ${facultyId} AND d.university_id = ${universityId}
+        ${whereDept}
     `;
     const totalDepartments = Number(totalDepartmentsQuery[0]?.count || 0);
 
-    // ─── 9. Active Cases (current — no time filter needed, status-based) ───
-    // Scoped: university_id + faculty_id
+    // ─── 9. Active Cases ───
     const activeCasesQuery = await prisma.$queryRaw<{ count: bigint }[]>`
         SELECT COUNT(DISTINCT b.booking_id)::int as count
         FROM "booking" b
         JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
-        WHERE b.university_id = ${universityId}
-        AND sa.faculty_id = ${facultyId}
+        JOIN "student_profile" sp ON b.student_id = sp.student_id AND b.university_id = sp.university_id
+        LEFT JOIN "department" d ON sa.department_id = d.department_id AND sa.university_id = d.university_id
+        LEFT JOIN "booking_outcome" bo ON b.university_id = bo.university_id AND b.booking_id = bo.booking_id
+        LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
+        ${commonWhereBooking}
         AND b.booking_status IN ('PENDING_ASSIGNMENT', 'ASSIGNED', 'IN_PROGRESS')
     `;
     const activeCases = Number(activeCasesQuery[0]?.count || 0);
@@ -476,7 +645,6 @@ export const DeanService = {
     }
 
     // ─── 11. Consultant Workload (this academic year) ───
-    // Scoped: university_id + faculty_id + academic year
     const consultantStatsQuery = await prisma.$queryRaw<{
       consultant_id: number,
       consultant_first_name: string,
@@ -492,10 +660,11 @@ export const DeanService = {
         JOIN "consultant" c ON b.consultant_id = c.consultant_id
         JOIN "consultant_profile" cp ON c.consultant_id = cp.consultant_id
         JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
-        WHERE b.university_id = ${universityId}
-        AND sa.faculty_id = ${facultyId}
-        AND b.booking_created_at >= ${ayStart}
-        AND b.booking_created_at <= ${ayEnd}
+        JOIN "student_profile" sp ON b.student_id = sp.student_id AND b.university_id = sp.university_id
+        LEFT JOIN "department" d ON sa.department_id = d.department_id AND sa.university_id = d.university_id
+        LEFT JOIN "booking_outcome" bo ON b.university_id = bo.university_id AND b.booking_id = bo.booking_id
+        LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
+        ${commonWhereBooking}
         GROUP BY c.consultant_id, cp.consultant_first_name, cp.consultant_last_name
         ORDER BY case_count DESC
         LIMIT 5
@@ -611,6 +780,8 @@ export const DeanService = {
       WHERE b.university_id = ${universityId}
       AND sa.faculty_id = ${facultyId}
       AND bo.booking_outcome_risk_level >= 3
+      AND b.booking_created_at >= ${ayStart}
+      AND b.booking_created_at <= ${ayEnd}
       GROUP BY year_level
       ORDER BY high_risk_count DESC
       LIMIT 1
@@ -644,6 +815,8 @@ export const DeanService = {
       JOIN "student_academic" sa ON s.student_id = sa.student_id AND s.university_id = sa.university_id
       WHERE b.university_id = ${universityId}
       AND sa.faculty_id = ${facultyId}
+      AND b.booking_created_at >= ${ayStart}
+      AND b.booking_created_at <= ${ayEnd}
       GROUP BY pc.problem_category_name_th
       ORDER BY count DESC
       LIMIT 1

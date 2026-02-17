@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { LayoutDashboard, Search, Filter } from "lucide-react";
 import { FacultyHeaderBanner, HeaderBadgeItem } from "./FacultyHeaderBanner";
 import { FacultyOverview, SummaryStat, SessionTrendItem, RiskItem, ProblemItem } from "./FacultyOverview";
+import { FacultyDateRangePicker } from "./FacultyDateRangePicker";
 import { DepartmentListing, DepartmentStat } from "./DepartmentListing";
 import dynamic from "next/dynamic";
 
@@ -56,17 +57,8 @@ export function FacultyInformation({
   onDateRangeChange
 }: Props) {
   const [internalTab, setInternalTab] = useState<TabType>("overview");
-  const [internalStartDate, setInternalStartDate] = useState<Date | undefined>(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    d.setHours(0, 0, 0, 0);
-    return d;
-  });
-  const [internalEndDate, setInternalEndDate] = useState<Date | undefined>(() => {
-    const d = new Date();
-    d.setHours(23, 59, 59, 999);
-    return d;
-  });
+  const [internalStartDate, setInternalStartDate] = useState<Date | undefined>(undefined);
+  const [internalEndDate, setInternalEndDate] = useState<Date | undefined>(undefined);
 
   const activeTab = controlledTab ?? internalTab;
   const startDate = controlledStartDate ?? internalStartDate;
@@ -101,24 +93,33 @@ export function FacultyInformation({
       {/* Tab Navigation */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-6 md:px-12">
-          <div className="flex gap-10">
-            <TabButton
-              active={activeTab === "overview"}
-              onClick={() => handleTabChange("overview")}
-              icon={<LayoutDashboard className="w-4 h-4" />}
-              label="Dashboard"
-            />
-            <TabButton
-              active={activeTab === "departments"}
-              onClick={() => handleTabChange("departments")}
-              icon={<Search className="w-4 h-4" />}
-              label="ภาควิชา"
-            />
-            <TabButton
-              active={activeTab === "filters"}
-              onClick={() => handleTabChange("filters")}
-              icon={<Filter className="w-4 h-4" />}
-              label="ตัวกรอง"
+          <div className="flex items-center justify-between">
+            <div className="flex gap-10">
+              <TabButton
+                active={activeTab === "overview"}
+                onClick={() => handleTabChange("overview")}
+                icon={<LayoutDashboard className="w-4 h-4" />}
+                label="Dashboard"
+              />
+              <TabButton
+                active={activeTab === "departments"}
+                onClick={() => handleTabChange("departments")}
+                icon={<Search className="w-4 h-4" />}
+                label="ภาควิชา"
+              />
+              <TabButton
+                active={activeTab === "filters"}
+                onClick={() => handleTabChange("filters")}
+                icon={<Filter className="w-4 h-4" />}
+                label="ตัวกรอง"
+              />
+            </div>
+            
+            {/* Date Range Picker */}
+            <FacultyDateRangePicker 
+              startDate={startDate}
+              endDate={endDate}
+              onChange={handleDateRangeChange}
             />
           </div>
         </div>

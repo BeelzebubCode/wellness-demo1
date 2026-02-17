@@ -1,4 +1,4 @@
-// src/features/dashboard/dean/faculty-dashboard/shared/components/FacultyHeaderBanner.tsx
+// src/features/dashboard/dean/components/FacultyHeaderBanner.tsx
 "use client";
 
 import React from "react";
