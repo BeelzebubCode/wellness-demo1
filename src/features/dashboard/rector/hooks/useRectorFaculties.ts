@@ -12,8 +12,8 @@ interface Faculty {
     universityName: string;
     studentCount: number;
     departmentCount: number;
-    educationFieldGroup?: string | null;
-    educationFieldGroupTH?: string | null;
+    subjectGroupCategory?: string | null;
+    subjectGroupCategoryTH?: string | null;
     logo?: string;
 }
 

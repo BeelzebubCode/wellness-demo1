@@ -53,18 +53,6 @@ export async function handleListConsultants(
               },
             },
           },
-          // ✅ Ghost Accounts (AccountUniversityAccess) -- REVERTED per user request
-          // {
-          //   account: {
-          //     universityAccesses: {
-          //       some: {
-          //         university_id: activeUniversityId,
-          //         access_revoked_at: null,
-          //         access_role: { in: ["CONSULTANT", "HEAD_CONSULTANT"] as any },
-          //       },
-          //     },
-          //   },
-          // },
         ],
       }
       : {

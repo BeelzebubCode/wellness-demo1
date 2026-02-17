@@ -3,17 +3,16 @@
 import { useState } from "react";
 import { useUniversityStats } from "../hooks/useUniversityStats";
 import { LoadingSpinner } from "@/components/ui";
-import { DateRangePicker } from "@/components/ui/DateRangePicker";
-
-// Import New Modular Sections
+import { RectorFilter } from "./sections/RectorFilter";
 import { RectorOverviewCards } from "./sections/RectorOverviewCards";
 import { RectorAnalytics } from "./sections/RectorAnalytics";
 import { FacultyBreakdownTable } from "./sections/FacultyBreakdownTable";
 import { RectorExecutiveSummary } from "./sections/RectorExecutiveSummary";
+import { RectorDashboardFilters } from "../types";
 
 export function RectorDashboard() {
   // Default to Last 30 Days (Today - 30 days)
-  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date } | undefined>(() => {
+  const [filters, setFilters] = useState<RectorDashboardFilters>(() => {
     const to = new Date();
     to.setHours(23, 59, 59, 999);
 
@@ -21,10 +20,10 @@ export function RectorDashboard() {
     from.setDate(from.getDate() - 30); // Go back 30 days
     from.setHours(0, 0, 0, 0);
 
-    return { from, to };
+    return { startDate: from, endDate: to };
   });
 
-  const { stats, isLoading } = useUniversityStats(dateRange as { from: Date; to: Date } | undefined);
+  const { stats, isLoading } = useUniversityStats(filters);
 
   if (isLoading || !stats) {
     return (
@@ -46,20 +45,17 @@ export function RectorDashboard() {
             <h1 className="text-2xl font-bold text-slate-800">ศูนย์บัญชาการด้านสุขภาวะมหาวิทยาลัย</h1>
             <p className="text-slate-500 text-sm mt-1">ข้อมูลเชิงลึกและการกำกับดูแลระดับมหาวิทยาลัย (Executive Command Center)</p>
           </div>
-
-          <div className="flex flex-col items-end gap-2">
-            <DateRangePicker
-              startDate={dateRange?.from}
-              endDate={dateRange?.to}
-              onChange={(range: { from?: Date; to?: Date }) => setDateRange(range)}
-            />
-            <div className="text-right">
-              <p className="text-xs text-slate-400">
-                อัปเดตล่าสุด: {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
-              </p>
-            </div>
-          </div>
         </div>
+
+        {/* Filters */}
+        <section>
+          <RectorFilter filters={filters} onFilterChange={setFilters} />
+          <div className="text-right mt-2">
+            <p className="text-xs text-slate-400">
+              อัปเดตล่าสุด: {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
+          </div>
+        </section>
 
         {/* 1. KEY PERFORMANCE INDICATORS */}
         <section>

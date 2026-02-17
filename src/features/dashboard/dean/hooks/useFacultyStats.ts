@@ -10,7 +10,7 @@ interface FacultyStats {
     universityName: string;
     academicYear: string;
     totalDepartments: number;
-    educationFieldGroup: string | null;
+    subjectGroupCategory: string | null;
     departmentStats: Array<{
         departmentId: number;
         departmentCode: string;
@@ -125,7 +125,7 @@ export function useFacultyStats(facultyCode?: string, dateRange?: { from: Date; 
                         facultyCode: data.facultyCode,
                         universityName: data.universityName,
                         academicYear: data.academicYear || '',
-                        educationFieldGroup: data.educationFieldGroup,
+                        subjectGroupCategory: data.subjectGroupCategory,
                         departmentStats: data.departmentStats,
                         riskDistribution: data.riskDistribution,
                         yearLevelDistribution: data.yearLevelDistribution,

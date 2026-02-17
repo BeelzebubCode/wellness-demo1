@@ -34,9 +34,9 @@ export async function seedFacultiesDepartments(
   }
 
   // =========================
-  // 0) EDUCATION FIELD GROUPS (global, rerun-safe)
+  // 0) Subject Group Categories (renamed from Education Field Groups)
   // =========================
-  await prisma.educationFieldGroup.createMany({
+  await prisma.subjectGroupCategory.createMany({
     data: educationFieldGroupsData.map((g) => ({
       isced_broad_field_code: g.isced_broad_field_code,
       field_group_name_th: g.field_group_name_th,
@@ -45,9 +45,9 @@ export async function seedFacultiesDepartments(
     skipDuplicates: true,
   });
 
-  const groups = await prisma.educationFieldGroup.findMany();
+  const groups = await prisma.subjectGroupCategory.findMany();
   const groupIdByIsc = new Map<string, number>(
-    groups.map((g) => [g.isced_broad_field_code, g.education_field_group_id])
+    groups.map((g) => [g.isced_broad_field_code, g.subject_group_category_id])
   );
 
   // =========================
@@ -88,7 +88,7 @@ export async function seedFacultiesDepartments(
         faculty_code: f.faculty_code,
         faculty_name_th: f.faculty_name_th,
         faculty_name_en: f.faculty_name_en ?? null,
-        education_field_group_id: f.isced_broad_field_code
+        subject_group_category_id: f.isced_broad_field_code
           ? groupIdByIsc.get(f.isced_broad_field_code) ?? null
           : null,
       })),

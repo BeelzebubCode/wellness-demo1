@@ -53,11 +53,12 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             id={selectId}
             className={cn(
-              "w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 pr-10 text-gray-900 appearance-none",
-              "transition-all duration-200",
-              "focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500",
-              "disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed",
-              error && "border-red-300 focus:ring-red-500/20 focus:border-red-500",
+              "w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 pr-10 text-gray-900 appearance-none font-medium",
+              "transition-all duration-200 shadow-sm",
+              "hover:border-gray-300 hover:shadow-md",
+              "focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500",
+              "disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none",
+              error && "border-red-300 focus:ring-red-500/30 focus:border-red-500",
               className,
             )}
             {...rest}

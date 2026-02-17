@@ -52,12 +52,12 @@ export async function getBorrowWindowDays(universityId?: number | null) {
   // priority: policy เฉพาะมหาลัย → fallback global
   const policy =
     (universityId
-      ? await prisma.borrowWindowPolicy.findFirst({
+      ? await prisma.consultantBorrowPolicy.findFirst({
           where: { university_id: universityId, is_active: true },
           orderBy: { created_at: "desc" },
         })
       : null) ??
-    (await prisma.borrowWindowPolicy.findFirst({
+    (await prisma.consultantBorrowPolicy.findFirst({
       where: { university_id: null, is_active: true },
       orderBy: { created_at: "desc" },
     }));

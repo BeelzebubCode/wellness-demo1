@@ -60,12 +60,9 @@ interface UniversityStats {
     }>;
 }
 
-interface DateRange {
-    from?: Date;
-    to?: Date;
-}
+import { RectorDashboardFilters } from "../types";
 
-export function useUniversityStats(dateRange?: DateRange) {
+export function useUniversityStats(filters: RectorDashboardFilters = {}) {
     const [stats, setStats] = useState<UniversityStats | null>(null);
     const [analytics, setAnalytics] = useState<any>(null);
     const [facultyBreakdown, setFacultyBreakdown] = useState<any[]>([]);
@@ -77,14 +74,14 @@ export function useUniversityStats(dateRange?: DateRange) {
         async function fetchData() {
             setIsLoading(true);
             try {
-                // Build query string with date parameters
+                // Build query string with filter parameters
                 const params = new URLSearchParams();
-                if (dateRange?.from) {
-                    params.append("startDate", dateRange.from.toISOString());
-                }
-                if (dateRange?.to) {
-                    params.append("endDate", dateRange.to.toISOString());
-                }
+                if (filters.startDate) params.append("startDate", filters.startDate.toISOString());
+                if (filters.endDate) params.append("endDate", filters.endDate.toISOString());
+                if (filters.facultyId) params.append("facultyId", filters.facultyId.toString());
+                if (filters.departmentId) params.append("departmentId", filters.departmentId.toString());
+                if (filters.problemCategoryId) params.append("problemCategoryId", filters.problemCategoryId.toString());
+                if (filters.gender) params.append("gender", filters.gender);
 
                 const queryString = params.toString();
                 const url = `/api/v2/rector/university-stats${queryString ? `?${queryString}` : ''}`;
@@ -143,7 +140,14 @@ export function useUniversityStats(dateRange?: DateRange) {
         }
 
         fetchData();
-    }, [dateRange?.from, dateRange?.to]); // Re-fetch when date range changes
+    }, [
+        filters.startDate?.toISOString(), 
+        filters.endDate?.toISOString(), 
+        filters.facultyId, 
+        filters.departmentId, 
+        filters.problemCategoryId, 
+        filters.gender
+    ]); // Re-fetch when filters change
 
     return { stats, analytics, facultyBreakdown, riskTrends, isLoading, error };
 }

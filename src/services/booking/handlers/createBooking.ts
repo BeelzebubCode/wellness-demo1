@@ -16,7 +16,7 @@ type CreateBookingInput = {
 
   // ✅ เพิ่ม: consent + signature
   consentChecked?: boolean;
-  consentSignatureDataUrl?: string | null;
+  agreementSignatureDataUrl?: string | null;
 
   // ✅ เก็บ meta (ส่งมาจาก route)
   ipAddress?: string | null;
@@ -69,8 +69,8 @@ export async function handleCreateBooking(
     : null;
 
   const consentChecked = !!input.consentChecked;
-  const consentSignatureDataUrl = input.consentSignatureDataUrl
-    ? String(input.consentSignatureDataUrl)
+  const agreementSignatureDataUrl = input.agreementSignatureDataUrl
+    ? String(input.agreementSignatureDataUrl)
     : null;
 
   const ipAddress = input.ipAddress ? String(input.ipAddress) : null;
@@ -99,9 +99,9 @@ export async function handleCreateBooking(
         { status: 400 },
       );
     }
-    if (!consentSignatureDataUrl) {
+    if (!agreementSignatureDataUrl) {
       return NextResponse.json(
-        { error: "consentSignatureDataUrl is required for ONLINE booking" },
+        { error: "agreementSignatureDataUrl is required for ONLINE booking" },
         { status: 400 },
       );
     }
@@ -199,19 +199,19 @@ export async function handleCreateBooking(
       });
 
         if (serviceMode === "ONLINE") {
-          // consentSignatureDataUrl is required for ONLINE
-          if (!consentSignatureDataUrl) {
+          // agreementSignatureDataUrl is required for ONLINE
+          if (!agreementSignatureDataUrl) {
              throw new Error("Signature is required for online booking");
           }
 
           // Create the consent signature record
-          await tx.bookingConsentSignature.create({
+          await tx.bookingAgreementSignature.create({
             data: {
               university_id: booking.university_id,
               booking_id: booking.booking_id,
               student_id: studentId, // Required by new schema
               signature_method: "DRAW",
-              signature_payload: { dataUrl: consentSignatureDataUrl }, // Store as JSON
+              signature_payload: { dataUrl: agreementSignatureDataUrl }, // Store as JSON
             },
           });
         }

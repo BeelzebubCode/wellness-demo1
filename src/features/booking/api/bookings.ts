@@ -28,7 +28,10 @@ export async function cancelBooking(
 
   const data = await apiPatch<{ success: true; status: string } | { success: false; error: string }>(
     `/api/v2/bookings/${input.bookingId}/cancel`,
-    { cancelReason: input.reason }, // ✅ ชื่อตรง handler
+    { 
+      cancellationReasonId: input.cancellationReasonId,
+      cancellationNote: input.cancellationNote,
+    },
     { universityId, signal: opts?.signal },
   );
 

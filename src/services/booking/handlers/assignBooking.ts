@@ -79,13 +79,13 @@ export async function handleAssignBooking(
       university_id: true,
       account: {
         select: {
-          universityAccesses: {
+          accessPermissions: {
             where: {
               university_id: activeUniversityId,
               access_revoked_at: null,
               access_role: { in: ["CONSULTANT", "HEAD_CONSULTANT"] as any },
             },
-            select: { account_university_access_id: true },
+            select: { account_university_permission_id: true },
           },
         },
       },
@@ -97,7 +97,7 @@ export async function handleAssignBooking(
   }
 
   const consultantUniversityId = assignee.university_id;
-  const hasAccess = (assignee.account?.universityAccesses?.length || 0) > 0;
+  const hasAccess = (assignee.account?.accessPermissions?.length || 0) > 0;
   const isSameUniversity = consultantUniversityId === activeUniversityId || hasAccess;
 
   // ✅ ถ้าข้ามมหาลัย ต้องมี borrowAssignmentId + ตรวจว่า valid ในช่วงเวลา

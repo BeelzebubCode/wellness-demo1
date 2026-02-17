@@ -85,7 +85,8 @@ export async function platformListBorrowCandidates(input: {
   const fromLat = decToNumber(fromUni.university_latitude);
   const fromLng = decToNumber(fromUni.university_longitude);
 
-  // 3) ดึง consultant ทั้งหมดที่ "อยู่มหาลัยอื่น" + include profile + specializations
+  // 3) ดึง consultant ทั้งหมดที่ "อยู่มหาลัยอื่น" พร้อมข้อมูลที่เกี่ยวข้อง
+  // ✅ Optimize: Include relations to avoid "too many parameters" error from large IN clauses
   const consultants = await prisma.consultant.findMany({
     where: {
       university_id: { not: fromUniversityId }, // ✅ exclude ม.ต้นทาง
@@ -117,72 +118,50 @@ export async function platformListBorrowCandidates(input: {
           university_longitude: true,
         },
       },
-    },
-  });
 
-  // ✅ 3.5) โหลด ConsultantBorrowAvailability (Active) เพื่อดูว่าใครติดเวรไปแล้วบ้าง
-  const consultantIds = consultants.map((c) => c.consultant_id);
-
-  const shifts = await prisma.consultantBorrowAvailability.findMany({
-    where: {
-      consultant_id: { in: consultantIds },
-      status: "ACTIVE", // ✅ เฉพาะ shift ที่ active (ถูกยืมตัวอยู่)
-      // ✅ Shift overlap logic: shift.start < borrow.end AND shift.end > borrow.start
-      // Note: borrow_needed using inclusive/exclusive logic might need care, but general overlap is simplest
-      ...(br.borrow_needed_from && br.borrow_needed_to
-        ? {
-          availability_start_date: { lt: br.borrow_needed_to },
-          availability_end_date: { gt: br.borrow_needed_from },
-        }
-        : {}),
-    },
-    select: {
-      consultant_borrow_availability_id: true,
-      consultant_id: true,
-      availability_start_date: true,
-      availability_end_date: true,
-      status: true,
-      targetUniversity: {
+      // ✅ Include BUSY shifts (Active)
+      borrowAvailabilities: {
+        where: {
+          status: "ACTIVE",
+          ...(br.borrow_needed_from && br.borrow_needed_to
+            ? {
+                availability_start_date: { lt: br.borrow_needed_to },
+                availability_end_date: { gt: br.borrow_needed_from },
+              }
+            : {}),
+        },
         select: {
-          university_name_th: true,
+          consultant_borrow_availability_id: true,
+          availability_start_date: true,
+          availability_end_date: true,
+          status: true,
+          targetUniversity: {
+            select: {
+              university_name_th: true,
+            },
+          },
+        },
+      },
+
+      // ✅ Include Active Assignments (Already assigned to this or other requests)
+      borrowAssignments: {
+        where: {
+          borrowRequest: {
+            borrow_request_status: { in: ["APPROVED", "ASSIGNED"] },
+          },
+          ...(br.borrow_needed_from && br.borrow_needed_to
+            ? {
+                borrow_assign_start_at: { lt: br.borrow_needed_to },
+                borrow_assign_end_at: { gt: br.borrow_needed_from },
+              }
+            : {}),
+        },
+        select: {
+          borrow_assignment_id: true,
         },
       },
     },
   });
-
-  // ✅ สร้าง Map: consultantId -> shifts[]
-  const shiftsByConsultant = new Map<number, typeof shifts>();
-  for (const shift of shifts) {
-    if (!shiftsByConsultant.has(shift.consultant_id)) {
-      shiftsByConsultant.set(shift.consultant_id, []);
-    }
-    shiftsByConsultant.get(shift.consultant_id)!.push(shift);
-  }
-
-  // ✅ แสดง consultant ทั้งหมด (ไม่กรองตาม shift)
-  // shift info จะแสดงเป็น optional information เท่านั้น
-  const filteredConsultants = consultants;
-
-  // ✅ ดึง borrow assignment ที่ active อยู่ เพื่อเช็คว่า consultant ถูกมอบหมายแล้วหรือไม่
-  const activeAssignments = await prisma.borrowAssignment.findMany({
-    where: {
-      consultant_id: { in: consultantIds },
-      borrowRequest: {
-        borrow_request_status: { in: ["APPROVED", "ASSIGNED"] as any },
-      },
-      // เฉพาะที่ช่วงเวลาซ้อนกับคำขอนี้
-      ...(br.borrow_needed_from && br.borrow_needed_to
-        ? {
-          borrow_assign_start_at: { lt: br.borrow_needed_to },
-          borrow_assign_end_at: { gt: br.borrow_needed_from },
-        }
-        : {}),
-    },
-    select: {
-      consultant_id: true,
-    },
-  });
-  const alreadyAssignedSet = new Set(activeAssignments.map((a) => a.consultant_id));
 
   // 4) group by university
   const map = new Map<
@@ -211,8 +190,8 @@ export async function platformListBorrowCandidates(input: {
     }
   >();
 
-  for (const c of filteredConsultants) { // ✅ ใช้ filtered consultants
-    const u = c.university; // ✅ relation จริงชื่อ university
+  for (const c of consultants) {
+    const u = c.university;
     if (!u) continue;
 
     const uLat = decToNumber(u.university_latitude);
@@ -234,8 +213,6 @@ export async function platformListBorrowCandidates(input: {
         consultants: [],
       });
     } else {
-      // ✅ ถ้ามีหลาย consultant ในมหาลัยเดียวกัน ระยะทางควรเหมือนกัน
-      // แต่เผื่อบางคน lat/lng null จะได้ไม่ทับค่าที่คำนวณได้
       const prev = map.get(uniId)!;
       if (prev.distanceKm == null && distanceKm != null) prev.distanceKm = distanceKm;
     }
@@ -252,24 +229,24 @@ export async function platformListBorrowCandidates(input: {
         .filter((x): x is string => !!x && !!String(x).trim())
         .slice(0, 12);
 
-    // ✅ นับจำนวน topic ที่ match กับหัวข้อปัญหา
     const topicMatchCount = problemTopics.length
       ? specializations.filter((spec) =>
-        problemTopics.some((req) => spec.includes(req) || req.includes(spec))
-      ).length
+          problemTopics.some((req) => spec.includes(req) || req.includes(spec))
+        ).length
       : 0;
 
-    // ✅ ดึง shift info สำหรับ consultant นี้
-    const consultantShifts = shiftsByConsultant.get(c.consultant_id) || [];
-    const mappedShifts = consultantShifts.map((shift) => ({
+    // ✅ Map shifts from relation
+    const mappedShifts = c.borrowAvailabilities.map((shift) => ({
       shiftId: shift.consultant_borrow_availability_id,
       startAt: shift.availability_start_date.toISOString(),
       endAt: shift.availability_end_date.toISOString(),
       status: shift.status,
-      // If active shift exists, they are borrowed somewhere else
       currentBorrowCount: 1, 
       targetUniversityName: shift.targetUniversity.university_name_th,
     }));
+
+    // ✅ Check active assignments from relation
+    const isAlreadyAssigned = c.borrowAssignments.length > 0;
 
     map.get(uniId)!.consultants.push({
       consultantId: c.consultant_id,
@@ -277,7 +254,7 @@ export async function platformListBorrowCandidates(input: {
       nickname,
       specializations,
       topicMatchCount,
-      alreadyAssigned: alreadyAssignedSet.has(c.consultant_id), // ✅ flag ถูกมอบหมายแล้ว
+      alreadyAssigned: isAlreadyAssigned,
       shifts: mappedShifts,
     });
   }

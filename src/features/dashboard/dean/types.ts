@@ -8,8 +8,8 @@ export interface Faculty {
     universityName: string;
     studentCount: number;
     departmentCount: number;
-    educationFieldGroup?: string | null;
-    educationFieldGroupTH?: string | null;
+    subjectGroupCategory?: string | null;
+    subjectGroupCategoryTH?: string | null;
     logo?: string;
 }
 
@@ -20,7 +20,7 @@ export interface FacultyStats {
     facultyNameEn: string | null;
     universityCode: string;
     universityName: string;
-    educationFieldGroup: string | null;
+    subjectGroupCategory: string | null;
     totalStudents: number;
     totalDepartments: number;
     totalBookings: number;

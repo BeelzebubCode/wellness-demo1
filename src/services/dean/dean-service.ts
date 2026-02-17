@@ -54,7 +54,7 @@ export const DeanService = {
                 university_name_en: true,
               },
             },
-            educationFieldGroup: {
+            subjectGroupCategory: {
               select: {
                 field_group_name_th: true,
                 field_group_name_en: true,
@@ -84,8 +84,8 @@ export const DeanService = {
       universityCode: faculty.university.university_code,
       universityName: faculty.university.university_name_th,
       universityNameEn: faculty.university.university_name_en,
-      educationFieldGroup: faculty.educationFieldGroup?.field_group_name_en || null,
-      educationFieldGroupTH: faculty.educationFieldGroup?.field_group_name_th || null,
+      subjectGroupCategory: faculty.subjectGroupCategory?.field_group_name_en || null,
+      subjectGroupCategoryTH: faculty.subjectGroupCategory?.field_group_name_th || null,
       departmentCount: faculty._count.departments,
       studentCount: faculty._count.studentAcademics,
     }));
@@ -129,7 +129,7 @@ export const DeanService = {
             university_name_en: true,
           },
         },
-        educationFieldGroup: {
+        subjectGroupCategory: {
           select: {
             field_group_name_th: true,
             field_group_name_en: true,
@@ -515,7 +515,7 @@ export const DeanService = {
       universityCode: faculty.university.university_code,
       universityName: faculty.university.university_name_th,
       universityLogoUrl: `/images/logo/${faculty.university.university_code}_logo.png`,
-      educationFieldGroup: faculty.educationFieldGroup?.field_group_name_en || null,
+      subjectGroupCategory: faculty.subjectGroupCategory?.field_group_name_en || null,
       academicYear: ayLabel,
       totalStudents,
       totalDepartments,

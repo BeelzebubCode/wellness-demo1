@@ -44,7 +44,7 @@ export async function listTimeSlotsByDate(
   // Relies on:
   // - idx_timeslot_university_datetime (time_slot WHERE clause)
   // - idx_booking_timeslot_status (booking count aggregation)
-  const slotsWithCounts = await prisma.$queryRaw<
+    const slotsWithCounts = await prisma.$queryRaw<
     Array<{
       time_slot_id: number;
       university_id: number;
@@ -53,6 +53,11 @@ export async function listTimeSlotsByDate(
       time_slot_max_capacity: number;
       time_slot_status: string;
       active_bookings: bigint | null;
+      // DayPeriod fields
+      day_period_id: number | null;
+      day_period_code: string | null;
+      day_period_name_th: string | null;
+      day_period_name_en: string | null;
     }>
   >`
     SELECT 
@@ -62,17 +67,23 @@ export async function listTimeSlotsByDate(
       ts.time_slot_end_datetime,
       ts.time_slot_max_capacity,
       ts.time_slot_status,
+      ts.day_period_id,
+      dp.day_period_code,
+      dp.day_period_name_th,
+      dp.day_period_name_en,
       COUNT(b.booking_id) FILTER (
         WHERE b.booking_status IN ('PENDING_ASSIGNMENT', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED')
       ) as active_bookings
     FROM time_slot ts
+    LEFT JOIN day_period dp ON dp.day_period_id = ts.day_period_id
     LEFT JOIN booking b ON b.time_slot_id = ts.time_slot_id 
       AND b.university_id = ts.university_id
     WHERE ts.university_id = ${uniId}
       AND ts.time_slot_start_datetime >= ${startOfDay}
       AND ts.time_slot_start_datetime <= ${endOfDay}
     GROUP BY ts.time_slot_id, ts.university_id, ts.time_slot_start_datetime, 
-             ts.time_slot_end_datetime, ts.time_slot_max_capacity, ts.time_slot_status
+             ts.time_slot_end_datetime, ts.time_slot_max_capacity, ts.time_slot_status,
+             ts.day_period_id, dp.day_period_code, dp.day_period_name_th, dp.day_period_name_en
     ORDER BY ts.time_slot_start_datetime ASC
   `;
 
@@ -150,6 +161,14 @@ export async function listTimeSlotsByDate(
       isClosed: isClosedOnly || isCancelled,
       isPastTime,
       unavailableReason,
+      
+      // ✅ Include day period info
+      dayPeriod: slot.day_period_id ? {
+        id: slot.day_period_id,
+        code: slot.day_period_code!,
+        nameTh: slot.day_period_name_th!,
+        nameEn: slot.day_period_name_en,
+      } : null,
     };
   });
 }

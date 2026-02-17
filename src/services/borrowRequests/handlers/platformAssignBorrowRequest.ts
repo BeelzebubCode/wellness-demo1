@@ -66,7 +66,7 @@ async function assignOne(tx: any, input: {
     },
   });
 
-  await tx.accountUniversityAccess.upsert({
+  await tx.accountUniversityPermission.upsert({
     where: {
       account_id_university_id: {
         account_id: consultant.account_id,

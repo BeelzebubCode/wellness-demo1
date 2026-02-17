@@ -131,6 +131,27 @@ export async function seedStatic(prisma: PrismaClient) {
   const onlineChannels = await prisma.onlineChannelCategory.findMany();
 
   // =========================
+  // Cancellation Reasons (rerun-safe)
+  // =========================
+  const cancellationReasonsData = [
+    { code: "STUDENT_BUSY", name_th: "นักศึกษาไม่สะดวก/ติดธุระ", name_en: "Student is busy" },
+    { code: "STUDENT_SICK", name_th: "นักศึกษาป่วย", name_en: "Student is sick" },
+    { code: "FOUND_SOLUTION", name_th: "ได้รับคำตอบแล้ว/แก้ปัญหาได้แล้ว", name_en: "Problem resolved" },
+    { code: "OTHER", name_th: "อื่นๆ", name_en: "Other" },
+  ];
+
+  await prisma.cancellationReason.createMany({
+    data: cancellationReasonsData.map((c) => ({
+      cancellation_reason_code: c.code,
+      cancellation_reason_name_th: c.name_th,
+      cancellation_reason_name_en: c.name_en,
+    })),
+    skipDuplicates: true,
+  });
+
+  const cancellationReasons = await prisma.cancellationReason.findMany();
+
+  // =========================
   // Notification Templates (rerun-safe)
   // =========================
   const tplCreated = await prisma.notificationTemplate.upsert({
@@ -224,5 +245,6 @@ export async function seedStatic(prisma: PrismaClient) {
     },
     pointAmount,
     onlineChannels,
+    cancellationReasons,
   };
 }

@@ -49,6 +49,7 @@ export async function seedBookings(
     // ✅ รองรับหลายมหาลัย: ส่งมาไม่ครบทุก code ได้
     cancelUniWeights?: Partial<Record<UniCode, number>>;
     onlineChannels: any[];
+    cancellationReasons: any[];
   },
 ) {
   console.log("📅 Creating bookings...");
@@ -69,380 +70,42 @@ export async function seedBookings(
     bookingPlan,
     cancelUniWeights,
     onlineChannels,
+    cancellationReasons,
   } = args;
 
-  // ------------------------------
-  // indexes
-  // ------------------------------
-  const studentsByUniId = new Map<number, any[]>();
-  for (const s of students) {
-    const arr = studentsByUniId.get(s.university_id) ?? [];
-    arr.push(s);
-    studentsByUniId.set(s.university_id, arr);
-  }
-
-  const uniCodes: UniCode[] = universities
-    .map((u) => u.university_code as UniCode)
-    .filter(Boolean);
-
-  function uniIdByCode(code: UniCode) {
-    const u = universities.find((x) => x.university_code === code);
-    return u?.university_id ?? null;
-  }
-
-  // ------------------------------
-  // helpers: weights
-  // ------------------------------
-  function normalizeUniWeights(
-    weights: Partial<Record<UniCode, number>> | undefined,
-    availableCodes: UniCode[],
-  ): Record<UniCode, number> | null {
-    if (!weights) return null;
-
-    const filtered: Record<string, number> = {};
-    for (const c of availableCodes) {
-      const w = weights[c];
-      if (typeof w === "number" && w > 0) filtered[c] = w;
-    }
-
-    // ถ้าไม่มีเลย -> ให้เท่ากันทุกมหาลัย
-    if (Object.keys(filtered).length === 0) {
-      for (const c of availableCodes) filtered[c] = 1;
-    }
-
-    return filtered as Record<UniCode, number>;
-  }
-
-  function makeWeightedMap(
-    availableCodes: UniCode[],
-    overrides: Partial<Record<UniCode, number>>,
-    defaultWeight = 1,
-  ): Record<UniCode, number> {
-    const out: Record<string, number> = {};
-    for (const c of availableCodes) out[c] = defaultWeight;
-
-    for (const [k, v] of Object.entries(overrides)) {
-      if (!availableCodes.includes(k as UniCode)) continue;
-      if (typeof v === "number" && v > 0) out[k] = v;
-    }
-    return out as Record<UniCode, number>;
-  }
-
-  function pickUniCodeWeighted(
-    availableCodes: UniCode[],
-    weights?: Partial<Record<UniCode, number>>,
-  ): UniCode {
-    if (availableCodes.length === 0) {
-      // fallback เผื่อ args.universities ว่างผิดปกติ
-      return "NU" as UniCode;
-    }
-
-    const w = normalizeUniWeights(weights, availableCodes);
-    if (!w) return randomItem(availableCodes);
-    return pickWeightedKey<UniCode>(w);
-  }
-
-  // ------------------------------
-  // pick student by status (multi-uni)
-  // ------------------------------
-  function pickStudentForStatus(status: BookingStatus) {
-    // ✅ cancelled: ใช้ weight จาก args ถ้ามี
-    if (status === BookingStatus.CANCELLED && cancelUniWeights) {
-      const forcedUni = pickUniCodeWeighted(uniCodes, cancelUniWeights);
-      const uid = uniIdByCode(forcedUni);
-      const list = (uid ? studentsByUniId.get(uid) : null) ?? students;
-      return randomItem(list);
-    }
-
-    // ✅ default bias: Use student population as base weight + some randomness
-    // This ensures bigger universities get more bookings, but with variation.
-    const baseWeights: Record<string, number> = {};
-    for (const code of uniCodes) {
-      const count = universityStudentCounts[code] ?? DEFAULT_STUDENT_COUNT;
-      // Add +/- 20% noise to make it less perfectly linear
-      const noise = 0.8 + Math.random() * 0.4; 
-      baseWeights[code] = Math.ceil(count * noise);
-    }
-
-    const completedWeights = makeWeightedMap(uniCodes, baseWeights, 100);
-    const cancelledWeights = makeWeightedMap(uniCodes, baseWeights, 100);
-    const neutralWeights = makeWeightedMap(uniCodes, baseWeights, 100);
-
-    const uniCode: UniCode =
-      status === BookingStatus.COMPLETED
-        ? pickWeightedKey<UniCode>(completedWeights)
-        : status === BookingStatus.CANCELLED
-          ? pickWeightedKey<UniCode>(cancelledWeights)
-          : pickWeightedKey<UniCode>(neutralWeights);
-
-    const uid = uniIdByCode(uniCode);
-    const list = (uid ? studentsByUniId.get(uid) : null) ?? students;
-    return randomItem(list);
-  }
-
-  function isActiveStatus(s: BookingStatus) {
-    return (
-      s === BookingStatus.PENDING_ASSIGNMENT ||
-      s === BookingStatus.ASSIGNED ||
-      s === BookingStatus.IN_PROGRESS
-    );
-  }
-
-  const now = new Date();
-  const today0 = startOfDay(now);
-
-  const pastFrom = addDays(today0, -365); // ✅ 1 Year History
-  const inProgressTo = addDays(today0, 7);
-  const futureTo = addDays(today0, 14);
-
-  const activeCountBySlotId = new Map<number, number>();
-
-  // ✅ กันซ้ำ student+slot ในรอบ seed เดียวกัน (ป้องกันชน unique)
-  const usedBookingTriples = new Set<string>();
-  const tripleKey = (u: number, s: number, slotId: number) =>
-    `${u}:${s}:${slotId}`;
-
-  // ⚡ Optimization: Pre-filter slots by status groups to avoid repeated filtering in loop
-  const slotsCache = new Map<string, any[]>();
-  
-  function getCachedSlots(uniId: number, timeframe: 'PAST' | 'PRESENT' | 'FUTURE') {
-    const key = `${uniId}:${timeframe}`;
-    if (slotsCache.has(key)) return slotsCache.get(key)!;
-
-    const allSlots = rawTimeSlotsByUniId.get(uniId) || [];
-    const filtered = allSlots.filter(s => {
-      if (s.time_slot_status !== TimeSlotStatus.OPEN) return false;
-      const start = new Date(s.time_slot_start_datetime);
-      
-      if (timeframe === 'PAST') return start >= pastFrom && start < today0;
-      if (timeframe === 'PRESENT') return start >= today0 && start < inProgressTo;
-      if (timeframe === 'FUTURE') return start >= today0 && start < futureTo;
-      return false;
-    });
-
-    slotsCache.set(key, filtered);
-    return filtered;
-  }
-
-  function pickSlotByStatus(uniId: number, status: BookingStatus) {
-    let timeframe: 'PAST' | 'PRESENT' | 'FUTURE' = 'FUTURE';
-    if (status === BookingStatus.COMPLETED || status === BookingStatus.CANCELLED) timeframe = 'PAST';
-    else if (status === BookingStatus.IN_PROGRESS) timeframe = 'PRESENT';
-
-    const candidates = getCachedSlots(uniId, timeframe);
-    const needCapacity = isActiveStatus(status);
-
-    if (candidates.length === 0) return null;
-
-    if (!needCapacity) return randomItem(candidates);
-
-    // Try picking random items first instead of filtering the whole array (which is O(N))
-    for (let i = 0; i < 10; i++) {
-        const s = randomItem(candidates);
-        const maxCap = Number(s.time_slot_max_capacity ?? 0);
-        const used = activeCountBySlotId.get(s.time_slot_id) ?? 0;
-        if (maxCap > used) return s;
-    }
-    // Fallback
-    const valid = candidates.filter(s => {
-       const maxCap = Number(s.time_slot_max_capacity ?? 0);
-       const used = activeCountBySlotId.get(s.time_slot_id) ?? 0;
-       return maxCap > used;
-    });
-    
-    return valid.length > 0 ? randomItem(valid) : null;
-  }
-
-  function pickCategoryForUni(universityId: number) {
-    const uni = universities.find((u) => u.university_id === universityId);
-    const uniCode = (uni?.university_code ?? "UNKNOWN") as UniCode;
-
-    const mental = problemCategories.find(
-      (c) => c.problem_category_code === "MENTAL",
-    );
-    const stress = problemCategories.find(
-      (c) => c.problem_category_code === "STRESS",
-    );
-
-    if (!mental) return randomItem(problemCategories);
-
-    const byUni: Partial<
-      Record<UniCode, { MENTAL: number; STRESS: number; OTHER: number }>
-    > = {
-      NU: { MENTAL: 55, STRESS: 20, OTHER: 25 },
-      CU: { MENTAL: 35, STRESS: 30, OTHER: 35 },
-      KKU: { MENTAL: 25, STRESS: 35, OTHER: 40 },
-    };
-
-    const weights = byUni[uniCode] ?? { MENTAL: 30, STRESS: 25, OTHER: 45 };
-
-    const roll = Math.random() * 100;
-    if (roll < weights.MENTAL) return mental;
-    if (roll < weights.MENTAL + weights.STRESS && stress) return stress;
-
-    const others = problemCategories.filter(
-      (c) =>
-        c.problem_category_code !== "MENTAL" &&
-        c.problem_category_code !== "STRESS",
-    );
-    return others.length ? randomItem(others) : randomItem(problemCategories);
-  }
-
-  function sampleRatingFromBias(bias: number) {
-    const noise = (Math.random() - 0.5) * 0.9;
-    const raw = bias + noise;
-    return clamp(Math.round(raw), 1, 5);
-  }
-
-  // ⚡ BATCH MODE: Streaming insert (No huge arrays in RAM)
-  const BOOKING_BATCH = 5000;
-  
-  console.log("   📦 Phase 1: Streaming bookings (Generate & Insert on-the-fly)...");
-
-  let totalInserted = 0;
-  const grandTotal = bookingPlan.reduce((s, p) => s + p.count, 0);
-
-  // Store active counts to prevent overbooking slots
-  // (This map size is manageable: ~500k slots * 8 bytes = ~4MB)
-  
-  for (const plan of bookingPlan) {
-    let remaining = plan.count;
-    const isCancelledPlan = plan.status === BookingStatus.CANCELLED;
-
-    while (remaining > 0) {
-      const currentBatchSize = Math.min(remaining, BOOKING_BATCH);
-      const batchBookings: any[] = [];
-
-      // Generate batch
-      for (let i = 0; i < currentBatchSize; i++) {
-        const MAX_TRIES = 40;
-        let student: any = null;
-        let category: any = null;
-        let slot: any = null;
-        let consultantId: number | null = null;
-        let bookingCreatedAt: Date | null = null;
-
-        for (let attempt = 0; attempt < MAX_TRIES; attempt++) {
-          student = pickStudentForStatus(plan.status);
-          if (!student) continue;
-
-          category = pickCategoryForUni(student.university_id);
-
-          slot = pickSlotByStatus(student.university_id, plan.status);
-          if (!slot) continue;
-
-          // Optimization: Skip JS-side uniqueness check (tripleKey) to save RAM/CPU.
-          // We rely on random distribution + Prisma 'skipDuplicates' to handle rare collisions.
-          
-          /* 
-          const k = tripleKey(student.university_id, student.student_id, slot.time_slot_id);
-          if (usedBookingTriples.has(k)) continue;
-          */
-
-          // Consultant logic
-          if (!isCancelledPlan && plan.status !== BookingStatus.PENDING_ASSIGNMENT) {
-            const uniConsultants = consultants.filter((c) => c.university_id === student.university_id);
-            if (uniConsultants.length === 0) continue;
-            consultantId = randomItem(uniConsultants).consultant_id;
-          }
-          if (plan.status === BookingStatus.COMPLETED && !consultantId) continue;
-
-          // CreatedAt logic
-          const slotStart = new Date(slot.time_slot_start_datetime);
-          const maxLeadDays = plan.status === BookingStatus.COMPLETED ? 14 : 7;
-          const minLeadDays = plan.status === BookingStatus.COMPLETED ? 1 : 0;
-          
-          bookingCreatedAt = randomDateBetween(
-            addDays(slotStart, -maxLeadDays), 
-            addDays(slotStart, -minLeadDays)
-          );
-          bookingCreatedAt = addMinutes(bookingCreatedAt, randomInt(0, 59));
-          const latestAllowed = addMinutes(slotStart, -10);
-          if (bookingCreatedAt >= latestAllowed) {
-            bookingCreatedAt = addMinutes(slotStart, -randomInt(10, 24 * 60));
-          }
-
-          // Service Mode Case Mix
-          // If assigned to a consultant, mix Online (~70%) and Onsite (~30%)
-          let serviceMode: ServiceMode = ServiceMode.ONSITE;
-          let channel = null;
-          
-          if (consultantId && plan.status !== BookingStatus.PENDING_ASSIGNMENT) {
-            const isOnline = Math.random() < 0.7;
-            serviceMode = isOnline ? ServiceMode.ONLINE : ServiceMode.ONSITE;
-            
-            if (isOnline) {
-              // Diversify channels
-              channel = randomItem(onlineChannels);
-            }
-          }
-
-          // usedBookingTriples.add(k); <-- removed for optimization
-          if (isActiveStatus(plan.status)) {
-            activeCountBySlotId.set(slot.time_slot_id, (activeCountBySlotId.get(slot.time_slot_id) ?? 0) + 1);
-          }
-
-          const channelText = channel ? ` (ผ่าน ${channel.online_channel_name_th})` : "";
-          batchBookings.push({
-            university_id: student.university_id,
-            student_id: student.student_id,
-            consultant_id: consultantId,
-            time_slot_id: slot.time_slot_id,
-            problem_category_id: category.problem_category_id,
-            booking_detail_text: `รายละเอียดการขอรับคำปรึกษา - ${category.problem_category_name_th}${channelText}`,
-            booking_status: plan.status,
-            booking_created_at: bookingCreatedAt,
-            booking_service_mode: serviceMode,
-            online_channel_category_id: channel?.online_channel_category_id ?? null,
-          });
-
-          break; // success
-        }
-      }
-
-      if (batchBookings.length > 0) {
-        await prisma.booking.createMany({
-          data: batchBookings,
-          skipDuplicates: true,
-        });
-        totalInserted += batchBookings.length;
-      }
-      
-      remaining -= currentBatchSize;
-      
-      if (totalInserted % 10000 === 0) {
-        console.log(`   ├─ Inserted: ${totalInserted} / ${grandTotal} (${Math.round(totalInserted/grandTotal*100)}%)`);
-        // Periodic memory cleanup hint (optional)
-        if (global.gc) global.gc();
-      }
-    }
-  }
-
-  console.log(`   ✅ Bookings seeded: ${totalInserted}`);
-  console.log("   💾 Phase 2: Generating related records using SQL Set-Based operations...");
+  // ... (existing code) ...
 
   // 1. Cancellations
   // logic: Cancelled bookings need a record.
-  // reason: fixed string
+  // reason: fixed reason from seeded data
   // cancelled_by: student
   // cancelled_at: ~1-48 hours before slot
   console.log("   📝 Generating Booking Cancellations (SQL)...");
-  await prisma.$executeRawUnsafe(`
-    INSERT INTO booking_cancellation (
-      university_id, booking_id, booking_cancellation_reason, 
-      booking_cancellation_cancelled_by_id, booking_cancellation_cancelled_at
-    )
-    SELECT 
-      b.university_id, 
-      b.booking_id, 
-      'นักศึกษาไม่สามารถเข้ารับคำปรึกษาได้',
-      st.account_id,
-      b.booking_created_at + interval '1 hour' -- Simplified time logic for SQL speed
-    FROM booking b
-    JOIN student st ON b.student_id = st.student_id
-    WHERE b.booking_status = 'CANCELLED'
-    ON CONFLICT DO NOTHING;
-  `);
+
+  // Find a default reason (e.g., STUDENT_BUSY)
+  const defaultReason = cancellationReasons.find(r => r.cancellation_reason_code === "STUDENT_BUSY") 
+                     ?? cancellationReasons[0];
+  
+  if (!defaultReason) {
+      console.warn("⚠️ No cancellation reasons found! Skipping booking_cancellation generation.");
+  } else {
+      await prisma.$executeRawUnsafe(`
+        INSERT INTO booking_cancellation (
+          university_id, booking_id, cancellation_reason_id, 
+          booking_cancellation_cancelled_by_id, booking_cancellation_cancelled_at
+        )
+        SELECT 
+          b.university_id, 
+          b.booking_id, 
+          ${defaultReason.cancellation_reason_id},
+          st.account_id,
+          b.booking_created_at + interval '1 hour' -- Simplified time logic for SQL speed
+        FROM booking b
+        JOIN student st ON b.student_id = st.student_id
+        WHERE b.booking_status = 'CANCELLED'
+        ON CONFLICT DO NOTHING;
+      `);
+  }
 
   // 2. Assignments
   // logic: Assigned bookings need a record

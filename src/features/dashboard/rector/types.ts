@@ -8,8 +8,8 @@ export interface Faculty {
     universityName: string;
     studentCount: number;
     departmentCount: number;
-    educationFieldGroup?: string | null;
-    educationFieldGroupTH?: string | null;
+    subjectGroupCategory?: string | null;
+    subjectGroupCategoryTH?: string | null;
     logo?: string;
 }
 
@@ -20,7 +20,7 @@ export interface FacultyStats {
     facultyNameEn: string | null;
     universityCode: string;
     universityName: string;
-    educationFieldGroup: string | null;
+    subjectGroupCategory: string | null;
     totalStudents: number;
     totalDepartments: number;
     totalBookings: number;
@@ -43,6 +43,7 @@ export interface DepartmentStat {
     bookingCount: number;
 }
 
+
 export interface DeanDashboardData {
     facultyName: string;
     totalStudents: number;
@@ -53,4 +54,13 @@ export interface DeanDashboardData {
         normal: number;
     };
     departmentStats: DepartmentStat[];
+}
+
+export interface RectorDashboardFilters {
+    startDate?: Date;
+    endDate?: Date;
+    facultyId?: number;
+    departmentId?: number;
+    problemCategoryId?: number;
+    gender?: string;
 }

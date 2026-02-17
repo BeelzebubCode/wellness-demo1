@@ -25,9 +25,20 @@ export async function handleCancelBooking({ tenant, bookingIdRaw, body }: Input)
     return NextResponse.json({ success: false, error: "Invalid booking ID" }, { status: 400 });
   }
 
-  const cancelReason = String(body?.cancelReason ?? "").trim();
-  if (!cancelReason) {
-    return NextResponse.json({ success: false, error: "กรุณากรอกเหตุผลในการยกเลิก" }, { status: 400 });
+  const cancellationReasonId = Number(body?.cancellationReasonId);
+  if (!cancellationReasonId || Number.isNaN(cancellationReasonId)) {
+    return NextResponse.json({ success: false, error: "กรุณาเลือกเหตุผลในการยกเลิก" }, { status: 400 });
+  }
+
+  const cancellationNote = String(body?.cancellationNote ?? "").trim() || null;
+
+  // Validate that cancellation reason exists
+  const reasonExists = await prisma.cancellationReason.findUnique({
+    where: { cancellation_reason_id: cancellationReasonId },
+  });
+
+  if (!reasonExists) {
+    return NextResponse.json({ success: false, error: "Invalid cancellation reason" }, { status: 400 });
   }
 
   // ✅ โหลด booking แบบ tenant-safe + owner-safe
@@ -78,13 +89,15 @@ export async function handleCancelBooking({ tenant, bookingIdRaw, body }: Input)
       },
       update: {
         booking_cancellation_cancelled_by_id: account.accountId,
-        booking_cancellation_reason: cancelReason,
+        cancellation_reason_id: cancellationReasonId,
+        booking_cancellation_note: cancellationNote,
       },
       create: {
         university_id: activeUniversityId,
         booking_id: bookingId,
         booking_cancellation_cancelled_by_id: account.accountId,
-        booking_cancellation_reason: cancelReason,
+        cancellation_reason_id: cancellationReasonId,
+        booking_cancellation_note: cancellationNote,
       },
     });
 

@@ -43,7 +43,7 @@ export function BookingConfirmModal({
     serviceMode: ServiceMode;
     onlineChannelCode?: OnlineChannelCode | null;
     consentChecked: boolean;
-    consentSignatureDataUrl?: string | null;
+    agreementSignatureDataUrl?: string | null;
   }) => Promise<void> | void;
   isLoading?: boolean;
   error?: string | null;
@@ -53,7 +53,7 @@ export function BookingConfirmModal({
   });
 
   const [consentChecked, setConsentChecked] = useState(false);
-  const [consentSignature, setConsentSignature] = useState<string | null>(null);
+  const [agreementSignature, setAgreementSignature] = useState<string | null>(null);
 
   const [form, setForm] = useState<BookingFormData>({
     problemCategoryId: 0,
@@ -74,7 +74,7 @@ export function BookingConfirmModal({
     if (!slot) return false;
     if (!consentChecked) return false;
     if (needsOnlineChannel && !service.onlineChannelCode) return false;
-    if (needsSignature && !consentSignature) return false;
+    if (needsSignature && !agreementSignature) return false;
     if (!formOk) return false;
     return true;
   }, [
@@ -83,7 +83,7 @@ export function BookingConfirmModal({
     needsOnlineChannel,
     service.onlineChannelCode,
     needsSignature,
-    consentSignature,
+    agreementSignature,
     formOk,
   ]);
 
@@ -116,7 +116,7 @@ export function BookingConfirmModal({
                     onChange={(next) => {
                       setService(next);
                       if (next.mode !== "ONLINE") {
-                        setConsentSignature(null);
+                        setAgreementSignature(null);
                       }
                     }}
                   />
@@ -182,10 +182,10 @@ export function BookingConfirmModal({
                     {service.mode === "ONLINE" ? (
                       <div className="flex-1 flex flex-col space-y-3">
                         <SignaturePad
-                          value={consentSignature}
-                          onChange={setConsentSignature}
+                          value={agreementSignature}
+                          onChange={setAgreementSignature}
                           disabled={!!isLoading}
-                          warning={!consentSignature && (
+                          warning={!agreementSignature && (
                             <AlertBox type="warning" message="กรุณาเซ็นยินยอมการจองออนไลน์" />
                           )}
                         />
@@ -226,8 +226,8 @@ export function BookingConfirmModal({
                     ? service.onlineChannelCode ?? null
                     : null,
                   consentChecked,
-                  consentSignatureDataUrl:
-                    service.mode === "ONLINE" ? consentSignature : null,
+                  agreementSignatureDataUrl:
+                    service.mode === "ONLINE" ? agreementSignature : null,
                 });
               }}
             >

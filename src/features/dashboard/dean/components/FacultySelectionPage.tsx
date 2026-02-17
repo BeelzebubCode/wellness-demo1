@@ -152,10 +152,10 @@ export function FacultySelectionPage() {
                                     </div>
                                 </div>
 
-                                {faculty.educationFieldGroup && (
+                                {faculty.subjectGroupCategory && (
                                     <div className="mb-4">
                                         <span className="text-xs font-semibold text-[rgb(var(--primary))] uppercase tracking-wide bg-[rgba(var(--primary),0.1)] px-2 py-1 rounded">
-                                            {faculty.educationFieldGroup}
+                                            {faculty.subjectGroupCategory}
                                         </span>
                                     </div>
                                 )}

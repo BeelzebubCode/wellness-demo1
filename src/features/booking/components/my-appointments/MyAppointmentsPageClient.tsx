@@ -23,14 +23,16 @@ function isActiveStatus(status: string) {
 
 export default function MyAppointmentsPageClient() {
   const [bookingToCancel, setBookingToCancel] = useState<MyBookingDto | null>(null);
-  const [cancelReason, setCancelReason] = useState("");
+  const [cancellationReasonId, setCancellationReasonId] = useState<number | null>(null);
+  const [cancellationNote, setCancellationNote] = useState("");
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
 
   const openCancel = (booking: MyBookingDto) => {
     setBookingToCancel(booking);
-    setCancelReason("");
+    setCancellationReasonId(null);
+    setCancellationNote("");
     setCancelError(null);
     setHasSubmitted(false);
     setShowCancelModal(true);
@@ -65,8 +67,8 @@ export default function MyAppointmentsPageClient() {
     setHasSubmitted(true);
     if (!bookingToCancel) return;
 
-    if (!cancelReason.trim()) {
-      setCancelError("กรุณากรอกเหตุผลในการยกเลิก");
+    if (!cancellationReasonId) {
+      setCancelError("กรุณาเลือกเหตุผลในการยกเลิก");
       return;
     }
 
@@ -74,12 +76,14 @@ export default function MyAppointmentsPageClient() {
       await cancelBooking({
         bookingId: bookingToCancel.bookingId,
         universityId: bookingToCancel.universityId,
-        reason: cancelReason,
+        cancellationReasonId: cancellationReasonId,
+        cancellationNote: cancellationNote.trim() || undefined,
       });
 
       setShowCancelModal(false);
       setBookingToCancel(null);
-      setCancelReason("");
+      setCancellationReasonId(null);
+      setCancellationNote("");
       setCancelError(null);
       setHasSubmitted(false);
 
@@ -134,11 +138,15 @@ export default function MyAppointmentsPageClient() {
       <CancelBookingModal
         open={showCancelModal}
         onClose={() => setShowCancelModal(false)}
-        reason={cancelReason}
-        onChangeReason={(v) => {
-          setCancelReason(v);
+        cancellationReasonId={cancellationReasonId}
+        onChangeCancellationReasonId={(id) => {
+          setCancellationReasonId(id);
           setCancelError(null);
           setHasSubmitted(false);
+        }}
+        cancellationNote={cancellationNote}
+        onChangeCancellationNote={(note) => {
+          setCancellationNote(note);
         }}
         error={cancelError}
         hasSubmitted={hasSubmitted}

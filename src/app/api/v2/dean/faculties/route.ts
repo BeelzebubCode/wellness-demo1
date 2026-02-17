@@ -53,8 +53,8 @@ export async function GET(req: NextRequest) {
             universityName: faculty.universityName,
             studentCount: faculty.studentCount,
             departmentCount: faculty.departmentCount,
-            educationFieldGroup: faculty.educationFieldGroup,
-            educationFieldGroupTH: faculty.educationFieldGroupTH,
+            subjectGroupCategory: faculty.subjectGroupCategory,
+            subjectGroupCategoryTH: faculty.subjectGroupCategoryTH,
             logo: `/images/logo/${faculty.universityCode}_logo.png`, // Using university logo for now
         }));
 

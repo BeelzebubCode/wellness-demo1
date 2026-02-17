@@ -17,7 +17,7 @@ function normalizeTopics(arr: unknown): string[] {
 }
 
 async function getBorrowWindowDays(): Promise<number> {
-  const policy = await prisma.borrowWindowPolicy.findFirst({
+  const policy = await prisma.consultantBorrowPolicy.findFirst({
     where: { is_active: true },
     orderBy: { created_at: "desc" },
   });

@@ -2,14 +2,25 @@
 
 "use client";
 
+import { useState, useEffect } from "react";
 import { AlertBox } from "@/components/notification/AlertBox";
 import { Button, Modal, ModalFooter } from "@/components/ui";
+import { CustomSelect } from "@/components/ui/CustomSelect";
+
+interface CancellationReason {
+  cancellation_reason_id: number;
+  cancellation_reason_code: string;
+  cancellation_reason_name_th: string;
+  cancellation_reason_name_en: string | null;
+}
 
 export function CancelBookingModal({
   open,
   onClose,
-  reason,
-  onChangeReason,
+  cancellationReasonId,
+  onChangeCancellationReasonId,
+  cancellationNote,
+  onChangeCancellationNote,
   error,
   hasSubmitted,
   onConfirm,
@@ -18,8 +29,11 @@ export function CancelBookingModal({
   open: boolean;
   onClose: () => void;
 
-  reason: string;
-  onChangeReason: (v: string) => void;
+  cancellationReasonId: number | null;
+  onChangeCancellationReasonId: (id: number) => void;
+
+  cancellationNote: string;
+  onChangeCancellationNote: (note: string) => void;
 
   error: string | null;
   hasSubmitted: boolean;
@@ -27,25 +41,78 @@ export function CancelBookingModal({
   onConfirm: () => void;
   isLoading?: boolean;
 }) {
+  const [reasons, setReasons] = useState<CancellationReason[]>([]);
+  const [loadingReasons, setLoadingReasons] = useState(true);
+
+  useEffect(() => {
+    if (open) {
+      fetchReasons();
+    }
+  }, [open]);
+
+  async function fetchReasons() {
+    try {
+      setLoadingReasons(true);
+      const response = await fetch("/api/v2/master/cancellation-reasons");
+      const result = await response.json();
+
+      if (result.success) {
+        setReasons(result.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch cancellation reasons:", error);
+    } finally {
+      setLoadingReasons(false);
+    }
+  }
+
+  const reasonOptions = reasons.map((r) => ({
+    value: r.cancellation_reason_id.toString(),
+    label: r.cancellation_reason_name_th,
+  }));
+
   return (
     <Modal isOpen={open} onClose={onClose} title="ยืนยันการยกเลิก" size="sm">
       <div className="space-y-4">
         <p className="text-sm text-gray-600">คุณแน่ใจหรือไม่ที่จะยกเลิกการจองนี้?</p>
 
-        <textarea
-          value={reason}
-          onChange={(e) => onChangeReason(e.target.value)}
-          placeholder="เหตุผล (จำเป็น)"
-          rows={3}
-          className={`
-            w-full p-3 rounded-xl text-sm transition border
-            ${error && hasSubmitted
-              ? "border-red-400 bg-red-50 focus:ring-red-300"
-              : "border-gray-300 focus:border-primary-500 focus:ring-primary-300"
-            }
-            focus:outline-none focus:ring-2
-          `}
-        />
+        {/* Cancellation Reason Dropdown */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            เหตุผลในการยกเลิก <span className="text-red-500">*</span>
+          </label>
+          {loadingReasons ? (
+            <div className="animate-pulse h-12 bg-gray-100 rounded-xl"></div>
+          ) : (
+            <CustomSelect
+              placeholder="เลือกเหตุผล"
+              options={reasonOptions}
+              value={cancellationReasonId?.toString() || ""}
+              onValueChange={(val) => onChangeCancellationReasonId(Number(val))}
+              error={!!(error && hasSubmitted && !cancellationReasonId)}
+            />
+          )}
+        </div>
+
+        {/* Optional Note */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            รายละเอียดเพิ่มเติม (ไม่บังคับ)
+          </label>
+          <textarea
+            value={cancellationNote}
+            onChange={(e) => {
+              onChangeCancellationNote(e.target.value);
+              // Auto-expand textarea
+              e.target.style.height = 'auto';
+              e.target.style.height = e.target.scrollHeight + 'px';
+            }}
+            placeholder="ระบุรายละเอียดเพิ่มเติม..."
+            rows={2}
+            className="w-full p-3 rounded-xl text-sm transition border border-gray-200 shadow-sm hover:border-gray-300 focus:border-primary-500 focus:ring-primary-300 focus:outline-none focus:ring-2 resize-none overflow-hidden min-h-[60px] max-h-[200px]"
+            style={{ height: 'auto' }}
+          />
+        </div>
 
         {error ? <AlertBox type="error" message={error} /> : null}
       </div>
@@ -54,7 +121,7 @@ export function CancelBookingModal({
         <Button variant="ghost" onClick={onClose} disabled={isLoading}>
           ยกเลิก
         </Button>
-        <Button variant="danger" onClick={onConfirm} disabled={isLoading}>
+        <Button variant="danger" onClick={onConfirm} disabled={isLoading || loadingReasons}>
           ยืนยันยกเลิกการจอง
         </Button>
       </ModalFooter>

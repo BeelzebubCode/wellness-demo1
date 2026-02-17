@@ -15,6 +15,7 @@ import { seedUniversityTypes } from "./seeds/10-university-types";
 import { seedUniversityConnections } from "./seeds/11-university-connections";
 import { seedManualConnections } from "./seeds/12-manual-connections";
 import { seedDeans } from "./seeds/13-deans";
+import { seedDayPeriods } from "./seeds/18-day-periods";
 
 
 const prisma = new PrismaClient();
@@ -71,6 +72,7 @@ async function main() {
     passwordHash: st.passwordHash,
   });
 
+  const hours = await seedDayPeriods(prisma, { universities: geo.universities });
   const timeSlots = await seedTimeSlots(prisma, { universities: geo.universities });
 
   const isQuickMode = process.env.SEED_QUICK_MODE === "true";
@@ -101,6 +103,7 @@ async function main() {
     consultantBiasById: consultants.consultantBiasById,
     bookingPlan,
     onlineChannels: st.onlineChannels,
+    cancellationReasons: st.cancellationReasons,
   });
 
   console.log("\\n🏛️  Seeding university types...");

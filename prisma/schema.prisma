@@ -49,15 +49,15 @@ model University {
   university_latitude  Decimal? @db.Decimal(9, 6)
   university_longitude Decimal? @db.Decimal(9, 6)
 
-  accountsHome  Account[]                 @relation("AccountHomeUniversity")
-  accessMembers AccountUniversityAccess[]
-  students      Student[]
-  consultants   Consultant[]
-  faculties     Faculty[]
-  departments   Department[]
-  advisors      Advisor[]
-  timeSlots     TimeSlot[]
-  bookings      Booking[]
+  accountsHome      Account[]                     @relation("AccountHomeUniversity")
+  accessPermissions AccountUniversityPermission[]
+  students          Student[]
+  consultants       Consultant[]
+  faculties         Faculty[]
+  departments       Department[]
+  advisors          Advisor[]
+  timeSlots         TimeSlot[]
+  bookings          Booking[]
 
   aiKbDocuments    AiKbDocument[]    @relation("UniversityAiKbDocuments")
   aiKbChunks       AiKbChunk[]       @relation("UniversityAiKbChunks")
@@ -65,8 +65,8 @@ model University {
 
   borrowRequestsFrom BorrowRequest[]
 
-  borrowWindowPolicies BorrowWindowPolicy[]
-  BookingAssignment    BookingAssignment[]
+  consultantBorrowPolicies ConsultantBorrowPolicy[]
+  BookingAssignment        BookingAssignment[]
 
   connectionsFrom UniversityConnection[] @relation("SourceUniversity")
   connectionsTo   UniversityConnection[] @relation("TargetUniversity")
@@ -74,20 +74,21 @@ model University {
   homeBorrowAvailabilities   ConsultantBorrowAvailability[] @relation("BorrowAvailabilityHomeUniversity")
   targetBorrowAvailabilities ConsultantBorrowAvailability[] @relation("BorrowAvailabilityTargetUniversity")
   borrowAssignments          BorrowAssignment[]
+  dayPeriods                 DayPeriod[]                    @relation("UniversityDayPeriods")
 
   @@index([province_id])
   @@index([university_is_active])
   @@map("university")
 }
 
-model AccountUniversityAccess {
-  account_university_access_id Int                  @id @default(autoincrement())
-  account_id                   Int
-  university_id                Int
-  access_role                  UniversityAccessRole @default(STUDENT)
-  access_granted_by_account_id Int?
-  access_granted_at            DateTime             @default(now())
-  access_revoked_at            DateTime?
+model AccountUniversityPermission {
+  account_university_permission_id Int                  @id @default(autoincrement()) @map("account_university_access_id")
+  account_id                       Int
+  university_id                    Int
+  access_role                      UniversityAccessRole @default(STUDENT)
+  access_granted_by_account_id     Int?
+  access_granted_at                DateTime             @default(now())
+  access_revoked_at                DateTime?
 
   account          Account    @relation(fields: [account_id], references: [account_id])
   university       University @relation(fields: [university_id], references: [university_id])
@@ -114,9 +115,9 @@ model Account {
   account_created_at         DateTime    @default(now())
   account_last_login_at      DateTime?
 
-  homeUniversity        University?               @relation("AccountHomeUniversity", fields: [account_home_university_id], references: [university_id])
-  universityAccesses    AccountUniversityAccess[]
-  accessGrantedToOthers AccountUniversityAccess[] @relation("AccessGrantedBy")
+  homeUniversity        University?                   @relation("AccountHomeUniversity", fields: [account_home_university_id], references: [university_id])
+  accessPermissions     AccountUniversityPermission[]
+  accessGrantedToOthers AccountUniversityPermission[] @relation("AccessGrantedBy")
 
   bookingCancellations   BookingCancellation[]
   consultant             Consultant?
@@ -165,9 +166,9 @@ model Student {
   addresses  StudentAddress[]
   profile    StudentProfile?
 
-  pointWallet       StudentPointWallet?
-  pointTransactions StudentPointTransaction[]
-  consentSignatures BookingConsentSignature[]
+  pointWallet         StudentPointWallet?
+  pointTransactions   StudentPointTransaction[]
+  agreementSignatures BookingAgreementSignature[]
 
   @@unique([university_id, student_id])
   @@unique([university_id, student_code])
@@ -257,11 +258,11 @@ model StudentAcademic {
 // 🏢 FACULTY & DEPARTMENT (ผูกมหาลัย) AcademicGroup
 // ==========================================
 
-model EducationFieldGroup {
-  education_field_group_id Int    @id @default(autoincrement())
-  isced_broad_field_code   String @unique @db.VarChar(2) // "00".."10"
-  field_group_name_th      String @db.VarChar(150)
-  field_group_name_en      String @db.VarChar(150)
+model SubjectGroupCategory {
+  subject_group_category_id Int    @id @default(autoincrement()) @map("education_field_group_id")
+  isced_broad_field_code    String @unique @db.VarChar(2) // "00".."10"
+  field_group_name_th       String @db.VarChar(150)
+  field_group_name_en       String @db.VarChar(150)
 
   faculties Faculty[]
 
@@ -277,8 +278,8 @@ model Faculty {
 
   dean_account_id Int? // [NEW] Link to Dean account
 
-  education_field_group_id Int?
-  educationFieldGroup      EducationFieldGroup? @relation(fields: [education_field_group_id], references: [education_field_group_id])
+  subject_group_category_id Int?                  @map("education_field_group_id")
+  subjectGroupCategory      SubjectGroupCategory? @relation(fields: [subject_group_category_id], references: [subject_group_category_id])
 
   university University @relation(fields: [university_id], references: [university_id])
   dean       Account?   @relation("FacultyDean", fields: [dean_account_id], references: [account_id])
@@ -290,7 +291,7 @@ model Faculty {
   @@unique([university_id, faculty_id])
   @@unique([university_id, faculty_code])
   @@index([university_id])
-  @@index([education_field_group_id])
+  @@index([subject_group_category_id])
   @@index([dean_account_id])
   @@map("faculty")
 }
@@ -441,10 +442,40 @@ model TimeSlot {
   university University @relation(fields: [university_id], references: [university_id])
   bookings   Booking[]
 
+  day_period_id Int?
+  dayPeriod     DayPeriod? @relation(fields: [day_period_id], references: [day_period_id])
+
   @@unique([university_id, time_slot_id])
   @@unique([university_id, time_slot_start_datetime, time_slot_end_datetime])
   @@index([university_id, time_slot_start_datetime])
+  @@index([university_id, day_period_id, time_slot_start_datetime])
   @@map("time_slot")
+}
+
+model DayPeriod {
+  day_period_id Int @id @default(autoincrement())
+
+  university_id Int?
+
+  day_period_code    String  @db.VarChar(30)
+  day_period_name_th String  @db.VarChar(50)
+  day_period_name_en String? @db.VarChar(50)
+
+  start_time DateTime @db.Time
+  end_time   DateTime @db.Time
+
+  spans_midnight Boolean @default(false)
+
+  sort_order Int     @default(0)
+  is_active  Boolean @default(true)
+
+  university University? @relation("UniversityDayPeriods", fields: [university_id], references: [university_id])
+
+  timeSlots TimeSlot[]
+
+  @@unique([university_id, day_period_code])
+  @@index([university_id, is_active])
+  @@map("day_period")
 }
 
 // ==========================================
@@ -491,14 +522,14 @@ model Booking {
   problemCategory ProblemCategory        @relation(fields: [problem_category_id], references: [problem_category_id])
   onlineChannel   OnlineChannelCategory? @relation(fields: [online_channel_category_id], references: [online_channel_category_id])
 
-  assignments       BookingAssignment[]
-  cancellation      BookingCancellation?
-  outcome           BookingOutcome?
-  feedback          Feedback?
-  notifications     Notification[]
-  pointTransactions StudentPointTransaction[] @relation("BookingPointTx")
-  consentSignature  BookingConsentSignature?
-  BookingSession    BookingSession?
+  assignments        BookingAssignment[]
+  cancellation       BookingCancellation?
+  outcome            BookingOutcome?
+  feedback           Feedback?
+  notifications      Notification[]
+  pointTransactions  StudentPointTransaction[]  @relation("BookingPointTx")
+  agreementSignature BookingAgreementSignature?
+  BookingSession     BookingSession?
 
   @@id([university_id, booking_id])
   // @@unique([university_id, student_id, time_slot_id]) -- Removed to allow re-booking after cancellation
@@ -599,8 +630,8 @@ model BookingOutcome {
   @@map("booking_outcome")
 }
 
-model BookingConsentSignature {
-  booking_consent_signature_id Int @id @default(autoincrement())
+model BookingAgreementSignature {
+  booking_agreement_signature_id Int @id @default(autoincrement()) @map("booking_consent_signature_id")
 
   university_id Int
   booking_id    Int
@@ -621,20 +652,35 @@ model BookingConsentSignature {
   @@map("booking_consent_signature")
 }
 
+model CancellationReason {
+  cancellation_reason_id          Int     @id @default(autoincrement())
+  cancellation_reason_code        String  @unique @db.VarChar(20)
+  cancellation_reason_name_th     String  @db.VarChar(100)
+  cancellation_reason_name_en     String? @db.VarChar(100)
+  cancellation_reason_description String? @db.Text
+
+  bookingCancellations BookingCancellation[]
+
+  @@map("cancellation_reason")
+}
+
 model BookingCancellation {
   booking_id    Int
   university_id Int
 
+  cancellation_reason_id               Int
+  booking_cancellation_note            String?  @db.Text
   booking_cancellation_cancelled_by_id Int
-  booking_cancellation_reason          String   @db.Text
   booking_cancellation_cancelled_at    DateTime @default(now())
 
-  cancelledBy Account @relation(fields: [booking_cancellation_cancelled_by_id], references: [account_id])
-  booking     Booking @relation(fields: [university_id, booking_id], references: [university_id, booking_id])
+  cancelledBy        Account            @relation(fields: [booking_cancellation_cancelled_by_id], references: [account_id])
+  booking            Booking            @relation(fields: [university_id, booking_id], references: [university_id, booking_id])
+  cancellationReason CancellationReason @relation(fields: [cancellation_reason_id], references: [cancellation_reason_id])
 
   @@id([university_id, booking_id])
   @@index([booking_cancellation_cancelled_by_id])
   @@index([booking_id])
+  @@index([cancellation_reason_id])
   @@map("booking_cancellation")
 }
 
@@ -1060,9 +1106,9 @@ model ConsultantBorrowAvailability {
   @@map("consultant_borrow_availability")
 }
 
-model BorrowWindowPolicy {
-  borrow_window_policy_id Int  @id @default(autoincrement())
-  university_id           Int? // null = default/global
+model ConsultantBorrowPolicy {
+  consultant_borrow_policy_id Int  @id @default(autoincrement()) @map("borrow_window_policy_id")
+  university_id               Int? // null = default/global
 
   borrow_window_days Int     @default(14)
   is_active          Boolean @default(true)

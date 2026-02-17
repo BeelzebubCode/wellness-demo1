@@ -41,4 +41,12 @@ export interface TimeSlotCore {
   isPastTime: boolean;
 
   unavailableReason?: UnavailableReason | null;
+  
+  // ✅ day period info
+  dayPeriod?: {
+    id: number;
+    code: string;
+    nameTh: string;
+    nameEn?: string | null;
+  } | null;
 }

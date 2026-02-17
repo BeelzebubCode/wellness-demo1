@@ -58,7 +58,7 @@ export async function handleGetBooking(
         orderBy: { assigned_at: "desc" },
       },
       outcome: true,
-      cancellation: { include: { cancelledBy: true } },
+      cancellation: { include: { cancelledBy: true, cancellationReason: true } },
       feedback: {
         include: {
           ratings: { include: { criterion: true } },
@@ -165,7 +165,10 @@ export async function handleGetBooking(
 
     cancellation: booking.cancellation
       ? {
-          reason: booking.cancellation.booking_cancellation_reason,
+          reasonId: booking.cancellation.cancellation_reason_id,
+          reason: booking.cancellation.cancellationReason.cancellation_reason_name_th,
+          reasonCode: booking.cancellation.cancellationReason.cancellation_reason_code,
+          note: booking.cancellation.booking_cancellation_note,
           cancelledBy: booking.cancellation.cancelledBy.account_username,
           cancelledAt: booking.cancellation.booking_cancellation_cancelled_at.toISOString(),
         }

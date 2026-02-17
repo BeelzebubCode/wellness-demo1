@@ -68,7 +68,7 @@ export async function autoExpireAssignments(): Promise<number> {
                     });
 
                     if (otherActive === 0) {
-                        await tx.accountUniversityAccess.updateMany({
+                        await tx.accountUniversityPermission.updateMany({
                             where: {
                                 account_id: accountId,
                                 university_id: targetUniId,

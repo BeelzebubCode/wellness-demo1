@@ -106,7 +106,7 @@ export async function handleLogin(request: NextRequest) {
           },
         },
 
-        universityAccesses: {
+        accessPermissions: {
           where: { access_revoked_at: null },
           select: { university_id: true },
           orderBy: { university_id: "asc" },
@@ -233,7 +233,7 @@ export async function handleLogin(request: NextRequest) {
 
     let allowedUniversityIds: number[] = [];
     try {
-      const grantedUniversityIds = account.universityAccesses.map((x) => x.university_id);
+      const grantedUniversityIds = account.accessPermissions.map((x) => x.university_id);
       
       allowedUniversityIds = Array.from(
         new Set(
@@ -257,7 +257,7 @@ export async function handleLogin(request: NextRequest) {
         {
           success: false,
           error:
-            "บัญชีนี้ไม่มีสิทธิ์ผูกกับมหาวิทยาลัยใดเลย (home_university / entity / universityAccesses ว่าง)",
+            "บัญชีนี้ไม่มีสิทธิ์ผูกกับมหาวิทยาลัยใดเลย (home_university / entity / accessPermissions ว่าง)",
         },
         { status: 403 }
       );
@@ -271,7 +271,7 @@ export async function handleLogin(request: NextRequest) {
           {
             success: false,
             error:
-              "บัญชีไม่มีสิทธิ์ในมหาวิทยาลัยของโดเมนนี้ (ตรวจสอบ home_university / entity / universityAccesses)",
+              "บัญชีไม่มีสิทธิ์ในมหาวิทยาลัยของโดเมนนี้ (ตรวจสอบ home_university / entity / accessPermissions)",
           },
           { status: 403 }
         );

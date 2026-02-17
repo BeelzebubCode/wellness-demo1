@@ -8,7 +8,7 @@ export interface DeanFacultyStats {
   universityCode: string;
   universityName: string;
   universityLogoUrl: string;
-  educationFieldGroup: string | null;
+  subjectGroupCategory: string | null;
   academicYear: string;
   totalStudents: number;
   totalDepartments: number;

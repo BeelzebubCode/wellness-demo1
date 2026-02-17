@@ -49,6 +49,7 @@ export async function confirmBookingCancel(args: {
     });
 
     // ✅ จุดที่พังบ่อย: create ต้องใส่ cancelled_by_id (ถ้าฟิลด์นี้ not null)
+    // ✅ Use "OTHER" category (ID=6) for AI-generated cancellations
     await tx.bookingCancellation.upsert({
       where: {
         university_id_booking_id: {
@@ -57,14 +58,16 @@ export async function confirmBookingCancel(args: {
         },
       },
       update: {
-        booking_cancellation_cancelled_by_id: cancelledByAccountId, // ✅ เพิ่ม
-        booking_cancellation_reason: reason,
+        booking_cancellation_cancelled_by_id: cancelledByAccountId,
+        cancellation_reason_id: 6, // OTHER category
+        booking_cancellation_note: reason,
       },
       create: {
         university_id: activeUniversityId,
         booking_id: booking.booking_id,
-        booking_cancellation_cancelled_by_id: cancelledByAccountId, // ✅ เพิ่ม
-        booking_cancellation_reason: reason,
+        booking_cancellation_cancelled_by_id: cancelledByAccountId,
+        cancellation_reason_id: 6, // OTHER category
+        booking_cancellation_note: reason,
       },
     });
 

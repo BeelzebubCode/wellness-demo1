@@ -25,20 +25,29 @@ export async function seedTimeSlots(
   // ------------------------------
   // helpers
   // ------------------------------
-  function buildSlotsForDate(date: Date) {
-    const openHour = 8;
-    const closeHour = 20; // ✅ Fix: Always close at 20:00 (last slot 19:00-20:00) regardless of weekend
+  function getDayPeriodCode(hour: number): string {
+    if (hour >= 8 && hour < 12) return "MORNING";
+    if (hour >= 12 && hour < 16) return "AFTERNOON";
+    if (hour >= 16 && hour < 20) return "EVENING";
+    return "EVENING"; // Fallback
+  }
 
-    const slots: Array<{ start: Date; end: Date }> = [];
+  function buildSlotsForDate(date: Date, dayPeriodMap: Map<string, number>) {
+    const openHour = 8;
+    const closeHour = 20;
+
+    const slots: Array<{ start: Date; end: Date; dayPeriodId: number | null }> = [];
 
     for (let hour = openHour; hour < closeHour; hour++) {
-      // Use toThaiDate to get the correct UTC instant for 08:00 TH
       const start = toThaiDate(date, hour, 0);
 
       const end = new Date(start);
       end.setMinutes(end.getMinutes() + SLOT_DURATION_MINUTES);
 
-      slots.push({ start, end });
+      const code = getDayPeriodCode(hour);
+      const dayPeriodId = dayPeriodMap.get(code) ?? null;
+
+      slots.push({ start, end, dayPeriodId });
     }
 
     return slots;
@@ -48,6 +57,15 @@ export async function seedTimeSlots(
   // main loop
   // ------------------------------
   for (const uni of universities) {
+      // Pre-fetch day periods for this university
+      const periods = await prisma.dayPeriod.findMany({
+          where: { university_id: uni.university_id }
+      });
+      const dayPeriodMap = new Map<string, number>();
+      for (const p of periods) {
+          dayPeriodMap.set(p.day_period_code, p.day_period_id);
+      }
+
     const createBuffer: Omit<TimeSlot, "time_slot_id">[] = [];
 
     const startDate = addDays(today0, -PAST_DAYS);
@@ -55,10 +73,9 @@ export async function seedTimeSlots(
     for (let i = 0; i <= TOTAL_DAYS; i++) {
       const distinctDate = addDays(startDate, i);
       
-      // Normalize to UTC Noon to avoid timezone shifting during setUTCHours (Date Shifting Bug Fix)
       const d = new Date(Date.UTC(distinctDate.getFullYear(), distinctDate.getMonth(), distinctDate.getDate(), 12, 0, 0));
 
-      const slots = buildSlotsForDate(d);
+      const slots = buildSlotsForDate(d, dayPeriodMap);
       for (const s of slots) {
         createBuffer.push({
           university_id: uni.university_id,
@@ -66,6 +83,7 @@ export async function seedTimeSlots(
           time_slot_end_datetime: s.end,
           time_slot_max_capacity: DEFAULT_CAPACITY,
           time_slot_status: TimeSlotStatus.OPEN,
+          day_period_id: s.dayPeriodId,
         });
       }
     }

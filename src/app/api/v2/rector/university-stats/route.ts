@@ -49,20 +49,29 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        // 3. Extract optional date range from query parameters
+        // 3. Extract filters from query parameters
         const { searchParams } = new URL(req.url);
         const startDateStr = searchParams.get("startDate");
         const endDateStr = searchParams.get("endDate");
+        const facultyId = searchParams.get("facultyId");
+        const departmentId = searchParams.get("departmentId");
+        const problemCategoryId = searchParams.get("problemCategoryId");
+        const gender = searchParams.get("gender");
 
-        // Parse dates if provided
-        const startDate = startDateStr ? new Date(startDateStr) : undefined;
-        const endDate = endDateStr ? new Date(endDateStr) : undefined;
+        const filters = {
+            startDate: startDateStr ? new Date(startDateStr) : undefined,
+            endDate: endDateStr ? new Date(endDateStr) : undefined,
+            facultyId: facultyId ? Number(facultyId) : undefined,
+            departmentId: departmentId ? Number(departmentId) : undefined,
+            problemCategoryId: problemCategoryId ? Number(problemCategoryId) : undefined,
+            gender: gender || undefined,
+        };
 
         // 4. Get university-wide statistics using RectorService
         const [stats, wellbeing, healthMap] = await Promise.all([
-            RectorService.getUniversityStats(account.account_home_university_id, startDate, endDate),
-            RectorService.getUniversityWellbeing(account.account_home_university_id, startDate, endDate),
-            RectorService.getFacultyHealthMap(account.account_home_university_id, startDate, endDate)
+            RectorService.getUniversityStats(account.account_home_university_id, filters),
+            RectorService.getUniversityWellbeing(account.account_home_university_id, filters),
+            RectorService.getFacultyHealthMap(account.account_home_university_id, filters)
         ]);
 
         return NextResponse.json({

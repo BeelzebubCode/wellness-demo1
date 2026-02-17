@@ -38,7 +38,7 @@ export type BookingPayload = {
   onlineChannelCode?: string | null;
 
   consentChecked?: boolean;
-  consentSignatureDataUrl?: string | null;
+  agreementSignatureDataUrl?: string | null;
 
   // compat (โค้ดเก่า)
   detailText?: string | null;
@@ -112,7 +112,8 @@ export type MyAppointmentsResponse =
 export type CancelBookingInput = {
   bookingId: number;
   universityId: number;
-  reason: string;
+  cancellationReasonId: number;
+  cancellationNote?: string;
 };
 
 // ==============================

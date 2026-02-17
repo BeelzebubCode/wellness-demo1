@@ -215,8 +215,15 @@ export async function handleListBookings(
       },
       cancellation: {
         select: {
-          booking_cancellation_reason: true,
+          cancellation_reason_id: true,
+          booking_cancellation_note: true,
           booking_cancellation_cancelled_at: true,
+          cancellationReason: {
+            select: {
+              cancellation_reason_name_th: true,
+              cancellation_reason_code: true,
+            },
+          },
           cancelledBy: {
             select: {
               account_username: true,

@@ -79,7 +79,7 @@ export async function consultantCompleteBorrowAssignment(input: {
 
         if (otherActive === 0) {
             // Revoke access
-            await tx.accountUniversityAccess.updateMany({
+            await tx.accountUniversityPermission.updateMany({
                 where: {
                     account_id: input.accountId,
                     university_id: targetUniId,

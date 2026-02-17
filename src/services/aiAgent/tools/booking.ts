@@ -214,7 +214,8 @@ export async function agentCancelActiveForStudent(input: {
             university_id: booking.university_id, // ✅ ถ้า schema มี tenant field
             booking_id: booking.booking_id,
             booking_cancellation_cancelled_by_id: Number(cancelledByAccountId),
-            booking_cancellation_reason: reason || "ยกเลิกโดยผู้ใช้",
+            cancellation_reason_id: 6, // OTHER category for AI cancellations
+            booking_cancellation_note: reason || "ยกเลิกโดยผู้ใช้",
           },
         });
       } catch {

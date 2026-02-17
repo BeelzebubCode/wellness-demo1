@@ -44,7 +44,7 @@ export async function getAccountFromRequest(
     ? jwt.allowedUniversityIds.filter((n) => Number.isFinite(n))
     : [];
 
-  const accesses = await prisma.accountUniversityAccess.findMany({
+  const accesses = await prisma.accountUniversityPermission.findMany({
     where: { account_id: account.account_id, access_revoked_at: null },
     select: { university_id: true },
   });

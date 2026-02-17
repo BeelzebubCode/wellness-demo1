@@ -1,47 +1,57 @@
+import { Prisma, StudentGender } from "@prisma/client";
 import prisma from "@/lib/prisma";
+import type { RectorDashboardFilters } from "@/features/dashboard/rector/types";
 
 export const RectorService = {
     /**
      * Get aggregated university-wide statistics for Rector's dashboard
      * Includes all faculties in the university
      */
-    async getUniversityStats(universityId: number, startDate?: Date, endDate?: Date) {
+    async getUniversityStats(universityId: number, filters: RectorDashboardFilters = {}) {
         // Legacy wrapper for backward compatibility if needed, 
         // but primarily we use the new specific functions below.
-        return await this.getLegacyStats(universityId, startDate, endDate);
+        return await this.getLegacyStats(universityId, filters);
     },
 
     // Independent function to get the "University Health Pulse"
-    async getUniversityWellbeing(universityId: number, startDate?: Date, endDate?: Date) {
+    async getUniversityWellbeing(universityId: number, filters: RectorDashboardFilters = {}) {
         if (!universityId) return null;
 
-        // Build date filter
-        const dateFilter = startDate && endDate ? {
-            booking: {
+        const { startDate, endDate, facultyId, departmentId, problemCategoryId, gender } = filters;
+
+        // Build student filter
+        const studentWhere: Prisma.StudentWhereInput = {};
+        if (gender) {
+            studentWhere.profile = { student_gender: gender as StudentGender };
+        }
+        if (facultyId || departmentId) {
+            studentWhere.academic = {
+                ...(facultyId ? { faculty_id: facultyId } : {}),
+                ...(departmentId ? { department_id: departmentId } : {})
+            };
+        }
+
+        // Build base booking filter
+        const bookingWhere: Prisma.BookingWhereInput = {
+            university_id: universityId,
+            ...(startDate && endDate ? {
                 timeSlot: {
                     time_slot_start_datetime: {
                         gte: startDate,
                         lte: endDate
                     }
                 }
-            }
-        } : {};
+            } : {}),
+            ...(problemCategoryId ? { problem_category_id: problemCategoryId } : {}),
+            ...(Object.keys(studentWhere).length > 0 ? { student: studentWhere } : {})
+        };
 
         // 1. Risk Score (Inverse of High Risk %)
         const riskQuery = await prisma.bookingOutcome.groupBy({
             by: ['booking_outcome_risk_level'],
             where: {
                 university_id: universityId,
-                ...(startDate && endDate ? {
-                    booking: {
-                        timeSlot: {
-                            time_slot_start_datetime: {
-                                gte: startDate,
-                                lte: endDate
-                            }
-                        }
-                    }
-                } : {})
+                booking: bookingWhere
             },
             _count: true
         });
@@ -53,6 +63,7 @@ export const RectorService = {
             const count = r._count as unknown as number; // Force cast safely if type is ambiguous
             if (typeof count === 'number') {
                 totalCases += count;
+                 // Assuming booking_outcome_risk_level is 1-5
                 if (r.booking_outcome_risk_level && r.booking_outcome_risk_level >= 4) {
                     highRiskCases += count;
                 }
@@ -65,20 +76,11 @@ export const RectorService = {
 
         // 2. Satisfaction Score (0-5 -> 0-100)
         const ratings = await prisma.feedbackRating.aggregate({
-            where: startDate && endDate ? {
+            where: {
                 feedback: {
                     university_id: universityId,
-                    booking: {
-                        timeSlot: {
-                            time_slot_start_datetime: {
-                                gte: startDate,
-                                lte: endDate
-                            }
-                        }
-                    }
+                    booking: bookingWhere
                 }
-            } : {
-                feedback: { university_id: universityId }
             },
             _avg: { feedback_rating_score: true }
         });
@@ -87,21 +89,17 @@ export const RectorService = {
 
         // 3. Engagement Score (Active Students / Total Students)
         // Active = Has at least 1 booking
-        const totalStudents = await prisma.student.count({ where: { university_id: universityId } });
+        // Total Students = Filtered by Faculty/Dept logic if applied
+        const totalStudentWhere: Prisma.StudentWhereInput = {
+             university_id: universityId,
+             ...studentWhere
+        };
 
-        const bookingDateFilter = startDate && endDate ? {
-            university_id: universityId,
-            timeSlot: {
-                time_slot_start_datetime: {
-                    gte: startDate,
-                    lte: endDate
-                }
-            }
-        } : { university_id: universityId };
+        const totalStudents = await prisma.student.count({ where: totalStudentWhere });
 
         const activeStudents = await prisma.booking.groupBy({
             by: ['student_id'],
-            where: bookingDateFilter,
+            where: bookingWhere,
         }); // Returns array of unique student_ids
 
         const engagementRate = totalStudents > 0 ? (activeStudents.length / totalStudents) : 0;
@@ -126,29 +124,52 @@ export const RectorService = {
         };
     },
 
-    async getFacultyHealthMap(universityId: number, startDate?: Date, endDate?: Date) {
-        // Get list of faculties
+    async getFacultyHealthMap(universityId: number, filters: RectorDashboardFilters = {}) {
+        // If specific faculty is selected, maybe we still show all but highlight? 
+        // Or if faculty/dept filter IS applied, this map might be less relevant 
+        // as it compares faculties. 
+        // However, user might want to see breakdown even when filtered? 
+        // Actually if I filter by "Engineering", I only see "Engineering" bubble?
+        // Let's stick to showing what matches the filter.
+
+        const { startDate, endDate, facultyId, departmentId, problemCategoryId, gender } = filters;
+        
+        // Get list of faculties (filtered if facultyId provided)
         const faculties = await prisma.faculty.findMany({
-            where: { university_id: universityId },
+            where: { 
+                university_id: universityId,
+                ...(facultyId ? { faculty_id: facultyId } : {})
+            },
             include: {
                 _count: { select: { studentAcademics: true } }
             }
         });
 
         const healthMap = await Promise.all(faculties.map(async (faculty) => {
+            // Build student filter
+            const studentWhere: Prisma.StudentWhereInput = {
+                academic: {
+                    faculty_id: faculty.faculty_id,
+                    ...(departmentId ? { department_id: departmentId } : {})
+                }
+            };
+            if (gender) {
+                studentWhere.profile = { student_gender: gender as StudentGender };
+            }
+
             // Build booking date filter for this faculty
-            const facultyBookingFilter = startDate && endDate ? {
+            const facultyBookingFilter: Prisma.BookingWhereInput = {
                 university_id: universityId,
-                timeSlot: {
-                    time_slot_start_datetime: {
-                        gte: startDate,
-                        lte: endDate
+                ...(startDate && endDate ? {
+                    timeSlot: {
+                        time_slot_start_datetime: {
+                            gte: startDate,
+                            lte: endDate
+                        }
                     }
-                },
-                student: { academic: { faculty_id: faculty.faculty_id } }
-            } : {
-                university_id: universityId,
-                student: { academic: { faculty_id: faculty.faculty_id } }
+                } : {}),
+                student: studentWhere,
+                ...(problemCategoryId ? { problem_category_id: problemCategoryId } : {})
             };
 
             // 1. Engagement
@@ -156,25 +177,23 @@ export const RectorService = {
                 by: ['student_id'],
                 where: facultyBookingFilter
             });
-            const studentCount = faculty._count.studentAcademics || 1; // Avoid div by 0
-            const engagementRate = (activeStudents.length / studentCount) * 100;
+            
+            // Student count mapping
+            const denominatorWhere: Prisma.StudentWhereInput = {
+                university_id: universityId,
+                ...studentWhere
+            };
+            
+            const studentCount = await prisma.student.count({ where: denominatorWhere });
+            const validStudentCount = studentCount > 0 ? studentCount : 1; 
+
+            const engagementRate = (activeStudents.length / validStudentCount) * 100;
 
             // 2. Risk Index (Average Risk Level)
             const riskStats = await prisma.bookingOutcome.aggregate({
-                where: startDate && endDate ? {
+                where: {
                     university_id: universityId,
-                    booking: {
-                        timeSlot: {
-                            time_slot_start_datetime: {
-                                gte: startDate,
-                                lte: endDate
-                            }
-                        },
-                        student: { academic: { faculty_id: faculty.faculty_id } }
-                    }
-                } : {
-                    university_id: universityId,
-                    booking: { student: { academic: { faculty_id: faculty.faculty_id } } }
+                    booking: facultyBookingFilter
                 },
                 _avg: { booking_outcome_risk_level: true }
             });
@@ -182,22 +201,10 @@ export const RectorService = {
 
             // 3. High Risk Volume (Bubble Size or Color)
             const highRiskCount = await prisma.bookingOutcome.count({
-                where: startDate && endDate ? {
+                where: {
                     university_id: universityId,
                     booking_outcome_risk_level: { gte: 4 },
-                    booking: {
-                        timeSlot: {
-                            time_slot_start_datetime: {
-                                gte: startDate,
-                                lte: endDate
-                            }
-                        },
-                        student: { academic: { faculty_id: faculty.faculty_id } }
-                    }
-                } : {
-                    university_id: universityId,
-                    booking_outcome_risk_level: { gte: 4 },
-                    booking: { student: { academic: { faculty_id: faculty.faculty_id } } }
+                    booking: facultyBookingFilter
                 }
             });
 
@@ -206,7 +213,7 @@ export const RectorService = {
                 name: faculty.faculty_name_th,
                 engagementRate: Number(engagementRate.toFixed(1)), // X-Axis
                 riskIndex: Number(riskIndex.toFixed(2)), // Y-Axis
-                studentCount, // Bubble Size
+                studentCount: validStudentCount, // Bubble Size
                 activeCount: activeStudents.length,
                 highRiskCount
             };
@@ -216,26 +223,70 @@ export const RectorService = {
     },
 
     // Legacy function wrapper to support existing calls if any
-    async getLegacyStats(universityId: number, startDate?: Date, endDate?: Date) {
-        // Set defaults if not provided (last 30 days)
+    async getLegacyStats(universityId: number, filters: RectorDashboardFilters = {}) {
+        const { startDate, endDate, facultyId, departmentId, problemCategoryId, gender } = filters;
+
+        // Set defaults if not provided (last 30 days) - ONLY if pure dates missing? 
+        // Actually if filters provided we trust them. if not we default.
         const end = endDate ? new Date(endDate) : new Date();
         const start = startDate ? new Date(startDate) : new Date(new Date(end).setDate(end.getDate() - 30));
 
-        // 1. Total Students (SQL) - This is university population, usually not date-filtered
+        // Helper to build WHERE conditions for SQL
+        // We need to join tables if filtering by them
+        
+        // Base Filters
+        const sqlFilters: Prisma.Sql[] = [];
+        
+        if (facultyId) {
+            sqlFilters.push(Prisma.sql`AND sa.faculty_id = ${facultyId}`);
+        }
+        if (departmentId) {
+            sqlFilters.push(Prisma.sql`AND sa.department_id = ${departmentId}`);
+        }
+        if (gender) {
+            sqlFilters.push(Prisma.sql`AND sp.student_gender = ${gender}`);
+        }
+        if (problemCategoryId) {
+            sqlFilters.push(Prisma.sql`AND b.problem_category_id = ${problemCategoryId}`);
+        }
+
+        // We need to ensure aliases match in the queries below:
+        // b = booking
+        // sa = student_academic
+        // sp = student_profile
+        // pc = problem_category
+        
+        // 1. Total Students (SQL) - Applying Filters (Faculty, Dept, Gender)
+        // Note: Students are not filtered by Booking Date or Problem Category (unless we mean "Students who booked"?)
+        // Standard "Total Students" usually means Population.
+        // If we filter by Problem Category, Total Students (Population) becomes 0? Or Students who HAVE that problem?
+        // Let's assume Population is only filtered by demographics (Faculty, Dept, Gender).
+        
+        const populationFilters: Prisma.Sql[] = [];
+        if (facultyId) populationFilters.push(Prisma.sql`AND sa.faculty_id = ${facultyId}`);
+        if (departmentId) populationFilters.push(Prisma.sql`AND sa.department_id = ${departmentId}`);
+        if (gender) populationFilters.push(Prisma.sql`AND sp.student_gender = ${gender}`);
+
         const totalStudentsQuery = await prisma.$queryRaw<{ count: bigint }[]>`
-             SELECT COUNT(*)::int as count 
-             FROM "student_academic" 
-             WHERE "university_id" = ${universityId}
+             SELECT COUNT(DISTINCT s.student_id)::int as count 
+             FROM "student" s
+             LEFT JOIN "student_academic" sa ON s.student_id = sa.student_id
+             LEFT JOIN "student_profile" sp ON s.student_id = sp.student_id
+             WHERE s."university_id" = ${universityId}
+             ${Prisma.join(populationFilters, " ")}
          `;
         const totalStudents = Number(totalStudentsQuery[0]?.count || 0);
 
-        // 2. Total Bookings (SQL) - DATE FILTERED
+        // 2. Total Bookings (SQL) - DATE FILTERED + ALL FILTERS
         const totalBookingsQuery = await prisma.$queryRaw<{ count: bigint }[]>`
              SELECT COUNT(*)::int as count 
-             FROM "booking" 
-             WHERE "university_id" = ${universityId}
-             AND "booking_created_at" >= ${start}
-             AND "booking_created_at" <= ${end}
+             FROM "booking" b
+             LEFT JOIN "student_academic" sa ON b.student_id = sa.student_id AND sa.university_id = ${universityId}
+             LEFT JOIN "student_profile" sp ON b.student_id = sp.student_id
+             WHERE b."university_id" = ${universityId}
+             AND b."booking_created_at" >= ${start}
+             AND b."booking_created_at" <= ${end}
+             ${Prisma.join(sqlFilters, " ")}
          `;
         const totalBookings = Number(totalBookingsQuery[0]?.count || 0);
 
@@ -261,16 +312,19 @@ export const RectorService = {
             select: { university_name_th: true },
         });
 
-        // 4. Risk Distribution (SQL Group By) - DATE FILTERED
+        // 4. Risk Distribution (SQL Group By) - DATE FILTERED + FILTERS
         const riskStats = await prisma.$queryRaw<{ risk: number, count: bigint }[]>`
              SELECT 
                  bo.booking_outcome_risk_level as risk,
                  COUNT(*)::int as count
              FROM "booking" b
              JOIN "booking_outcome" bo ON b.booking_id = bo.booking_id
+             LEFT JOIN "student_academic" sa ON b.student_id = sa.student_id AND sa.university_id = ${universityId}
+             LEFT JOIN "student_profile" sp ON b.student_id = sp.student_id
              WHERE b.university_id = ${universityId}
              AND b.booking_created_at >= ${start}
              AND b.booking_created_at <= ${end}
+             ${Prisma.join(sqlFilters, " ")}
              GROUP BY bo.booking_outcome_risk_level
          `;
 
@@ -282,7 +336,7 @@ export const RectorService = {
             else riskDistribution.NORMAL += Number(r.count);
         });
 
-        // 5. Problem Stats & Gender (SQL Group By) - DATE FILTERED
+        // 5. Problem Stats & Gender (SQL Group By)
         const problemGenderStats = await prisma.$queryRaw<{ name: string, gender: string, count: bigint }[]>`
              SELECT 
                  COALESCE(pc.problem_category_name_th, 'อื่นๆ') as name,
@@ -291,9 +345,11 @@ export const RectorService = {
              FROM "booking" b
              LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
              LEFT JOIN "student_profile" sp ON b.student_id = sp.student_id
+             LEFT JOIN "student_academic" sa ON b.student_id = sa.student_id AND sa.university_id = ${universityId}
              WHERE b.university_id = ${universityId}
              AND b.booking_created_at >= ${start}
              AND b.booking_created_at <= ${end}
+             ${Prisma.join(sqlFilters, " ")}
              GROUP BY pc.problem_category_name_th, sp.student_gender
          `;
 
@@ -313,7 +369,7 @@ export const RectorService = {
             }
         });
 
-        // 5.1. Year Level Distribution (University Wide) - DATE FILTERED
+        // 5.1. Year Level Distribution
         const currentYear = new Date().getFullYear();
         const currentBuddhistYear = currentYear + 543;
 
@@ -327,9 +383,11 @@ export const RectorService = {
                 COUNT(DISTINCT b.student_id)::int as count
             FROM "booking" b
             JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
+            LEFT JOIN "student_profile" sp ON b.student_id = sp.student_id
             WHERE b.university_id = ${universityId}
             AND b.booking_created_at >= ${start}
             AND b.booking_created_at <= ${end}
+            ${Prisma.join(sqlFilters, " ")}
             GROUP BY year_level
         `;
 
@@ -344,15 +402,18 @@ export const RectorService = {
             else yearLevelDistribution.UNKNOWN += count;
         });
 
-        // 6. Visits by Month (SQL Truncate Date) - FILTERED BY RANGE
+        // 6. Visits by Month
         const visitsQuery = await prisma.$queryRaw<{ month: string, count: bigint }[]>`
              SELECT 
                  TO_CHAR(booking_created_at, 'YYYY-MM') as month,
                  COUNT(*)::int as count
-             FROM "booking"
-             WHERE university_id = ${universityId}
-             AND booking_created_at >= ${start}
-             AND booking_created_at <= ${end}
+             FROM "booking" b
+             LEFT JOIN "student_academic" sa ON b.student_id = sa.student_id AND sa.university_id = ${universityId}
+             LEFT JOIN "student_profile" sp ON b.student_id = sp.student_id
+             WHERE b.university_id = ${universityId}
+             AND b.booking_created_at >= ${start}
+             AND b.booking_created_at <= ${end}
+             ${Prisma.join(sqlFilters, " ")}
              GROUP BY TO_CHAR(booking_created_at, 'YYYY-MM')
          `;
 
@@ -361,18 +422,21 @@ export const RectorService = {
             if (v.month) visitsByMonth[v.month] = Number(v.count);
         });
 
-        // 7. Repeat Visits (SQL Count Group By Student) - DATE FILTERED
+        // 7. Repeat Visits
         const repeatQuery = await prisma.$queryRaw<{ visit_count: number, student_count: bigint }[]>`
              SELECT 
                  visit_count,
                  COUNT(*)::int as student_count
              FROM (
-                 SELECT student_id, COUNT(*) as visit_count
-                 FROM "booking"
-                 WHERE university_id = ${universityId}
-                 AND booking_created_at >= ${start}
-                 AND booking_created_at <= ${end}
-                 GROUP BY student_id
+                 SELECT b.student_id, COUNT(*) as visit_count
+                 FROM "booking" b
+                 LEFT JOIN "student_academic" sa ON b.student_id = sa.student_id AND sa.university_id = ${universityId}
+                 LEFT JOIN "student_profile" sp ON b.student_id = sp.student_id
+                 WHERE b.university_id = ${universityId}
+                 AND b.booking_created_at >= ${start}
+                 AND b.booking_created_at <= ${end}
+                 ${Prisma.join(sqlFilters, " ")}
+                 GROUP BY b.student_id
              ) as sub
              GROUP BY visit_count
          `;
@@ -384,7 +448,13 @@ export const RectorService = {
             else repeatVisits += Number(r.student_count);
         });
 
-        // 8. Faculty Breakdown (Combined SQL) - DATE FILTERED
+        // 8. Faculty Breakdown
+        // Filter logic:
+        // - If Faculty filtered: The list should probably only show that faculty? Or show all but zero for others?
+        // - Usually dashboard shows breakdown of *filtered dataset*. 
+        // - But if I filter by "Eng", logic says "Engineering: X", others 0.
+        // - Let's apply filters to the LEFT JOINed booking/outcome, so counts reflect filters.
+        
         const facultyStats = await prisma.$queryRaw<{
             faculty_id: number,
             faculty_name: string,
@@ -399,19 +469,35 @@ export const RectorService = {
                  f.faculty_name_th as faculty_name,
                  (
                      SELECT COUNT(*) 
-                     FROM "student_academic" sa 
-                     WHERE sa.faculty_id = f.faculty_id AND sa.university_id = ${universityId}
+                     FROM "student_academic" sa2
+                     LEFT JOIN "student_profile" sp2 ON sa2.student_id = sp2.student_id
+                     WHERE sa2.faculty_id = f.faculty_id AND sa2.university_id = ${universityId}
+                     ${
+                        // Note: If gender filter is on, we should filter student count too?
+                        // Yes, "Total Students (Female) in Engineering"
+                        gender ? Prisma.sql`AND sp2.student_gender = ${gender}` : Prisma.empty
+                     }
+                     ${
+                        // If department filter is on, filter population
+                        departmentId ? Prisma.sql`AND sa2.department_id = ${departmentId}` : Prisma.empty
+                     }
                  )::int as student_count,
                  COUNT(DISTINCT b.booking_id)::int as booking_count,
                  COALESCE(SUM(CASE WHEN bo.booking_outcome_risk_level >= 4 THEN 1 ELSE 0 END), 0)::int as high_risk,
                  COALESCE(SUM(CASE WHEN bo.booking_outcome_risk_level = 3 THEN 1 ELSE 0 END), 0)::int as medium_risk,
                  COALESCE(SUM(CASE WHEN bo.booking_outcome_risk_level = 2 THEN 1 ELSE 0 END), 0)::int as low_risk
              FROM "faculty" f
+             -- We need to LEFT JOIN bookings that MATCH THE FILTER, otherwise we count everything for that faculty
              LEFT JOIN "student_academic" sa ON f.faculty_id = sa.faculty_id
+                ${departmentId ? Prisma.sql`AND sa.department_id = ${departmentId}` : Prisma.empty}
+             LEFT JOIN "student_profile" sp ON sa.student_id = sp.student_id
+                ${gender ? Prisma.sql`AND sp.student_gender = ${gender}` : Prisma.empty}
              LEFT JOIN "booking" b ON sa.student_id = b.student_id AND b.university_id = ${universityId} 
                 AND b.booking_created_at >= ${start} AND b.booking_created_at <= ${end}
+                ${problemCategoryId ? Prisma.sql`AND b.problem_category_id = ${problemCategoryId}` : Prisma.empty}
              LEFT JOIN "booking_outcome" bo ON b.booking_id = bo.booking_id
              WHERE f.university_id = ${universityId}
+             ${facultyId ? Prisma.sql`AND f.faculty_id = ${facultyId}` : Prisma.empty}
              GROUP BY f.faculty_id, f.faculty_name_th
              ORDER BY student_count DESC
          `;
@@ -425,18 +511,21 @@ export const RectorService = {
             lowRiskCount: Number(f.low_risk)
         }));
 
-        // 9. Active Cases (University Wide) - DATE FILTERED
+        // 9. Active Cases
         const activeCasesQuery = await prisma.$queryRaw<{ count: bigint }[]>`
-             SELECT COUNT(DISTINCT booking_id)::int as count
-             FROM "booking"
-             WHERE university_id = ${universityId}
-             AND booking_created_at >= ${start}
-             AND booking_created_at <= ${end}
-             AND booking_status IN ('PENDING_ASSIGNMENT', 'ASSIGNED', 'IN_PROGRESS')
+             SELECT COUNT(DISTINCT b.booking_id)::int as count
+             FROM "booking" b
+             LEFT JOIN "student_academic" sa ON b.student_id = sa.student_id AND sa.university_id = ${universityId}
+             LEFT JOIN "student_profile" sp ON b.student_id = sp.student_id
+             WHERE b.university_id = ${universityId}
+             AND b.booking_created_at >= ${start}
+             AND b.booking_created_at <= ${end}
+             AND b.booking_status IN ('PENDING_ASSIGNMENT', 'ASSIGNED', 'IN_PROGRESS')
+             ${Prisma.join(sqlFilters, " ")}
          `;
         const activeCases = Number(activeCasesQuery[0]?.count || 0);
 
-        // 10. Visit Trends (Selected Period vs Previous Equivalent Period)
+        // 10. Visit Trends
         const durationMs = end.getTime() - start.getTime();
         const prevStart = new Date(start.getTime() - durationMs);
         const prevEnd = new Date(end.getTime() - durationMs);
@@ -444,10 +533,13 @@ export const RectorService = {
         const currentPeriodVisits = totalBookings;
         const prevPeriodQuery = await prisma.$queryRaw<{ count: bigint }[]>`
             SELECT COUNT(*)::int as count 
-            FROM "booking" 
-            WHERE "university_id" = ${universityId}
-            AND "booking_created_at" >= ${prevStart}
-            AND "booking_created_at" <= ${prevEnd}
+            FROM "booking" b
+             LEFT JOIN "student_academic" sa ON b.student_id = sa.student_id AND sa.university_id = ${universityId}
+             LEFT JOIN "student_profile" sp ON b.student_id = sp.student_id
+            WHERE b."university_id" = ${universityId}
+            AND b."booking_created_at" >= ${prevStart}
+            AND b."booking_created_at" <= ${prevEnd}
+            ${Prisma.join(sqlFilters, " ")}
         `;
         const prevPeriodVisits = Number(prevPeriodQuery[0]?.count || 0);
 
@@ -669,7 +761,7 @@ export const RectorService = {
             },
             include: {
                 university: true,
-                educationFieldGroup: true,
+                subjectGroupCategory: true,
                 _count: {
                     select: {
                         departments: true,
@@ -691,8 +783,8 @@ export const RectorService = {
             universityCode: faculty.university.university_code,
             universityName: faculty.university.university_name_th,
             universityNameEn: faculty.university.university_name_en,
-            educationFieldGroup: faculty.educationFieldGroup?.field_group_name_en || null,
-            educationFieldGroupTH: faculty.educationFieldGroup?.field_group_name_th || null,
+            subjectGroupCategory: faculty.subjectGroupCategory?.field_group_name_en || null,
+            subjectGroupCategoryTH: faculty.subjectGroupCategory?.field_group_name_th || null,
             departmentCount: faculty._count.departments,
             studentCount: faculty._count.studentAcademics,
         }));

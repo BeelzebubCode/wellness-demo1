@@ -23,16 +23,16 @@ export function useBooking(universityId?: number) {
     }
   }
 
-  // ✅ overload: รับได้ทั้ง object และ positional
+  // ✅ overload: รับได้ทั้ง object และ positional (kept for backwards compat but discouraged)
   async function cancelBooking(input: CancelBookingInput): Promise<any>;
   async function cancelBooking(
     bookingId: number | string,
-    reason: string,
+    cancellationReasonId: number,
     uniId?: number,
   ): Promise<any>;
   async function cancelBooking(
     a: CancelBookingInput | number | string,
-    b?: string,
+    b?: number,
     c?: number,
   ) {
     setIsCancelling(true);
@@ -44,7 +44,7 @@ export function useBooking(universityId?: number) {
         : {
             bookingId: Number(a),
             universityId: c ?? universityId ?? 0,
-            reason: String(b ?? ""),
+            cancellationReasonId: Number(b ?? 0),
           };
 
     if (!normalized.universityId) {
@@ -54,8 +54,8 @@ export function useBooking(universityId?: number) {
       throw new Error(msg);
     }
 
-    if (!normalized.reason.trim()) {
-      const msg = "กรุณากรอกเหตุผลในการยกเลิก";
+    if (!normalized.cancellationReasonId) {
+      const msg = "กรุณาเลือกเหตุผลในการยกเลิก";
       setCancelError(msg);
       setIsCancelling(false);
       throw new Error(msg);
