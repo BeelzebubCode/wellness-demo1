@@ -44,11 +44,7 @@ export function FacultyHeaderBanner({
               }}
             />
           </div>
-          {/* Layered Status Badge */}
-          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 flex items-center justify-center z-20">
-            <div className="absolute inset-0 rounded-full bg-slate-950" />
-            <div className="relative w-full h-full rounded-full bg-[#00e676] -translate-y-0.5 -translate-x-0.5 shadow-[1px_1px_4px_rgba(0,230,118,0.3)]" />
-          </div>
+
         </div>
 
         {/* Info Section */}
