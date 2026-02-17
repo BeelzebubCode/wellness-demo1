@@ -60,7 +60,6 @@ export const getUniversityComparison = {
       summary: `Comparison of ${categoryCode || "All"} cases (${format(start, "yyyy-MM-dd")} - ${format(end, "yyyy-MM-dd")})`,
       data: results,
       recommendedChart: "bar",
-      xAxisKey: "name",
       dataKey: "value",
     };
   },

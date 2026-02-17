@@ -1,5 +1,5 @@
 // src/services/aiAgent/help/types.ts
-import type { KbHit } from "@/services/aiKb/retrieval/getKbContext";
+// import type { KbHit } from "@/services/aiKb/retrieval/getKbContext";
 import type { ChatMsg } from "../core/types"; // ✅ ใช้ของเดียว
 
 export type HelpPolicy = {

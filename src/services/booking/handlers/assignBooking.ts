@@ -83,7 +83,7 @@ export async function handleAssignBooking(
             where: {
               university_id: activeUniversityId,
               access_revoked_at: null,
-              access_role: { in: ["CONSULTANT", "HEAD_CONSULTANT"] as any },
+              access_role: { in: ["CONSULTANT", "HEAD_CONSULTANT"] },
             },
             select: { account_university_permission_id: true },
           },
@@ -151,6 +151,7 @@ export async function handleAssignBooking(
 
     // สถานะคำขอควรพร้อมใช้งาน (ปรับได้ตาม flow จริงของคุณ)
     const okStatuses = ["APPROVED", "ASSIGNED", "COMPLETED"] as const;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (!okStatuses.includes(ba.borrowRequest.borrow_request_status as any)) {
       return NextResponse.json({ error: "borrowRequest ยังไม่พร้อมใช้งาน" }, { status: 409 });
     }
@@ -202,13 +203,15 @@ export async function handleAssignBooking(
       success: true,
       status: BookingStatus.ASSIGNED,
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     // ถ้า unique (เคยมี bookingAssignment แล้ว)
-    if (e?.code === "P2002") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((e as any)?.code === "P2002") {
       return NextResponse.json({ error: "รายการนี้ถูกมอบหมายไปแล้ว" }, { status: 409 });
     }
 
-    const status = e?.status ?? 500;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const status = (e as any)?.status ?? 500;
     const msg =
       status === 409
         ? "สถานะไม่อนุญาตให้แจกงาน หรือรายการถูกเปลี่ยนไปแล้ว"

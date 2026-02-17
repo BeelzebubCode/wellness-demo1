@@ -14,7 +14,7 @@ function stripMarkdown(md: string) {
     .trim();
 }
 
-function jsonToText(obj: any) {
+function jsonToText(obj: unknown) {
   // ทำให้อ่านง่าย + 검색ง่าย: เอาทั้ง key/value ออกมาเป็นบรรทัด
   // (ไม่ต้องสวยมาก แค่อย่าเป็น JSON ยาวติดกัน)
   try {
@@ -23,14 +23,14 @@ function jsonToText(obj: any) {
     if (typeof obj !== "object") return String(obj);
 
     const lines: string[] = [];
-    const walk = (v: any, path: string[] = []) => {
+    const walk = (v: unknown, path: string[] = []) => {
       if (v == null) return;
       if (Array.isArray(v)) {
         v.forEach((x, i) => walk(x, [...path, String(i)]));
         return;
       }
       if (typeof v === "object") {
-        for (const [k, val] of Object.entries(v)) {
+        for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
           walk(val, [...path, k]);
         }
         return;
@@ -76,7 +76,7 @@ function chunkText(text: string, maxLen = 800) {
 }
 
 export async function publishVersion(versionId: number): Promise<
-  | { ok: true; document: any; version: any }
+  | { ok: true; document: unknown; version: unknown }
   | { ok: false; status: 404 | 409; error: "NOT_FOUND" | "DOC_INACTIVE" }
 > {
   // โหลด version + doc ที่จำเป็นสำหรับ chunk

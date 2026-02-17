@@ -92,7 +92,7 @@ export async function clearDatabase(prisma: PrismaClient) {
     await prisma.department.deleteMany();
     await prisma.faculty.deleteMany();
 
-    await prisma.accountUniversityAccess.deleteMany();
+    await prisma.accountUniversityPermission.deleteMany({});
 
     await prisma.university.deleteMany();
     await prisma.province.deleteMany();

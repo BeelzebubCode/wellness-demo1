@@ -37,8 +37,8 @@ export type ListBookingDTO = {
   endTime: string | null; // HH:mm
   student: { id: number; username: string; name: string | null };
   consultant: { id: number; name: string } | null;
-  outcome: any | null;      // ถ้าอยาก type outcome เดี๋ยวผมทำให้ต่อได้
-  cancellation: any | null; // เช่นกัน
+  outcome: Record<string, unknown> | null;      // ถ้าอยาก type outcome เดี๋ยวผมทำให้ต่อได้
+  cancellation: Record<string, unknown> | null; // เช่นกัน
 };
 
 /**
@@ -72,21 +72,21 @@ export async function handleListBookings(
   const startTime = Date.now();
 
   const role = ctx.role as AccountRole;
-  const activeUniversityId = (ctx as any).activeUniversityId as number | undefined;
+  const activeUniversityId = ctx.activeUniversityId;
 
   if (typeof activeUniversityId !== "number") {
     return NextResponse.json({ error: "activeUniversityId missing" }, { status: 400 });
   }
 
   // tenant guard
-  const denied = requireUniversity(ctx as any, activeUniversityId);
+  const denied = requireUniversity(ctx, activeUniversityId);
   if (denied) return denied;
 
   // ต้องมี id ตาม role
-  if (role === "STUDENT" && typeof (ctx as any).studentId !== "number") {
+  if (role === "STUDENT" && typeof ctx.studentId !== "number") {
     return NextResponse.json({ error: "Student profile not found" }, { status: 400 });
   }
-  if (role === "CONSULTANT" && typeof (ctx as any).consultantId !== "number") {
+  if (role === "CONSULTANT" && typeof ctx.consultantId !== "number") {
     return NextResponse.json({ error: "Consultant profile not found" }, { status: 400 });
   }
 
@@ -127,8 +127,8 @@ export async function handleListBookings(
   }
 
   // role restriction
-  if (role === "STUDENT") where.student_id = (ctx as any).studentId;
-  if (role === "CONSULTANT") where.consultant_id = (ctx as any).consultantId;
+  if (role === "STUDENT") where.student_id = ctx.studentId;
+  if (role === "CONSULTANT") where.consultant_id = ctx.consultantId;
 
   // staff filters
   if (staff) {

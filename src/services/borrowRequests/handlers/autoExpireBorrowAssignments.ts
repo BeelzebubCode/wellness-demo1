@@ -61,7 +61,7 @@ export async function autoExpireAssignments(): Promise<number> {
                             consultant_id: assignment.consultant_id,
                             borrowRequest: {
                                 from_university_id: targetUniId,
-                                borrow_request_status: { in: ["APPROVED", "ASSIGNED"] as any },
+                                borrow_request_status: { in: ["APPROVED", "ASSIGNED"] },
                             },
                             borrow_assignment_id: { not: assignment.borrow_assignment_id },
                         },

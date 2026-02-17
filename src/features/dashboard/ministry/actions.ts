@@ -10,8 +10,6 @@ export async function getMinistryStats() {
     // In real prod, just return stats.
     
     return {
-       totalUniversities: stats.totalUniversities,
-       totalStudents: stats.totalStudents,
        nationalAvgRisk: 0, // Need complex calc
        criticalUniversities: 0, // Need complex calc from ranking
        ...stats

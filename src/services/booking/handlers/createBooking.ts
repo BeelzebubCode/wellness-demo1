@@ -4,7 +4,6 @@ import prisma from "@/lib/prisma";
 import type { AccountContext } from "@/lib/auth/context";
 import { requireUniversity } from "@/lib/auth/guard";
 import { BookingStatus, ServiceMode } from "@prisma/client";
-import crypto from "crypto";
 
 type CreateBookingInput = {
   timeSlotId: number;
@@ -23,23 +22,13 @@ type CreateBookingInput = {
   userAgent?: string | null;
 };
 
-function sha256Hex(s: string) {
-  return crypto.createHash("sha256").update(s, "utf8").digest("hex");
-}
-
 // ✅ ข้อความ consent (ตอนนี้ fix ไว้ก่อน — เดี๋ยวค่อยอัปเกรดเป็นดึงจาก DB/KB)
-const CONSENT_DOC_CODE = "TELEHEALTH_CONSENT";
-const CONSENT_DOC_VERSION = 1;
-const CONSENT_DOC_TEXT =
-  "ข้าพเจ้ายินยอมรับบริการให้คำปรึกษาออนไลน์ และรับทราบเงื่อนไขการให้บริการ รวมถึงการเก็บข้อมูลตามนโยบายความเป็นส่วนตัว";
 
 export async function handleCreateBooking(
   ctx: AccountContext & { activeUniversityId?: number; studentId?: number },
   input: Partial<CreateBookingInput>,
 ) {
-  const activeUniversityId = (ctx as any).activeUniversityId as
-    | number
-    | undefined;
+  const activeUniversityId = ctx.activeUniversityId;
   if (typeof activeUniversityId !== "number") {
     return NextResponse.json(
       { error: "activeUniversityId missing" },
@@ -47,10 +36,10 @@ export async function handleCreateBooking(
     );
   }
 
-  const denied = requireUniversity(ctx as any, activeUniversityId);
+  const denied = requireUniversity(ctx, activeUniversityId);
   if (denied) return denied;
 
-  const studentId = (ctx as any).studentId as number | undefined;
+  const studentId = ctx.studentId;
   if (typeof studentId !== "number") {
     return NextResponse.json(
       { error: "Student profile not found" },
@@ -73,8 +62,7 @@ export async function handleCreateBooking(
     ? String(input.agreementSignatureDataUrl)
     : null;
 
-  const ipAddress = input.ipAddress ? String(input.ipAddress) : null;
-  const userAgent = input.userAgent ? String(input.userAgent) : null;
+
 
   if (!Number.isFinite(timeSlotId) || !Number.isFinite(problemCategoryId)) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
@@ -225,16 +213,19 @@ export async function handleCreateBooking(
       bookingId: created.booking_id,
       universityId: created.university_id,
     });
-  } catch (err: any) {
-    if (err?.code === "P2002") {
+  } catch (err: unknown) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((err as any)?.code === "P2002") {
       return NextResponse.json(
         { error: "Slot already booked" },
         { status: 409 },
       );
     }
-    const status = err?.status ?? 500;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const status = (err as any)?.status ?? 500;
     return NextResponse.json(
-      { error: err?.message ?? "Failed to create booking" },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { error: (err as any)?.message ?? "Failed to create booking" },
       { status },
     );
   }

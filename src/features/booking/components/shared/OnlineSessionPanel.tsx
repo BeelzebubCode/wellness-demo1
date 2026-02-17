@@ -18,12 +18,12 @@ export function OnlineSessionPanel({ booking }: { booking: MyBookingDto }) {
   if (booking.serviceMode !== "ONLINE") return null;
 
   // ✅ map ชื่อให้สวย (ถ้า key ตรงกับ ONLINE_CHANNEL_META)
-  const meta = channel ? (ONLINE_CHANNEL_META as any)[channel] : null;
-  const channelLabel = meta?.label ?? (channel ? String(channel) : null);
+  const meta = channel ? (ONLINE_CHANNEL_META as any)[channel.code] : null;
+  const channelLabel = meta?.label ?? (channel ? String(channel.nameTh) : null);
 
   const isEmpty = !channel && !meetingUrl && !phoneNumber && !meetingNote;
 
-  const isPhone = channel === "PHONE" || !!phoneNumber;
+  const isPhone = channel?.code === "PHONE" || !!phoneNumber;
 
   return (
     <div className="rounded-2xl border bg-white p-4">

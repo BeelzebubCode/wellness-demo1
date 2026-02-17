@@ -15,7 +15,7 @@ export function useProblemCategoriesQuery() {
   const refresh = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/v1/problem-categories");
+      const res = await fetch("/api/v2/master/problem-categories");
       const data = await res.json();
       if (data.success && Array.isArray(data.categories)) {
         setCategories(data.categories);

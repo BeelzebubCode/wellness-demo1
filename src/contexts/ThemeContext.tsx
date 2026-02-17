@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import type { TenantCode } from "@/config/tenant-domains";
+import type { TenantCode } from "@/config/tenants";
 import { tenantFromHost } from "@/config/tenant-domains";
 import { initTenantTheme, setTenantTheme, clearTenantTheme } from "@/lib/tenant/client";
 

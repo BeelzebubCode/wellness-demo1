@@ -62,7 +62,7 @@ export function bkkRange(date: string) {
   return { start, end };
 }
 
-function hasExplicitClock(text: string) {
+function _hasExplicitClock(text: string) {
   return /\b\d{1,2}:\d{2}\b/.test(text || "");
 }
 

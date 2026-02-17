@@ -5,7 +5,7 @@ import type { AccountContext } from "@/lib/auth/context";
 import { requireUniversity } from "@/lib/auth/guard";
 import { BookingStatus, AccountRole } from "@prisma/client";
 
-function upper(v: any) {
+function upper(v: unknown) {
   return String(v ?? "").toUpperCase();
 }
 
@@ -18,13 +18,13 @@ export async function handleStartBooking(
     return NextResponse.json({ error: "Invalid booking ID" }, { status: 400 });
   }
 
-  const activeUniversityId = (ctx as any).activeUniversityId as number | undefined;
+  const activeUniversityId = ctx.activeUniversityId;
   if (typeof activeUniversityId !== "number") {
     return NextResponse.json({ error: "activeUniversityId missing" }, { status: 400 });
   }
 
   // tenant guard
-  const denied = requireUniversity(ctx as any, activeUniversityId);
+  const denied = requireUniversity(ctx, activeUniversityId);
   if (denied) return denied;
 
   const role = ctx.role as AccountRole;
@@ -34,7 +34,7 @@ export async function handleStartBooking(
     return NextResponse.json({ error: "Permission denied" }, { status: 403 });
   }
 
-  const consultantId = (ctx as any).consultantId as number | undefined;
+  const consultantId = ctx.consultantId;
   if (typeof consultantId !== "number") {
     return NextResponse.json({ error: "Missing consultant id" }, { status: 400 });
   }
@@ -93,6 +93,7 @@ export async function handleStartBooking(
   // ✅ update สถานะ (กัน race)
   // ถ้า consultant_id ตรง ก็ใช้ consultant_id
   // ถ้าไม่ตรง (Ghost/Borrow case) ก็เช็คว่าเป็น null หรือไม่
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const whereClause: any = {
     university_id: activeUniversityId,
     booking_id: bookingId,

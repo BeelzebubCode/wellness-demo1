@@ -25,6 +25,11 @@ const styleMap = {
     icon: <Info className="w-5 h-5 text-blue-500" />,
     action: 'text-blue-600 hover:text-blue-700',
   },
+  reward: {
+    bg: 'bg-indigo-50 border-indigo-200 text-indigo-700',
+    icon: <Info className="w-5 h-5 text-indigo-500" />, // Using Info for now, or Star if available
+    action: 'text-indigo-600 hover:text-indigo-700',
+  },
 };
 
 interface AlertBoxProps {

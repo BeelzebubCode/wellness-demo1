@@ -9,7 +9,7 @@ import { DEFAULT_SERVICE_HOURS, isOutOfServiceTime, serviceHoursText } from "./d
 import { decideTimeRange } from "./domain/timeRange";
 
 import { normalizePlanDate, userLooksLikeGaveDate } from "./utils/guards";
-import { addDaysISO, bkkTodayISO, fmtBkkHHMM, toMinBkk } from "./utils/time";
+import { addDaysISO, fmtBkkHHMM, toMinBkk } from "./utils/time";
 
 import {
   loadProblemCategories,
@@ -211,7 +211,7 @@ export class BookingPlanEngine {
         nextSlotsText = topCandidatesText(nextSlots, 5);
       }
 
-      const progress = buildProgressCard({
+      const _progress = buildProgressCard({
         dateISO: plan.date!,
         timeRange: this.toDisplayTimeRange(plan.timeRange),
         categoryName: null,

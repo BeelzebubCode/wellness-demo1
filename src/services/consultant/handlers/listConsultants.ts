@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import type { AccountContext } from "@/lib/auth/context";
 import { requireUniversity } from "@/lib/auth/guard";
-import { AccountRole } from "@prisma/client";
+import { AccountRole, BookingStatus, BorrowRequestStatus, Prisma } from "@prisma/client";
+
 
 function isStaff(role: AccountRole) {
   return role === "HEAD_CONSULTANT" || role === "RECTOR" || role === "SUPER_ADMIN";
@@ -18,19 +19,19 @@ export async function handleListConsultants(
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const activeUniversityId = (ctx as any).activeUniversityId as number | undefined;
+  const activeUniversityId = ctx.activeUniversityId;
   if (typeof activeUniversityId !== "number") {
     return NextResponse.json({ error: "activeUniversityId missing" }, { status: 400 });
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const denied = requireUniversity(ctx as any, activeUniversityId);
+  const denied = requireUniversity(ctx, activeUniversityId);
   if (denied) return denied;
 
   const includeBorrowed = input?.includeBorrowed ?? false;
   const targetDate = input?.date; // YYYY-MM-DD
 
-  const where = {
+  const where: Prisma.ConsultantWhereInput = {
     ...(typeof input?.organizationId === "number"
       ? { organization_id: input.organizationId }
       : {}),
@@ -48,7 +49,7 @@ export async function handleListConsultants(
                   from_university_id: activeUniversityId,
                   // ✅ User request: Don't show if COMPLETED (Assignee disappears after work done)
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  borrow_request_status: { in: ["APPROVED", "ASSIGNED"] as any },
+                  borrow_request_status: { in: [BorrowRequestStatus.APPROVED, BorrowRequestStatus.ASSIGNED] },
                 },
               },
             },
@@ -85,7 +86,7 @@ export async function handleListConsultants(
           bookings: {
             where: {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              booking_status: { in: ["PENDING_ASSIGNMENT", "ASSIGNED", "IN_PROGRESS"] as any },
+              booking_status: { in: [BookingStatus.PENDING_ASSIGNMENT, BookingStatus.ASSIGNED, BookingStatus.IN_PROGRESS] },
             },
           },
         },
@@ -99,7 +100,7 @@ export async function handleListConsultants(
               lte: new Date(`${targetDate}T23:59:59Z`),
             }
           },
-          booking_status: { not: "CANCELLED" as any }
+          booking_status: { not: BookingStatus.CANCELLED }
         },
         select: {
           timeSlot: {
@@ -118,13 +119,14 @@ export async function handleListConsultants(
           },
         },
       },
+
       // ✅ Select borrow assignments to get the ID for cross-university booking assignment
       borrowAssignments: {
         where: {
           borrowRequest: {
             from_university_id: activeUniversityId,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            borrow_request_status: { in: ["APPROVED", "ASSIGNED"] as any },
+            borrow_request_status: { in: [BorrowRequestStatus.APPROVED, BorrowRequestStatus.ASSIGNED] },
           },
         },
         select: {
@@ -159,10 +161,11 @@ export async function handleListConsultants(
         : null;
 
       // ✅ Parse busy slots
-      const busySlots = (c as any).bookings?.map((b: any) => ({
-        start: b.timeSlot.time_slot_start_datetime.toISOString(),
-        end: b.timeSlot.time_slot_end_datetime.toISOString(),
-      })) ?? [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const busySlots = (c.bookings && typeof c.bookings !== 'boolean') ? (c.bookings as any[]).map((b) => ({
+        start: b.timeSlot?.time_slot_start_datetime.toISOString(),
+        end: b.timeSlot?.time_slot_end_datetime.toISOString(),
+      })) : [];
 
       return {
         id: c.consultant_id,

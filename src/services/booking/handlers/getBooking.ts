@@ -20,7 +20,7 @@ export async function handleGetBooking(
     return NextResponse.json({ error: "Invalid booking ID" }, { status: 400 });
   }
 
-  const activeUniversityId = (ctx as any).activeUniversityId as number | undefined;
+  const activeUniversityId = ctx.activeUniversityId;
   if (typeof activeUniversityId !== "number") {
     return NextResponse.json(
       { error: "activeUniversityId missing" },
@@ -29,7 +29,7 @@ export async function handleGetBooking(
   }
 
   // ✅ tenant guard ตั้งแต่ต้น
-  const denied = requireUniversity(ctx as any, activeUniversityId);
+  const denied = requireUniversity(ctx, activeUniversityId);
   if (denied) return denied;
 
   // ✅ Booking ใช้ composite key
@@ -76,11 +76,13 @@ export async function handleGetBooking(
   const role = ctx.role as AccountRole;
 
   if (role === "STUDENT") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const studentId = (ctx as any).studentId as number | undefined;
     if (!studentId || booking.student_id !== studentId) {
       return NextResponse.json({ error: "Permission denied" }, { status: 403 });
     }
   } else if (role === "CONSULTANT") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const consultantId = (ctx as any).consultantId as number | undefined;
     if (!consultantId || booking.consultant_id !== consultantId) {
       return NextResponse.json({ error: "Permission denied" }, { status: 403 });

@@ -2,10 +2,11 @@
 
 import prisma from "@/lib/prisma";
 import { parseAssignBorrowRequestBody } from "../validators";
+import { Prisma } from "@prisma/client";
 
 // ใช้ logic เดิมของคุณ แต่ทำเป็น function ย่อยสำหรับ assign ทีละ item
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function assignOne(tx: any, input: {
+async function assignOne(tx: Prisma.TransactionClient, input: {
   borrowRequestId: number;
   assignedByAccountId: number;
   consultantId: number;
@@ -43,7 +44,7 @@ async function assignOne(tx: any, input: {
     where: {
       consultant_id: input.consultantId,
       borrowRequest: {
-        borrow_request_status: { in: ["APPROVED", "ASSIGNED"] as any },
+        borrow_request_status: { in: ["APPROVED", "ASSIGNED"] },
       },
       // ช่วงเวลาซ้อนกัน (overlap)
       borrow_assign_start_at: { lt: endAt },
@@ -100,6 +101,7 @@ export async function platformAssignBorrowRequest(params: {
 
   return prisma.$transaction(async (tx) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const createdAssignments: any[] = [];
 
     // ทำทีละคนตาม items
@@ -131,6 +133,7 @@ export async function platformAssignBorrowRequest(params: {
 
     await tx.borrowRequest.update({
       where: { borrow_request_id: params.borrowRequestId },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data: { borrow_request_status: nextStatus as any },
     });
