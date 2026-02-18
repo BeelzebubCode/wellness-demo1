@@ -23,18 +23,24 @@ export async function getMyStudents(user: AuthUser, filters?: { search?: string;
   }
 }
 
-export async function getAdvisorRiskTrends(user: AuthUser) {
+export async function getAdvisorRiskTrends(
+  user: AuthUser,
+  filters?: { startDate?: Date; endDate?: Date }
+) {
     try {
-        return await AdvisorService.getStudentRiskTrends(user.id);
+        return await AdvisorService.getStudentRiskTrends(user.id, filters);
     } catch (error) {
         console.error(error);
         return [];
     }
 }
 
-export async function getAdvisorAnalytics(user: AuthUser) {
+export async function getAdvisorAnalytics(
+  user: AuthUser,
+  filters?: { startDate?: Date; endDate?: Date; problemCategoryId?: number; gender?: string }
+) {
     try {
-        return await AdvisorService.getAdvisorAnalytics(user.id);
+        return await AdvisorService.getAdvisorAnalytics(user.id, filters);
     } catch (error) {
         console.error("Failed to fetch advisor analytics:", error);
         return null;

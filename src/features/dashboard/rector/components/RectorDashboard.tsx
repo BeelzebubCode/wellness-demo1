@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useUniversityStats } from "../hooks/useUniversityStats";
 import { LoadingSpinner } from "@/components/ui";
-import { RectorFilter } from "./sections/RectorFilter";
+import { RectorAdvancedFilter } from "./RectorAdvancedFilter";
 import { RectorOverviewCards } from "./sections/RectorOverviewCards";
 import { RectorAnalytics } from "./sections/RectorAnalytics";
 import { FacultyBreakdownTable } from "./sections/FacultyBreakdownTable";
@@ -17,13 +17,45 @@ export function RectorDashboard() {
     to.setHours(23, 59, 59, 999);
 
     const from = new Date(to);
-    from.setDate(from.getDate() - 30); // Go back 30 days
+    from.setDate(from.getDate() - 30);
     from.setHours(0, 0, 0, 0);
 
     return { startDate: from, endDate: to };
   });
 
+  const [activeQuickFilter, setActiveQuickFilter] = useState("all");
+
+  const handleQuickFilterChange = useCallback((id: string) => {
+    setActiveQuickFilter(id);
+    // Quick filters adjust the date range and reset other filters
+    const now = new Date();
+    now.setHours(23, 59, 59, 999);
+
+    if (id === "all") {
+      const from = new Date(now);
+      from.setDate(from.getDate() - 30);
+      from.setHours(0, 0, 0, 0);
+      setFilters({ startDate: from, endDate: now });
+    } else if (id === "high-risk") {
+      // Keep date range, clear other filters — charts will show all data
+      // The backend will return all, and charts will highlight high-risk
+      setFilters(prev => ({
+        startDate: prev.startDate,
+        endDate: prev.endDate,
+      }));
+    } else if (id === "new-cases") {
+      // Set date range to this week
+      const from = new Date(now);
+      from.setDate(from.getDate() - 7);
+      from.setHours(0, 0, 0, 0);
+      setFilters({ startDate: from, endDate: now });
+    }
+  }, []);
+
   const { stats, isLoading } = useUniversityStats(filters);
+
+  // Check if filters are active beyond default date range
+  const hasActiveFilters = !!(filters.facultyId || filters.departmentId || filters.problemCategoryId || filters.gender);
 
   if (isLoading || !stats) {
     return (
@@ -47,10 +79,20 @@ export function RectorDashboard() {
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Advanced Filters — Dean-Style */}
         <section>
-          <RectorFilter filters={filters} onFilterChange={setFilters} />
-          <div className="text-right mt-2">
+          <RectorAdvancedFilter
+            filters={filters}
+            onFilterChange={setFilters}
+            activeQuickFilter={activeQuickFilter}
+            onQuickFilterChange={handleQuickFilterChange}
+          />
+          <div className="text-right mt-2 flex items-center justify-end gap-3">
+            {hasActiveFilters && (
+              <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full animate-pulse">
+                🔍 กำลังกรองข้อมูล
+              </span>
+            )}
             <p className="text-xs text-slate-400">
               อัปเดตล่าสุด: {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
             </p>

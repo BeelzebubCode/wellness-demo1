@@ -141,14 +141,22 @@ export const AdvisorService = {
   },
 
   /**
-   * Get historical risk trend for advisor's students (Mock/Aggregated)
+   * Get historical risk trend for advisor's students
    */
-  async getStudentRiskTrends(advisorAccountId: number) {
+  async getStudentRiskTrends(
+    advisorAccountId: number,
+    filters?: { startDate?: Date; endDate?: Date }
+  ) {
      const advisor = await prisma.advisor.findUnique({
       where: { account_id: advisorAccountId },
     });
 
     if (!advisor) return [];
+
+    // Build date where clause
+    const dateWhere: any = {};
+    if (filters?.startDate) dateWhere.gte = filters.startDate;
+    if (filters?.endDate) dateWhere.lte = filters.endDate;
 
     // Aggregate outcomes by month for students under this advisor
     const outcomes = await prisma.bookingOutcome.findMany({
@@ -159,7 +167,10 @@ export const AdvisorService = {
                         advisor_id: advisor.advisor_id
                     }
                 }
-            }
+            },
+            ...(Object.keys(dateWhere).length > 0 && {
+                booking_outcome_recorded_at: dateWhere
+            }),
         },
         select: {
             booking_outcome_risk_level: true,
@@ -190,24 +201,49 @@ export const AdvisorService = {
   /**
    * Get comprehensive analytics for advisor dashboard
    */
-  async getAdvisorAnalytics(advisorAccountId: number) {
+  async getAdvisorAnalytics(
+    advisorAccountId: number,
+    filters?: { startDate?: Date; endDate?: Date; problemCategoryId?: number; gender?: string }
+  ) {
     const advisor = await prisma.advisor.findUnique({
       where: { account_id: advisorAccountId },
     });
 
-    if (!advisor) return null; // Or throw error
+    if (!advisor) return null;
 
-    // Fetch ALL relevant bookings for analysis
-    const bookings = await prisma.booking.findMany({
-      where: {
-        student: {
-          academic: {
-            advisor_id: advisor.advisor_id,
-          },
+    // Build dynamic where clause from filters
+    const bookingWhere: any = {
+      student: {
+        academic: {
+          advisor_id: advisor.advisor_id,
         },
-        booking_status: { in: ["COMPLETED", "IN_PROGRESS", "ASSIGNED"] }, // Focus on active/done cases? Or all? User said "Consulted", so mostly COMPLETED/IN_PROGRESS.
-        // Let's include all to see demand as well, maybe filter locally.
       },
+      booking_status: { in: ["COMPLETED", "IN_PROGRESS", "ASSIGNED"] },
+    };
+
+    // Date range filter
+    if (filters?.startDate || filters?.endDate) {
+      bookingWhere.booking_created_at = {};
+      if (filters.startDate) bookingWhere.booking_created_at.gte = filters.startDate;
+      if (filters.endDate) bookingWhere.booking_created_at.lte = filters.endDate;
+    }
+
+    // Problem category filter
+    if (filters?.problemCategoryId) {
+      bookingWhere.problem_category_id = filters.problemCategoryId;
+    }
+
+    // Gender filter
+    if (filters?.gender) {
+      bookingWhere.student = {
+        ...bookingWhere.student,
+        profile: { student_gender: filters.gender },
+      };
+    }
+
+    // Fetch filtered bookings for analysis
+    const bookings = await prisma.booking.findMany({
+      where: bookingWhere,
       include: {
         problemCategory: true,
         student: {

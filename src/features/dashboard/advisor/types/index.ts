@@ -17,3 +17,12 @@ export interface AdvisorStats {
   appointmentsToday: number;
   highRiskCount: number;
 }
+
+export interface AdvisorDashboardFilters {
+  search?: string;
+  riskLevel?: string;
+  startDate?: Date;
+  endDate?: Date;
+  problemCategoryId?: number;
+  gender?: string;
+}

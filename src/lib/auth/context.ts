@@ -7,6 +7,7 @@ import { extractToken, verifyToken, JWTPayload } from "./jwt";
 export type AccountContext = {
   accountId: number;
   username: string;
+  displayName: string;
   role: JWTPayload["role"];
 
   consultantId?: number;
@@ -34,7 +35,26 @@ export async function getAccountFromRequest(
       account_username: true,
       account_role: true,
       account_home_university_id: true,
-      // ถ้าคุณมี account_token_version: true ก็เอามาเทียบกับ jwt.tv ได้
+      consultant: {
+        select: {
+          profile: {
+            select: {
+              consultant_first_name: true,
+              consultant_last_name: true,
+            },
+          },
+        },
+      },
+      student: {
+        select: {
+          profile: {
+            select: {
+              student_first_name_th: true,
+              student_last_name_th: true,
+            },
+          },
+        },
+      },
     },
   });
   if (!account) return null;
@@ -73,9 +93,20 @@ export async function getAccountFromRequest(
     activeUniversityId = allowedUniversityIds[0] ?? undefined;
   }
 
+  // Build display name from consultant or student profile
+  let displayName = account.account_username;
+  if (account.consultant?.profile) {
+    const p = account.consultant.profile;
+    displayName = [p.consultant_first_name, p.consultant_last_name].filter(Boolean).join(" ") || displayName;
+  } else if (account.student?.profile) {
+    const p = account.student.profile;
+    displayName = [p.student_first_name_th, p.student_last_name_th].filter(Boolean).join(" ") || displayName;
+  }
+
   return {
     accountId: account.account_id,
     username: account.account_username,
+    displayName,
     role: account.account_role,
     consultantId: jwt.consultantId,
     studentId: jwt.studentId,

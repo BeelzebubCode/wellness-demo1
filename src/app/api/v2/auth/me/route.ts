@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
       account: {
         id: account.accountId,
         username: account.username,
+        name: account.displayName,
         role: account.role,
         consultantId: account.consultantId ?? null,
         studentId: account.studentId ?? null,

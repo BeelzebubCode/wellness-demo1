@@ -1,8 +1,11 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import { useAdvisorStats } from "../hooks/useAdvisorStats";
 import { AdvisorStatsCards } from "./AdvisorStatsCards";
 import { StudentListTable } from "./StudentListTable";
+import { AdvisorAdvancedFilter } from "./AdvisorAdvancedFilter";
+import { AdvisorDashboardFilters } from "../types";
 import dynamic from "next/dynamic";
 
 const AdvisorRiskChart = dynamic(() => import("./AdvisorRiskChart").then(mod => mod.AdvisorRiskChart), {
@@ -15,25 +18,6 @@ const AdvisorAnalyticsCharts = dynamic(() => import("./AdvisorAnalyticsCharts").
 });
 import { LoadingSpinner } from "@/components/ui";
 
-import { FilterBar } from "@/components/filters/FilterBar";
-import { FilterDef } from "@/components/filters/types";
-
-const FILTER_DEFS: FilterDef<any>[] = [
-  {
-    key: "riskLevel",
-    label: "ระดับความเสี่ยง",
-    type: "select",
-    options: [
-      { label: "ทั้งหมด", value: "ALL" },
-      { label: "🔴 เสี่ยงสูง (High)", value: "HIGH" },
-      { label: "🟠 เสี่ยงปานกลาง (Medium)", value: "MEDIUM" },
-      { label: "🟢 เสี่ยงต่ำ (Low)", value: "LOW" },
-      { label: "⚪ ปกติ (Normal)", value: "NORMAL" },
-    ],
-    placeholder: "ทั้งหมด",
-  },
-];
-
 export function AdvisorDashboard() {
   const {
     stats,
@@ -44,6 +28,34 @@ export function AdvisorDashboard() {
     filters,
     setFilters,
   } = useAdvisorStats();
+
+  const [activeQuickFilter, setActiveQuickFilter] = useState("all");
+
+  const handleQuickFilterChange = useCallback((id: string) => {
+    setActiveQuickFilter(id);
+    const now = new Date();
+    now.setHours(23, 59, 59, 999);
+
+    if (id === "all") {
+      const from = new Date(now);
+      from.setDate(from.getDate() - 30);
+      from.setHours(0, 0, 0, 0);
+      setFilters(prev => ({ search: prev.search, startDate: from, endDate: now }));
+    } else if (id === "high-risk") {
+      setFilters(prev => ({
+        ...prev,
+        riskLevel: "HIGH",
+      }));
+    } else if (id === "new-cases") {
+      const from = new Date(now);
+      from.setDate(from.getDate() - 7);
+      from.setHours(0, 0, 0, 0);
+      setFilters(prev => ({ search: prev.search, startDate: from, endDate: now }));
+    }
+  }, [setFilters]);
+
+  // Check if filters are active beyond defaults
+  const hasActiveFilters = !!(filters.riskLevel || filters.problemCategoryId || filters.gender);
 
   if (isLoading || !stats) {
     return (
@@ -64,6 +76,21 @@ export function AdvisorDashboard() {
           ภาพรวมการดูแลนิสิตในที่ปรึกษาของคุณ
         </p>
       </div>
+
+      {/* ===== Advanced Filter (Dean-style) ===== */}
+      <AdvisorAdvancedFilter
+        filters={filters}
+        onFilterChange={setFilters}
+        activeQuickFilter={activeQuickFilter}
+        onQuickFilterChange={handleQuickFilterChange}
+      />
+      {hasActiveFilters && (
+        <div className="flex justify-end -mt-4">
+          <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full animate-pulse">
+            🔍 กำลังกรองข้อมูล
+          </span>
+        </div>
+      )}
 
       {/* ===== Stats Cards ===== */}
       <div className="bg-white rounded-2xl p-4 shadow-sm">
@@ -97,14 +124,6 @@ export function AdvisorDashboard() {
               ค้นหาและคัดกรองนิสิตตามระดับความเสี่ยง
             </p>
           </div>
-
-          <FilterBar
-            defs={FILTER_DEFS}
-            value={filters}
-            onChange={setFilters}
-            searchKey="search"
-            searchPlaceholder="ค้นหาชื่อนิสิต หรือรหัส..."
-          />
 
           <StudentListTable students={students} />
         </div>

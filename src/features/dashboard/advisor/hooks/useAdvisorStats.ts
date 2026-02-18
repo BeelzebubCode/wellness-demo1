@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { getAdviseeStats, getMyStudents, getAdvisorRiskTrends, getAdvisorAnalytics } from "../actions";
 import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
+import { AdvisorDashboardFilters } from "../types";
 
 export interface AdvisorStats {
   totalStudents: number;
@@ -24,11 +25,6 @@ export interface RiskTrendItem {
     averageRisk: number;
 }
 
-export interface AdvisorFilters {
-  search?: string;
-  riskLevel?: string;
-}
-
 export function useAdvisorStats() {
   const { user } = useRoleAuth({ 
     allowedRoles: ["ADVISOR"], 
@@ -36,15 +32,21 @@ export function useAdvisorStats() {
     loginToastKey: "advisor_login_toast"
   });
   
-  // ... inside useAdvisorStats ...
   const [stats, setStats] = useState<AdvisorStats | null>(null);
   const [students, setStudents] = useState<StudentListItem[]>([]);
   const [riskTrends, setRiskTrends] = useState<RiskTrendItem[]>([]);
-  const [analytics, setAnalytics] = useState<any>(null); // [NEW] Store comprehensive analytics
+  const [analytics, setAnalytics] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Filter state
-  const [filters, setFilters] = useState<AdvisorFilters>({ riskLevel: "ALL" });
+  // Full filter state (expanded from just riskLevel)
+  const [filters, setFilters] = useState<AdvisorDashboardFilters>(() => {
+    const to = new Date();
+    to.setHours(23, 59, 59, 999);
+    const from = new Date(to);
+    from.setDate(from.getDate() - 30);
+    from.setHours(0, 0, 0, 0);
+    return { startDate: from, endDate: to };
+  });
 
   useEffect(() => {
     if (!user) return;
@@ -54,9 +56,17 @@ export function useAdvisorStats() {
         try {
             const [s, st, rt, an] = await Promise.all([
                 getAdviseeStats(user!),
-                getMyStudents(user!, filters),
-                getAdvisorRiskTrends(user!),
-                getAdvisorAnalytics(user!) // [NEW] Fetch analytics
+                getMyStudents(user!, { search: filters.search, riskLevel: filters.riskLevel }),
+                getAdvisorRiskTrends(user!, {
+                    startDate: filters.startDate,
+                    endDate: filters.endDate,
+                }),
+                getAdvisorAnalytics(user!, {
+                    startDate: filters.startDate,
+                    endDate: filters.endDate,
+                    problemCategoryId: filters.problemCategoryId,
+                    gender: filters.gender,
+                }),
             ]);
             
             if (s) setStats(s);
@@ -75,7 +85,15 @@ export function useAdvisorStats() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [user, filters]);
+  }, [
+    user, 
+    filters.search, 
+    filters.riskLevel,
+    filters.startDate?.toISOString(),
+    filters.endDate?.toISOString(),
+    filters.problemCategoryId,
+    filters.gender,
+  ]);
 
   return { stats, students, riskTrends, analytics, isLoading, filters, setFilters };
 }

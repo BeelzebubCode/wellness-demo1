@@ -273,7 +273,7 @@ export const RectorService = {
              LEFT JOIN "student_academic" sa ON s.student_id = sa.student_id
              LEFT JOIN "student_profile" sp ON s.student_id = sp.student_id
              WHERE s."university_id" = ${universityId}
-             ${Prisma.join(populationFilters, " ")}
+             ${populationFilters.length > 0 ? Prisma.join(populationFilters, " ") : Prisma.empty}
          `;
         const totalStudents = Number(totalStudentsQuery[0]?.count || 0);
 
@@ -286,7 +286,7 @@ export const RectorService = {
              WHERE b."university_id" = ${universityId}
              AND b."booking_created_at" >= ${start}
              AND b."booking_created_at" <= ${end}
-             ${Prisma.join(sqlFilters, " ")}
+             ${sqlFilters.length > 0 ? Prisma.join(sqlFilters, " ") : Prisma.empty}
          `;
         const totalBookings = Number(totalBookingsQuery[0]?.count || 0);
 
@@ -324,7 +324,7 @@ export const RectorService = {
              WHERE b.university_id = ${universityId}
              AND b.booking_created_at >= ${start}
              AND b.booking_created_at <= ${end}
-             ${Prisma.join(sqlFilters, " ")}
+             ${sqlFilters.length > 0 ? Prisma.join(sqlFilters, " ") : Prisma.empty}
              GROUP BY bo.booking_outcome_risk_level
          `;
 
@@ -349,7 +349,7 @@ export const RectorService = {
              WHERE b.university_id = ${universityId}
              AND b.booking_created_at >= ${start}
              AND b.booking_created_at <= ${end}
-             ${Prisma.join(sqlFilters, " ")}
+             ${sqlFilters.length > 0 ? Prisma.join(sqlFilters, " ") : Prisma.empty}
              GROUP BY pc.problem_category_name_th, sp.student_gender
          `;
 
@@ -387,7 +387,7 @@ export const RectorService = {
             WHERE b.university_id = ${universityId}
             AND b.booking_created_at >= ${start}
             AND b.booking_created_at <= ${end}
-            ${Prisma.join(sqlFilters, " ")}
+            ${sqlFilters.length > 0 ? Prisma.join(sqlFilters, " ") : Prisma.empty}
             GROUP BY year_level
         `;
 
@@ -413,7 +413,7 @@ export const RectorService = {
              WHERE b.university_id = ${universityId}
              AND b.booking_created_at >= ${start}
              AND b.booking_created_at <= ${end}
-             ${Prisma.join(sqlFilters, " ")}
+             ${sqlFilters.length > 0 ? Prisma.join(sqlFilters, " ") : Prisma.empty}
              GROUP BY TO_CHAR(booking_created_at, 'YYYY-MM')
          `;
 
@@ -435,7 +435,7 @@ export const RectorService = {
                  WHERE b.university_id = ${universityId}
                  AND b.booking_created_at >= ${start}
                  AND b.booking_created_at <= ${end}
-                 ${Prisma.join(sqlFilters, " ")}
+                 ${sqlFilters.length > 0 ? Prisma.join(sqlFilters, " ") : Prisma.empty}
                  GROUP BY b.student_id
              ) as sub
              GROUP BY visit_count
@@ -521,7 +521,7 @@ export const RectorService = {
              AND b.booking_created_at >= ${start}
              AND b.booking_created_at <= ${end}
              AND b.booking_status IN ('PENDING_ASSIGNMENT', 'ASSIGNED', 'IN_PROGRESS')
-             ${Prisma.join(sqlFilters, " ")}
+             ${sqlFilters.length > 0 ? Prisma.join(sqlFilters, " ") : Prisma.empty}
          `;
         const activeCases = Number(activeCasesQuery[0]?.count || 0);
 
@@ -539,7 +539,7 @@ export const RectorService = {
             WHERE b."university_id" = ${universityId}
             AND b."booking_created_at" >= ${prevStart}
             AND b."booking_created_at" <= ${prevEnd}
-            ${Prisma.join(sqlFilters, " ")}
+            ${sqlFilters.length > 0 ? Prisma.join(sqlFilters, " ") : Prisma.empty}
         `;
         const prevPeriodVisits = Number(prevPeriodQuery[0]?.count || 0);
 
