@@ -1,6 +1,6 @@
 // src/services/aiAgent/booking/plan/adapters/planner.ts
-import type { ChatMsg } from "@/services/aiAgent/core";
-import { callChatLLM, extractJsonFromText, safeParseJson, getLLMContent } from "@/services/aiAgent/core";
+import type { ChatMsg } from "@/services/ai-agent/core";
+import { callChatLLM, extractJsonFromText, safeParseJson, getLLMContent } from "@/services/ai-agent/core";
 import type { PlanLLM } from "../types";
 import type { BookingWindow } from "../domain/window";
 

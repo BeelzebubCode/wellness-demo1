@@ -1,9 +1,9 @@
 // src/app/api/v2/time-slots/purge/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
-import { TIME_SLOT_STAFF_ROLES } from "@/services/timeSlots/constants";
-import { isValidDateStr } from "@/services/timeSlots/utils";
-import { purgeUnusedSlotsByDate } from "@/services/timeSlots/purgeByDate";
+import { TIME_SLOT_STAFF_ROLES } from "@/services/time-slots/handlers/constants";
+import { isValidDateStr } from "@/services/time-slots/handlers/utils";
+import { purgeUnusedSlotsByDate } from "@/services/time-slots/handlers/purgeByDate";
 
 export async function DELETE(req: NextRequest) {
   try {

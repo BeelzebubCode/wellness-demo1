@@ -1,5 +1,5 @@
 // src/services/aiAgent/booking/cancel/types.ts
-import type { AgentQuestion } from "@/services/aiAgent/core";
+import type { AgentQuestion } from "@/services/ai-agent/core";
 
 export type CancelDraft = {
   intent?: "CANCEL";

@@ -177,8 +177,18 @@ export async function seedBookings(
     SELECT
       b.university_id,
       b.booking_id,
-      'สรุปผลการให้คำปรึกษา (Auto-generated)',
-      CASE WHEN random() < 0.5 THEN 'นัดติดตามผล' ELSE NULL END,
+      CASE 
+        WHEN random() < 0.2 THEN 'นิสิตมีความเครียดเรื่องการจัดสรรเวลาเรียน แนะนำเทคนิคการทำ Timeboxing'
+        WHEN random() < 0.4 THEN 'ปัญหาซึมเศร้าเล็กน้อย ให้คำปรึกษาเบื้องต้นและให้แบบประเมินกลับไปทำ'
+        WHEN random() < 0.6 THEN 'นิสิตมีปัญหากับเพื่อนร่วมงานในกลุ่ม ได้แนะนำวิธีสื่อสารแบบ Assertive Communication'
+        WHEN random() < 0.8 THEN 'มีความกังวลเรื่องอนาคตการทำงานหลังเรียนจบ แนะนำแหล่งข้อมูลฝึกงาน'
+        ELSE 'รับฟังปัญหาทั่วไป นิสิตมีภาวะเครียดสะสมจากช่วงสอบ แนะนำการดูแลสุขภาพการนอน'
+      END,
+      CASE 
+        WHEN random() < 0.3 THEN 'นัดติดตามผลในอีก 2 สัปดาห์' 
+        WHEN random() < 0.6 THEN 'ให้นิสิตกลับไปลองปรับพฤติกรรมการนอน'
+        ELSE NULL 
+      END,
       -- 🔥 REALISTIC RISK CALCULATION (1-5)
       -- Base: Gaussian-ish centered around 2-3
       -- Modifiers: University + Faculty

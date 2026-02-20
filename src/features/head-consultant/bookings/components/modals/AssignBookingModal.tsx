@@ -1,8 +1,7 @@
-// src/features/head-consultant/bookings/components/modals/AssignBookingModal.tsx
 "use client";
-
 import { useMemo, useState } from "react";
 import { Modal, ModalFooter } from "@/components/ui/Modal";
+import { useToast } from "@/contexts/ToastContext";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { cn } from "@/lib/cn";
@@ -258,6 +257,7 @@ export function AssignBookingModal({
 }) {
   const [consultantId, setConsultantId] = useState<number | "">("");
   const [search, setSearch] = useState("");
+  const { warning } = useToast();
 
   // ✅ Advanced Ranking Logic
   const sortedAssignees = useMemo(() => {
@@ -390,6 +390,12 @@ export function AssignBookingModal({
                 if (!booking) return;
                 const cid = Number(consultantId);
                 if (!Number.isFinite(cid) || cid <= 0) return;
+
+                // Validate if assigning to the exact same consultant
+                if (booking.consultant?.id === cid || booking.consultantId === cid) {
+                  warning("ที่ปรึกษาท่านนี้ดูแลเคสนี้อยู่แล้ว กรุณาเลือกท่านอื่น");
+                  return;
+                }
 
                 const selected = assignees.find((a) => a.id === cid);
                 await onConfirmAssign(booking.id, cid, selected?.borrowAssignmentId);

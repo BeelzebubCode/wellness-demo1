@@ -15,12 +15,14 @@ export async function fetchAdminBookings(
   status: AdminBookingStatusFilter = "ALL",
   consultantId?: string,
   problemCategoryId?: string,
+  assignmentMethod?: "ALL" | "MANUAL" | "AUTO",
 ): Promise<AdminBookingRow[]> {
   const qs = new URLSearchParams();
   qs.set("date", date);
   if (status !== "ALL") qs.set("status", status);
   if (consultantId) qs.set("consultantId", consultantId);
   if (problemCategoryId) qs.set("problemCategoryId", problemCategoryId);
+  if (assignmentMethod && assignmentMethod !== "ALL") qs.set("assignmentMethod", assignmentMethod);
 
   const res = await fetch(`/api/v2/bookings?${qs.toString()}`, {
     credentials: "include",

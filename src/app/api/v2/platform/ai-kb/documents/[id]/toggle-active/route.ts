@@ -1,7 +1,7 @@
 // src/app/api/v2/platform/ai-kb/documents/[id]/toggle-active/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { requireSuperAdmin } from "@/lib/auth/platformGuard";
-import { toggleActive } from "@/services/aiKb/documents/toggleActive";
+import { toggleActive } from "@/services/ai-kb/documents/toggleActive";
 
 function parseId(params: { id: string }) {
   const id = Number(params.id);

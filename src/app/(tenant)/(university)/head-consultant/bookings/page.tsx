@@ -25,9 +25,10 @@ import { toYMD, fromYMD } from "@/lib/date";
 
 export default function HeadConsultantBookingsPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [statusFilter, setStatusFilter] = useState<BookingStatus | "ALL">("ALL");
+  const [statusFilter, setStatusFilter] = useState<BookingStatus | "ALL">("PENDING_ASSIGNMENT");
   const [consultantId, setConsultantId] = useState<string>("");
   const [problemCategoryId, setProblemCategoryId] = useState<string>("");
+  const [assignmentMethod, setAssignmentMethod] = useState<"ALL" | "MANUAL" | "AUTO">("ALL");
   const [search, setSearch] = useState("");
 
   const { rows, isLoading, error, refresh } = useBookingsQuery({
@@ -35,6 +36,7 @@ export default function HeadConsultantBookingsPage() {
     status: statusFilter,
     consultantId: consultantId || undefined,
     problemCategoryId: problemCategoryId || undefined,
+    assignmentMethod: assignmentMethod,
   });
 
   const { assignees, isLoading: isLoadingAssignees } = useAssigneesQuery(
@@ -63,13 +65,22 @@ export default function HeadConsultantBookingsPage() {
       status: statusFilter as any,
       search,
       consultantId,
-      problemCategoryId
+      problemCategoryId,
+      assignmentMethod
     }),
-    [selectedDate, statusFilter, search, consultantId, problemCategoryId],
+    [selectedDate, statusFilter, search, consultantId, problemCategoryId, assignmentMethod],
   );
 
   const dynamicDefs = useMemo(() => {
     return ADMIN_BOOKINGS_FILTER_DEFS.map((def) => {
+      if (def.key === "status") {
+        return {
+          ...def,
+          options: [
+            { label: "รอมอบหมาย", value: "PENDING_ASSIGNMENT" }
+          ]
+        };
+      }
       if (def.key === "consultantId") {
         return {
           ...def,
@@ -129,6 +140,7 @@ export default function HeadConsultantBookingsPage() {
           setStatusFilter(((next as any).status ?? "ALL") as any);
           setConsultantId(String((next as any).consultantId ?? ""));
           setProblemCategoryId(String((next as any).problemCategoryId ?? ""));
+          setAssignmentMethod(((next as any).assignmentMethod ?? "ALL") as any);
           setSearch(String((next as any).search ?? ""));
         }}
       />

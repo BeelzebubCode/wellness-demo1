@@ -1,6 +1,6 @@
 "use server";
 
-import { RectorService } from "@/services/rector/rector-service";
+import { RectorService } from "@/services/dashboards/handlers/getRectorDashboard";
 
 // Actions now take user context or ID to identify university
 // Assuming we pass universityId directly for simplicity, or we derive from session if we had server session.

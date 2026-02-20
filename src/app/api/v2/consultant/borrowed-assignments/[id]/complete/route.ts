@@ -2,7 +2,7 @@
 
 import { NextRequest } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
-import { consultantCompleteBorrowAssignment } from "@/services/borrowRequests";
+import { consultantCompleteBorrowAssignment } from "@/services/borrow-requests";
 
 export async function POST(
     req: NextRequest,

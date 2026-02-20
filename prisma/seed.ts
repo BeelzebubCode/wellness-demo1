@@ -118,45 +118,44 @@ async function main() {
   // =========================
   // Summary (รองรับทุกมหาลัย)
   // =========================
-  console.log("\\n✅ Database seeding completed successfully!\\n");
-  console.log("📊 Summary:");
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("\n\x1b[32m✅ Database seeding completed successfully!\x1b[0m\n");
+  console.log("\x1b[1m\x1b[36m📊 Summary of Generated Data:\x1b[0m");
+  console.log("\x1b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\x1b[0m");
 
   const uniCount = geo.universities.length;
-  const headCount = accounts.headAccountIdByUniversityId.size; // 1 head ต่อมหาลัย
-  const rectorCount = uniCount; // 1 rector ต่อมหาลัย (ตาม seedAccounts ใหม่)
+  const headCount = accounts.headAccountIdByUniversityId.size;
+  const rectorCount = uniCount;
   const consultantCount = consultants.consultants.length;
   const studentCount = students.length;
 
-  console.log(`🏫 Universities: ${uniCount}`);
-  console.log(`👑 Head Consultants: ${headCount} (head_{university_code})`);
-  console.log(`🏛️ Rectors: ${rectorCount} (rector_{university_code})`);
-  console.log(`🏛️ Ministry: 1 (ministry_admin)`);
-  console.log(`🛡️ Super Admin: 1 (superAdmin)`);
-  console.log(`👨‍🏫 Advisors: ${advisors.length} (advisor_{uni}_{dept})`);
-  console.log(`👔 Deans: ${deans.length} (dean_{uni}_{faculty})`);
-  console.log(`💼 Consultants: ${consultantCount} (consultant_{university_code}_1..5)`);
+  console.log(`\x1b[34m🏫 Universities:\x1b[0m \x1b[1m${uniCount}\x1b[0m`);
+  console.log(`\x1b[33m👑 Head Consultants:\x1b[0m \x1b[1m${headCount}\x1b[0m \x1b[90m(head_{university_code})\x1b[0m`);
+  console.log(`\x1b[35m🏛️  Rectors:\x1b[0m \x1b[1m${rectorCount}\x1b[0m \x1b[90m(rector_{university_code})\x1b[0m`);
+  console.log(`\x1b[36m🏛️  Ministry:\x1b[0m \x1b[1m1\x1b[0m \x1b[90m(ministry_admin)\x1b[0m`);
+  console.log(`\x1b[31m🛡️  Super Admin:\x1b[0m \x1b[1m1\x1b[0m \x1b[90m(superAdmin)\x1b[0m`);
+  console.log(`\x1b[32m👨‍🏫 Advisors:\x1b[0m \x1b[1m${advisors.length}\x1b[0m \x1b[90m(advisor_{uni}_{dept})\x1b[0m`);
+  console.log(`\x1b[35m👔 Deans:\x1b[0m \x1b[1m${deans.length}\x1b[0m \x1b[90m(dean_{uni}_{faculty})\x1b[0m`);
+  console.log(`\x1b[34m💼 Consultants:\x1b[0m \x1b[1m${consultantCount}\x1b[0m \x1b[90m(consultant_{university_code}_1..5)\x1b[0m`);
   const studentCountLog = isDevMode 
-    ? `${geo.universities.length * 30} (Dev Mode: 30/uni)` 
-    : `~1.8M (Full Scale)`;
+    ? `${geo.universities.length * 30} \x1b[90m(Dev Mode: 30/uni)\x1b[0m` 
+    : `~1.8M \x1b[90m(Full Scale)\x1b[0m`;
 
-  console.log(`🎓 Students: ${studentCountLog}`);
+  console.log(`\x1b[32m🎓 Students:\x1b[0m \x1b[1m${studentCountLog}\x1b[0m`);
 
   // =========================
   // Credentials (รองรับทุกมหาลัย)
   // =========================
-  console.log("\n🔑 Login Credentials:");
-  console.log("   Ministry: ministry_admin");
-  console.log("   Head: head_{university_code}");
-  console.log("   Rector: rector_{university_code}");
-  console.log("   Super: superAdmin");
-  console.log("   Advisor: advisor_{uni}_{dept} (e.g. advisor_cu_cse)");
-  console.log("   Dean: dean_{uni}_{faculty} (e.g. dean_cu_eng)");
-  console.log("   Consultant: consultant_{university_code}_1 .. _5");
-  console.log("   Student (new): stu_{university_code}_01 .. _30");
-  console.log("   Student (old): student1 - student120  (ถ้ายังใช้ seedStudents เวอร์ชันเก่า)");
-  console.log(`   Password: ${st.plainPassword}`);
-  console.log("\\n💡 Note: Bookings created for ALL students\\n");
+  console.log("\n\x1b[1m\x1b[33m🔑 Login Credentials:\x1b[0m");
+  console.log("   \x1b[36mMinistry:\x1b[0m   ministry_admin");
+  console.log("   \x1b[33mHead:\x1b[0m       head_{university_code}");
+  console.log("   \x1b[35mRector:\x1b[0m     rector_{university_code}");
+  console.log("   \x1b[31mSuper:\x1b[0m      superAdmin");
+  console.log("   \x1b[32mAdvisor:\x1b[0m    advisor_{uni}_{dept} \x1b[90m(e.g. advisor_cu_cse)\x1b[0m");
+  console.log("   \x1b[35mDean:\x1b[0m       dean_{uni}_{faculty} \x1b[90m(e.g. dean_cu_eng)\x1b[0m");
+  console.log("   \x1b[34mConsultant:\x1b[0m consultant_{university_code}_1 .. _5");
+  console.log("   \x1b[32mStudent:\x1b[0m    stu_{university_code}_01 .. _30");
+  console.log(`   \x1b[1mPassword:\x1b[0m   \x1b[32m${st.plainPassword}\x1b[0m`);
+  console.log("\n\x1b[90m💡 Note: Bookings were created intelligently across all students.\x1b[0m\n");
 
   // silence unused warning
   void accounts.superAccount;

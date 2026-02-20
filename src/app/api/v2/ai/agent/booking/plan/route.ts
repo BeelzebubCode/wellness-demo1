@@ -4,7 +4,7 @@ import { requireTenant, assertRole } from "@/lib/tenant/server";
 import prisma from "@/lib/prisma";
 
 // ✅ เปลี่ยนมาใช้ของใหม่
-import { runBookingPlan } from "@/services/aiAgent/booking/plan";
+import { runBookingPlan } from "@/services/ai-agent/booking/plan";
 
 export const runtime = "nodejs";
 

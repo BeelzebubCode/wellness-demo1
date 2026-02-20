@@ -49,7 +49,7 @@ export function FilterPopover<TFilters extends Record<string, any>>({
             </button>
           </div>
 
-          <div className="space-y-1 max-h-[400px] overflow-auto">
+          <div className="space-y-1 max-h-[400px] overflow-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 pr-2">
             {defs.map((def) => {
               const isSelected = selectedKeys.has(def.key);
               return (
@@ -87,7 +87,7 @@ export function FilterPopover<TFilters extends Record<string, any>>({
           {activeDefs.length === 0 ? (
             <div className="text-sm text-gray-400 py-8 text-center">เลือกตัวกรองจากด้านซ้าย</div>
           ) : (
-            <div className="space-y-4 max-h-[400px] overflow-auto">
+            <div className="space-y-4 max-h-[400px] overflow-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 pr-2 pb-2">
               {activeDefs.map((def) => (
                 <div key={String(def.key)} className="space-y-1.5">
                   <label className="text-xs font-medium text-gray-600">{def.label}</label>

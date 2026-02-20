@@ -1,7 +1,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
-import { processAnalystQuery } from "@/services/aiAgent/analyst/query-agent";
+import { processAnalystQuery } from "@/services/ai-agent/analyst/query-agent";
 
 export async function POST(req: NextRequest) {
   try {

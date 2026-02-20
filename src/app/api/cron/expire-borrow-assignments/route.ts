@@ -4,7 +4,7 @@
 // Also called lazily from assignBooking — this endpoint is just a manual fallback.
 
 import { NextResponse } from "next/server";
-import { autoExpireAssignments } from "@/services/borrowRequests";
+import { autoExpireAssignments } from "@/services/borrow-requests";
 
 export const dynamic = "force-dynamic";
 

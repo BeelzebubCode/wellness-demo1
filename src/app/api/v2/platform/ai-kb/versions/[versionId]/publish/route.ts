@@ -1,7 +1,7 @@
 // src/app/api/v2/platform/ai-kb/versions/[versionId]/publish/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { requireSuperAdmin } from "@/lib/auth/platformGuard";
-import { publishVersion } from "@/services/aiKb/versions/publishVersion";
+import { publishVersion } from "@/services/ai-kb/versions/publishVersion";
 
 function parseId(params: { versionId: string }) {
   const id = Number(params.versionId);

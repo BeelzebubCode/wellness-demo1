@@ -11,8 +11,9 @@ export function useBookingsQuery(input: {
   status: AdminBookingStatusFilter;
   consultantId?: string;
   problemCategoryId?: string;
+  assignmentMethod?: "ALL" | "MANUAL" | "AUTO";
 }) {
-  const { date, status, consultantId, problemCategoryId } = input;
+  const { date, status, consultantId, problemCategoryId, assignmentMethod = "ALL" } = input;
 
   const [rows, setRows] = useState<AdminBookingRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -24,7 +25,7 @@ export function useBookingsQuery(input: {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await fetchAdminBookings(selectedDateStr, status, consultantId, problemCategoryId);
+      const data = await fetchAdminBookings(selectedDateStr, status, consultantId, problemCategoryId, assignmentMethod);
       setRows(data);
     } catch (e: any) {
       setRows([]);
@@ -32,7 +33,7 @@ export function useBookingsQuery(input: {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedDateStr, status, consultantId, problemCategoryId]);
+  }, [selectedDateStr, status, consultantId, problemCategoryId, assignmentMethod]);
 
   useEffect(() => {
     refresh();

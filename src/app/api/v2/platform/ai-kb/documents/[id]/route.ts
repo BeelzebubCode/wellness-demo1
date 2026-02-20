@@ -1,8 +1,8 @@
 // src/app/api/v2/platform/ai-kb/documents/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { requireSuperAdmin } from "@/lib/auth/platformGuard";
-import { getDocument } from "@/services/aiKb/documents/getDocument";
-import { deleteDocument } from "@/services/aiKb/documents/deleteDocument";
+import { getDocument } from "@/services/ai-kb/documents/getDocument";
+import { deleteDocument } from "@/services/ai-kb/documents/deleteDocument";
 
 function parseId(params: { id: string }) {
   const id = Number(params.id);

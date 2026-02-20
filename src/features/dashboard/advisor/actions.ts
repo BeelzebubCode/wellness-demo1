@@ -2,7 +2,7 @@
 
 "use server";
 
-import { AdvisorService } from "@/services/advisor/advisor-service";
+import { AdvisorService } from "@/services/dashboards/handlers/getAdvisorDashboard";
 import { AuthUser } from "@/features/auth/types";
 
 export async function getAdviseeStats(user: AuthUser) {

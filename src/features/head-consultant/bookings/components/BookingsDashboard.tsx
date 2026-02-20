@@ -85,25 +85,57 @@ export function BookingsDashboard({
 
       {/* Glass container */}
       <div className="relative bg-white/80 backdrop-blur-xl border border-white/80 shadow-[0_10px_40px_rgba(0,0,0,0.06)] rounded-3xl overflow-hidden">
-        {/* Header */}
-        <div className="px-8 py-5 border-b border-slate-100/80 flex items-center justify-between bg-gradient-to-r from-white/90 to-blue-50/30 backdrop-blur-md">
-          <div className="flex items-center gap-3">
-            <span className="w-1.5 h-6 bg-gradient-to-b from-primary-500 to-blue-500 rounded-full shadow-lg" />
-            <div>
-              <p className="text-sm font-bold text-slate-800 leading-none">
-                รายการนัดหมาย
-              </p>
-              <p className="text-xs text-slate-500 mt-1 leading-none">
-                {rows.length} รายการ
-              </p>
+        {/* Header with Score Bar */}
+        <div className="px-8 py-5 border-b border-slate-100/80 bg-gradient-to-r from-white/90 to-blue-50/30 backdrop-blur-md">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <span className="w-1.5 h-6 bg-gradient-to-b from-primary-500 to-blue-500 rounded-full shadow-lg" />
+              <div>
+                <p className="text-sm font-bold text-slate-800 leading-none">
+                  รายการนัดหมาย
+                </p>
+                <p className="text-xs text-slate-500 mt-1 leading-none">
+                  ทั้งหมด {rows.length} รายการ
+                </p>
+              </div>
             </div>
+
+            {isLoading && (
+              <div className="flex items-center gap-1">
+                <div className="w-1 h-1 bg-slate-400 rounded-full animate-pulse" />
+                <div className="w-1 h-1 bg-slate-400 rounded-full animate-pulse" style={{ animationDelay: "150ms" }} />
+                <div className="w-1 h-1 bg-slate-400 rounded-full animate-pulse" style={{ animationDelay: "300ms" }} />
+              </div>
+            )}
           </div>
 
-          {isLoading && (
-            <div className="flex items-center gap-1">
-              <div className="w-1 h-1 bg-slate-400 rounded-full animate-pulse" />
-              <div className="w-1 h-1 bg-slate-400 rounded-full animate-pulse" style={{ animationDelay: "150ms" }} />
-              <div className="w-1 h-1 bg-slate-400 rounded-full animate-pulse" style={{ animationDelay: "300ms" }} />
+          {/* Dynamic Score Bar */}
+          {rows.length > 0 && (
+            <div className="flex w-full h-2.5 rounded-full overflow-hidden bg-slate-100 mt-2 shadow-inner">
+              {(() => {
+                const total = rows.length;
+                const pend = rows.filter(r => r.status === "PENDING_ASSIGNMENT").length;
+                const asig = rows.filter(r => r.status === "ASSIGNED" || r.status === "IN_PROGRESS").length;
+                const comp = rows.filter(r => r.status === "COMPLETED").length;
+                const canc = rows.filter(r => r.status === "CANCELLED").length;
+
+                return (
+                  <>
+                    {pend > 0 && <div style={{ width: `${(pend / total) * 100}%` }} className="bg-amber-400 transition-all duration-500 hover:brightness-110" title={`รอมอบหมาย: ${pend}`} />}
+                    {asig > 0 && <div style={{ width: `${(asig / total) * 100}%` }} className="bg-blue-500 transition-all duration-500 hover:brightness-110" title={`กำลังดำเนินการ: ${asig}`} />}
+                    {comp > 0 && <div style={{ width: `${(comp / total) * 100}%` }} className="bg-emerald-500 transition-all duration-500 hover:brightness-110" title={`เสร็จสิ้น: ${comp}`} />}
+                    {canc > 0 && <div style={{ width: `${(canc / total) * 100}%` }} className="bg-slate-300 transition-all duration-500 hover:brightness-110" title={`ยกเลิก: ${canc}`} />}
+                  </>
+                );
+              })()}
+            </div>
+          )}
+          {rows.length > 0 && (
+            <div className="flex items-center gap-4 mt-3 text-[10px] font-medium text-slate-500">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" /> รอมอบหมาย</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" /> ดำเนินการ</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" /> เสร็จสิ้น</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-300" /> ยกเลิก</span>
             </div>
           )}
         </div>

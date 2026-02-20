@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth/jwt";
-import { RectorService } from "@/services/rector/rector-service";
-import prisma from "@/lib/prisma";
+import { DeanService } from "@/services/dashboards/handlers/getDeanDashboard";
 
 /**
- * GET /api/v2/rector/faculties
- * Get all faculties in the rector's university
+ * GET /api/v2/dean/faculties
+ * Get all faculties managed by the authenticated dean
  */
 export async function GET(req: NextRequest) {
     try {
@@ -26,35 +25,10 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        // 2. Verify Rector role and get university
-        const account = await prisma.account.findUnique({
-            where: { account_id: token.accountId },
-            select: {
-                account_role: true,
-                account_home_university_id: true,
-            },
-        });
+        // 2. Get faculties managed by this dean
+        const faculties = await DeanService.getFacultiesByDean(token.accountId);
 
-        if (!account || account.account_role !== "RECTOR") {
-            return NextResponse.json(
-                { success: false, error: "Forbidden: Rector access required" },
-                { status: 403 }
-            );
-        }
-
-        if (!account.account_home_university_id) {
-            return NextResponse.json(
-                { success: false, error: "No university assigned to this Rector" },
-                { status: 404 }
-            );
-        }
-
-        // 3. Get all faculties in the university
-        const faculties = await RectorService.getAllFaculties(
-            account.account_home_university_id
-        );
-
-        // 4. Apply search filter if provided
+        // 3. Apply search filter if provided
         const { searchParams } = new URL(req.url);
         const searchTerm = searchParams.get("search")?.toLowerCase() || "";
 
@@ -68,7 +42,7 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        // 5. Transform to frontend format
+        // 4. Transform to frontend format
         const data = filteredFaculties.map((faculty) => ({
             id: `${faculty.universityId}-${faculty.facultyId}`,
             code: faculty.facultyCode,
@@ -81,7 +55,7 @@ export async function GET(req: NextRequest) {
             departmentCount: faculty.departmentCount,
             subjectGroupCategory: faculty.subjectGroupCategory,
             subjectGroupCategoryTH: faculty.subjectGroupCategoryTH,
-            logo: `/images/logo/${faculty.universityCode}_logo.png`,
+            logo: `/images/logo/${faculty.universityCode}_logo.png`, // Using university logo for now
         }));
 
         return NextResponse.json({
@@ -90,7 +64,16 @@ export async function GET(req: NextRequest) {
             count: data.length,
         });
     } catch (error: any) {
-        console.error("[RECTOR_FACULTIES_ERROR]", error);
+        console.error("[DEAN_FACULTIES_ERROR]", error);
+
+        // Handle specific errors
+        if (error.message === "Account is not a dean or does not exist") {
+            return NextResponse.json(
+                { success: false, error: "Forbidden: Dean access required" },
+                { status: 403 }
+            );
+        }
+
         return NextResponse.json(
             { success: false, error: "Internal Server Error" },
             { status: 500 }

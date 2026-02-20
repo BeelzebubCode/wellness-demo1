@@ -4,7 +4,7 @@ import type { BookingStatus } from "@prisma/client";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
 import { handleListBookings } from "@/services/booking/handlers/listBookings";
 import { handleCreateBooking } from "@/services/booking/handlers/createBooking";
-import { autoExpireAssignments } from "@/services/borrowRequests";
+import { autoExpireAssignments } from "@/services/borrow-requests";
 
 function getIpAddress(req: NextRequest): string | null {
   // รองรับ proxy หลายชั้น (เอาตัวแรก)
@@ -40,9 +40,11 @@ export async function GET(request: NextRequest) {
     const consultantIdRaw = searchParams.get("consultantId");
     const problemCategoryIdRaw = searchParams.get("problemCategoryId");
     const date = searchParams.get("date"); // yyyy-mm-dd
+    const assignmentMethodRaw = searchParams.get("assignmentMethod");
 
     const consultantId = consultantIdRaw ? Number(consultantIdRaw) : null;
     const problemCategoryId = problemCategoryIdRaw ? Number(problemCategoryIdRaw) : null;
+    const assignmentMethod = (assignmentMethodRaw === "AUTO" || assignmentMethodRaw === "MANUAL") ? assignmentMethodRaw : "ALL";
 
     return await handleListBookings(
       { ...(account as any), activeUniversityId },
@@ -52,6 +54,7 @@ export async function GET(request: NextRequest) {
         consultantId: Number.isFinite(consultantId as any) ? consultantId : null,
         problemCategoryId: Number.isFinite(problemCategoryId as any) ? problemCategoryId : null,
         date,
+        assignmentMethod,
       },
     );
   } catch (err: any) {

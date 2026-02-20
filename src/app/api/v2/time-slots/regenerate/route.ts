@@ -1,9 +1,9 @@
 // src/app/api/v2/time-slots/regenerate/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
-import { TIME_SLOT_STAFF_ROLES } from "@/services/timeSlots/constants";
-import { isValidDateStr } from "@/services/timeSlots/utils";
-import { regenerateSlotsByDate } from "@/services/timeSlots/regenerateByDate";
+import { TIME_SLOT_STAFF_ROLES } from "@/services/time-slots/handlers/constants";
+import { isValidDateStr } from "@/services/time-slots/handlers/utils";
+import { regenerateSlotsByDate } from "@/services/time-slots/handlers/regenerateByDate";
 
 export async function PATCH(req: NextRequest) {
   try {

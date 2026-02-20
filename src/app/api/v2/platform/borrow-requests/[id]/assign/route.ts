@@ -1,8 +1,8 @@
 // src/app/api/v2/platform/borrow-requests/[id]/assign/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
-import { platformAssignBorrowRequest } from "@/services/borrowRequests/handlers/platformAssignBorrowRequest";
-import { getAccountId } from "@/services/borrowRequests/helpers";
+import { platformAssignBorrowRequest } from "@/services/borrow-requests/handlers/platformAssignBorrowRequest";
+import { getAccountId } from "@/services/borrow-requests/helpers";
 
 export async function POST(
   req: NextRequest,

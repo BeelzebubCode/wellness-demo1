@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { AdminHeader, AdminSidebar } from "@/components/layout";
 import { LoadingSpinner } from "@/components/ui";
 import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
+import { ToastProvider } from "@/contexts/ToastContext";
 
 export default function HeadConsultantLayout({
   children,
@@ -40,25 +41,27 @@ export default function HeadConsultantLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex font-sans">
-      <AdminSidebar
-        isOpen={isMobileMenuOpen}
-        isCollapsed={isSidebarCollapsed}
-        onCloseMobile={() => setIsMobileMenuOpen(false)}
-        onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
-      />
-
-      <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
-        <AdminHeader
-          adminName={(user as any)?.name}
-          adminRole={user?.role}
-          onMenuClick={() => setIsMobileMenuOpen(true)}
+    <ToastProvider>
+      <div className="min-h-screen bg-gray-50 flex font-sans">
+        <AdminSidebar
+          isOpen={isMobileMenuOpen}
+          isCollapsed={isSidebarCollapsed}
+          onCloseMobile={() => setIsMobileMenuOpen(false)}
+          onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
         />
 
-        <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
-          <div className="max-w-7xl mx-auto animate-fade-in">{children}</div>
-        </main>
+        <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
+          <AdminHeader
+            adminName={(user as any)?.name}
+            adminRole={user?.role}
+            onMenuClick={() => setIsMobileMenuOpen(true)}
+          />
+
+          <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
+            <div className="max-w-7xl mx-auto animate-fade-in">{children}</div>
+          </main>
+        </div>
       </div>
-    </div>
+    </ToastProvider>
   );
 }

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth/jwt";
-import { RectorService } from "@/services/rector/rector-service";
+import { RectorService } from "@/services/dashboards/handlers/getRectorDashboard";
 import prisma from "@/lib/prisma";
 
 /**
- * GET /api/v2/rector/university-stats
- * Get university-wide aggregated statistics for Rector's main dashboard
+ * GET /api/v2/rector/faculties
+ * Get all faculties in the rector's university
  */
 export async function GET(req: NextRequest) {
     try {
@@ -49,41 +49,48 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        // 3. Extract filters from query parameters
+        // 3. Get all faculties in the university
+        const faculties = await RectorService.getAllFaculties(
+            account.account_home_university_id
+        );
+
+        // 4. Apply search filter if provided
         const { searchParams } = new URL(req.url);
-        const startDateStr = searchParams.get("startDate");
-        const endDateStr = searchParams.get("endDate");
-        const facultyId = searchParams.get("facultyId");
-        const departmentId = searchParams.get("departmentId");
-        const problemCategoryId = searchParams.get("problemCategoryId");
-        const gender = searchParams.get("gender");
+        const searchTerm = searchParams.get("search")?.toLowerCase() || "";
 
-        const filters = {
-            startDate: startDateStr ? new Date(startDateStr) : undefined,
-            endDate: endDateStr ? new Date(endDateStr) : undefined,
-            facultyId: facultyId ? Number(facultyId) : undefined,
-            departmentId: departmentId ? Number(departmentId) : undefined,
-            problemCategoryId: problemCategoryId ? Number(problemCategoryId) : undefined,
-            gender: gender || undefined,
-        };
+        let filteredFaculties = faculties;
+        if (searchTerm) {
+            filteredFaculties = faculties.filter(
+                (faculty) =>
+                    faculty.facultyName.toLowerCase().includes(searchTerm) ||
+                    faculty.facultyCode.toLowerCase().includes(searchTerm) ||
+                    faculty.facultyNameEn?.toLowerCase().includes(searchTerm)
+            );
+        }
 
-        // 4. Get university-wide statistics using RectorService
-        const [stats, wellbeing, healthMap] = await Promise.all([
-            RectorService.getUniversityStats(account.account_home_university_id, filters),
-            RectorService.getUniversityWellbeing(account.account_home_university_id, filters),
-            RectorService.getFacultyHealthMap(account.account_home_university_id, filters)
-        ]);
+        // 5. Transform to frontend format
+        const data = filteredFaculties.map((faculty) => ({
+            id: `${faculty.universityId}-${faculty.facultyId}`,
+            code: faculty.facultyCode,
+            name: faculty.facultyName,
+            nameEn: faculty.facultyNameEn,
+            universityId: faculty.universityId,
+            universityCode: faculty.universityCode,
+            universityName: faculty.universityName,
+            studentCount: faculty.studentCount,
+            departmentCount: faculty.departmentCount,
+            subjectGroupCategory: faculty.subjectGroupCategory,
+            subjectGroupCategoryTH: faculty.subjectGroupCategoryTH,
+            logo: `/images/logo/${faculty.universityCode}_logo.png`,
+        }));
 
         return NextResponse.json({
             success: true,
-            data: {
-                ...stats,
-                wellbeing,
-                healthMap
-            },
+            data,
+            count: data.length,
         });
     } catch (error: any) {
-        console.error("[RECTOR_UNIVERSITY_STATS_ERROR]", error);
+        console.error("[RECTOR_FACULTIES_ERROR]", error);
         return NextResponse.json(
             { success: false, error: "Internal Server Error" },
             { status: 500 }

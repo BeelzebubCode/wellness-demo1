@@ -3,10 +3,12 @@
 
 import { useCallback, useState } from "react";
 import { assignBooking, cancelBooking, rescheduleBooking } from "../api/bookings";
+import { useToast } from "@/contexts/ToastContext";
 
 export function useBookingActions(opts?: { onDone?: () => void }) {
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const { success, error: toastError } = useToast();
 
   const doAssign = useCallback(
     async (input: {
@@ -17,18 +19,21 @@ export function useBookingActions(opts?: { onDone?: () => void }) {
       note?: string;
     }) => {
       setIsSaving(true);
-      setError(null);
+      setActionError(null);
       try {
         await assignBooking(input);
+        success("แจกงานสำเร็จ");
         opts?.onDone?.();
       } catch (e: any) {
-        setError(e?.message ?? "Assign ไม่สำเร็จ");
+        const msg = e?.message ?? "Assign ไม่สำเร็จ";
+        setActionError(msg);
+        toastError(msg);
         throw e;
       } finally {
         setIsSaving(false);
       }
     },
-    [opts],
+    [opts, success, toastError],
   );
 
   const doReschedule = useCallback(
@@ -39,36 +44,42 @@ export function useBookingActions(opts?: { onDone?: () => void }) {
       note?: string;
     }) => {
       setIsSaving(true);
-      setError(null);
+      setActionError(null);
       try {
         await rescheduleBooking(input);
+        success("เลื่อนเวลาสำเร็จ");
         opts?.onDone?.();
       } catch (e: any) {
-        setError(e?.message ?? "Reschedule ไม่สำเร็จ");
+        const msg = e?.message ?? "Reschedule ไม่สำเร็จ";
+        setActionError(msg);
+        toastError(msg);
         throw e;
       } finally {
         setIsSaving(false);
       }
     },
-    [opts],
+    [opts, success, toastError],
   );
 
   const doCancel = useCallback(
     async (input: { universityId: number; bookingId: number; reason: string }) => {
       setIsSaving(true);
-      setError(null);
+      setActionError(null);
       try {
         await cancelBooking(input);
+        success("ยกเลิกรายการสำเร็จ");
         opts?.onDone?.();
       } catch (e: any) {
-        setError(e?.message ?? "Cancel ไม่สำเร็จ");
+        const msg = e?.message ?? "Cancel ไม่สำเร็จ";
+        setActionError(msg);
+        toastError(msg);
         throw e;
       } finally {
         setIsSaving(false);
       }
     },
-    [opts],
+    [opts, success, toastError],
   );
 
-  return { isSaving, error, doAssign, doReschedule, doCancel };
+  return { isSaving, error: actionError, doAssign, doReschedule, doCancel };
 }

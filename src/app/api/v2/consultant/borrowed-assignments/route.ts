@@ -3,7 +3,7 @@
 import { NextRequest } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
 import prisma from "@/lib/prisma";
-import { consultantListBorrowedAssignments } from "@/services/borrowRequests";
+import { consultantListBorrowedAssignments } from "@/services/borrow-requests";
 
 export async function GET(req: NextRequest) {
     try {

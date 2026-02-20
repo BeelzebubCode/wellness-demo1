@@ -26,6 +26,16 @@ export type AdminBookingRow = BookingCore & {
 
   outcome?: BookingOutcomeCore | null;
   cancellation?: BookingCancellationCore | null;
+
+  createdAt: string;
+  assignments?: Array<{
+    assignedAt: string;
+    isAutoAssigned: boolean;
+    isActive: boolean;
+    note: string | null;
+    assignedBy: { name: string; username: string } | null;
+    consultant: { name: string } | null;
+  }>;
 };
 
 export type AssigneeOption = {
@@ -41,4 +51,5 @@ export type AssigneeOption = {
 };
 
 export type AdminBookingStatusFilter = BookingStatus | "ALL";
+export type AdminAssignmentMethodFilter = "ALL" | "MANUAL" | "AUTO";
 export type { BookingStatus };

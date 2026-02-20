@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import type { AdminBookingRow } from "../types";
+import { useAutoAssignCountdown } from "../hook/useAutoAssignCountdown";
 
 /* -------------------- small ui helpers -------------------- */
 
@@ -83,7 +84,7 @@ function IconAction({
 }: {
   icon: React.ElementType;
   label: string;
-  tone: "amber" | "emerald" | "slate";
+  tone: "amber" | "emerald" | "slate" | "blue";
   disabled?: boolean;
   title?: string;
   onClick: () => void;
@@ -96,7 +97,9 @@ function IconAction({
       ? "border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100"
       : tone === "emerald"
         ? "border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
-        : "border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100";
+        : tone === "blue"
+          ? "border-blue-200 bg-blue-50 text-blue-900 hover:bg-blue-100"
+          : "border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100";
 
   return (
     <button
@@ -125,20 +128,20 @@ function IconAction({
 function getAssignState(b: AdminBookingRow) {
   if (b.status === "CANCELLED") return { can: false, reason: "รายการนี้ถูกยกเลิกแล้ว" };
   if (b.status === "COMPLETED") return { can: false, reason: "รายการนี้เสร็จสิ้นแล้ว" };
-  if (b.status !== "PENDING_ASSIGNMENT")
-    return { can: false, reason: "สถานะไม่อนุญาตให้แจกงาน" };
+  if (b.status === "ASSIGNED" || b.status === "IN_PROGRESS") {
+    return { can: true, isEdit: true, reason: null as string | null };
+  }
+  if (b.status === "PENDING_ASSIGNMENT") {
+    return { can: true, isEdit: false, reason: null as string | null };
+  }
 
-  // BookingCore มี consultantId: number | null
-  if (b.consultantId != null) return { can: false, reason: "รายการนี้ถูกมอบหมายไปแล้ว" };
-
-  return { can: true, reason: null as string | null };
+  return { can: false, reason: "สถานะไม่อนุญาตให้แจกงาน" };
 }
 
-function assignLabel(assign: { can: boolean }, status?: string) {
-  if (assign.can) return "แจกงาน";
+function assignLabel(assign: { can: boolean; isEdit?: boolean }, status?: string) {
+  if (assign.can) return assign.isEdit ? "แก้ไขผู้ดูแล" : "แจกงาน";
+
   switch (status) {
-    case "ASSIGNED":
-      return "แจกงานแล้ว";
     case "COMPLETED":
       return "เสร็จสิ้นแล้ว";
     case "CANCELLED":
@@ -163,6 +166,10 @@ export function BookingsListCard({
 }) {
   const studentName = row.userName || row.student?.name || row.student?.username || "ไม่ทราบชื่อ";
   const assign = getAssignState(row);
+  const countdown = useAutoAssignCountdown(row.createdAt, row.status === "PENDING_ASSIGNMENT");
+
+  const latestAssignment = row.assignments?.[0];
+  const isAutoAssigned = latestAssignment?.isAutoAssigned;
 
   const timeLabel =
     row.startTime && row.endTime ? `${row.startTime}–${row.endTime} น.` : "-";
@@ -195,7 +202,29 @@ export function BookingsListCard({
                 <p className="truncate text-sm font-extrabold text-gray-900">
                   {studentName}
                 </p>
-                <StatusBadge status={row.status ?? null} />
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <StatusBadge status={row.status ?? null} />
+
+                  {row.status === "PENDING_ASSIGNMENT" && countdown && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800 animate-pulse border border-amber-200">
+                      <Clock3 className="h-3.5 w-3.5" />
+                      {countdown}
+                    </span>
+                  )}
+                  {row.status === "PENDING_ASSIGNMENT" && !countdown && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-bold text-orange-800 border border-orange-200">
+                      กำลังเข้าสู่ระบบแจกอัตโนมัติ...
+                    </span>
+                  )}
+                  {latestAssignment && row.status !== "PENDING_ASSIGNMENT" && row.status !== "CANCELLED" && (
+                    <span className={cn(
+                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold border",
+                      isAutoAssigned ? "bg-purple-50 text-purple-700 border-purple-200" : "bg-blue-50 text-blue-700 border-blue-200"
+                    )}>
+                      {isAutoAssigned ? "🤖 แจกงานอัตโนมัติ" : "🧑‍💻 จัดการเอง"}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
@@ -254,7 +283,7 @@ export function BookingsListCard({
             />
 
             <IconAction
-              tone={assign.can ? "emerald" : "slate"}
+              tone={assign.can ? (assign.isEdit ? "blue" : "emerald") : "slate"}
               icon={UserCheck}
               label={assignLabel(assign, row.status)}
               disabled={!assign.can}

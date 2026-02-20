@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
 
-import { confirmAgentAction } from "@/services/aiAgent/core/confirm/action";
+import { confirmAgentAction } from "@/services/ai-agent/core/confirm/action";
 
 export const runtime = "nodejs";
 

@@ -1,7 +1,7 @@
 // src/app/api/v2/platform/ai-kb/documents/upload/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { requireSuperAdmin } from "@/lib/auth/platformGuard";
-import { uploadDocument } from "@/services/aiKb/documents/uploadDocument";
+import { uploadDocument } from "@/services/ai-kb/documents/uploadDocument";
 
 export const runtime = "nodejs";
 

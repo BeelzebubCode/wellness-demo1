@@ -37,8 +37,17 @@ export type ListBookingDTO = {
   endTime: string | null; // HH:mm
   student: { id: number; username: string; name: string | null };
   consultant: { id: number; name: string } | null;
-  outcome: Record<string, unknown> | null;      // ถ้าอยาก type outcome เดี๋ยวผมทำให้ต่อได้
-  cancellation: Record<string, unknown> | null; // เช่นกัน
+  outcome: Record<string, unknown> | null;
+  cancellation: Record<string, unknown> | null;
+  createdAt: string; // ISO date format for countdown timer
+  assignments: Array<{
+    assignedAt: string;
+    isAutoAssigned: boolean;
+    isActive: boolean;
+    note: string | null;
+    assignedBy: { name: string; username: string } | null;
+    consultant: { name: string } | null;
+  }>;
 };
 
 /**
@@ -65,6 +74,7 @@ export async function handleListBookings(
     consultantId?: number | null;
     date?: string | null; // yyyy-mm-dd
     problemCategoryId?: number | null;
+    assignmentMethod?: "ALL" | "MANUAL" | "AUTO";
     page?: number;
     pageSize?: number;
   },
@@ -103,6 +113,7 @@ export async function handleListBookings(
     consultantId: staff ? input.consultantId ?? null : null,
     problemCategoryId: staff ? input.problemCategoryId ?? null : null,
     studentUsername: staff ? (input.studentUsername?.trim() || null) : null,
+    assignmentMethod: staff ? (input.assignmentMethod ?? "ALL") : "ALL",
   };
 
   // ✅ type-safe where
@@ -148,6 +159,16 @@ export async function handleListBookings(
             },
           },
         },
+      };
+    }
+
+    if (safeInput.assignmentMethod === "AUTO") {
+      where.assignments = {
+        some: { is_active: true, is_auto_assigned: true },
+      };
+    } else if (safeInput.assignmentMethod === "MANUAL") {
+      where.assignments = {
+        some: { is_active: true, is_auto_assigned: false },
       };
     }
   }
@@ -231,6 +252,30 @@ export async function handleListBookings(
           },
         },
       },
+      assignments: {
+        orderBy: { assigned_at: "desc" },
+        select: {
+          assigned_at: true,
+          is_auto_assigned: true,
+          is_active: true,
+          assigned_note: true,
+          consultant: {
+            select: {
+              profile: {
+                select: {
+                  consultant_first_name: true,
+                  consultant_last_name: true,
+                },
+              },
+            },
+          },
+          assignedBy: {
+            select: {
+              account_username: true,
+            },
+          },
+        },
+      },
     },
     orderBy: { booking_created_at: "desc" },
     skip,
@@ -288,6 +333,22 @@ export async function handleListBookings(
 
       outcome: b.outcome ?? null,
       cancellation: b.cancellation ?? null,
+      createdAt: b.booking_created_at.toISOString(),
+      assignments: b.assignments.map((assign: any) => ({
+        assignedAt: assign.assigned_at.toISOString(),
+        isAutoAssigned: assign.is_auto_assigned,
+        isActive: assign.is_active,
+        note: assign.assigned_note,
+        consultant: assign.consultant?.profile
+          ? { name: `${assign.consultant.profile.consultant_first_name} ${assign.consultant.profile.consultant_last_name}` }
+          : null,
+        assignedBy: assign.assignedBy
+          ? {
+              username: assign.assignedBy.account_username,
+              name: assign.assignedBy.account_username,
+            }
+          : null,
+      })),
     };
   });
 

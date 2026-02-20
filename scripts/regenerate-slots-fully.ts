@@ -1,6 +1,6 @@
 
 import { PrismaClient } from "@prisma/client";
-import { regenerateSlotsByDate } from "../src/services/timeSlots/regenerateByDate";
+import { regenerateSlotsByDate } from "../src/services/time-slots/handlers/regenerateByDate";
 import { addDays, startOfDay } from "../prisma/seed-utils/date";
 
 const prisma = new PrismaClient();

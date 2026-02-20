@@ -1,5 +1,5 @@
 // src/services/aiAgent/booking/plan/types.ts
-import type { AgentQuestion } from "@/services/aiAgent/core";
+import type { AgentQuestion } from "@/services/ai-agent/core";
 
 export type PlanLLM = {
   intent?: "BOOK";

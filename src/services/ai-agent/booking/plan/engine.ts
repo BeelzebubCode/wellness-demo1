@@ -1,6 +1,6 @@
 // src/services/aiAgent/booking/plan/engine.ts
-import type { ChatMsg, AgentQuestion } from "@/services/aiAgent/core";
-import { signConfirmToken } from "@/services/aiAgent/core";
+import type { ChatMsg, AgentQuestion } from "@/services/ai-agent/core";
+import { signConfirmToken } from "@/services/ai-agent/core";
 
 import type { BookingPlanResponse, PlanLLM } from "./types";
 

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
 
 // ✅ ของใหม่
-import { runBookingCancel } from "@/services/aiAgent/booking/cancel";
+import { runBookingCancel } from "@/services/ai-agent/booking/cancel";
 
 export const runtime = "nodejs";
 

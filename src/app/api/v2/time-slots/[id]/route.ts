@@ -1,10 +1,10 @@
 // src/app/api/v2/time-slots/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
-import { TIME_SLOT_STAFF_ROLES } from "@/services/timeSlots/constants";
-import { updateTimeSlot } from "@/services/timeSlots/updateSlot";
-import type { PatchSlotBody } from "@/services/timeSlots/updateSlot";
-import { deleteTimeSlot } from "@/services/timeSlots/deleteSlot";
+import { TIME_SLOT_STAFF_ROLES } from "@/services/time-slots/handlers/constants";
+import { updateTimeSlot } from "@/services/time-slots/handlers/updateSlot";
+import type { PatchSlotBody } from "@/services/time-slots/handlers/updateSlot";
+import { deleteTimeSlot } from "@/services/time-slots/handlers/deleteSlot";
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {

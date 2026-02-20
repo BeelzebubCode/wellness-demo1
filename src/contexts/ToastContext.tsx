@@ -1,7 +1,8 @@
 // src/contexts/ToastContext.tsx
 'use client';
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -34,17 +35,17 @@ const icons = {
 };
 
 const styles = {
-  success: 'bg-emerald-50 border-emerald-200 text-emerald-800',
-  error: 'bg-red-50 border-red-200 text-red-800',
-  info: 'bg-blue-50 border-blue-200 text-blue-800',
-  warning: 'bg-amber-50 border-amber-200 text-amber-800',
+  success: 'bg-emerald-500 border-emerald-600 text-white shadow-emerald-200',
+  error: 'bg-red-500 border-red-600 text-white shadow-red-200',
+  info: 'bg-blue-500 border-blue-600 text-white shadow-blue-200',
+  warning: 'bg-amber-400 border-amber-500 text-amber-950 shadow-amber-200',
 };
 
 const iconStyles = {
-  success: 'text-emerald-500',
-  error: 'text-red-500',
-  info: 'text-blue-500',
-  warning: 'text-amber-500',
+  success: 'text-white',
+  error: 'text-white',
+  info: 'text-white',
+  warning: 'text-amber-900',
 };
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
@@ -57,44 +58,52 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const showToast = useCallback(
     (message: string, type: ToastType = 'info', duration = 4000) => {
       const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      const toast: Toast = { id, type, message, duration };
-
-      setToasts((prev) => [...prev, toast]);
-
-      if (duration > 0) {
-        setTimeout(() => hideToast(id), duration);
-      }
+      setToasts((prev) => [...prev, { id, type, message, duration }]);
+      if (duration > 0) setTimeout(() => hideToast(id), duration);
     },
     [hideToast]
   );
 
-  const success = useCallback((message: string) => showToast(message, 'success'), [showToast]);
-  const error = useCallback((message: string) => showToast(message, 'error'), [showToast]);
-  const info = useCallback((message: string) => showToast(message, 'info'), [showToast]);
-  const warning = useCallback((message: string) => showToast(message, 'warning'), [showToast]);
+  const success = useCallback((msg: string) => showToast(msg, 'success'), [showToast]);
+  const error = useCallback((msg: string) => showToast(msg, 'error'), [showToast]);
+  const info = useCallback((msg: string) => showToast(msg, 'info'), [showToast]);
+  const warning = useCallback((msg: string) => showToast(msg, 'warning'), [showToast]);
 
   return (
-    <ToastContext.Provider
-      value={{ toasts, showToast, hideToast, success, error, info, warning }}
-    >
+    <ToastContext.Provider value={{ toasts, showToast, hideToast, success, error, info, warning }}>
       {children}
-      {/* Toast Container */}
-      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+
+      {/* Toast container — rendered at end of provider so it sits on top in DOM order */}
+      <div
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          zIndex: 2147483647,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          maxWidth: '384px',
+          width: '100%',
+          pointerEvents: 'none',
+        }}
+      >
         {toasts.map((toast) => {
           const Icon = icons[toast.type];
           return (
             <div
               key={toast.id}
               className={cn(
-                'flex items-start gap-3 p-4 rounded-xl border shadow-lg pointer-events-auto animate-slide-in',
+                'flex items-center gap-3 px-4 py-3.5 rounded-2xl border shadow-2xl',
                 styles[toast.type]
               )}
+              style={{ pointerEvents: 'auto', animation: 'slideInToast 0.3s ease-out' }}
             >
-              <Icon className={cn('w-5 h-5 flex-shrink-0 mt-0.5', iconStyles[toast.type])} />
-              <p className="flex-1 text-sm font-medium">{toast.message}</p>
+              <Icon className={cn('w-5 h-5 flex-shrink-0', iconStyles[toast.type])} />
+              <p className="flex-1 text-sm font-semibold">{toast.message}</p>
               <button
                 onClick={() => hideToast(toast.id)}
-                className="flex-shrink-0 p-0.5 hover:bg-black/5 rounded transition-colors"
+                className="flex-shrink-0 p-1 hover:bg-black/10 rounded-lg transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -102,19 +111,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           );
         })}
       </div>
-      <style jsx global>{`
-        @keyframes slide-in {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        .animate-slide-in {
-          animation: slide-in 0.3s ease-out;
+
+      <style>{`
+        @keyframes slideInToast {
+          from { transform: translateX(110%); opacity: 0; }
+          to   { transform: translateX(0);    opacity: 1; }
         }
       `}</style>
     </ToastContext.Provider>

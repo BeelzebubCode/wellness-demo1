@@ -1,10 +1,10 @@
 // src/app/api/v2/time-slots/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
-import { TIME_SLOT_VIEW_ROLES } from "@/services/timeSlots/constants";
-import { isValidDateStr } from "@/services/timeSlots/utils";
-import { listTimeSlotsByDate } from "@/services/timeSlots/listByDate";
-import { generateDefaultSlotsForUniversity } from "@/services/timeSlots/generateDefault";
+import { TIME_SLOT_VIEW_ROLES } from "@/services/time-slots/handlers/constants";
+import { isValidDateStr } from "@/services/time-slots/handlers/utils";
+import { listTimeSlotsByDate } from "@/services/time-slots/handlers/listByDate";
+import { generateDefaultSlotsForUniversity } from "@/services/time-slots/handlers/generateDefault";
 
 const AUTO_GENERATE_IF_EMPTY = true;
 

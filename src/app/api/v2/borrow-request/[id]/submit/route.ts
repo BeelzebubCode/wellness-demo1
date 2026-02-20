@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
-import { submitBorrowRequest } from "@/services/borrowRequests/handlers/submitBorrowRequest";
-import { getAccountId } from "@/services/borrowRequests/helpers";
+import { submitBorrowRequest } from "@/services/borrow-requests/handlers/submitBorrowRequest";
+import { getAccountId } from "@/services/borrow-requests/helpers";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {

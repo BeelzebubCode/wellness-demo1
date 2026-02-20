@@ -1,6 +1,6 @@
 "use server";
 
-import { MinistryService } from "@/services/ministry/ministry-service";
+import { MinistryService } from "@/services/dashboards/handlers/getMinistryDashboard";
 
 export async function getMinistryStats() {
   try {

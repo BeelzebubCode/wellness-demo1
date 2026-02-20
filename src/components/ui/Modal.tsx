@@ -102,14 +102,14 @@ export function Modal(props: ModalProps) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-hidden"
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-4 overflow-hidden"
       onClick={handleOverlayClick}
       role="dialog"
       aria-modal="true"
       aria-label={title ?? "Modal"}
     >
       {/* overlay */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" />
+      <div className="absolute inset-0 bg-black/60 animate-in fade-in duration-200" />
 
       {/* content container */}
       <div

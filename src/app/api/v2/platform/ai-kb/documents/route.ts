@@ -1,7 +1,7 @@
 // src/app/api/v2/platform/ai-kb/documents/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { requireSuperAdmin } from "@/lib/auth/platformGuard";
-import { listDocuments } from "@/services/aiKb/documents/listDocuments";
+import { listDocuments } from "@/services/ai-kb/documents/listDocuments";
 
 export async function GET(req: NextRequest) {
   try {

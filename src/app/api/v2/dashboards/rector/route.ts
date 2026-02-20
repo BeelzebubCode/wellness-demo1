@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth/jwt";
-import { DeanService } from "@/services/dean/dean-service";
+import { DeanService } from "@/services/dashboards/handlers/getDeanDashboard";
 import prisma from "@/lib/prisma";
 
 /**

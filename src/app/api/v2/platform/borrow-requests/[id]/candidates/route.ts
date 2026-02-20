@@ -2,8 +2,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
-import { getAccountId } from "@/services/borrowRequests/helpers";
-import { platformListBorrowCandidates } from "@/services/borrowRequests/handlers/platformListBorrowCandidates";
+import { getAccountId } from "@/services/borrow-requests/helpers";
+import { platformListBorrowCandidates } from "@/services/borrow-requests/handlers/platformListBorrowCandidates";
 
 export async function GET(
   req: NextRequest,

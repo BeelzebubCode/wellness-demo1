@@ -1,8 +1,8 @@
 // src/app/api/v2/ai/agent/help
 
 import { NextRequest, NextResponse } from "next/server";
-import { coerceMessages, lastUserText, type ChatMsg } from "@/services/aiAgent/core/http/request";
-import { runHelpChat } from "@/services/aiAgent/help";
+import { coerceMessages, lastUserText, type ChatMsg } from "@/services/ai-agent/core/http/request";
+import { runHelpChat } from "@/services/ai-agent/help";
 
 export const runtime = "nodejs";
 

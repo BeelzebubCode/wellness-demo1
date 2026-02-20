@@ -1,8 +1,8 @@
 // src/app/api/v2/platform/ai-kb/documents/[id]/versions/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { requireSuperAdmin } from "@/lib/auth/platformGuard";
-import { getDocument } from "@/services/aiKb/documents/getDocument";
-import { createVersion } from "@/services/aiKb/versions/createVersion";
+import { getDocument } from "@/services/ai-kb/documents/getDocument";
+import { createVersion } from "@/services/ai-kb/versions/createVersion";
 
 export const runtime = "nodejs";
 

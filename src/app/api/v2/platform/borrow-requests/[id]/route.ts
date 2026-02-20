@@ -1,7 +1,7 @@
 // src/app/api/v2/platform/borrow-requests/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
-import { getBorrowRequest } from "@/services/borrowRequests/handlers/getBorrowRequest";
+import { getBorrowRequest } from "@/services/borrow-requests/handlers/getBorrowRequest";
 
 export async function GET(
   req: NextRequest,

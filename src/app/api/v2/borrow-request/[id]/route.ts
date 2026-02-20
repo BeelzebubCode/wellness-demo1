@@ -2,7 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
-import { getBorrowRequest } from "@/services/borrowRequests/handlers/getBorrowRequest";
+import { getBorrowRequest } from "@/services/borrow-requests/handlers/getBorrowRequest";
 
 export async function GET(
   req: NextRequest,
@@ -61,7 +61,7 @@ export async function PATCH(
     const body = await req.json();
 
     // Import the update handler
-    const { updateBorrowRequest } = await import("@/services/borrowRequests/handlers/updateBorrowRequest");
+    const { updateBorrowRequest } = await import("@/services/borrow-requests/handlers/updateBorrowRequest");
 
     // Parse body for update or cancel
     const patch: any = {};

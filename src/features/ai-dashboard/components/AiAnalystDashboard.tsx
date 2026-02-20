@@ -5,7 +5,7 @@ import { AiQueryInput } from "./AiQueryInput";
 import { DynamicChart } from "./DynamicChart";
 import { DashboardLayout } from "./DashboardLayout";
 
-import { AnalystResponse } from "@/services/aiAgent/analyst/contracts";
+import { AnalystResponse } from "@/services/ai-agent/analyst/contracts";
 
 export function AiAnalystDashboard({ role }: { role: "RECTOR" | "MINISTRY" }) {
   const [loading, setLoading] = useState(false);

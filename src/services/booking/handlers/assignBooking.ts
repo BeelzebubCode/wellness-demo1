@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { BookingStatus } from "@prisma/client";
-import { autoExpireAssignments } from "@/services/borrowRequests";
+import { autoExpireAssignments } from "@/services/borrow-requests";
 
 type AssignBody = {
   consultantId?: number;
@@ -61,12 +61,15 @@ export async function handleAssignBooking(
     return NextResponse.json({ error: "ไม่พบรายการจอง" }, { status: 404 });
   }
 
-  // ✅ Re-assignment allowed (schema v2)
-
-  // ✅ อนุญาตแจกเฉพาะสถานะนี้
-  if (booking.booking_status !== BookingStatus.PENDING_ASSIGNMENT) {
+  // ✅ อนุญาตแจกเฉพาะสถานะที่ยังแก้ไขได้ (ไม่อนุญาต COMPLETED / CANCELLED)
+  const reassignableStatuses: BookingStatus[] = [
+    BookingStatus.PENDING_ASSIGNMENT,
+    BookingStatus.ASSIGNED,
+    BookingStatus.IN_PROGRESS,
+  ];
+  if (!reassignableStatuses.includes(booking.booking_status)) {
     return NextResponse.json(
-      { error: "สถานะไม่อนุญาตให้แจกงาน" },
+      { error: "ไม่สามารถเปลี่ยนผู้ดูแลได้ในสถานะนี้ (เสร็จสิ้น/ยกเลิก)" },
       { status: 409 },
     );
   }
@@ -171,7 +174,7 @@ export async function handleAssignBooking(
         where: {
           university_id: activeUniversityId,
           booking_id: bookingId,
-          booking_status: { in: [BookingStatus.PENDING_ASSIGNMENT, BookingStatus.ASSIGNED] },
+          booking_status: { in: [BookingStatus.PENDING_ASSIGNMENT, BookingStatus.ASSIGNED, BookingStatus.IN_PROGRESS] },
         },
         data: {
           booking_status: BookingStatus.ASSIGNED,
@@ -183,7 +186,19 @@ export async function handleAssignBooking(
         throw Object.assign(new Error("RACE_OR_STATUS"), { status: 409 });
       }
 
-      // create booking_assignment (schema ใหม่)
+      // ✅ 1. Deactivate old assignments to keep history
+      await tx.bookingAssignment.updateMany({
+        where: {
+          university_id: activeUniversityId,
+          booking_id: bookingId,
+          is_active: true,
+        },
+        data: {
+          is_active: false,
+        },
+      });
+
+      // ✅ 2. Create booking_assignment (schema ใหม่ - บันทึกประวัติใหม่)
       await tx.bookingAssignment.create({
         data: {
           university_id: activeUniversityId,
@@ -195,6 +210,7 @@ export async function handleAssignBooking(
 
           assigned_by_account_id: ctx.accountId,
           assigned_note: body?.note ?? null,
+          is_active: true,
         },
       });
     });
@@ -204,12 +220,6 @@ export async function handleAssignBooking(
       status: BookingStatus.ASSIGNED,
     });
   } catch (e: unknown) {
-    // ถ้า unique (เคยมี bookingAssignment แล้ว)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ((e as any)?.code === "P2002") {
-      return NextResponse.json({ error: "รายการนี้ถูกมอบหมายไปแล้ว" }, { status: 409 });
-    }
-
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const status = (e as any)?.status ?? 500;
     const msg =

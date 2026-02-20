@@ -1,6 +1,6 @@
 // src/services/aiAgent/help/kb.ts
-import { getKbContext } from "@/services/aiKb/retrieval/getKbContext";
-import type { KbHit } from "@/services/aiKb/retrieval/getKbContext";
+import { getKbContext } from "@/services/ai-kb/retrieval/getKbContext";
+import type { KbHit } from "@/services/ai-kb/retrieval/getKbContext";
 
 export function formatKbText(kb: KbHit[]) {
   if (!kb.length) return "";

@@ -597,18 +597,21 @@ model BookingAssignment {
   consultant_university_id Int
   borrow_assignment_id     Int?
 
-  assigned_by_account_id Int
-  assigned_note          String?  @db.Text
-  assigned_at            DateTime @default(now()) @db.Timestamptz(3)
+  assigned_by_account_id Int? // Null = System Auto-Assigned
+  is_auto_assigned       Boolean @default(false)
+  is_active              Boolean @default(true) // False = historical record
+
+  assigned_note String?  @db.Text
+  assigned_at   DateTime @default(now()) @db.Timestamptz(3)
 
   booking              Booking    @relation(fields: [university_id, booking_id], references: [university_id, booking_id], onDelete: Cascade)
   consultant           Consultant @relation(fields: [consultant_university_id, consultant_id], references: [university_id, consultant_id])
   consultantUniversity University @relation(fields: [consultant_university_id], references: [university_id])
 
-  assignedBy       Account           @relation(fields: [assigned_by_account_id], references: [account_id])
+  assignedBy       Account?          @relation(fields: [assigned_by_account_id], references: [account_id])
   borrowAssignment BorrowAssignment? @relation(fields: [borrow_assignment_id], references: [borrow_assignment_id])
 
-  @@unique([university_id, booking_id])
+  @@index([university_id, booking_id]) // Replaced unique with standard index
   @@index([consultant_id, assigned_at])
   @@index([borrow_assignment_id])
   @@map("booking_assignment")

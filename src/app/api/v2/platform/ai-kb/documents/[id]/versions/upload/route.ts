@@ -2,7 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireSuperAdmin } from "@/lib/auth/platformGuard";
-import { createVersionFromUpload } from "@/services/aiKb/versions/createVersionFromUpload";
+import { createVersionFromUpload } from "@/services/ai-kb/versions/createVersionFromUpload";
 
 function parseId(params: { id: string }) {
   const id = Number(params.id);

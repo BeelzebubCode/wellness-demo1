@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth/jwt";
-import { DeanService } from "@/services/dean/dean-service";
+import { DeanService } from "@/services/dashboards/handlers/getDeanDashboard";
 
 export async function GET(req: NextRequest) {
   try {

@@ -1,6 +1,6 @@
 // src/services/aiAgent/booking/cancel/engine.ts
-import type { ChatMsg, AgentQuestion } from "@/services/aiAgent/core";
-import { signConfirmToken } from "@/services/aiAgent/core";
+import type { ChatMsg, AgentQuestion } from "@/services/ai-agent/core";
+import { signConfirmToken } from "@/services/ai-agent/core";
 
 import type { BookingCancelResponse, CancelDraft } from "./types";
 import { extractCancelReason } from "./domain/reason";
