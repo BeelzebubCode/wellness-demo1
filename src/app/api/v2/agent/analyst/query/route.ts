@@ -7,11 +7,18 @@ export async function POST(req: NextRequest) {
   try {
     const { account, activeUniversityId } = await requireTenant(req);
     
-    // Allow Rector and higher roles (Ministry, SuperAdmin)
-    assertRole(account.role, ["RECTOR", "MINISTRY", "SUPER_ADMIN"]); 
+    // Allow all roles except Consultant / Head Consultant
+    assertRole(account.role, ["STUDENT", "PERSONNEL", "ADMIN", "DEAN", "RECTOR", "MINISTRY", "SUPER_ADMIN"]); 
 
     const body = await req.json();
-    const { query, universityId } = body;
+    const { query, messages, universityId } = body;
+
+    let targetQuery = query;
+    if (!targetQuery && messages && Array.isArray(messages)) {
+      // Find the last user message
+      const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user");
+      if (lastUserMsg) targetQuery = lastUserMsg.content;
+    }
 
     let targetUniversityId = universityId;
 
@@ -22,13 +29,14 @@ export async function POST(req: NextRequest) {
     } 
     // Ministry/SuperAdmin can query any university (passed in body) or all (undefined)
 
-    if (!query) {
+    if (!targetQuery) {
       return NextResponse.json({ error: "Query is required" }, { status: 400 });
     }
 
     const result = await processAnalystQuery({
-      query,
+      query: targetQuery,
       universityId: targetUniversityId,
+      role: account.role,
     });
 
     return NextResponse.json(result);

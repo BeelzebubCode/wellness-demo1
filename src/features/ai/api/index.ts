@@ -1,6 +1,7 @@
 // src/features/ai/api/index.ts
 import { postJson } from "./client";
 import type { AiChatResponse, ChatMsg } from "./client";
+import { AnalystResponse } from "@/services/ai-agent/analyst/contracts";
 
 export const aiApi = {
   chat(endpoint: string, input: { messages?: ChatMsg[]; message?: string }) {
@@ -8,9 +9,13 @@ export const aiApi = {
   },
 
   bookingConfirm(confirmToken: string) {
-    return postJson<AiChatResponse>("/api/v2/ai/agent/booking/confirm", {
+    return postJson<AiChatResponse>("/api/v2/agent/booking/confirm", {
       confirmToken,
     });
+  },
+
+  analyst(query: string) {
+    return postJson<AnalystResponse>("/api/v2/agent/analyst/query", { query });
   },
 };
 

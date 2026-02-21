@@ -14,7 +14,7 @@ export default function Page() {
   const onSubmit = async (input: CreateBorrowRequestInput) => {
     setLoading(true);
     try {
-      const res = await fetch("/api/v2/borrow-request", {
+      const res = await fetch("/api/v2/head-consultant/borrow-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

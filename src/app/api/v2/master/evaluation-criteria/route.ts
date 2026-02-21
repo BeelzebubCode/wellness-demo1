@@ -1,4 +1,4 @@
-// src/app/api/v2/evaluation-criteria/route.ts
+// src/app/api/v2/master/evaluation-criteria/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, criteria });
   } catch (e) {
-    console.error("GET /api/v2/evaluation-criteria error:", e);
+    console.error("GET /api/v2/master/evaluation-criteria error:", e);
     return NextResponse.json(
       { success: false, error: "โหลดเกณฑ์ประเมินไม่สำเร็จ" },
       { status: 500 }

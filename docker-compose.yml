@@ -1,32 +1,6 @@
 version: "3.8"
 
 services:
-  app:
-    container_name: wellness-app
-    build:
-      context: .
-      dockerfile: Dockerfile
-    restart: always
-    ports:
-      - "9999:3000"
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgrespassword@db:5432/wellness_db?schema=public
-      - REDIS_URL=redis://redis:6379
-      - AI_BASE_URL=http://host.docker.internal:11434
-      - AI_MODEL=qwen2.5:7b
-      - AI_API_KEY=ollama
-      - NODE_ENV=production
-      - HOSTNAME=0.0.0.0
-      - NEXT_PUBLIC_APP_URL=http://wellness.local:9999
-      - JWT_SECRET=your-super-secret-jwt-key-change-this
-      - PASSWORD_SALT=your-password-salt-change-this
-      - ROOT_DOMAIN=wellness.local
-      - NODE_ENV=production
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    depends_on:
-      - db
-      - redis
 
   db:
     container_name: wellness-db
@@ -41,12 +15,31 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
 
-  redis:
-    container_name: wellness-redis
-    image: redis:alpine
+  mongodb:
+    container_name: wellness-mongo
+    image: mongo:latest
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongoadmin
+      MONGO_INITDB_ROOT_PASSWORD: mongopassword
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  mongo-express:
+    container_name: wellness-mongo-express
+    image: mongo-express
     restart: always
     ports:
-      - "6379:6379"
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: mongoadmin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: mongopassword
+      ME_CONFIG_MONGODB_URL: mongodb://mongoadmin:mongopassword@mongodb:27017/
+      ME_CONFIG_BASICAUTH: false
+    depends_on:
+      - mongodb
 
   pgadmin:
     container_name: wellness-admin
@@ -62,3 +55,4 @@ services:
 
 volumes:
   db_data:
+  mongo_data:

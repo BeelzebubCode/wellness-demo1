@@ -1,21 +1,62 @@
 import { callChatLLM } from "../core/llm/client";
-import { tools } from "./tools";
 import { ANALYST_SYSTEM_PROMPT } from "./prompt";
 import { format } from "date-fns";
 import { AnalystIntent, AnalystResponse, ChartType } from "./contracts";
+import { getAiSummariesCollection } from "@/lib/mongodb";
 
 interface AnalystQueryArgs {
   query: string;
   universityId?: number; // Core RBAC param: If set, user is restricted to this uni.
+  role?: string;
 }
 
-export async function processAnalystQuery({ query, universityId }: AnalystQueryArgs): Promise<AnalystResponse> {
+export async function processAnalystQuery({ query, universityId, role }: AnalystQueryArgs): Promise<AnalystResponse> {
   const currentDate = format(new Date(), "yyyy-MM-dd");
-  const systemContent = ANALYST_SYSTEM_PROMPT.replace("{{CURRENT_DATE}}", currentDate);
+  let systemContent = ANALYST_SYSTEM_PROMPT.replace("{{CURRENT_DATE}}", currentDate);
 
   try {
     // =========================================================
-    // STEP 1: PLANNER (AI decides Intent)
+    // STEP 1: CONTEXT RETRIEVAL (MongoDB RAG)
+    // =========================================================
+    let mongoData: any = null;
+    try {
+      const collection = await getAiSummariesCollection();
+      
+      let level = "MINISTRY";
+      let refId = null;
+
+      if (role === "RECTOR") {
+         level = "UNIVERSITY";
+         refId = universityId || null;
+      } else if (role === "DEAN") {
+         level = "FACULTY";
+         // Optional: if facultyId was passed, use it. But for now, rely on route scoping.
+         // If a Dean queried without facultyId, we might need it. For now, assume it's handled.
+      } else if (role === "STUDENT") {
+         level = "UNIVERSITY"; // Fallback to university level for students if they ask stats
+         refId = universityId || null;
+      }
+
+      console.log(`[AI_RAG] Fetching MongoDB Summary - Level: ${level}, RefId: ${refId}`);
+      const summaryDoc = await collection.findOne(
+        { level, reference_id: refId },
+        { sort: { date: -1 } }
+      );
+
+      if (summaryDoc && summaryDoc.data) {
+        mongoData = summaryDoc.data;
+        systemContent += `\n\n=== RECENT STATISTICAL SUMMARY (Knowledge Base) ===\n`;
+        systemContent += JSON.stringify(summaryDoc.data, null, 2);
+        systemContent += `\n==========================================================\n`;
+      } else {
+        systemContent += `\n\n=== RECENT STATISTICAL SUMMARY ===\nNo data available currently.\n`;
+      }
+    } catch (dbError) {
+       console.error("[AI_RAG] Failed to fetch MongoDB contexts:", dbError);
+    }
+
+    // =========================================================
+    // STEP 2: GENERATION (LLM answers directly)
     // =========================================================
     const llmResponse = await callChatLLM({
       baseURL: process.env.AI_BASE_URL || "http://localhost:11434",
@@ -41,7 +82,7 @@ export async function processAnalystQuery({ query, universityId }: AnalystQueryA
         type: "text", 
         title: "Error", 
         data: [], 
-        reply: "ขออภัยครับ ระบบไม่สามารถประมวลผลคำสั่งได้ในขณะนี้" 
+        reply: "ขออภัยครับ ระบบไม่สามารถประมวลผลคำสั่งได้ในขณะนี้ แนะนำให้ลองถามคำถามเจาะจงเกี่ยวกับสถิติการใช้งานดูครับ" 
       };
     }
 
@@ -56,109 +97,44 @@ export async function processAnalystQuery({ query, universityId }: AnalystQueryA
       };
     }
 
-    if (!decision.tool) {
+    // Formatting data for chart if any
+    let chartData: any[] = [];
+    let chartType: ChartType = "bar";
+    let chartTitle = decision.title || "Overall Stats";
+    let replyText = decision.reply;
+
+    if (query.includes("แนวโน้ม") || query.includes("สัดส่วน")) {
+        chartData = Object.entries(mongoData?.booking_stats || {}).map(([k, v]) => ({ label: k, value: v }));
+        chartType = "pie";
+        chartTitle = "สัดส่วนสถานะการจอง 30 วัน";
+    } else if (query.includes("ปัญหา") || query.includes("อันดับ")) {
+        chartData = (mongoData?.top_issues || []).map((t: any) => ({ label: t.category, value: t.count }));
+        chartType = "bar";
+        chartTitle = "ปัญหาที่พบบ่อย 5 อันดับแรก";
+    }
+
+    if (!replyText) {
+       replyText = "ผมไม่แน่ใจว่าจะช่วยเหลืออย่างไรดีครับ แนะนำให้ถามว่า 'ปัญหาที่พบบ่อยคืออะไร' หรือ 'สถิติการจองเป็นยังไงบ้าง'";
+    }
+
+    // If no chart data, return text only
+    if (chartData.length === 0) {
       return {
         type: "text",
-        title: "No Tool Selected",
-        reply: decision.reply || "ผมไม่แน่ใจว่าจะช่วยเหลืออย่างไรดีครับ",
+        title: chartTitle,
+        reply: replyText,
         data: []
       };
     }
 
-    // =========================================================
-    // STEP 2: EXECUTOR (Server runs tool & safeguards)
-    // =========================================================
-    const selectedTool = tools.find(t => t.name === decision.tool);
-    if (!selectedTool) {
-      return { 
-        type: "text", 
-        title: "Tool Not Found", 
-        reply: `ไม่พบเครื่องมือ: ${decision.tool}`, 
-        data: [] 
-      };
-    }
-
-    // ENFORCE RBAC: If universityId is present, overwrite it in args.
-    const safeArgs = { ...decision.args };
-    if (universityId) {
-      safeArgs.universityId = universityId; 
-    }
-
-    // EXECUTE
-    // Expect tools to return { data: any[], summary: string, recommendedChart?: string, ...keys }
-    const rawResult = await selectedTool.execute(safeArgs);
-
-    // =========================================================
-    // STEP 3: ANALYST (Generate Insight / Summary)
-    // =========================================================
-    // The user explicitly requested a "Speech/Text Summary" because the Minister is busy.
-    // We will ask the LLM to summarize the data briefly.
-    
-    let aiSummary = rawResult.summary;
-    if (rawResult.data && rawResult.data.length > 0) {
-       try {
-          const summaryPrompt = `
-You are an expert data analyst for the Ministry of Higher Education.
-Summarize the following data into a short, insightful paragraph (in Thai) suitable for a busy Minister.
-Focus on the key trend, the highest/lowest values, or the answer to: "${query}".
-Do not simply list numbers. Interpret them.
-
-Data: ${JSON.stringify(rawResult.data.slice(0, 5))} ... (Total ${rawResult.data.length} items)
-context: ${rawResult.summary}
-`;
-          const summaryRes = await callChatLLM({
-             baseURL: process.env.AI_BASE_URL || "http://localhost:11434",
-             model: process.env.AI_MODEL || "qwen2.5:7b",
-             system: { role: "system", content: "You are a helpful assistant summarizing data." },
-             messages: [{ role: "user", content: summaryPrompt }],
-             temperature: 0.3,
-          });
-          aiSummary = await summaryRes.text();
-       } catch (e) {
-          console.error("Summary gen failed", e);
-       }
-    }
-
-    // =========================================================
-    // STEP 4: FORMATTER (Normalize to Contract)
-    // =========================================================
-    
-    // Auto-select chart heuristic
-    let chartType: ChartType = "bar"; // default
-    
-    // Use tool recommendation if sensible
-    if ((rawResult as any).recommendedChart && ["bar", "line", "pie"].includes((rawResult as any).recommendedChart)) {
-      chartType = (rawResult as any).recommendedChart as ChartType;
-    } else {
-      // Simple Heuristic Fallback
-      if (rawResult.data && rawResult.data.length > 0) {
-        const first = rawResult.data[0];
-        if ("date" in first) chartType = "line"; // Time series
-        else if (rawResult.data.length <= 6 && !("date" in first)) chartType = "pie"; // Small categorical
-        else chartType = "bar"; // Comparison
-      }
-    }
-
-    // Map result to AnalystResponse
-    const response: AnalystResponse = {
+    return {
       type: "chart",
-      title: rawResult.summary || decision.view?.titleHint || "Analysis Result",
-      description: decision.thought,
-      chart: {
-        type: chartType,
-        xKey: (rawResult as any).xAxisKey || "name", // standard defaults
-        yKey: (rawResult as any).dataKey || "value", 
-        dataKey: (rawResult as any).dataKey || "value", // for pie
-        nameKey: (rawResult as any).xAxisKey || "name", // for pie
-      },
-      data: Array.isArray(rawResult.data) ? rawResult.data : [],
-      summary: {
-        bullets: rawResult.summary ? [rawResult.summary] : []
-      },
-      reply: aiSummary // Inject the AI generated summary here
-    };
-
-    return response;
+      title: chartTitle,
+      chartType: chartType,
+      data: chartData,
+      summary: replyText, // The front end chat uses 'detail' or 'reply'
+      reply: replyText
+    } as any; // Type override for extended response properties
 
   } catch (error) {
     console.error("Analyst Pipeline Error:", error);

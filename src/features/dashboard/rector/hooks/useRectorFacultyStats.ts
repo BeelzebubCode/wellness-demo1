@@ -26,7 +26,7 @@ export function useRectorFacultyStats(facultyCode?: string, dateRange?: { from: 
                     params.append("endDate", dateRange.to.toISOString().split('T')[0]);
                 }
 
-                const url = `/api/v2/rector/dashboard?${params.toString()}`;
+                const url = `/api/v2/dashboards/rector?${params.toString()}`;
 
                 const response = await fetch(url);
                 const result = await response.json();

@@ -1,19 +1,20 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import { ArrowUp, RotateCcw, ChevronDown, Bot, Calendar, CheckCircle2, CalendarCheck, XCircle } from "lucide-react";
+import { ArrowUp, RotateCcw, ChevronDown, Bot, Calendar, CheckCircle2, CalendarCheck, XCircle, LineChart } from "lucide-react";
 import type { useAiChat } from "@/features/ai/hooks/useAiChat";
 import { cn } from "@/lib/cn";
 import styles from "./aiChatTheme.module.css";
 import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
 import { useNotificationContext } from "@/components/notification/NotificationProvider";
 
-export type AiChatMode = "help" | "booking_agent";
+export type AiChatMode = "help" | "booking_agent" | "analyst";
 export type AiChatController = ReturnType<typeof useAiChat>;
 
 const MODES = [
   { id: "help", name: "AI Help Center", icon: <Bot className="h-4 w-4" /> },
-  { id: "booking_agent", name: "Booking Agent", icon: <Calendar className="h-4 w-4" /> },
+  { id: "booking_agent", name: "AI Booking", icon: <Calendar className="h-4 w-4" /> },
+  { id: "analyst", name: "AI สรุปผล", icon: <LineChart className="h-4 w-4" /> },
 ] as const;
 
 export default function AiChatInput({
@@ -29,8 +30,8 @@ export default function AiChatInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // ✅ Auth Check (requireTenant: false — AI Chat ไม่ต้องเช็ค tenant)
-  const { isAuthenticated, isLoading: authLoading } = useRoleAuth({
-    allowedRoles: ["STUDENT", "PERSONNEL", "RECTOR", "ADMIN", "SUPER_ADMIN", "CONSULTANT", "HEAD_CONSULTANT"],
+  const { user, isAuthenticated, isLoading: authLoading } = useRoleAuth({
+    allowedRoles: ["STUDENT", "PERSONNEL", "DEAN", "RECTOR", "MINISTRY", "ADMIN", "SUPER_ADMIN", "CONSULTANT", "HEAD_CONSULTANT"] as const,
     loginToastKey: "ai_login_required",
     guard: false,
     requireTenant: false,
@@ -39,6 +40,13 @@ export default function AiChatInput({
 
   // ✅ Force Help Mode if not Auth (ใช้ authLoading ไม่ใช่ chat.isLoading!)
   const didForceHelpRef = useRef(false);
+
+  // Filter modes based on role
+  const availableModes = MODES.filter((m) => {
+    if (m.id === "booking_agent") return isAuthenticated && user?.role === "STUDENT";
+    if (m.id === "analyst") return isAuthenticated && user?.role && !["CONSULTANT", "HEAD_CONSULTANT"].includes(user.role);
+    return true; // Help center available to all
+  });
   useEffect(() => {
     // รอ AUTH load เสร็จก่อน + ต้องเป็น booking_agent + ยังไม่เคย force
     if (authLoading || isAuthenticated || mode !== "booking_agent" || didForceHelpRef.current) return;
@@ -54,7 +62,7 @@ export default function AiChatInput({
   useEffect(() => { didForceHelpRef.current = false; }, [mode]);
 
   const [isModeOpen, setIsModeOpen] = useState(false);
-  const selectedMode = MODES.find((m) => m.id === mode) || MODES[0];
+  const selectedMode = availableModes.find((m) => m.id === mode) || availableModes[0] || MODES[0];
 
   // Auto-resize textarea
   useEffect(() => {
@@ -254,7 +262,9 @@ export default function AiChatInput({
                 placeholder={
                   mode === "booking_agent"
                     ? 'พิมพ์คำขอจอง/ยกเลิก "พรุ่งนี้ 14:00"'
-                    : "ถามอะไรก็ได้..."
+                    : mode === "analyst"
+                      ? "ถามสถิติ 7 วันล่าสุด, ดูเทรนด์..."
+                      : "ถามอะไรก็ได้..."
                 }
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -321,7 +331,7 @@ export default function AiChatInput({
               {/* Custom Dropdown (Drop-up) */}
               {isModeOpen && (
                 <div className="absolute bottom-full left-0 mb-2 z-50 min-w-[180px] overflow-hidden rounded-xl border border-slate-100 bg-white p-1 shadow-xl animate-in fade-in zoom-in-95 slide-in-from-bottom-2">
-                  {MODES.map((m) => (
+                  {availableModes.map((m) => (
                     <button
                       key={m.id}
                       onClick={() => {

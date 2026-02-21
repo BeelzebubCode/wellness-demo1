@@ -1,4 +1,4 @@
-// src/app/api/v2/profile/me/route.ts
+// src/app/api/v2/me/profile/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireTenant } from "@/lib/tenant/server";

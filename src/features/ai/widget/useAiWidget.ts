@@ -2,7 +2,7 @@
 "use client";
 import { create } from "zustand";
 
-export type AiWidgetMode = "help" | "booking_agent";
+export type AiWidgetMode = "help" | "booking_agent" | "analyst";
 
 type AiWidgetState = {
   open: boolean;

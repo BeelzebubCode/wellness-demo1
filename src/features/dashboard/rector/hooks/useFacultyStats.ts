@@ -13,8 +13,8 @@ export function useFacultyStats(facultyCode?: string) {
             try {
                 setIsLoading(true);
                 const url = facultyCode
-                    ? `/api/v2/dean/dashboard?facultyCode=${encodeURIComponent(facultyCode)}`
-                    : "/api/v2/dean/dashboard";
+                    ? `/api/v2/dashboards/dean?facultyCode=${encodeURIComponent(facultyCode)}`
+                    : "/api/v2/dashboards/dean";
 
                 const response = await fetch(url);
                 const result = await response.json();

@@ -32,7 +32,7 @@ export function useUniversitiesMap() {
     async function fetchUniversities() {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/v2/ministry/universities?pageSize=500");
+        const response = await fetch("/api/v2/master/universities?pageSize=500");
         
         if (!response.ok) {
           throw new Error("Failed to fetch universities");

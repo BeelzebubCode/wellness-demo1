@@ -85,7 +85,7 @@ export function useDeanFacultyData(facultyCode?: string, initialStart?: Date, in
   const fetchData = useCallback(async (start?: Date, end?: Date) => {
     setLoading(true);
     try {
-      let url = "/api/v2/dean/dashboard";
+      let url = "/api/v2/dashboards/dean";
       const params = new URLSearchParams();
       if (facultyCode) params.append("facultyCode", facultyCode);
       

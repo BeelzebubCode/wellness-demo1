@@ -84,7 +84,7 @@ export function useUniversityStats(filters: RectorDashboardFilters = {}) {
                 if (filters.gender) params.append("gender", filters.gender);
 
                 const queryString = params.toString();
-                const url = `/api/v2/rector/university-stats${queryString ? `?${queryString}` : ''}`;
+                const url = `/api/v2/dashboards/rector/university-stats${queryString ? `?${queryString}` : ''}`;
 
                 const response = await fetch(url);
                 const result = await response.json();

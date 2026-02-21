@@ -14,7 +14,7 @@ import AiChatInput from "./AiChatInput";
 import styles from "./aiChatTheme.module.css";
 import { cn } from "@/lib/cn";
 
-export type AiChatMode = "help" | "booking_agent";
+export type AiChatMode = "help" | "booking_agent" | "analyst";
 
 type Props = {
   mode: AiChatMode;
@@ -38,6 +38,7 @@ export default function AiChatCore({ mode, variant, onModeChange }: Props) {
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [chat.messages.length, chat.isLoading]);
 
+  // --- Normal Booking/Help Mode ---
   const content = (
     // ✅ ครอบ root แค่ตรงนี้พอ (ทั้ง chat)
     <div className={cn(styles.root, "flex h-full min-h-0 flex-col")}>
@@ -51,7 +52,7 @@ export default function AiChatCore({ mode, variant, onModeChange }: Props) {
         isLoading={chat.isLoading}
       />
 
-      <AiChatInput mode={mode} chat={chat} onModeChange={onModeChange} />
+      <AiChatInput mode={mode} chat={chat} onModeChange={onModeChange as any} />
     </div>
   );
 

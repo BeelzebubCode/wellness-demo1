@@ -92,7 +92,7 @@ export function useFacultyStats(facultyCode?: string, dateRange?: { from: Date; 
                     console.log('[useFacultyStats] Date range:', dateRange.from?.toISOString().split('T')[0], 'to', dateRange.to?.toISOString().split('T')[0]);
                 }
 
-                const url = `/api/v2/dean/dashboard?${params.toString()}`;
+                const url = `/api/v2/dashboards/dean?${params.toString()}`;
                 console.log('[useFacultyStats] Fetching URL:', url);
 
                 let response = await fetch(url);
@@ -100,7 +100,7 @@ export function useFacultyStats(facultyCode?: string, dateRange?: { from: Date; 
                 // If Forbidden (403), it might be a Rector trying to view a faculty.
                 // Try the Rector-specific endpoint instead.
                 if (response.status === 403) {
-                    const rectorUrl = `/api/v2/rector/dashboard?${params.toString()}`;
+                    const rectorUrl = `/api/v2/dashboards/rector?${params.toString()}`;
 
                     console.log("Dean access forbidden, trying Rector access:", rectorUrl);
                     response = await fetch(rectorUrl);

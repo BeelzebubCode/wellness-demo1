@@ -42,7 +42,7 @@ export function BookingFeedbackModal({ isOpen, bookingId, onClose, onSuccess }: 
         setError(null);
         setIsLoadingCriteria(true);
 
-        const res = await fetch("/api/v2/evaluation-criteria", {
+        const res = await fetch("/api/v2/master/evaluation-criteria", {
           next: { revalidate: 86400 } // cache 1 day - static data
         });
         const json = await res.json();

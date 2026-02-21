@@ -64,7 +64,7 @@ export function useRiskMetrics(filters?: {
         if (filters?.type) params.set("type", filters.type);
         if (filters?.days) params.set("days", filters.days.toString());
 
-        const res = await fetch(`/api/v2/ministry/risk-metrics?${params.toString()}`);
+        const res = await fetch(`/api/v2/dashboards/ministry?${params.toString()}`);
         if (!res.ok) throw new Error("Failed to fetch risk metrics");
 
         const json = await res.json();

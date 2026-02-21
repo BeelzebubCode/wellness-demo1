@@ -12,7 +12,7 @@ function buildIncludeQuery(include?: ProfileInclude) {
 export async function fetchMyProfile(include?: ProfileInclude): Promise<ProfileMeDTO> {
   const qs = buildIncludeQuery(include);
 
-  const res = await fetch(`/api/v2/profile/me${qs}`, {
+  const res = await fetch(`/api/v2/me/profile${qs}`, {
     method: "GET",
     credentials: "include",
     cache: "no-store",

@@ -12,7 +12,7 @@ export function useFaculties() {
         async function fetchFaculties() {
             try {
                 setIsLoading(true);
-                const response = await fetch("/api/v2/dean/faculties");
+                const response = await fetch("/api/v2/dashboards/dean/faculties");
                 const result = await response.json();
 
                 if (!response.ok) {

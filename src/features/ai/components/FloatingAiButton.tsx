@@ -12,7 +12,7 @@ export default function FloatingAiButton() {
   const isOpen = useAiWidget((s) => s.open); // 👈 กันกดซ้ำ
 
   const { user, isLoading } = useRoleAuth({
-    allowedRoles: ["STUDENT"] as const,
+    allowedRoles: ["STUDENT", "PERSONNEL", "ADMIN", "DEAN", "RECTOR", "MINISTRY", "SUPER_ADMIN"] as const,
     loginToastKey: "ai_widget_login",
     guard: false,
     requireTenant: false,
@@ -20,14 +20,19 @@ export default function FloatingAiButton() {
 
   const onClick = useCallback(() => {
     if (isOpen) return;
-    openChat("booking_agent");
-  }, [isOpen, openChat]);
+    if (user?.role === "STUDENT") {
+      openChat("booking_agent");
+    } else {
+      openChat("analyst");
+    }
+  }, [isOpen, openChat, user?.role]);
 
   const pathname = usePathname();
 
   if (isLoading) return null;
-  if (!user || user.role !== "STUDENT") return null;
-  // Hide on AI chat page to avoid duplication
+  if (!user) return null;
+
+  // Hide on dedicated AI chat page to avoid duplication (if any)
   if (pathname?.includes("/help/ai")) return null;
 
   return (

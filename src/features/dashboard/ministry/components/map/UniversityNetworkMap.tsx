@@ -66,18 +66,18 @@ export function UniversityNetworkMap({
 
     // Only fetch if external connections are not provided
     if (!externalConnections) {
-        async function fetchConnections() {
+      async function fetchConnections() {
         try {
-            const response = await fetch(`/api/v2/ministry/universities/${universityCode}`);
-            if (response.ok) {
+          const response = await fetch(`/api/v2/master/universities/${universityCode}`);
+          if (response.ok) {
             const data = await response.json();
             setInternalConnections(data.university.connections || []);
-            }
+          }
         } catch (error) {
-            console.error("Error fetching connections:", error);
+          console.error("Error fetching connections:", error);
         }
-        }
-        fetchConnections();
+      }
+      fetchConnections();
     }
   }, [universityCode, externalConnections]);
 
@@ -171,11 +171,10 @@ export function UniversityNetworkMap({
       {/* Toggle Button */}
       <button
         onClick={() => setShowNetwork(!showNetwork)}
-        className={`absolute top-4 right-4 z-[1000] px-4 py-2.5 rounded-xl font-medium text-sm transition-all shadow-lg flex items-center gap-2 ${
-          showNetwork
+        className={`absolute top-4 right-4 z-[1000] px-4 py-2.5 rounded-xl font-medium text-sm transition-all shadow-lg flex items-center gap-2 ${showNetwork
             ? "bg-indigo-600 text-white hover:bg-indigo-700"
             : "bg-white/95 backdrop-blur-md text-gray-700 hover:bg-white border border-gray-200"
-        }`}
+          }`}
       >
         {showNetwork ? <X className="w-4 h-4" /> : <Network className="w-4 h-4" />}
         {showNetwork ? "Hide Network" : "Show Network"}
@@ -210,9 +209,8 @@ export function UniversityNetworkMap({
                 key={idx}
                 // ✅ Click to focus
                 onClick={() => setFocusedLocation([uni.lat, uni.lng])}
-                className={`flex items-center gap-3 p-2 rounded-lg transition-all cursor-pointer ${
-                  idx < 3 ? getRankBadgeClass(idx) : "hover:bg-gray-50"
-                }`}
+                className={`flex items-center gap-3 p-2 rounded-lg transition-all cursor-pointer ${idx < 3 ? getRankBadgeClass(idx) : "hover:bg-gray-50"
+                  }`}
               >
                 {/* Rank Number/Icon */}
                 <div className="flex-shrink-0 w-8 flex items-center justify-center">
@@ -232,17 +230,17 @@ export function UniversityNetworkMap({
                     {getMetricDisplay(uni)}
                   </div>
                 </div>
-                
+
                 {/* View Button (Propagation Stop) */}
                 <a
-                    href={`/ministry/universities/${uni.universityCode}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()} // Prevent focus when clicking link
-                    className="p-1.5 rounded-lg hover:bg-indigo-50 text-gray-400 hover:text-indigo-600 transition-colors"
-                    title="Open Dashboard"
+                  href={`/ministry/universities/${uni.universityCode}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()} // Prevent focus when clicking link
+                  className="p-1.5 rounded-lg hover:bg-indigo-50 text-gray-400 hover:text-indigo-600 transition-colors"
+                  title="Open Dashboard"
                 >
-                    <Award className="w-4 h-4" />
+                  <Award className="w-4 h-4" />
                 </a>
               </div>
             ))}
@@ -298,7 +296,7 @@ export function UniversityNetworkMap({
                 icon={createLogoIcon(`/images/logo/${conn.universityCode}_logo.png`, conn.universityCode)}
                 // ✅ Allow clicking marker to set focus too (optional)
                 eventHandlers={{
-                    click: () => setFocusedLocation([conn.lat, conn.lng]),
+                  click: () => setFocusedLocation([conn.lat, conn.lng]),
                 }}
               >
                 <Popup>

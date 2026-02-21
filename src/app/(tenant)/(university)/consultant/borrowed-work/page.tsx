@@ -54,7 +54,7 @@ export default function ConsultantBorrowedWorkPage() {
     async function fetchAssignments() {
         try {
             setLoading(true);
-            const res = await fetch("/api/v2/consultant/borrowed-assignments");
+            const res = await fetch("/api/v2/consultants/me/borrow-requests");
             const json = await res.json();
 
             if (!json.ok) {

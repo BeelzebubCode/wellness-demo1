@@ -54,7 +54,7 @@ function qs(obj: Record<string, any>) {
 // --------------------
 // HEAD (counseling-admin)
 // --------------------
-const HEAD_BASE = "/api/v2/borrow-request";
+const HEAD_BASE = "/api/v2/head-consultant/borrow-requests";
 
 export const borrowRequestsApi = {
   listMy: () => apiFetch<{ ok: true; data: BorrowRequest[] }>(HEAD_BASE),

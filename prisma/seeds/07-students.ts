@@ -174,7 +174,7 @@ export async function seedStudents(
       // ✅ Fix: Use gender from name generator, or fallback if undefined (should be defined)
       // If person.gender is "MALE" -> StudentGender.MALE
       // If person.gender is "FEMALE" -> StudentGender.FEMALE
-      let genderStr = (person as any).gender || (Math.random() < 0.5 ? "MALE" : "FEMALE");
+      const genderStr = (person as any).gender || (Math.random() < 0.5 ? "MALE" : "FEMALE");
       
       // Map to Prisma Enum
       const gender: StudentGender = genderStr === "FEMALE" ? StudentGender.FEMALE : StudentGender.MALE;

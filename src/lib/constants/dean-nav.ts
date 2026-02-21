@@ -1,4 +1,4 @@
-import { School } from "lucide-react";
+import { School, Bot } from "lucide-react";
 import type { NavItem } from "@/components/layout/sidebar/types";
 
 export const DEAN_NAV: NavItem[] = [
@@ -17,5 +17,10 @@ export const DEAN_NAV: NavItem[] = [
         href: "/dean/filter",
         label: "Filter",
         icon: School,
+    },
+    {
+        href: "/dean/ai-insight",
+        label: "AI สรุปผล (Analyst)",
+        icon: Bot,
     },
 ];

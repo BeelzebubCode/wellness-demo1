@@ -30,7 +30,7 @@ export function UniversitySelectionPage() {
   useEffect(() => {
     async function fetchUniversities() {
       try {
-        const response = await fetch("/api/v2/ministry/universities");
+        const response = await fetch("/api/v2/master/universities");
         const result = await response.json();
         if (result.success) {
           setUniversities(result.data);
@@ -116,8 +116,8 @@ export function UniversitySelectionPage() {
             <button
               onClick={() => setSelectedRegion("")}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${!selectedRegion
-                  ? "bg-indigo-600 text-white shadow-lg"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                ? "bg-indigo-600 text-white shadow-lg"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
             >
               All
@@ -127,8 +127,8 @@ export function UniversitySelectionPage() {
                 key={region}
                 onClick={() => setSelectedRegion(region)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedRegion === region
-                    ? "bg-indigo-600 text-white shadow-lg"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? "bg-indigo-600 text-white shadow-lg"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
               >
                 {region}
@@ -144,8 +144,8 @@ export function UniversitySelectionPage() {
             <button
               onClick={() => setSelectedType("")}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${!selectedType
-                  ? "bg-indigo-600 text-white shadow-lg"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                ? "bg-indigo-600 text-white shadow-lg"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
             >
               All
@@ -155,8 +155,8 @@ export function UniversitySelectionPage() {
                 key={type}
                 onClick={() => setSelectedType(type)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedType === type
-                    ? "bg-indigo-600 text-white shadow-lg"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? "bg-indigo-600 text-white shadow-lg"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
               >
                 {type}
@@ -251,8 +251,8 @@ export function UniversitySelectionPage() {
               onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${currentPage === 1
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg"
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg"
                 }`}
             >
               <ChevronLeft className="w-4 h-4" />
@@ -281,8 +281,8 @@ export function UniversitySelectionPage() {
                     key={page}
                     onClick={() => setCurrentPage(page)}
                     className={`w-10 h-10 rounded-lg font-semibold transition-all ${currentPage === page
-                        ? "bg-indigo-600 text-white shadow-lg"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      ? "bg-indigo-600 text-white shadow-lg"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                       }`}
                   >
                     {page}
@@ -296,8 +296,8 @@ export function UniversitySelectionPage() {
               onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${currentPage === totalPages
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg"
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg"
                 }`}
             >
               Next

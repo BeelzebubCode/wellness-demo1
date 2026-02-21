@@ -4,7 +4,7 @@ import type { MyScheduleResponse } from "../types";
 
 export async function getMySchedule(): Promise<MyScheduleResponse> {
   try {
-    const res = await fetch("/api/v2/consultant/shifts/my-schedule", {
+    const res = await fetch("/api/v2/consultants/me/shifts/my-schedule", {
       method: "GET",
       credentials: "include",
       headers: {

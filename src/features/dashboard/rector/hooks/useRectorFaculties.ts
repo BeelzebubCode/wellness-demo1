@@ -26,7 +26,7 @@ export function useRectorFaculties() {
         async function fetchFaculties() {
             try {
                 setIsLoading(true);
-                const response = await fetch("/api/v2/rector/faculties");
+                const response = await fetch("/api/v2/dashboards/rector/faculties");
                 const result = await response.json();
 
                 if (!response.ok) {

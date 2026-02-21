@@ -1,6 +1,6 @@
 // src/features/ai/api/endpoints.ts
 
-export type Mode = "help" | "booking_agent";
+export type Mode = "help" | "booking_agent" | "analyst";
 export type AgentIntent = "BOOK" | "CANCEL";
 
 export function detectIntent(text: string, currentIntent?: AgentIntent | null): AgentIntent {
@@ -23,18 +23,22 @@ export function detectIntent(text: string, currentIntent?: AgentIntent | null): 
 
 export function endpointFor(mode: Mode, intent: AgentIntent) {
   if (mode === "help") {
-    return { plan: "/api/v2/ai/agent/help", confirm: "" };
+    return { plan: "/api/v2/agent/help", confirm: "" };
+  }
+
+  if (mode === "analyst") {
+    return { plan: "/api/v2/agent/analyst/query", confirm: "" };
   }
 
   if (intent === "CANCEL") {
     return {
-      plan: "/api/v2/ai/agent/booking/cancel/plan",
-      confirm: "/api/v2/ai/agent/booking/confirm", // ✅ confirm กลาง
+      plan: "/api/v2/agent/booking/cancel/plan",
+      confirm: "/api/v2/agent/booking/confirm", // ✅ confirm กลาง
     };
   }
 
   return {
-    plan: "/api/v2/ai/agent/booking/plan",
-    confirm: "/api/v2/ai/agent/booking/confirm", // ✅ confirm กลาง
+    plan: "/api/v2/agent/booking/plan",
+    confirm: "/api/v2/agent/booking/confirm", // ✅ confirm กลาง
   };
 }

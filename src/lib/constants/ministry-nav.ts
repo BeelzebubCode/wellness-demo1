@@ -1,5 +1,5 @@
 // src/lib/constants/ministry-nav.ts
-import { LayoutDashboard, Building2, Map, Users, FileText } from "lucide-react";
+import { LayoutDashboard, Building2, Map, Users, FileText, Bot } from "lucide-react";
 import type { NavItem } from "@/components/layout/sidebar/types";
 
 export const MINISTRY_NAV: NavItem[] = [
@@ -28,5 +28,10 @@ export const MINISTRY_NAV: NavItem[] = [
     href: "/ministry/reports",
     label: "รายงานประจำปี",
     icon: FileText,
+  },
+  {
+    href: "/ministry/ai-insight",
+    label: "AI สรุปผล (Analyst)",
+    icon: Bot,
   },
 ];

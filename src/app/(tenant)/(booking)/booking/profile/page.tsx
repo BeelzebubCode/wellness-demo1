@@ -103,7 +103,7 @@ function FieldRow({ label, value }: { label: string; value: string }) {
 
 async function fetchMe(lang: "th" | "en") {
   const res = await fetch(
-    `/api/v2/profile/me?include=university,academic,addresses&lang=${lang}`,
+    `/api/v2/me/profile?include=university,academic,addresses&lang=${lang}`,
     { credentials: "include", cache: "no-store" }
   );
 
