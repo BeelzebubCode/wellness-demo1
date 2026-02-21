@@ -26,9 +26,10 @@ export default function MinistryLayout({ children }: { children: React.ReactNode
   // ✅ Check if we are on the main dashboard (3D Map) OR University Detail (Immersive)
   const is3DDashboard = pathname === "/ministry";
   const isUniversityDetail = pathname.startsWith("/ministry/universities/");
-  
+
   // Immersive Pages disable default container/padding
-  const isImmersive = is3DDashboard || isUniversityDetail; 
+  const isAiInsight = pathname.endsWith("/ai-insight");
+  const isImmersive = is3DDashboard || isUniversityDetail || isAiInsight;
 
   if (isLoginPage) return <>{children}</>;
 
@@ -42,32 +43,32 @@ export default function MinistryLayout({ children }: { children: React.ReactNode
 
   // ✅ Immersive Layout (No default padding/constraints)
   if (isImmersive) {
-     if (is3DDashboard) return <>{children}</>; // 3D Map often handles its own layout entirely
-     
-     // University Detail uses Sidebar/Header but needs full width content area
-     return (
-        <div className="min-h-screen bg-gray-50 flex font-sans">
-          <MinistrySidebar
-            isOpen={isMobileMenuOpen}
-            isCollapsed={isSidebarCollapsed}
-            onCloseMobile={() => setIsMobileMenuOpen(false)}
-            onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+    if (is3DDashboard) return <>{children}</>; // 3D Map often handles its own layout entirely
+
+    // University Detail uses Sidebar/Header but needs full width content area
+    return (
+      <div className="min-h-screen bg-gray-50 flex font-sans">
+        <MinistrySidebar
+          isOpen={isMobileMenuOpen}
+          isCollapsed={isSidebarCollapsed}
+          onCloseMobile={() => setIsMobileMenuOpen(false)}
+          onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+        />
+
+        <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
+          <AdminHeader
+            adminName={(user as any)?.name || "ท่านรัฐมนตรี"}
+            adminRole="Ministry of Higher Education"
+            onMenuClick={() => setIsMobileMenuOpen(true)}
           />
-    
-          <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
-            <AdminHeader
-              adminName={(user as any)?.name || "ท่านรัฐมนตรี"}
-              adminRole="Ministry of Higher Education"
-              onMenuClick={() => setIsMobileMenuOpen(true)}
-            />
-    
-            <main className="flex-1 overflow-x-hidden overflow-y-auto p-0"> 
-               {/* 🚀 No Padding, No Max-Width for Immersive Detail Page */}
-               {children}
-            </main>
-          </div>
+
+          <main className="flex-1 overflow-x-hidden overflow-y-auto p-0">
+            {/* 🚀 No Padding, No Max-Width for Immersive Detail Page */}
+            {children}
+          </main>
         </div>
-     );
+      </div>
+    );
   }
 
   // Standard Layout for other pages (Tables, Settings, etc.)
@@ -87,8 +88,14 @@ export default function MinistryLayout({ children }: { children: React.ReactNode
           onMenuClick={() => setIsMobileMenuOpen(true)}
         />
 
-        <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
-          <div className="max-w-7xl mx-auto animate-fade-in">{children}</div>
+        <main className={isAiInsight
+          ? "flex-1 min-h-0 overflow-hidden flex flex-col"
+          : "flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 pb-20 md:pb-6"
+        }>
+          {isAiInsight
+            ? children
+            : <div className="max-w-7xl mx-auto animate-fade-in">{children}</div>
+          }
         </main>
       </div>
     </div>

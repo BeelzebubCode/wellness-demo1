@@ -20,6 +20,7 @@ export default function RectorLayout({ children }: { children: React.ReactNode }
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const isAiInsight = pathname.endsWith("/ai-insight");
 
   if (isLoginPage) return <>{children}</>;
 
@@ -47,8 +48,14 @@ export default function RectorLayout({ children }: { children: React.ReactNode }
           onMenuClick={() => setIsMobileMenuOpen(true)}
         />
 
-        <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
-          <div className="max-w-7xl mx-auto animate-fade-in">{children}</div>
+        <main className={isAiInsight
+          ? "flex-1 min-h-0 overflow-hidden flex flex-col"
+          : "flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 pb-20 md:pb-6"
+        }>
+          {isAiInsight
+            ? children
+            : <div className="max-w-7xl mx-auto animate-fade-in">{children}</div>
+          }
         </main>
       </div>
     </div>

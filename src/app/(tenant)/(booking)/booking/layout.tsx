@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
 import { BookingSidebar } from "@/components/layout/sidebar";
@@ -20,6 +21,7 @@ const FloatingAiButton = dynamic(
 );
 
 export default function BookingLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const { user, isLoading, isAuthenticated } = useRoleAuth({
     redirectTo: "/login",
     allowedRoles: ["STUDENT"] as const,
@@ -29,6 +31,9 @@ export default function BookingLayout({ children }: { children: React.ReactNode 
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  // Only lock the exact /booking (slot-booking page), not sub-routes like /my-appointments
+  const isBookingOnly = pathname === "/booking";
 
   const handleCloseMobile = useCallback(() => setIsSidebarOpen(false), []);
   const handleToggleCollapse = useCallback(() => setIsSidebarCollapsed((prev) => !prev), []);
@@ -44,7 +49,7 @@ export default function BookingLayout({ children }: { children: React.ReactNode 
 
   return (
     <>
-      <div className="flex min-h-screen bg-slate-50">
+      <div className={isBookingOnly ? "flex h-screen overflow-hidden bg-slate-50" : "flex min-h-screen bg-slate-50"}>
         <BookingSidebar
           isOpen={isSidebarOpen}
           isCollapsed={isSidebarCollapsed}
@@ -52,13 +57,19 @@ export default function BookingLayout({ children }: { children: React.ReactNode 
           onToggleCollapse={handleToggleCollapse}
         />
 
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className={isBookingOnly
+          ? "flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden"
+          : "flex-1 flex flex-col min-w-0"
+        }>
           <BookingHeader
             userName={user?.name ?? user?.username ?? "บุคคลทั่วไป"}
             userRole={isAuthenticated ? "นักศึกษา" : "Guest"}
             onMenuClick={handleOpenMobile}
           />
-          <main className="flex-1 overflow-auto">{children}</main>
+          <main className={isBookingOnly
+            ? "flex-1 min-h-0 overflow-hidden flex flex-col"
+            : "flex-1 overflow-auto"
+          }>{children}</main>
         </div>
       </div>
 

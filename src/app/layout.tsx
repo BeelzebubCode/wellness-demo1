@@ -25,7 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <ThemeProvider>
           <NotificationProvider>
-            <AuthToastGate /> 
+            <AuthToastGate />
             {children}
           </NotificationProvider>
         </ThemeProvider>

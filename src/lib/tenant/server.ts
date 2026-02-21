@@ -176,6 +176,37 @@ export async function requireTenant(request: NextRequest): Promise<TenantContext
   }
 
   // =========================
+  // 2.5) GLOBAL roles (MINISTRY, DEAN) - bypass university permission check
+  // =========================
+  const GLOBAL_ROLES = new Set(["MINISTRY", "DEAN"]);
+  if (GLOBAL_ROLES.has(role)) {
+    // These roles can operate without a specific university_access record.
+    // Ministry = all universities; Dean = their home faculty/university.
+    const active =
+      requestedUniversityId ??
+      (account.activeUniversityId && Number.isFinite(account.activeUniversityId)
+        ? account.activeUniversityId
+        : null) ??
+      home ??
+      allowed[0] ??
+      null;
+
+    // For MINISTRY, it's okay to have no specific university (null = all universities)
+    if (active && Number.isFinite(active)) {
+      await assertUniversityExists(active);
+    }
+
+    return {
+      accountId,
+      role,
+      universityId: active ?? 0, // 0 = global scope
+      account,
+      activeUniversityId: active ?? 0,
+      tenantCode,
+    };
+  }
+
+  // =========================
   // 3) other roles
   // =========================
   if (!allowed.length) throw err("NO_ALLOWED_UNIVERSITIES", 403);

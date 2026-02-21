@@ -21,7 +21,7 @@ export const RECTOR_NAV: NavItem[] = [
   },
   {
     href: "/rector/ai-insight",
-    label: "AI สรุปผล (Analyst)",
+    label: "AI สรุปผล",
     icon: Bot,
   },
 ];

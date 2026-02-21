@@ -38,20 +38,14 @@ export default function AiChatCore({ mode, variant, onModeChange }: Props) {
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [chat.messages.length, chat.isLoading]);
 
-  // --- Normal Booking/Help Mode ---
   const content = (
-    // ✅ ครอบ root แค่ตรงนี้พอ (ทั้ง chat)
-    <div className={cn(styles.root, "flex h-full min-h-0 flex-col")}>
-      {/* Header removed to avoid duplication with main dashboard header */}
-
-      {/* ✅ min-h-0 ช่วยให้ส่วน messages scroll ถูก */}
+    <div className={cn(styles.root, "flex h-full min-h-0 flex-col overflow-hidden")}>
       <AiChatMessages
         ref={listRef}
         mode={mode}
         messages={chat.messages}
         isLoading={chat.isLoading}
       />
-
       <AiChatInput mode={mode} chat={chat} onModeChange={onModeChange as any} />
     </div>
   );

@@ -20,7 +20,7 @@ export const DEAN_NAV: NavItem[] = [
     },
     {
         href: "/dean/ai-insight",
-        label: "AI สรุปผล (Analyst)",
+        label: "AI สรุปผล",
         icon: Bot,
     },
 ];

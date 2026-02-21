@@ -28,12 +28,6 @@
     background: rgb(var(--bg));
     color: rgb(var(--fg));
     @apply leading-relaxed antialiased;
-
-    /* Hide scrollbar globally */
-    -ms-overflow-style: none;
-    /* IE and Edge */
-    scrollbar-width: none;
-    /* Firefox */
   }
 
   body::-webkit-scrollbar {

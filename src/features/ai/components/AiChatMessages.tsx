@@ -22,8 +22,8 @@ const AiChatMessages = forwardRef<HTMLDivElement, Props>(
       <div
         ref={ref}
         className={cn(
-          styles.root, // ✅ ROOT: ครอบทั้ง chat เพื่อกัน globals.css
-          "flex-1 overflow-y-auto bg-slate-50 py-4 pb-6",
+          styles.root,
+          "flex-1 min-h-0 overflow-y-auto bg-slate-50 py-4 pb-6",
         )}
       >
         {/* Centered container matching input width */}

@@ -25,13 +25,8 @@ export const MINISTRY_NAV: NavItem[] = [
     icon: Users,
   },
   {
-    href: "/ministry/reports",
-    label: "รายงานประจำปี",
-    icon: FileText,
-  },
-  {
     href: "/ministry/ai-insight",
-    label: "AI สรุปผล (Analyst)",
+    label: "AI สรุปผล",
     icon: Bot,
   },
 ];

@@ -21,6 +21,7 @@ export default function DeanLayout({ children }: { children: React.ReactNode }) 
 
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const isAiInsight = pathname.endsWith("/ai-insight");
 
     if (isLoginPage) return <>{children}</>;
 
@@ -48,8 +49,14 @@ export default function DeanLayout({ children }: { children: React.ReactNode }) 
                     onMenuClick={() => setIsMobileMenuOpen(true)}
                 />
 
-                <main className="flex-1 overflow-x-hidden overflow-y-auto pb-20 md:pb-6">
-                    <div className="animate-fade-in">{children}</div>
+                <main className={isAiInsight
+                    ? "flex-1 min-h-0 overflow-hidden flex flex-col"
+                    : "flex-1 overflow-x-hidden overflow-y-auto pb-20 md:pb-6"
+                }>
+                    {isAiInsight
+                        ? children
+                        : <div className="animate-fade-in">{children}</div>
+                    }
                 </main>
             </div>
         </div>
