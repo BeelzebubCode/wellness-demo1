@@ -3,13 +3,16 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { BorrowRequestForm } from "@/components/head-consultant/borrow-requests";
+import { useNotification } from "@/components/notification/useNotification";
 import type { CreateBorrowRequestInput } from "@/features/borrow-requests/types";
 
 export default function Page() {
   const router = useRouter();
+  const pathname = usePathname();
   const [loading, setLoading] = useState(false);
+  const notify = useNotification();
 
   const onSubmit = async (input: CreateBorrowRequestInput) => {
     setLoading(true);
@@ -23,10 +26,18 @@ export default function Page() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? "สร้างคำขอไม่สำเร็จ");
 
-      // ✅ กลับหน้าเดิม
-      router.back();
+      // ✅ แจ้งสำเร็จ
+      notify.success("สร้างคำขอยืมตัวที่ปรึกษาเรียบร้อยแล้ว");
+
+      // ✅ ไปหน้า detail ของคำขอที่เพิ่งสร้าง
+      const newId = data?.data?.borrow_request_id;
+      if (newId) {
+        router.push(pathname.replace(/\/new$/, `/${newId}`));
+      } else {
+        router.back();
+      }
     } catch (e: any) {
-      alert(e?.message ?? "สร้างคำขอไม่สำเร็จ");
+      notify.error(e?.message ?? "สร้างคำขอไม่สำเร็จ");
     } finally {
       setLoading(false);
     }

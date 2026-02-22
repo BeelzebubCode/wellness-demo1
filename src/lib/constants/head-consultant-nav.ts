@@ -31,7 +31,7 @@ export const HEAD_CONSULTANT_NAV: NavItem[] = [
   },
   {
     href: "/head-consultant/exception-requests",
-    label: "ขอยกเว้นโทษ (นศ)",
+    label: "คำขอยกเว้นโทษ",
     icon: BookCheck,
   },
 ];

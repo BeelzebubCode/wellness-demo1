@@ -3,10 +3,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { MapPin, Users, Eye, CheckCircle, UserPlus } from "lucide-react";
+import { Users, Eye, FileText, Clock, Building2, Search, Inbox } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
 import { LoadingSpinner } from "@/components/ui";
 import { FilterBar } from "@/components/filters/FilterBar";
 import {
@@ -15,34 +14,54 @@ import {
 } from "@/features/borrow-requests/filters/defs";
 import type { BorrowRequest } from "@/features/borrow-requests/types";
 
-function getStatusColor(status: string) {
-  switch (status) {
-    case "SUBMITTED":
-      return "bg-blue-100 text-blue-800 border-blue-200";
-    case "APPROVED":
-      return "bg-green-100 text-green-800 border-green-200";
-    case "ASSIGNED":
-      return "bg-purple-100 text-purple-800 border-purple-200";
-    case "COMPLETED":
-      return "bg-gray-100 text-gray-800 border-gray-200";
-    default:
-      return "bg-gray-100 text-gray-600 border-gray-200";
-  }
-}
+const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
+  SUBMITTED: {
+    label: "รอดำเนินการ",
+    bg: "bg-blue-50",
+    text: "text-blue-700",
+    dot: "bg-blue-500",
+  },
+  APPROVED: {
+    label: "อนุมัติแล้ว",
+    bg: "bg-emerald-50",
+    text: "text-emerald-700",
+    dot: "bg-emerald-500",
+  },
+  ASSIGNED: {
+    label: "มอบหมายแล้ว",
+    bg: "bg-purple-50",
+    text: "text-purple-700",
+    dot: "bg-purple-500",
+  },
+  COMPLETED: {
+    label: "เสร็จสิ้น",
+    bg: "bg-slate-50",
+    text: "text-slate-600",
+    dot: "bg-slate-400",
+  },
+  CANCELLED: {
+    label: "ยกเลิก",
+    bg: "bg-red-50",
+    text: "text-red-600",
+    dot: "bg-red-400",
+  },
+};
 
-function getStatusLabel(status: string) {
-  switch (status) {
-    case "SUBMITTED":
-      return "รอดำเนินการ";
-    case "APPROVED":
-      return "อนุมัติแล้ว";
-    case "ASSIGNED":
-      return "มอบหมายแล้ว";
-    case "COMPLETED":
-      return "เสร็จสิ้น";
-    default:
-      return status;
-  }
+function StatusBadge({ status }: { status: string }) {
+  const cfg = STATUS_CONFIG[status] ?? {
+    label: status,
+    bg: "bg-gray-50",
+    text: "text-gray-600",
+    dot: "bg-gray-400",
+  };
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.bg} ${cfg.text}`}
+    >
+      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+      {cfg.label}
+    </span>
+  );
 }
 
 export function BorrowRequestsTable({
@@ -82,97 +101,108 @@ export function BorrowRequestsTable({
   }, [safeRows, filters]);
 
   return (
-    <Card className="p-4 space-y-3">
+    <div className="space-y-4">
+      {/* ── Header ── */}
       <div className="flex items-center justify-between">
-        <div className="font-semibold text-slate-800">Borrow Requests</div>
-        {loading ? <LoadingSpinner /> : null}
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 text-white shadow-md shadow-primary-200/40">
+            <FileText className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-slate-800 tracking-tight">
+              คำขอยืมตัวที่ปรึกษา
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {loading ? "กำลังโหลด..." : `ทั้งหมด ${safeRows.length} รายการ · แสดง ${filtered.length} รายการ`}
+            </p>
+          </div>
+        </div>
+        {loading && <LoadingSpinner />}
       </div>
 
+      {/* ── Filter ── */}
       <FilterBar
         defs={BORROW_REQUESTS_FILTER_DEFS}
         value={filters}
         onChange={setFilters}
         searchKey="q"
-        searchPlaceholder="ค้นหา title/reason..."
+        searchPlaceholder="ค้นหาหัวข้อ / เหตุผล..."
       />
 
-      <div className="overflow-auto">
-        <table className="min-w-full w-full text-sm">
-          <thead className="bg-slate-50 border-b-2 border-slate-200">
-            <tr>
-              <th className="py-3 px-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">ID</th>
-              <th className="py-3 px-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">หัวข้อคำขอ</th>
-              <th className="py-3 px-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">จำนวน</th>
-              <th className="py-3 px-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">สถานะ</th>
-              <th className="py-3 px-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">การดำเนินการ</th>
-            </tr>
-          </thead>
+      {/* ── List ── */}
+      <div className="space-y-2">
+        {filtered.map((r) => (
+          <Card
+            key={r.borrowRequestId}
+            className="group rounded-xl border-slate-200 shadow-sm hover:shadow-md hover:border-primary-200 transition-all duration-200 cursor-pointer"
+            onClick={() => onView(r.borrowRequestId)}
+          >
+            <div className="p-4 flex items-center gap-4">
+              {/* Left: ID badge */}
+              <div className="flex-shrink-0">
+                <div className="w-11 h-11 rounded-xl bg-slate-100 group-hover:bg-primary-50 flex items-center justify-center transition-colors">
+                  <span className="text-sm font-bold text-slate-500 group-hover:text-primary-600 transition-colors">
+                    #{r.borrowRequestId}
+                  </span>
+                </div>
+              </div>
 
-          <tbody className="bg-white divide-y divide-slate-100">
-            {filtered.map((r) => {
-              const canApprove = r.borrowRequestStatus === "SUBMITTED";
-              const canAssign = r.borrowRequestStatus === "APPROVED";
-
-              return (
-                <tr
-                  key={r.borrowRequestId}
-                  className="hover:bg-slate-50 transition-colors cursor-pointer"
-                  onClick={() => onView(r.borrowRequestId)}
-                >
-                  <td className="py-4 px-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <span className="text-sm font-medium text-slate-900">#{r.borrowRequestId}</span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4">
-                    <div className="max-w-md">
-                      <div className="text-sm font-semibold text-slate-900 mb-1">
-                        {r.borrowRequestTitle}
-                      </div>
-                      <div className="text-xs text-slate-500 line-clamp-2 mb-1">
-                        {r.borrowRequestReason}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5 text-slate-500" />
-                      <span className="text-sm text-slate-700 font-medium">
-                        {r.borrowNeededCount} คน
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(r.borrowRequestStatus)}`}>
-                      {getStatusLabel(r.borrowRequestStatus)}
+              {/* Center: Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm font-bold text-slate-800 truncate">
+                    {r.borrowRequestTitle}
+                  </span>
+                  <StatusBadge status={r.borrowRequestStatus} />
+                </div>
+                <p className="text-xs text-slate-400 truncate">
+                  {r.borrowRequestReason}
+                </p>
+                <div className="flex items-center gap-3 mt-1.5">
+                  <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+                    <Users className="w-3 h-3" />
+                    {r.borrowNeededCount} คน
+                  </span>
+                  {(r as any).fromUniversityNameTh && (
+                    <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+                      <Building2 className="w-3 h-3" />
+                      {(r as any).fromUniversityNameTh}
                     </span>
-                  </td>
-                  <td className="py-4 px-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex gap-2 justify-end">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onView(r.borrowRequestId)}
-                        leftIcon={<Eye className="w-4 h-4" />}
-                      >
-                        ดูรายละเอียด
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+                  )}
+                </div>
+              </div>
 
-            {!filtered.length && !loading ? (
-              <tr>
-                <td colSpan={5} className="py-10 text-center text-slate-500">
-                  ไม่มีรายการ
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
+              {/* Right: Action */}
+              <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onView(r.borrowRequestId)}
+                  className="rounded-lg shadow-sm text-slate-600 hover:text-primary-600 hover:border-primary-200 hover:bg-primary-50/50"
+                >
+                  <Eye className="w-3.5 h-3.5 mr-1.5" />
+                  ดูรายละเอียด
+                </Button>
+              </div>
+            </div>
+          </Card>
+        ))}
+
+        {/* ── Empty state ── */}
+        {!filtered.length && !loading && (
+          <Card className="rounded-xl border-slate-200 shadow-sm">
+            <div className="py-14 flex flex-col items-center text-center">
+              <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+                <Inbox className="w-7 h-7 text-slate-300" />
+              </div>
+              <p className="text-sm font-semibold text-slate-500">ไม่พบรายการ</p>
+              <p className="text-xs text-slate-400 mt-1">
+                ลองเปลี่ยนตัวกรองหรือคำค้นหาดูใหม่
+              </p>
+            </div>
+          </Card>
+        )}
       </div>
-    </Card>
+    </div>
   );
 }

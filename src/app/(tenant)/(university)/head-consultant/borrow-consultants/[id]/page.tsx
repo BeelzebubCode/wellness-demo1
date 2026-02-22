@@ -42,12 +42,12 @@ export default function BorrowRequestDetailPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <Button variant="outline" onClick={() => router.back()}>
+        <Button size="sm" variant="outline" onClick={() => router.back()} className="shadow-sm bg-white hover:bg-gray-50">
           กลับ
         </Button>
 
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => refetch?.()}>
+          <Button size="sm" variant="outline" onClick={() => refetch?.()} className="shadow-sm bg-white hover:bg-gray-50">
             รีเฟรช
           </Button>
         </div>

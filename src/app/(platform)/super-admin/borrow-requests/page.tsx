@@ -22,16 +22,7 @@ export default function SuperBorrowRequestsPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">คำขอยืมตัวที่ปรึกษา</h1>
-        {!loading && (
-          <div className="text-sm text-gray-600">
-            พบ {total} รายการ
-          </div>
-        )}
-      </div>
-
+    <div>
       <BorrowRequestsTable
         rows={rows}
         loading={loading}
