@@ -38,23 +38,27 @@ export function ConsultantShiftsPageClient() {
     );
   }
 
-  const { currentShift, historyShifts } = data.data!;
-  const allShifts = [
-    ...(currentShift ? [currentShift] : []),
-    ...historyShifts,
-  ];
+  const { teamId, teamOrder, teamName, config, borrowShifts } = data.data!;
 
-  if (allShifts.length === 0) {
+  if (!teamOrder || !config) {
     return (
-      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-8 text-center">
-        <AlertCircle className="h-12 w-12 text-yellow-600 mx-auto mb-3" />
-        <p className="text-yellow-900 font-medium">ยังไม่มีข้อมูลตารางเวร</p>
-        <p className="text-sm text-yellow-700 mt-1">
-          กรุณาติดต่อผู้ดูแลระบบเพื่อกำหนดตารางเวรของคุณ
+      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-8 text-center max-w-2xl mx-auto mt-10 shadow-sm">
+        <AlertCircle className="h-12 w-12 text-yellow-600 mx-auto mb-4" />
+        <h2 className="text-xl font-bold text-yellow-900 mb-2">ยังไม่ได้จัดสรรทีมเข้าเวร</h2>
+        <p className="text-yellow-700">
+          บัญชีของคุณยังไม่ได้ถูกเข้าร่วมในทีมเข้าเวรใดเลย (ทีม 1-4)
+          กรุณาติดต่อผู้ดูแลระบบเพื่อแก้ไขข้อมูลการเข้าเวรของคุณ
         </p>
       </div>
     );
   }
 
-  return <TimelineCalendar shifts={allShifts} />;
+  return (
+    <TimelineCalendar
+      teamOrder={teamOrder}
+      teamName={teamName || `ทีม ${teamOrder}`}
+      config={config}
+      borrowShifts={borrowShifts}
+    />
+  );
 }

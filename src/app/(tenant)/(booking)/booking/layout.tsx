@@ -8,6 +8,7 @@ import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
 import { BookingSidebar } from "@/components/layout/sidebar";
 import { BookingHeader } from "@/components/layout/header";
 import { LoadingSpinner } from "@/components/ui";
+import { ToastProvider } from "@/contexts/ToastContext";
 
 // ✅ Dynamic imports - load AI components only when needed
 const AiChatModal = dynamic(
@@ -48,7 +49,7 @@ export default function BookingLayout({ children }: { children: React.ReactNode 
   }
 
   return (
-    <>
+    <ToastProvider>
       <div className={isBookingOnly ? "flex h-screen overflow-hidden bg-slate-50" : "flex min-h-screen bg-slate-50"}>
         <BookingSidebar
           isOpen={isSidebarOpen}
@@ -76,6 +77,6 @@ export default function BookingLayout({ children }: { children: React.ReactNode 
       {/* ✅ AI components loaded on-demand */}
       <AiChatModal />
       <FloatingAiButton />
-    </>
+    </ToastProvider>
   );
 }

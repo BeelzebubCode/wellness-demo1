@@ -14,6 +14,7 @@ export interface TimeSlotGridProps {
   onSelectSlot: (slot: TimeSlotCore) => void;
   isLoading?: boolean;
   hasActiveBooking?: boolean;
+  isLocked?: boolean;
 
   /** ✅ เพิ่ม: ใช้ตอน embed ลง card ภายนอก */
   embedded?: boolean;
@@ -52,6 +53,7 @@ export function TimeSlotGrid({
   onSelectSlot,
   isLoading = false,
   hasActiveBooking = false,
+  isLocked = false,
   embedded = false,
 }: TimeSlotGridProps) {
   const groupedSlots = {
@@ -120,12 +122,17 @@ export function TimeSlotGrid({
             </p>
           </div>
 
-          {hasActiveBooking && (
+          {isLocked ? (
+            <div className="inline-flex items-center gap-1 px-3 py-1 bg-red-50 text-red-700 rounded-full text-[11px] md:text-xs font-medium self-start md:self-auto">
+              <AlertTriangle className="w-3 h-3" />
+              <span>ถูกระงับสิทธิ์ชั่วคราว</span>
+            </div>
+          ) : hasActiveBooking ? (
             <div className="inline-flex items-center gap-1 px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-[11px] md:text-xs font-medium self-start md:self-auto">
               <AlertTriangle className="w-3 h-3" />
               <span>คุณมีคิวค้างอยู่</span>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -138,6 +145,7 @@ export function TimeSlotGrid({
             slots={groupedSlots.morning}
             onSelectSlot={onSelectSlot}
             disabled={hasActiveBooking}
+            isLocked={isLocked}
           />
         )}
 
@@ -149,6 +157,7 @@ export function TimeSlotGrid({
             slots={groupedSlots.afternoon}
             onSelectSlot={onSelectSlot}
             disabled={hasActiveBooking}
+            isLocked={isLocked}
           />
         )}
 
@@ -160,13 +169,14 @@ export function TimeSlotGrid({
             slots={groupedSlots.evening}
             onSelectSlot={onSelectSlot}
             disabled={hasActiveBooking}
+            isLocked={isLocked}
           />
         )}
 
         {/* ✅ ถ้า startTime ไม่มีจนจัดกลุ่มไม่ได้เลย ให้โชว์ข้อความช่วย debug */}
         {groupedSlots.morning.length === 0 &&
-        groupedSlots.afternoon.length === 0 &&
-        groupedSlots.evening.length === 0 ? (
+          groupedSlots.afternoon.length === 0 &&
+          groupedSlots.evening.length === 0 ? (
           <div className="text-sm text-slate-500">
             ไม่สามารถจัดกลุ่มช่วงเวลาได้ (ข้อมูลเวลา startTime ไม่ถูกต้อง)
           </div>
@@ -191,6 +201,7 @@ interface TimeSlotSectionProps {
   slots: TimeSlotCore[];
   onSelectSlot: (slot: TimeSlotCore) => void;
   disabled?: boolean;
+  isLocked?: boolean;
 }
 
 function TimeSlotSection({
@@ -200,12 +211,13 @@ function TimeSlotSection({
   slots,
   onSelectSlot,
   disabled,
+  isLocked,
 }: TimeSlotSectionProps) {
   return (
     <section>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-3 gap-2">
         <div className="flex items-start gap-3">
-          
+
           {/* 🔥 icon ผูกกับ text block */}
           <div className="relative">
             <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center translate-y-[6px]">
@@ -232,6 +244,7 @@ function TimeSlotSection({
             slot={slot}
             onSelect={() => onSelectSlot(slot)}
             disabled={disabled}
+            isLocked={isLocked}
           />
         ))}
       </div>

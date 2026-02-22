@@ -96,6 +96,22 @@ export async function handleCreateBooking(
   }
 
   try {
+    // ✅ BOOKING LOCK GUARD — check StudentTrustStatus before any write
+    const trustStatus = await prisma.studentTrustStatus.findUnique({
+      where: { university_id_student_id: { university_id: activeUniversityId, student_id: studentId } },
+      select: { student_trust_locked_until: true },
+    });
+    if (trustStatus?.student_trust_locked_until && trustStatus.student_trust_locked_until > new Date()) {
+      return NextResponse.json(
+        {
+          error: "BOOKING_LOCKED",
+          message: "ท่านถูกระงับสิทธิ์การจองชั่วคราว กรุณาติดต่อเจ้าหน้าที่",
+          locked_until: trustStatus.student_trust_locked_until,
+        },
+        { status: 403 },
+      );
+    }
+
     const created = await prisma.$transaction(async (tx) => {
       const slot = await tx.timeSlot.findUnique({
         where: {

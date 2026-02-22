@@ -49,7 +49,7 @@ export function ConsultantMyJobsPageClient() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 font-sans text-slate-900 pb-20 relative overflow-hidden selection:bg-[rgba(var(--ring),0.25)] selection:text-slate-900">
-      
+
       {/* Decorative background (คงของเดิม) */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-primary/5 to-transparent rounded-full blur-3xl"></div>
@@ -92,11 +92,11 @@ export function ConsultantMyJobsPageClient() {
 
         {/* ================= STATS ================= */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatWidget 
-            title={filters.date ? "นัดหมายวันที่เลือก" : "นัดหมายทั้งหมด"} 
-            value={vm.stats.today} 
-            icon={CalendarClock} 
-            theme="gradient-blue" 
+          <StatWidget
+            title={filters.date ? "นัดหมายวันที่เลือก" : "นัดหมายทั้งหมด"}
+            value={vm.stats.today}
+            icon={CalendarClock}
+            theme="gradient-blue"
           />
           <StatWidget title="รอดำเนินการ" value={vm.stats.pending} icon={Clock3} theme="gradient-amber" />
           <StatWidget title="กำลังดำเนินการ" value={vm.stats.inProgress} icon={PlayCircle} theme="gradient-purple" />
@@ -171,6 +171,7 @@ export function ConsultantMyJobsPageClient() {
                         )
                       }
                       onAction={() => vm.handleAction(job)}
+                      onRefresh={() => vm.triggerRefresh()}
                       onEditChannel={(j) => vm.handleEditChannel(j)}
                       isActing={vm.actionLoadingId === job.id}
                     />
@@ -200,10 +201,10 @@ export function ConsultantMyJobsPageClient() {
                     // Show current page, first, last, and surrounding pages
                     const isAround = Math.abs(p - currentPage) <= 1;
                     const isFirstLast = p === 1 || p === totalPages;
-                    
+
                     if (!isAround && !isFirstLast) {
                       if (p === 2 || p === totalPages - 1) {
-                         return <span key={p} className="w-4 text-center text-slate-400 text-xs">...</span>;
+                        return <span key={p} className="w-4 text-center text-slate-400 text-xs">...</span>;
                       }
                       return null;
                     }

@@ -39,7 +39,7 @@ export default function MyAppointmentsPageClient() {
   };
 
   const { push } = useNotificationContext();
-  const { items, loading, error, refetch } = useMyAppointments();
+  const { items, trustStatus, loading, error, refetch } = useMyAppointments();
   const { cancelBooking, isCancelling } = useBooking();
 
   const vm = useMemo(() => {
@@ -137,6 +137,8 @@ export default function MyAppointmentsPageClient() {
 
       <CancelBookingModal
         open={showCancelModal}
+        booking={bookingToCancel}
+        trustStatus={trustStatus}
         onClose={() => setShowCancelModal(false)}
         cancellationReasonId={cancellationReasonId}
         onChangeCancellationReasonId={(id) => {

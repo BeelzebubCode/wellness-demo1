@@ -7,6 +7,8 @@ export type PlanLLM = {
   timeRange: string | null; // "AUTO" | "HH:mm-HH:mm"
   problemCategoryCode: string | null;
   detailText: string | null;
+  serviceMode?: string | null;         // "ONLINE" | "ONSITE"
+  onlineChannelCode?: string | null;   // "ZOOM" | "LINE" | "MEET"
 };
 
 export type SlotCandidate = {
@@ -29,6 +31,7 @@ export type BookingPlanResponse = {
 
   // UI support
   categories?: Array<{ id: number; code: string; name: string }>;
+  channels?: Array<{ code: string; name: string }>;
 
   missingFields?: string[];
   questions?: AgentQuestion[];

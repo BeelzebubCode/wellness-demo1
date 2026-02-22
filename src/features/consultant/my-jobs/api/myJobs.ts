@@ -112,3 +112,27 @@ export async function setOnlineChannel(
 
   return data as { success: boolean };
 }
+
+/**
+ * ✅ บันทึกการเข้าพบ (CHECKED_IN, LATE, NO_SHOW)
+ */
+export async function markAttendance(
+  bookingId: number,
+  status: "CHECKED_IN" | "LATE" | "NO_SHOW",
+  lateMinutes?: number,
+  note?: string
+) {
+  const res = await fetch(`/api/v2/bookings/${bookingId}/attendance`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    cache: "no-store",
+    body: JSON.stringify({ status, late_minutes: lateMinutes, note }),
+  });
+
+  const data = await safeJson(res);
+  if (!res.ok) throw new Error(data?.error ?? "บันทึกการเข้าพบไม่สำเร็จ");
+
+  return data as { success: boolean };
+}
+

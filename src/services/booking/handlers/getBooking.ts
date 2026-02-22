@@ -148,7 +148,7 @@ export async function handleGetBooking(
 
     assignments: booking.assignments.map((a) => ({
       id: a.booking_assignment_id,
-      assignedBy: a.assignedBy.account_username,
+      assignedBy: a.assignedBy?.account_username ?? "",
       assignedTo: a.consultant.profile
         ? `${a.consultant.profile.consultant_first_name} ${a.consultant.profile.consultant_last_name}`
         : null,

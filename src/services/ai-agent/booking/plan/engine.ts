@@ -28,6 +28,8 @@ import {
   filterSlotsByTimeRange,
 } from "./adapters/slotsRepo";
 
+import { loadOnlineChannels } from "./adapters/channelsRepo";
+
 import { callPlannerLLM } from "./adapters/planner";
 
 import { buildProgressCard, replyNeedField, topCandidatesText } from "./presenter/messages";
@@ -39,7 +41,7 @@ type Deps = {
 };
 
 export class BookingPlanEngine {
-  constructor(private deps: Deps) {}
+  constructor(private deps: Deps) { }
 
   async run(input: {
     activeUniversityId: number;
@@ -52,10 +54,12 @@ export class BookingPlanEngine {
     const question = this.lastUserText(userMessages).trim();
     if (!question) return { reply: "พิมพ์คำขอจองคิวสั้น ๆ ให้ผมหน่อยครับ 🙂" };
 
-    // categories
+    // categories & channels
     const cats = await loadProblemCategories();
     const categoriesJson = cats.length ? categoriesJsonForPrompt(cats) : "[]";
     const allowedCodes = allowedCategoryCodes(cats);
+
+    const channels = await loadOnlineChannels();
 
     // window + hours
     const window = getBookingWindow(this.deps.maxBookAheadDays);
@@ -84,7 +88,18 @@ export class BookingPlanEngine {
       timeRange: llmPlan.timeRange ?? prevPlan?.timeRange ?? null,
       problemCategoryCode: llmPlan.problemCategoryCode ?? prevPlan?.problemCategoryCode ?? null,
       detailText: llmPlan.detailText ?? prevPlan?.detailText ?? null,
+      serviceMode: llmPlan.serviceMode ?? prevPlan?.serviceMode ?? null,
+      onlineChannelCode: llmPlan.onlineChannelCode ?? prevPlan?.onlineChannelCode ?? null,
     };
+
+    // Reset triggers
+    if (/เปลี่ยนรูปแบบ|เปลี่ยนประเภท|เปลี่ยนการเข้าพบ/i.test(question)) {
+      plan.serviceMode = null;
+      plan.onlineChannelCode = null;
+    }
+    if (/เปลี่ยนช่องทาง/i.test(question)) {
+      plan.onlineChannelCode = null;
+    }
 
     // --------------------------
     // 🎯 TimeRange (single truth)
@@ -111,7 +126,7 @@ export class BookingPlanEngine {
         // Only error if we really have no idea.
         // But if LLM sent something invalid, we might want to ask.
         // For now, if LLM failed and regex failed -> Ask.
-         return {
+        return {
           reply:
             `⛔ **ผมยังไม่เข้าใจเวลาที่พิมพ์มาครับ**\n\n` +
             `✍️ กรุณาพิมพ์เวลาในรูปแบบที่ชัดเจน เช่น:\n` +
@@ -130,17 +145,17 @@ export class BookingPlanEngine {
 
     // ✅ Match check check service hours
     if (plan.timeRange && plan.timeRange !== "AUTO" && isOutOfServiceTime(plan.timeRange, hours)) {
-        return {
-          reply:
-            `⛔ **เวลา ${plan.timeRange} อยู่นอกช่วงให้บริการครับ**\n\n` +
-            `🕗 ระบบเปิดให้จองเฉพาะ:\n` +
-            `${serviceHoursText(hours)}\n\n` +
-            `✍️ กรุณาพิมพ์เวลาใหม่ที่ต้องการ`,
-          state: plan,
-          candidates: [],
-          missingFields: ["timeRange"],
-          questions: [{ field: "timeRange", text: "ต้องการจองช่วงเวลาไหนครับ?" }],
-        };
+      return {
+        reply:
+          `⛔ **เวลา ${plan.timeRange} อยู่นอกช่วงให้บริการครับ**\n\n` +
+          `🕗 ระบบเปิดให้จองเฉพาะ:\n` +
+          `${serviceHoursText(hours)}\n\n` +
+          `✍️ กรุณาพิมพ์เวลาใหม่ที่ต้องการ`,
+        state: plan,
+        candidates: [],
+        missingFields: ["timeRange"],
+        questions: [{ field: "timeRange", text: "ต้องการจองช่วงเวลาไหนครับ?" }],
+      };
     }
 
     // --------------------------
@@ -216,6 +231,8 @@ export class BookingPlanEngine {
         timeRange: this.toDisplayTimeRange(plan.timeRange),
         categoryName: null,
         detailText: plan.detailText,
+        serviceMode: plan.serviceMode,
+        onlineChannelCode: plan.onlineChannelCode,
       });
 
       return {
@@ -223,9 +240,9 @@ export class BookingPlanEngine {
           `😕 **วัน ${plan.date} คิวเต็มแล้วครับ**\n\n` +
           (nextDate
             ? `✅ **แนะนำคิวว่างที่ใกล้ที่สุด:**\n` +
-              `📅 **${nextDate}**\n` +
-              `${nextSlotsText}\n\n` +
-              `✍️ พิมพ์เวลาที่ต้องการจองได้เลย (เช่น "10:00") หรือพิมพ์ "จอง ${nextDate}"`
+            `📅 **${nextDate}**\n` +
+            `${nextSlotsText}\n\n` +
+            `✍️ พิมพ์เวลาที่ต้องการจองได้เลย (เช่น "10:00") หรือพิมพ์ "จอง ${nextDate}"`
             : `⚠️ ช่วงวันที่เปิดให้จอง (${window.minISO} ถึง ${window.maxISO}) ไม่มีคิวว่างเลยครับ`) +
           `\n\n(หรือพิมพ์เปลี่ยนวันได้ครับ)`,
         state: plan,
@@ -252,6 +269,8 @@ export class BookingPlanEngine {
         timeRange: this.toDisplayTimeRange(plan.timeRange),
         categoryName: null,
         detailText: plan.detailText,
+        serviceMode: plan.serviceMode,
+        onlineChannelCode: plan.onlineChannelCode,
       });
 
       return {
@@ -297,6 +316,8 @@ export class BookingPlanEngine {
         timeRange: this.toDisplayTimeRange(plan.timeRange),
         categoryName: null,
         detailText: plan.detailText,
+        serviceMode: plan.serviceMode,
+        onlineChannelCode: plan.onlineChannelCode,
       });
 
       const q: AgentQuestion = {
@@ -342,6 +363,8 @@ export class BookingPlanEngine {
         timeRange: plan.timeRange!,
         categoryName: null,
         detailText: plan.detailText,
+        serviceMode: plan.serviceMode,
+        onlineChannelCode: plan.onlineChannelCode,
       });
 
       const q: AgentQuestion = {
@@ -374,6 +397,8 @@ export class BookingPlanEngine {
         timeRange: plan.timeRange!,
         categoryName: cat.problem_category_name_th,
         detailText: plan.detailText,
+        serviceMode: plan.serviceMode,
+        onlineChannelCode: plan.onlineChannelCode,
       });
 
       const q: AgentQuestion = {
@@ -393,6 +418,100 @@ export class BookingPlanEngine {
         candidates,
         categories: mapCategoriesForUi(cats),
         missingFields: ["detailText"],
+        questions: [q],
+      };
+    }
+
+    // --------------------------
+    // 🏢 Service Mode
+    // --------------------------
+    if (!plan.serviceMode) {
+      if (question === "คุยออนไลน์ (Online)" || question.toLowerCase() === "online") plan.serviceMode = "ONLINE";
+      else if (question === "พบที่ศูนย์ (On-site)" || question.toLowerCase() === "onsite") plan.serviceMode = "ONSITE";
+    }
+
+    if (!plan.serviceMode) {
+      const progress = buildProgressCard({
+        dateISO: plan.date!,
+        timeRange: plan.timeRange!,
+        categoryName: cat.problem_category_name_th,
+        detailText: plan.detailText,
+        serviceMode: plan.serviceMode,
+        onlineChannelCode: plan.onlineChannelCode,
+      });
+
+      const q: AgentQuestion = {
+        field: "serviceMode",
+        text: "ต้องการเข้าพบแบบไหนครับ?",
+        options: [
+          { value: "ONSITE", label: "พบที่ศูนย์ (On-site)" },
+          { value: "ONLINE", label: "คุยออนไลน์ (Online)" },
+        ],
+      };
+
+      return {
+        reply: replyNeedField({
+          header: "🏢 **เลือกรูปแบบการเข้าพบครับ**",
+          progress,
+          ask: "ประเภทการเข้าพบ",
+          examples: ["พบที่ศูนย์", "ออนไลน์"],
+          candidates,
+        }),
+        state: plan,
+        candidates,
+        categories: mapCategoriesForUi(cats),
+        channels: channels.map(c => ({ code: c.online_channel_code, name: c.online_channel_name_th || c.online_channel_code })),
+        missingFields: ["serviceMode"],
+        questions: [q],
+      };
+    }
+
+    // --------------------------
+    // 💻 Online Channel (If ONLINE)
+    // --------------------------
+    if (plan.serviceMode === "ONLINE" && !plan.onlineChannelCode) {
+      const qUpper = question.toUpperCase();
+      const match = channels.find((c) =>
+        qUpper === c.online_channel_code.toUpperCase() ||
+        qUpper === c.online_channel_name_th.toUpperCase() ||
+        (c.online_channel_name_en && qUpper === c.online_channel_name_en.toUpperCase())
+      );
+      if (match) {
+        plan.onlineChannelCode = match.online_channel_code;
+      }
+    }
+
+    if (plan.serviceMode === "ONLINE" && !plan.onlineChannelCode) {
+      const progress = buildProgressCard({
+        dateISO: plan.date!,
+        timeRange: plan.timeRange!,
+        categoryName: cat.problem_category_name_th,
+        detailText: plan.detailText,
+        serviceMode: plan.serviceMode,
+        onlineChannelCode: plan.onlineChannelCode,
+      });
+
+      const q: AgentQuestion = {
+        field: "onlineChannelCode",
+        text: "สะดวกใช้ช่องทางออนไลน์ไหนครับ?",
+        options: channels.map(c => ({
+          value: c.online_channel_code,
+          label: c.online_channel_name_th || c.online_channel_code
+        })),
+      };
+
+      return {
+        reply: replyNeedField({
+          header: "💻 **เลือกช่องทางออนไลน์ครับ**",
+          progress,
+          ask: "ช่องทางออนไลน์",
+          examples: channels.map(c => c.online_channel_name_th || c.online_channel_code),
+        }),
+        state: plan,
+        candidates,
+        categories: mapCategoriesForUi(cats),
+        channels: channels.map(c => ({ code: c.online_channel_code, name: c.online_channel_name_th || c.online_channel_code })),
+        missingFields: ["onlineChannelCode"],
         questions: [q],
       };
     }
@@ -418,6 +537,8 @@ export class BookingPlanEngine {
       timeRange: plan.timeRange!,
       categoryName: cat.problem_category_name_th,
       detailText: brief,
+      serviceMode: plan.serviceMode,
+      onlineChannelCode: plan.onlineChannelCode,
     });
 
     const others = topCandidatesText(candidates, 3);
@@ -431,6 +552,8 @@ export class BookingPlanEngine {
       state: plan,
       candidates,
       suggested,
+      categories: mapCategoriesForUi(cats),
+      channels: channels.map(c => ({ code: c.online_channel_code, name: c.online_channel_name_th || c.online_channel_code })),
       confirmToken,
       missingFields: [],
       questions: [],
@@ -475,6 +598,8 @@ export class BookingPlanEngine {
       timeRange: this.toDisplayTimeRange(plan.timeRange),
       categoryName: null,
       detailText: plan.detailText,
+      serviceMode: plan.serviceMode,
+      onlineChannelCode: plan.onlineChannelCode,
     });
 
     return {

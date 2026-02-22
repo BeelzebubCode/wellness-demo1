@@ -90,20 +90,26 @@ export type MyBookingDto = {
 
   // ONLINE only
   session?: BookingSessionDto | null;
+
+  // EXCEPTION
+  hasExceptionRequest?: boolean;
+  exceptionRequestStatus?: string | null;
+  exceptionRequestNote?: string | null;
 };
 
 // ==============================
 // API Response: /api/v2/bookings/my
 // ==============================
 export type MyAppointmentsResponse =
-  | { 
-      success: true; 
-      universityId?: number; 
-      items: MyBookingDto[]; 
-      total: number;
-      page: number;
-      limit: number;
-    }
+  | {
+    success: true;
+    universityId?: number;
+    items: MyBookingDto[];
+    total: number;
+    trustStatus?: any; // To allow trust status info
+    page: number;
+    limit: number;
+  }
   | { success: false; error: string };
 
 // ==============================

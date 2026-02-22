@@ -1,12 +1,18 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { ArrowUp, RotateCcw, ChevronDown, Bot, Calendar, CheckCircle2, CalendarCheck, XCircle, LineChart } from "lucide-react";
 import type { useAiChat } from "@/features/ai/hooks/useAiChat";
 import { cn } from "@/lib/cn";
 import styles from "./aiChatTheme.module.css";
 import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
 import { useNotificationContext } from "@/components/notification/NotificationProvider";
+
+import type { ServiceMode } from "@/shared/types/service";
+import type { OnlineChannelCode } from "@/lib/constants/booking-service";
+import { ServiceModePicker } from "@/features/booking/components/forms/ServiceMode";
+import { ConsentBlock } from "@/features/booking/components/forms/ConsentBlock";
+import { SignaturePad } from "@/features/booking/components/forms/SignaturePad";
 
 export type AiChatMode = "help" | "booking_agent" | "analyst";
 export type AiChatController = ReturnType<typeof useAiChat>;
@@ -29,7 +35,6 @@ export default function AiChatInput({
   const { input, setInput, send, reset, isLoading, canSend } = chat;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // ✅ Auth Check (requireTenant: false — AI Chat ไม่ต้องเช็ค tenant)
   const { user, isAuthenticated, isLoading: authLoading } = useRoleAuth({
     allowedRoles: ["STUDENT", "PERSONNEL", "DEAN", "RECTOR", "MINISTRY", "ADMIN", "SUPER_ADMIN", "CONSULTANT", "HEAD_CONSULTANT"] as const,
     loginToastKey: "ai_login_required",
@@ -38,17 +43,32 @@ export default function AiChatInput({
   });
   const { push } = useNotificationContext();
 
-  // ✅ Force Help Mode if not Auth (ใช้ authLoading ไม่ใช่ chat.isLoading!)
+  const [consentChecked, setConsentChecked] = useState(false);
+  const [agreementSignature, setAgreementSignature] = useState<string | null>(null);
+  const [isCardCollapsed, setIsCardCollapsed] = useState(false);
+
+  const isCancelIntent = (chat.agent?.plan as any)?.intent === "CANCEL";
+  const planServiceMode = (chat.agent?.plan as any)?.serviceMode;
+  const planOnlineChannel = (chat.agent?.plan as any)?.onlineChannelCode;
+
+  const needsSignature = planServiceMode === "ONLINE";
+
+  const canConfirmBooking = useMemo(() => {
+    if (isCancelIntent) return true;
+    if (!consentChecked) return false;
+    if (needsSignature && !agreementSignature) return false;
+    return true;
+  }, [consentChecked, needsSignature, agreementSignature, isCancelIntent]);
+
   const didForceHelpRef = useRef(false);
 
-  // Filter modes based on role
   const availableModes = MODES.filter((m) => {
     if (m.id === "booking_agent") return isAuthenticated && user?.role === "STUDENT";
     if (m.id === "analyst") return isAuthenticated && user?.role && !["CONSULTANT", "HEAD_CONSULTANT"].includes(user.role);
-    return true; // Help center available to all
+    return true;
   });
+
   useEffect(() => {
-    // รอ AUTH load เสร็จก่อน + ต้องเป็น booking_agent + ยังไม่เคย force
     if (authLoading || isAuthenticated || mode !== "booking_agent" || didForceHelpRef.current) return;
     didForceHelpRef.current = true;
     push({
@@ -58,13 +78,12 @@ export default function AiChatInput({
     });
     onModeChange?.("help");
   }, [authLoading, isAuthenticated, mode, onModeChange, push]);
-  // Reset ref เมื่อ mode เปลี่ยน
+
   useEffect(() => { didForceHelpRef.current = false; }, [mode]);
 
   const [isModeOpen, setIsModeOpen] = useState(false);
   const selectedMode = availableModes.find((m) => m.id === mode) || availableModes[0] || MODES[0];
 
-  // Auto-resize textarea
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -72,7 +91,6 @@ export default function AiChatInput({
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
   }, [input]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (isModeOpen && !(event.target as Element).closest('.mode-selector')) {
@@ -84,145 +102,172 @@ export default function AiChatInput({
   }, [isModeOpen]);
 
   return (
-    <div className="w-full pb-6 pt-3">
-      {/* Container */}
-      <div className="mx-auto max-w-4xl px-6">
+    <div className="w-full pb-4">
+      <div className="mx-auto max-w-4xl">
 
-        {/* ✅ Confirmation Card (Floating above input) */}
+        {/* ✅ Confirmation Card — inline, fills chat width */}
         {mode === "booking_agent" && chat.agent?.confirmToken && (
-          <div className="mb-4 animate-in slide-in-from-bottom-5 fade-in zoom-in-95">
-            <div className="relative overflow-hidden rounded-2xl border border-indigo-100 bg-white p-4 shadow-xl">
-              <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-indigo-500 to-purple-500" />
+          <div className="mb-3 w-full animate-in slide-in-from-bottom-6 fade-in duration-400">
+            <div className="overflow-hidden rounded-2xl border border-indigo-200 bg-white shadow-xl">
 
-              <div className="flex items-start gap-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
-                  <CalendarCheck className="h-6 w-6" />
+              {/* Gradient top strip */}
+              <div className="h-1 w-full bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500" />
+
+              {/* ── Header ── */}
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
+                  <CalendarCheck className="h-5 w-5" />
                 </div>
-
-                <div className="flex-1">
-                  <h3 className="text-base font-semibold text-slate-900">
-                    {(chat.agent.plan as any)?.intent === "CANCEL"
-                      ? "ยืนยันการยกเลิกนัดหมาย?"
-                      : "ยืนยันการจองคิว?"}
-                  </h3>
-                  <p className="mt-1 text-sm text-slate-600">
-                    ระบบได้เตรียมข้อมูลการจองของคุณแล้ว กรุณาตรวจสอบและกดยืนยัน
+                <div className="flex-1 min-w-0">
+                  <p className="text-[15px] font-bold text-slate-800 leading-tight">
+                    {(chat.agent.plan as any)?.intent === "CANCEL" ? "ยืนยันการยกเลิกนัดหมาย" : "ยืนยันการจองคิว"}
                   </p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {isCardCollapsed ? "กด \"ขยาย\" เพื่อดูรายละเอียดและยืนยัน" : "ตรวจสอบข้อมูลด้านล่างและกดยืนยัน"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsCardCollapsed((v) => !v)}
+                  className="shrink-0 flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-[12px] font-semibold text-indigo-600 hover:bg-indigo-100 transition-colors focus:outline-none"
+                >
+                  {isCardCollapsed ? "ขยาย" : "ย่อ"}
+                  <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-300", isCardCollapsed && "rotate-180")} />
+                </button>
+              </div>
 
-                  {/* Optional: Show Plan Details if available */}
-                  {chat.agent.plan && (
-                    <div className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
-                      <div className="font-medium text-slate-900 mb-2">รายละเอียด:</div>
-                      <div className="space-y-1">
-                        {Object.entries(chat.agent.plan).map(([key, value]) => {
-                          const labels: Record<string, string> = {
-                            intent: "ความต้องการ",
-                            date: "วันที่",
-                            time: "เวลา",
-                            reason: "เหตุผล",
-                            topic: "หัวข้อ", // or "บริการ"
-                            service: "บริการ",
-                            consultant: "ผู้ให้คำปรึกษา",
-                            action: "การดำเนินการ",
+              {/* ── Accordion body (collapsible) ── */}
+              <div className={cn(
+                "grid transition-all duration-300 ease-in-out",
+                isCardCollapsed ? "grid-rows-[0fr] opacity-0 pointer-events-none" : "grid-rows-[1fr] opacity-100"
+              )}>
+                <div className="overflow-hidden min-h-0">
+                  {/* Scrollable content area */}
+                  <div className="overflow-y-auto max-h-[45vh] overscroll-contain">
+                    <div className="p-4 flex flex-col gap-4">
 
-                            // Booking specific (CamelCase & PascalCase support)
-                            timeRange: "ช่วงเวลา",
-                            TimeRange: "ช่วงเวลา",
-                            problemCategoryCode: "หมวดปัญหา",
-                            ProblemCategoryCode: "หมวดปัญหา",
-                            detailText: "รายละเอียดเพิ่มเติม",
-                            DetailText: "รายละเอียดเพิ่มเติม",
-                          };
-
-
-                          // Skip internal/empty keys if necessary
-                          if (!value) return null;
-
-                          // Normalize key for display
-                          const label = labels[key] ?? key;
-
-                          // Map intent/value values
-                          let displayValue = String(value);
-
-                          if (key === "intent" && value === "CANCEL") displayValue = "ยกเลิกนัดหมาย";
-                          if (key === "intent" && value === "BOOK") displayValue = "จองคิว";
-
-                          // ✅ Dynamic Map using categories list from server
-                          if (key.toLowerCase().includes("category")) {
-                            const codeStr = String(displayValue).trim().toUpperCase();
-                            const catObj = chat.agent?.categories?.find((c: any) =>
-                              String(c.code || "").trim().toUpperCase() === codeStr
-                            );
-                            if (catObj?.name) {
-                              displayValue = catObj.name;
+                      {/* Plan summary */}
+                      {chat.agent.plan && (() => {
+                        const labels: Record<string, string> = {
+                          intent: "ความต้องการ", date: "วันที่", time: "เวลา",
+                          reason: "เหตุผล", topic: "หัวข้อ", service: "บริการ",
+                          consultant: "ที่ปรึกษา", action: "การดำเนินการ",
+                          timeRange: "ช่วงเวลา", TimeRange: "ช่วงเวลา",
+                          problemCategoryCode: "หมวดปัญหา", ProblemCategoryCode: "หมวดปัญหา",
+                          detailText: "รายละเอียด", DetailText: "รายละเอียด",
+                          serviceMode: "รูปแบบ", onlineChannelCode: "ช่องทาง",
+                        };
+                        const entries = Object.entries(chat.agent.plan)
+                          .filter(([, v]) => !!v)
+                          .map(([key, value]) => {
+                            let dv = String(value);
+                            if (key === "intent") dv = dv === "CANCEL" ? "ยกเลิกนัดหมาย" : "จองคิว";
+                            if (key === "serviceMode") dv = dv === "ONLINE" ? "ออนไลน์" : dv === "ONSITE" ? "พบที่ศูนย์" : dv;
+                            if (key === "problemCategoryCode") {
+                              const c = chat.agent?.categories?.find((c: any) => String(c.code || "").toUpperCase() === dv.toUpperCase());
+                              if (c?.name) dv = c.name;
                             }
-                          }
-
-                          return (
-                            <div key={key} className="flex flex-col sm:flex-row sm:gap-2">
-                              {/* Label */}
-                              <span className="font-medium text-slate-500 min-w-[60px] capitalize">
-                                {label}:
-                              </span>
-                              {/* Value */}
-                              <span className="text-slate-800 break-words font-medium">
-                                {typeof value === "object"
-                                  ? JSON.stringify(value)
-                                  : displayValue}
-                              </span>
+                            if (key === "onlineChannelCode") {
+                              const c = chat.agent?.channels?.find((c: any) => String(c.code || "").toUpperCase() === dv.toUpperCase());
+                              if (c?.name) dv = c.name;
+                            }
+                            return { key, label: labels[key] ?? key, dv, value };
+                          });
+                        return (
+                          <div className="rounded-xl bg-gradient-to-br from-slate-50 to-indigo-50/40 border border-slate-100 p-4">
+                            <p className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.15em] mb-3">รายละเอียดนัดหมาย</p>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3">
+                              {entries.map(({ key, label, dv, value }) => (
+                                <div key={key} className="flex flex-col gap-0.5 min-w-0">
+                                  <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide">{label}</span>
+                                  <span className="text-[13px] font-semibold text-slate-700 break-words leading-snug">
+                                    {typeof value === "object" ? JSON.stringify(value) : dv}
+                                  </span>
+                                </div>
+                              ))}
                             </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+                          </div>
+                        );
+                      })()}
 
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    <button
-                      type="button"
-                      onClick={() => chat.confirmAgentAction()}
-                      disabled={isLoading}
-                      className={cn(
-                        "inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white shadow-sm disabled:opacity-50 transition-colors",
-                        (chat.agent.plan as any)?.intent === "CANCEL"
-                          ? "bg-red-600 hover:bg-red-700"
-                          : "bg-indigo-600 hover:bg-indigo-700"
-                      )}
-                    >
-                      {isLoading ? (
-                        <>กำลังยืนยัน...</>
-                      ) : (
-                        <>
-                          {(chat.agent.plan as any)?.intent === "CANCEL" ? (
-                            <XCircle className="h-4 w-4" />
-                          ) : (
-                            <CheckCircle2 className="h-4 w-4" />
+                      {/* Consent + Signature */}
+                      {chat.agent.plan && !isCancelIntent && (
+                        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+                          <div className="p-3">
+                            <ConsentBlock checked={consentChecked} onChange={setConsentChecked} />
+                          </div>
+                          {needsSignature && consentChecked && (
+                            <div className="border-t border-slate-100 animate-in slide-in-from-top-3 fade-in duration-300">
+                              <SignaturePad
+                                value={agreementSignature}
+                                onChange={setAgreementSignature}
+                                disabled={isLoading}
+                                className="h-[160px]"
+                              />
+                            </div>
                           )}
-                          {(chat.agent.plan as any)?.intent === "CANCEL"
-                            ? "ยืนยันการยกเลิก"
-                            : "ยืนยันการจอง"}
-                        </>
+                        </div>
                       )}
-                    </button>
 
-                    <button
-                      type="button"
-                      onClick={() => chat.reset()} // Or specialized cancel
-                      className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-red-600 transition-colors"
-                    >
-                      ยกเลิก
-                    </button>
+                    </div>
                   </div>
                 </div>
               </div>
+
+              {/* ── Footer — OUTSIDE accordion, always visible ── */}
+              {!isCardCollapsed && (
+                <div className="border-t border-slate-100 bg-white px-4 py-3 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const payload = isCancelIntent ? {} : {
+                        serviceMode: planServiceMode,
+                        onlineChannelCode: planOnlineChannel,
+                        consentChecked,
+                        agreementSignatureDataUrl: planServiceMode === "ONLINE" ? agreementSignature : null,
+                      };
+                      chat.confirmAgentAction(payload);
+                    }}
+                    disabled={isLoading || !canConfirmBooking}
+                    className={cn(
+                      "flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white shadow-lg transition-all active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed",
+                      (chat.agent.plan as any)?.intent === "CANCEL"
+                        ? "bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 shadow-red-200/50"
+                        : "bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 shadow-indigo-300/50"
+                    )}
+                  >
+                    {isLoading ? (
+                      <span className="flex items-center gap-2">
+                        <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                        กำลังยืนยัน...
+                      </span>
+                    ) : (
+                      <>
+                        {(chat.agent.plan as any)?.intent === "CANCEL"
+                          ? <XCircle className="h-4 w-4" />
+                          : <CheckCircle2 className="h-4 w-4" />}
+                        {(chat.agent.plan as any)?.intent === "CANCEL" ? "ยืนยันการยกเลิก" : "ยืนยันการจอง"}
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => chat.reset()}
+                    className="shrink-0 inline-flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-all active:scale-[0.97]"
+                  >
+                    ยกเลิก
+                  </button>
+                </div>
+              )}
+
             </div>
           </div>
         )}
 
-        {/* ✅ Question Options (NEW) */}
+        {/* ✅ Question Options */}
         {mode === "booking_agent" && !chat.agent?.confirmToken && chat.agent?.questions && chat.agent.questions.length > 0 && (
           <div className="mb-4 animate-in slide-in-from-bottom-5 fade-in zoom-in-95">
-            {chat.agent.questions.map((q, idx) => (
+            {chat.agent.questions.map((q: any, idx: number) => (
               q.options && q.options.length > 0 && (
                 <div key={idx} className="relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-2 md:p-2.5 shadow-sm">
                   <p className="mb-1 text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
@@ -251,10 +296,8 @@ export default function AiChatInput({
         )}
 
         <div className="flex flex-col gap-3">
-          {/* Input Box (Top) - Transparent background */}
+          {/* Input Box */}
           <div className="relative flex items-end gap-2 rounded-2xl bg-transparent border-2 border-slate-200 px-3 py-2 shadow-sm focus-within:border-indigo-400 focus-within:shadow-md transition-all">
-
-            {/* Textarea (Flexible) */}
             <div className="flex-1 min-w-0">
               <textarea
                 ref={textareaRef}
@@ -284,8 +327,6 @@ export default function AiChatInput({
                 style={{ minHeight: "32px" }}
               />
             </div>
-
-            {/* Send Button (Right) */}
             <div className="pb-0.5">
               <button
                 type="button"
@@ -304,9 +345,8 @@ export default function AiChatInput({
             </div>
           </div>
 
-          {/* Controls Row (Bottom) */}
+          {/* Controls Row */}
           <div className="flex items-center gap-3 px-2">
-            {/* Reset Button */}
             <button
               type="button"
               onClick={reset}
@@ -317,7 +357,6 @@ export default function AiChatInput({
               <span>รีเซ็ต</span>
             </button>
 
-            {/* Mode Selector Dropdown */}
             <div className="relative mode-selector">
               <button
                 onClick={() => setIsModeOpen(!isModeOpen)}
@@ -328,24 +367,21 @@ export default function AiChatInput({
                 <ChevronDown className={cn("h-3 w-3 text-slate-400 transition-transform", isModeOpen && "rotate-180")} />
               </button>
 
-              {/* Custom Dropdown (Drop-up) */}
               {isModeOpen && (
                 <div className="absolute bottom-full left-0 mb-2 z-50 min-w-[180px] overflow-hidden rounded-xl border border-slate-100 bg-white p-1 shadow-xl animate-in fade-in zoom-in-95 slide-in-from-bottom-2">
                   {availableModes.map((m) => (
                     <button
                       key={m.id}
                       onClick={() => {
-                        // ✅ Auth Check
                         if (m.id === "booking_agent" && !isAuthenticated) {
                           push({
-                            type: "warning", // Or 'error'
+                            type: "warning",
                             title: "กรุณาเข้าสู่ระบบ",
                             message: "ฟีเจอร์จองคิวเปิดให้ใช้งานเฉพาะผู้ที่เข้าสู่ระบบแล้วเท่านั้น",
                           });
                           setIsModeOpen(false);
                           return;
                         }
-
                         onModeChange?.(m.id as AiChatMode);
                         setIsModeOpen(false);
                       }}

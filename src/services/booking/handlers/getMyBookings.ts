@@ -49,7 +49,7 @@ export async function getMyBookings(params: GetMyBookingsParams) {
       where.booking_status = statusFilter;
     }
 
-    const [total, bookings] = await prisma.$transaction([
+    const [total, bookings, trustStatus, pendingGlobalException] = await prisma.$transaction([
       prisma.booking.count({ where }),
       prisma.booking.findMany({
         where,
@@ -59,11 +59,28 @@ export async function getMyBookings(params: GetMyBookingsParams) {
           BookingSession: { include: { onlineChannel: true } },
           onlineChannel: true,
           feedback: { select: { feedback_id: true } },
+          exceptionRequest: { select: { booking_exception_request_id: true, booking_exception_status: true, booking_exception_decision_note: true } },
         },
         orderBy: { booking_created_at: "desc" },
         skip,
         take: l,
       }),
+      prisma.studentTrustStatus.findUnique({
+        where: {
+          university_id_student_id: {
+            university_id: activeUniversityId,
+            student_id: student.student_id,
+          }
+        }
+      }),
+      prisma.bookingExceptionRequest.findFirst({
+        where: {
+          university_id: activeUniversityId,
+          student_id: student.student_id,
+          booking_exception_status: "PENDING_REVIEW",
+        },
+        select: { booking_exception_request_id: true },
+      })
     ]);
 
     const items = bookings.map((b) => {
@@ -94,10 +111,13 @@ export async function getMyBookings(params: GetMyBookingsParams) {
         consultantOrg: null,
         session,
         hasFeedback: !!(b as any).feedback,
+        hasExceptionRequest: !!(b as any).exceptionRequest,
+        exceptionRequestStatus: (b as any).exceptionRequest?.booking_exception_status ?? null,
+        exceptionRequestNote: (b as any).exceptionRequest?.booking_exception_decision_note ?? null,
       };
     });
 
-    return { items, total };
+    return { items, total, trustStatus, hasPendingGlobalException: !!pendingGlobalException };
   }
 
   // ---------------- CONSULTANT / HEAD_CONSULTANT ----------------

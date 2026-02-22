@@ -141,7 +141,7 @@ export function SignaturePad({
         </button>
       </div>
 
-      <div className="h-[220px] rounded-xl border border-gray-200 bg-white overflow-hidden relative">
+      <div className="flex-1 min-h-[140px] rounded-xl border border-gray-200 bg-white overflow-hidden relative">
         <canvas
           ref={canvasRef}
           className={cn("w-full h-full touch-none", disabled && "opacity-60")}

@@ -9,6 +9,7 @@ export interface TimeSlotCardProps {
   slot: TimeSlotCore;
   onSelect: () => void;
   disabled?: boolean;
+  isLocked?: boolean;
   showEndTime?: boolean;
 }
 
@@ -18,24 +19,28 @@ type BadgeVariant =
   | "blocked"
   | "past"
   | "closed"
-  | "unavailable";
+  | "unavailable"
+  | "locked";
 
 export function TimeSlotCard({
   slot,
   onSelect,
   disabled = false,
+  isLocked = false,
   showEndTime = true,
 }: TimeSlotCardProps) {
   const total = Number(slot.maxCapacity ?? 1);
   const booked = Number(slot.bookedCount ?? 0);
   const queueText = `${booked}/${total}`;
 
-  const isAvailable = slot.isAvailable && !disabled;
+  const isAvailable = slot.isAvailable && !disabled && !isLocked;
 
   const reason =
-    disabled
-      ? "BLOCKED_ACTIVE_BOOKING"
-      : slot.unavailableReason ??
+    isLocked
+      ? "LOCKED"
+      : disabled
+        ? "BLOCKED_ACTIVE_BOOKING"
+        : slot.unavailableReason ??
         (slot.isPastTime ? "PAST_TIME" : null);
 
   const badge = (() => {
@@ -73,6 +78,12 @@ export function TimeSlotCard({
           icon: <AlertTriangle className="w-3.5 h-3.5" />,
           text: "มีคิวค้าง",
         };
+      case "LOCKED":
+        return {
+          variant: "locked" as BadgeVariant,
+          icon: <AlertTriangle className="w-3.5 h-3.5" />,
+          text: "ถูกระงับสิทธิ์",
+        };
       default:
         return {
           variant: "unavailable" as BadgeVariant,
@@ -88,6 +99,7 @@ export function TimeSlotCard({
     past: "bg-slate-200 text-slate-700",
     closed: "bg-slate-200 text-slate-700",
     blocked: "bg-amber-100 text-amber-700",
+    locked: "bg-red-100 text-red-700",
     unavailable: "bg-gray-200 text-gray-700",
   }[badge.variant];
 

@@ -5,6 +5,7 @@
 import React from "react";
 import { ChevronDown, Loader2, Send, Link as LinkIcon, Clock, User, Info, Edit, Phone } from "lucide-react";
 import type { Job } from "../types";
+import { AttendancePanel } from "./AttendancePanel";
 
 function StatusBadge({ status }: { status: Job["status"] }) {
   if (status === "PENDING_ASSIGNMENT") {
@@ -83,6 +84,7 @@ export function JobItem({
   expanded,
   onToggle,
   onAction,
+  onRefresh,
   onEditChannel,
   isActing,
 }: {
@@ -90,6 +92,7 @@ export function JobItem({
   expanded: boolean;
   onToggle: () => void;
   onAction: () => void;
+  onRefresh: () => void;
   onEditChannel?: (job: Job) => void;
   isActing: boolean;
 }) {
@@ -282,6 +285,15 @@ export function JobItem({
                   <p className="text-sm text-slate-500 italic">ยังไม่ได้ตั้งค่าช่องทางออนไลน์</p>
                 )}
               </div>
+            )}
+
+            {/* Attendance Panel */}
+            {(job.status === "IN_PROGRESS" || job.attendanceStatus) && (
+              <AttendancePanel
+                bookingId={job.id}
+                currentStatus={job.attendanceStatus}
+                onSuccess={onRefresh}
+              />
             )}
           </div>
         </div>

@@ -3,6 +3,7 @@
 import { useMyAppointments } from "@/features/booking/hooks/useMyAppointments";
 import { MyAppointmentCard } from "@/features/booking/components/shared/MyAppointmentCard";
 import { BookingFeedbackModal } from "@/features/booking/components/shared/BookingFeedbackModal";
+import { BookingExceptionRequestModal } from "@/features/booking/components/shared/BookingExceptionRequestModal";
 import { Card, LoadingSpinner } from "@/components/ui";
 import { History, Inbox } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
@@ -27,7 +28,7 @@ function safeDate(raw: any): Date | null {
 }
 
 export function BookingHistoryPageClient() {
-  const { pastBookings = [], isLoading, refetch } = useMyAppointments({
+  const { pastBookings = [], isLoading, refetch, hasPendingGlobalException } = useMyAppointments({
     statusGroup: "HISTORY",
     limit: 100, // Reasonable limit for a single page/initial view
   });
@@ -46,6 +47,20 @@ export function BookingHistoryPageClient() {
   const closeFeedback = () => {
     setFeedbackOpen(false);
     setFeedbackBookingId(null);
+  };
+
+  // ✅ Exception Request modal state
+  const [exceptionOpen, setExceptionOpen] = useState(false);
+  const [exceptionBookingId, setExceptionBookingId] = useState<number | null>(null);
+
+  const openException = (bookingId: number) => {
+    setExceptionBookingId(bookingId);
+    setExceptionOpen(true);
+  };
+
+  const closeException = () => {
+    setExceptionOpen(false);
+    setExceptionBookingId(null);
   };
 
   function toYMD(d: Date) {
@@ -209,10 +224,12 @@ export function BookingHistoryPageClient() {
                         booking={booking}
                         isCompact
                         isExpanded={isExpanded}
+                        globalExceptionPending={hasPendingGlobalException}
                         onToggle={() =>
                           setExpandedId(isExpanded ? null : (booking.bookingId ?? booking.id))
                         }
                         onFeedback={() => openFeedback(booking.bookingId ?? booking.id)}
+                        onExceptionRequest={() => openException(booking.bookingId ?? booking.id)}
                       />
                     </div>
                   );
@@ -230,7 +247,7 @@ export function BookingHistoryPageClient() {
                 >
                   kก่อนหน้า
                 </button>
-                
+
                 {Array.from({ length: totalPages }, (_, i) => i + 1)
                   .map((p) => {
                     // Show current, first, last, and surrounding pages logic could go here
@@ -244,11 +261,10 @@ export function BookingHistoryPageClient() {
                         <button
                           key={p}
                           onClick={() => setCurrentPage(p)}
-                          className={`w-8 h-8 flex items-center justify-center text-sm rounded-md border ${
-                            currentPage === p
-                              ? "bg-primary-600 text-white border-primary-600"
-                              : "hover:bg-gray-50 text-gray-700"
-                          }`}
+                          className={`w-8 h-8 flex items-center justify-center text-sm rounded-md border ${currentPage === p
+                            ? "bg-primary-600 text-white border-primary-600"
+                            : "hover:bg-gray-50 text-gray-700"
+                            }`}
                         >
                           {p}
                         </button>
@@ -289,7 +305,16 @@ export function BookingHistoryPageClient() {
         bookingId={feedbackBookingId}
         onClose={closeFeedback}
         onSuccess={() => {
-          // ✅ รีเฟรช list เพื่อให้ hasFeedback อัปเดต + ปุ่มหายไป
+          if (typeof refetch === "function") refetch();
+        }}
+      />
+
+      {/* ✅ Exception Request Modal */}
+      <BookingExceptionRequestModal
+        isOpen={exceptionOpen}
+        bookingId={exceptionBookingId}
+        onClose={closeException}
+        onSuccess={() => {
           if (typeof refetch === "function") refetch();
         }}
       />

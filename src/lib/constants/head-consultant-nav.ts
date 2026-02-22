@@ -29,4 +29,9 @@ export const HEAD_CONSULTANT_NAV: NavItem[] = [
     label: "จัดการตารางเวลา",
     icon: Clock,
   },
+  {
+    href: "/head-consultant/exception-requests",
+    label: "ขอยกเว้นโทษ (นศ)",
+    icon: BookCheck,
+  },
 ];

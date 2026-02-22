@@ -27,7 +27,11 @@ export async function POST(req: NextRequest) {
       confirmToken,
       activeUniversityId,
       accountStudentId: account.studentId,
-      accountId: account.accountId, // ✅ เพิ่ม
+      accountId: account.accountId,
+      serviceMode: body?.serviceMode,
+      onlineChannelCode: body?.onlineChannelCode,
+      consentChecked: body?.consentChecked,
+      agreementSignatureDataUrl: body?.agreementSignatureDataUrl,
     });
 
     return NextResponse.json(result, { status: 200 });

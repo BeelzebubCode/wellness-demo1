@@ -26,6 +26,11 @@ export type MyBookingApiRow = {
   preferredOnlineChannel?: string | null;
   phoneNumber?: string | null;
 
+  /** ✅ เพิ่ม: การเข้าพบ */
+  attendanceStatus?: string | null;
+  attendanceNote?: string | null;
+  attendanceLateMinutes?: number | null;
+
   universityName?: string | null;
   universityCode?: string | null;
 };
@@ -46,6 +51,11 @@ export type Job = {
   onlineChannelNote?: string | null;
   preferredOnlineChannel?: string | null;
   phoneNumber?: string | null;
+
+  /** ✅ เพิ่ม: การเข้าพบ */
+  attendanceStatus?: string | null;
+  attendanceNote?: string | null;
+  attendanceLateMinutes?: number | null;
 
   universityName?: string | null;
   universityCode?: string | null;

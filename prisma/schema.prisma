@@ -58,6 +58,7 @@ model University {
   advisors          Advisor[]
   timeSlots         TimeSlot[]
   bookings          Booking[]
+  shiftTeams        ConsultantShiftTeam[]
 
   aiKbDocuments    AiKbDocument[]    @relation("UniversityAiKbDocuments")
   aiKbChunks       AiKbChunk[]       @relation("UniversityAiKbChunks")
@@ -139,7 +140,9 @@ model Account {
 
   BookingSession BookingSession[]
 
-  borrowAvailabilities ConsultantBorrowAvailability[]
+  borrowAvailabilities     ConsultantBorrowAvailability[]
+  bookingAttendances       BookingAttendance[]            @relation("AttendanceMarkedBy")
+  bookingExceptionRequests BookingExceptionRequest[]      @relation("ExceptionReviewedBy")
 
   @@index([account_role])
   @@index([account_home_university_id])
@@ -169,6 +172,10 @@ model Student {
   pointWallet         StudentPointWallet?
   pointTransactions   StudentPointTransaction[]
   agreementSignatures BookingAgreementSignature[]
+
+  // Exception & Attendance
+  trustStatus       StudentTrustStatus?
+  exceptionRequests BookingExceptionRequest[]
 
   @@unique([university_id, student_id])
   @@unique([university_id, student_code])
@@ -359,6 +366,7 @@ model Consultant {
   account_id            Int      @unique
   university_id         Int
   organization_id       Int
+  shift_team_id         Int? // [NEW] 1=Days 1-14, 2=Days 15-28, 3=Days 29-42, 4=Days 43-56
   consultant_created_at DateTime @default(now())
 
   bookings Booking[]
@@ -373,8 +381,10 @@ model Consultant {
   feedbacks         Feedback[]
   borrowAssignments BorrowAssignment[]
 
-  BookingAssignment    BookingAssignment[]
-  borrowAvailabilities ConsultantBorrowAvailability[]
+  BookingAssignment                BookingAssignment[]
+  borrowAvailabilities             ConsultantBorrowAvailability[]
+  consultantShiftTeam              ConsultantShiftTeam?           @relation(fields: [consultantShiftTeamShift_team_id], references: [shift_team_id])
+  consultantShiftTeamShift_team_id Int?
 
   @@unique([university_id, consultant_id])
   @@index([organization_id])
@@ -425,6 +435,23 @@ model Organization {
   consultants       Consultant[]
 
   @@map("organization")
+}
+
+// ==========================================
+// 🛡️ CONSULTANT SHIFT TEAM (ผูกมหาลัย)
+// ==========================================
+model ConsultantShiftTeam {
+  shift_team_id Int    @id @default(autoincrement())
+  university_id Int
+  team_name     String @db.VarChar(50) // e.g. "ทีม 1"
+  team_order    Int    @default(1) // 1, 2, 3, 4
+
+  consultants Consultant[]
+  university  University   @relation(fields: [university_id], references: [university_id])
+
+  @@unique([university_id, team_name])
+  @@unique([university_id, team_order])
+  @@map("consultant_shift_team")
 }
 
 // ==========================================
@@ -530,6 +557,10 @@ model Booking {
   pointTransactions  StudentPointTransaction[]  @relation("BookingPointTx")
   agreementSignature BookingAgreementSignature?
   BookingSession     BookingSession?
+
+  // Exception & Attendance
+  attendance       BookingAttendance?
+  exceptionRequest BookingExceptionRequest?
 
   @@id([university_id, booking_id])
   // @@unique([university_id, student_id, time_slot_id]) -- Removed to allow re-booking after cancellation
@@ -849,6 +880,104 @@ model StudentPointTransaction {
 }
 
 // ==========================================
+// EXCEPTION & ATTENDANCE
+// ==========================================
+
+model StudentTrustStatus {
+  student_id                      Int
+  university_id                   Int
+  student_trust_term_code         String?   @db.VarChar(20)
+  student_trust_score             Int       @default(100)
+  student_trust_late_cancel_count Int       @default(0)
+  student_trust_no_show_count     Int       @default(0)
+  student_trust_locked_until      DateTime? @db.Timestamptz(3)
+  student_trust_updated_at        DateTime  @updatedAt
+
+  student Student @relation(fields: [university_id, student_id], references: [university_id, student_id])
+
+  @@id([university_id, student_id])
+  @@index([student_trust_locked_until])
+  @@map("student_trust_status")
+}
+
+model BookingAttendance {
+  university_id                    Int
+  booking_id                       Int
+  booking_attendance_status        AttendanceStatus @default(PENDING)
+  booking_attendance_checked_in_at DateTime?        @db.Timestamptz(3)
+  booking_attendance_late_minutes  Int?
+  booking_attendance_note          String?          @db.Text
+  booking_attendance_marked_by_id  Int?
+  booking_attendance_marked_at     DateTime?        @db.Timestamptz(3)
+
+  booking  Booking  @relation(fields: [university_id, booking_id], references: [university_id, booking_id], onDelete: Cascade)
+  markedBy Account? @relation("AttendanceMarkedBy", fields: [booking_attendance_marked_by_id], references: [account_id])
+
+  @@id([university_id, booking_id])
+  @@index([booking_attendance_status])
+  @@map("booking_attendance")
+}
+
+model BookingExceptionRequest {
+  booking_exception_request_id     Int             @id @default(autoincrement())
+  university_id                    Int
+  booking_id                       Int
+  student_id                       Int
+  booking_exception_reason_code    String          @db.VarChar(50)
+  booking_exception_reason_detail  String          @db.Text
+  booking_exception_status         ExceptionStatus @default(DRAFT)
+  booking_exception_deadline_at    DateTime?       @db.Timestamptz(3)
+  booking_exception_requested_at   DateTime        @default(now()) @db.Timestamptz(3)
+  booking_exception_submitted_at   DateTime?       @db.Timestamptz(3)
+  booking_exception_reviewed_by_id Int?
+  booking_exception_reviewed_at    DateTime?       @db.Timestamptz(3)
+  booking_exception_decision_note  String?         @db.Text
+
+  booking    Booking                    @relation(fields: [university_id, booking_id], references: [university_id, booking_id])
+  student    Student                    @relation(fields: [university_id, student_id], references: [university_id, student_id])
+  reviewedBy Account?                   @relation("ExceptionReviewedBy", fields: [booking_exception_reviewed_by_id], references: [account_id])
+  evidences  BookingExceptionEvidence[]
+
+  @@unique([university_id, booking_id])
+  @@index([booking_exception_status, booking_exception_requested_at])
+  @@index([booking_exception_reviewed_by_id, booking_exception_reviewed_at])
+  @@map("booking_exception_request")
+}
+
+model BookingExceptionEvidence {
+  booking_exception_evidence_id          Int      @id @default(autoincrement())
+  booking_exception_request_id           Int
+  booking_exception_evidence_url         String   @db.Text
+  booking_exception_evidence_name        String?  @db.VarChar(255)
+  booking_exception_evidence_type        String?  @db.VarChar(50)
+  booking_exception_evidence_size        Int?
+  booking_exception_evidence_uploaded_at DateTime @default(now()) @db.Timestamptz(3)
+
+  request BookingExceptionRequest @relation(fields: [booking_exception_request_id], references: [booking_exception_request_id], onDelete: Cascade)
+
+  @@index([booking_exception_request_id])
+  @@map("booking_exception_evidence")
+}
+
+model BookingDisciplineLog {
+  booking_discipline_log_id        Int                 @id @default(autoincrement())
+  university_id                    Int
+  student_id                       Int
+  booking_id                       Int?
+  booking_discipline_event_type    DisciplineEventType
+  booking_discipline_delta_score   Int?
+  booking_discipline_delta_points  Int?
+  booking_discipline_lock_until    DateTime?           @db.Timestamptz(3)
+  booking_discipline_note          String?             @db.Text
+  booking_discipline_created_by_id Int?
+  booking_discipline_created_at    DateTime            @default(now()) @db.Timestamptz(3)
+
+  @@index([university_id, student_id])
+  @@index([booking_discipline_event_type, booking_discipline_created_at])
+  @@map("booking_discipline_log")
+}
+
+// ==========================================
 // AI KNOWLEDGE BASE
 // ==========================================
 
@@ -969,11 +1098,8 @@ model AiFeedbackEvent {
   ai_feedback_type      AiFeedbackType
   ai_user_question_text String         @db.Text
 
-  ai_assistant_reply_excerpt String? @db.VarChar(500)
-  ai_top_document_keys       Json?
-  ai_debug_meta              Json?
-
-  ai_feedback_status AiFeedbackStatus @default(OPEN)
+  ai_assistant_reply_excerpt String?          @db.VarChar(500)
+  ai_feedback_status         AiFeedbackStatus @default(OPEN)
 
   /// ถ้าจบเคสแล้วว่า "ควรแก้เอกสารไหน" ก็ชี้กลับไป
   ai_resolved_document_id Int?
@@ -1293,4 +1419,44 @@ enum UniversityType {
   SUPERVISED //มหาวิทยาลัยในกำกับ (26 แห่ง)
   PUBLIC // มหาวิทยาลัยรัฐ (57 แห่ง)
   PRIVATE // มหาวิทยาลัยเอกชน (72 แห่ง)
+}
+
+enum AttendanceStatus {
+  PENDING
+  CHECKED_IN
+  LATE
+  NO_SHOW
+  CANCELLED_BY_CONSULTANT
+}
+
+enum ExceptionStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum DisciplineEventType {
+  LATE_CANCEL_PENALTY
+  NO_SHOW_PENALTY
+  EXCEPTION_APPROVED_ROLLBACK
+  MANUAL_UNLOCK
+}
+
+// ==========================================
+// 📄 DOCUMENT MANAGEMENT
+// ==========================================
+
+model Document {
+  document_id        Int     @id @default(autoincrement())
+  document_slug      String  @unique @db.VarChar(100)
+  document_title     String  @db.VarChar(200)
+  document_content   String  @db.Text
+  document_is_active Boolean @default(true)
+  document_order     Int     @default(0)
+
+  document_created_at DateTime @default(now())
+  document_updated_at DateTime @updatedAt
+
+  @@map("document")
 }

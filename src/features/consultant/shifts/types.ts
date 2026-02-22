@@ -20,11 +20,20 @@ export interface BorrowShift {
   completedAt: string | null;
 }
 
+export interface ShiftCycleConfig {
+  epochDate: string;
+  cycleDays: number;
+  teamLengthDays: number;
+}
+
 export interface MyScheduleResponse {
   success: boolean;
   data?: {
-    currentShift: BorrowShift | null; // e.g. ACTIVE
-    historyShifts: BorrowShift[];     // e.g. COMPLETED / CANCELLED
+    teamId: number | null;
+    teamOrder: number | null;
+    teamName: string | null;
+    config: ShiftCycleConfig;
+    borrowShifts: BorrowShift[];
   };
   error?: string;
 }

@@ -38,22 +38,37 @@ export function buildProgressCard(input: {
   timeRange: string;
   categoryName?: string | null;
   detailText?: string | null;
+  serviceMode?: string | null;
+  onlineChannelCode?: string | null;
 }) {
-  const { dateISO, timeRange, categoryName, detailText } = input;
+  const { dateISO, timeRange, categoryName, detailText, serviceMode, onlineChannelCode } = input;
 
-  const dateLine = `✅ วันที่: **${fmtThaiDateLong(dateISO)}** (${dateISO})`;
-  const timeLine = `✅ ช่วงเวลา: **${fmtTimeRangeLabel(timeRange)}**`;
+  const dateLine = `- ✅ **วันที่:** ${fmtThaiDateLong(dateISO)} (${dateISO})`;
+  const timeLine = `- ✅ **ช่วงเวลา:** ${fmtTimeRangeLabel(timeRange)}`;
 
   const catLine = categoryName
-    ? `✅ หมวดปัญหา: **${categoryName}**`
-    : `❌ หมวดปัญหา: _ยังไม่ระบุ_`;
+    ? `- ✅ **หมวดปัญหา:** ${categoryName}`
+    : `- ❌ **หมวดปัญหา:** _ยังไม่ระบุ_`;
 
   const detailLine =
     detailText && detailText.trim().length >= 5
-      ? `✅ ปัญหาโดยย่อ: “${detailText.trim()}”`
-      : `❌ ปัญหาโดยย่อ: _ยังไม่ระบุ_`;
+      ? `- ✅ **ปัญหาโดยย่อ:** “${detailText.trim()}”`
+      : `- ❌ **ปัญหาโดยย่อ:** _ยังไม่ระบุ_`;
 
-  return [`**สรุปที่ผมเข้าใจตอนนี้**`, dateLine, timeLine, catLine, detailLine].join("\n");
+  let modeLine = "";
+  if (serviceMode === "ONLINE") {
+    if (onlineChannelCode) {
+      modeLine = `- ✅ **รูปแบบการรเข้าพบ:** ออนไลน์ (ผ่าน ${onlineChannelCode})`;
+    } else {
+      modeLine = `- ❌ **รูปแบบการเข้าพบ:** ออนไลน์ (_ยังไม่ระบุช่องทาง_)`;
+    }
+  } else if (serviceMode === "ONSITE") {
+    modeLine = `- ✅ **รูปแบบการเข้าพบ:** พบที่ศูนย์ (On-site)`;
+  } else {
+    modeLine = `- ❌ **รูปแบบการเข้าพบ:** _ยังไม่ระบุ_`;
+  }
+
+  return [`**📋 สรุปที่ผมเข้าใจตอนนี้:**`, dateLine, timeLine, catLine, detailLine, modeLine].join("\n");
 }
 
 export function replyNeedField(args: {

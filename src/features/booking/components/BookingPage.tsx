@@ -104,11 +104,16 @@ export function BookingPage({ universityId }: { universityId?: number }) {
 
   const { slots, loading, error, refetch } = useTimeSlots(dateStr, universityId);
   const { submitBooking, loading: bookingLoading, error: bookingError } = useBooking(universityId);
-  const { activeBooking: existingActiveBooking, isLoading: appointmentsLoading, refetch: refetchAppointments } = useMyAppointments({
+  const { activeBooking: existingActiveBooking, trustStatus, isLoading: appointmentsLoading, refetch: refetchAppointments } = useMyAppointments({
     universityId,
     statusGroup: "ACTIVE",
     limit: 5,
   });
+
+  const isLocked = useMemo(() => {
+    if (!trustStatus?.student_trust_locked_until) return false;
+    return new Date(trustStatus.student_trust_locked_until) > new Date();
+  }, [trustStatus]);
 
   // Computed values (memoized)
   const hasActiveBooking = useMemo(() => {
@@ -300,8 +305,18 @@ export function BookingPage({ universityId }: { universityId?: number }) {
             </div>
             {/* Slot content — scrollable */}
             <div className="flex-1 min-h-0 overflow-y-auto p-3 scrollbar-thin">
-              {hasActiveBooking ? (
-                <div className="mb-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+              {isLocked ? (
+                <div className="mb-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg p-3 shadow-sm flex gap-2 items-start">
+                  <Info className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold">ท่านถูกระงับสิทธิ์การจองชั่วคราว</span>
+                    <br />
+                    จนถึงวันที่ {new Date(trustStatus.student_trust_locked_until).toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })} เวลา {new Date(trustStatus.student_trust_locked_until).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })} น. เนื่องจากผิดนัดหมายหรือยกเลิกกระชั้นชิด เกินจำนวนที่กำหนด
+                  </div>
+                </div>
+              ) : hasActiveBooking ? (
+                <div className="mb-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5 flex items-center gap-2">
+                  <Info className="w-4 h-4 text-amber-600 shrink-0" />
                   คุณมีการจองที่กำลังดำเนินการอยู่ (คิวค้าง) กรุณารอให้เสร็จสิ้นหรือยกเลิกก่อนจองใหม่
                 </div>
               ) : null}
@@ -310,9 +325,10 @@ export function BookingPage({ universityId }: { universityId?: number }) {
                 selectedDate={selectedDate}
                 slots={filtered}
                 isLoading={loading || isPending}
-                hasActiveBooking={hasActiveBooking}
+                hasActiveBooking={hasActiveBooking && !isLocked}
+                isLocked={isLocked}
                 onSelectSlot={(s) => {
-                  if (hasActiveBooking) return;
+                  if (hasActiveBooking || isLocked) return;
                   setSelectedSlot(s);
                   setConfirmOpen(true);
                 }}

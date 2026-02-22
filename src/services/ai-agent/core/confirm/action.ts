@@ -10,6 +10,10 @@ export async function confirmAgentAction(args: {
   activeUniversityId: number;
   accountStudentId: number;
   accountId: number;
+  serviceMode?: string;
+  onlineChannelCode?: string | null;
+  consentChecked?: boolean;
+  agreementSignatureDataUrl?: string | null;
 }) {
   const { confirmToken, activeUniversityId, accountStudentId, accountId } = args;
 
@@ -33,6 +37,12 @@ export async function confirmAgentAction(args: {
   return await confirmBookingPlan({
     activeUniversityId,
     studentId: accountStudentId,
-    payload,
+    payload: {
+      ...payload,
+      serviceMode: args.serviceMode,
+      onlineChannelCode: args.onlineChannelCode,
+      consentChecked: args.consentChecked,
+      agreementSignatureDataUrl: args.agreementSignatureDataUrl,
+    },
   });
 }

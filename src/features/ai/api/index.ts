@@ -8,9 +8,10 @@ export const aiApi = {
     return postJson<AiChatResponse>(endpoint, input);
   },
 
-  bookingConfirm(confirmToken: string) {
+  bookingConfirm(confirmToken: string, payload?: any) {
     return postJson<AiChatResponse>("/api/v2/agent/booking/confirm", {
       confirmToken,
+      ...payload,
     });
   },
 

@@ -10,6 +10,8 @@ export function useMyAppointments(opts?: { universityId?: number; statusGroup?: 
   const { universityId, statusGroup = "ALL", limit = 50 } = opts ?? {};
   const [items, setItems] = useState<MyBookingDto[]>([]);
   const [total, setTotal] = useState(0); // ✅ Total from server
+  const [trustStatus, setTrustStatus] = useState<any>(null); // ✅ Expose StudentTrustStatus
+  const [hasPendingGlobalException, setHasPendingGlobalException] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,6 +30,8 @@ export function useMyAppointments(opts?: { universityId?: number; statusGroup?: 
       if (resp.success === true) {
         setItems(Array.isArray(resp.items) ? resp.items : []);
         setTotal(resp.total ?? 0);
+        setTrustStatus(resp.trustStatus ?? null);
+        setHasPendingGlobalException((resp as any).hasPendingGlobalException ?? false);
       } else {
         setError(resp.error || "Failed to load appointments");
       }
@@ -57,6 +61,8 @@ export function useMyAppointments(opts?: { universityId?: number; statusGroup?: 
   return {
     items,
     total, // ✅ Return total
+    trustStatus, // ✅ Return trustStatus for frontend guarding
+    hasPendingGlobalException, // ✅ Global exception flag
     activeBooking,
     pastBookings,
 

@@ -6,8 +6,6 @@ import { Spinner } from "@/components/ui/Spinner";
 import ChatMessage from "./ChatMessage";
 import { AiChatMode } from "./AiChatCore";
 import { cn } from "@/lib/cn";
-
-// ✅ ใช้ theme ตัวเดียวกันทั้งแชท (ถ้าคุณยังใช้ชื่อ aiChatTypography ก็เปลี่ยนชื่อไฟล์ให้ตรง)
 import styles from "./aiChatTheme.module.css";
 
 type Props = {
@@ -55,9 +53,27 @@ const AiChatMessages = forwardRef<HTMLDivElement, Props>(
             </div>
           ) : (
             <div className="space-y-3">
-              {messages.map((m, i) => (
-                <ChatMessage key={i} role={m.role} content={m.content} />
-              ))}
+              {messages.map((m, i) => {
+                // Find the most recent user question before this AI message
+                let userQuestion: string | undefined;
+                if (m.role === "assistant") {
+                  for (let j = i - 1; j >= 0; j--) {
+                    if (messages[j].role === "user") {
+                      userQuestion = messages[j].content;
+                      break;
+                    }
+                  }
+                }
+
+                return (
+                  <ChatMessage
+                    key={i}
+                    role={m.role}
+                    content={m.content}
+                    userQuestion={userQuestion}
+                  />
+                );
+              })}
 
               {isLoading && (
                 <div className={cn("flex items-center gap-2 px-1 text-slate-500", styles.hintList)}>

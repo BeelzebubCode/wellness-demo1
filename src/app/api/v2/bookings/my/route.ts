@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get("limit") ?? "50");
     const statusGroup = (searchParams.get("statusGroup") as any) ?? "ALL";
 
-    const { items, total } = await getMyBookings({
+    const { items, total, trustStatus } = await getMyBookings({
       accountId: account.accountId,
       activeUniversityId,
       role,
@@ -34,6 +34,7 @@ export async function GET(req: NextRequest) {
       // New standardized pagination fields
       items,
       total,
+      trustStatus,
       page,
       limit,
       

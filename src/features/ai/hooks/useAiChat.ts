@@ -19,6 +19,7 @@ type AgentState = {
   missingFields?: string[];
   questions?: AgentQuestion[];
   categories?: any[];          // ✅ added categories list
+  channels?: any[];            // ✅ added channels list
 };
 
 function pickConfirmToken(data: any): string | null {
@@ -59,14 +60,14 @@ export function useAiChat(input: { mode: Mode; onConfirmed?: () => void }) {
 
     setError(null);
     setIsLoading(true);
-    
+
     // ✅ Keep intent for continuity
     const currentIntent = agent?.intent;
     setAgent(null); // กันกด confirm เก่า
 
     const nextMessages: UiMsg[] = [...messages, { role: "user", content: userText }];
     setMessages(nextMessages);
-    setText(""); 
+    setText("");
 
     try {
       const intent: AgentIntent = mode === "booking_agent" ? detectIntent(userText, currentIntent) : "BOOK";
@@ -98,6 +99,7 @@ export function useAiChat(input: { mode: Mode; onConfirmed?: () => void }) {
           missingFields: Array.isArray((data as any)?.missingFields) ? (data as any).missingFields : [],
           questions: Array.isArray((data as any)?.questions) ? (data as any).questions : [],
           categories: Array.isArray((data as any)?.categories) ? (data as any).categories : [], // ✅ Capture categories
+          channels: Array.isArray((data as any)?.channels) ? (data as any).channels : [], // ✅ Capture channels
         });
       }
     } catch (e: any) {
@@ -111,7 +113,7 @@ export function useAiChat(input: { mode: Mode; onConfirmed?: () => void }) {
     sendMessage(text);
   }, [sendMessage, text]);
 
-  const confirmAgentAction = useCallback(async () => {
+  const confirmAgentAction = useCallback(async (payload?: any) => {
     if (mode !== "booking_agent") return;
     if (!agent?.confirmToken) return;
     if (isLoading) return;
@@ -121,7 +123,7 @@ export function useAiChat(input: { mode: Mode; onConfirmed?: () => void }) {
 
     try {
       // ✅ confirm กลางอันเดียว
-      const data = await aiApi.bookingConfirm(agent.confirmToken);
+      const data = await aiApi.bookingConfirm(agent.confirmToken, payload);
 
       const ok = Boolean((data as any)?.success);
       const replyText =

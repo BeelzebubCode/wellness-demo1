@@ -72,7 +72,18 @@ export async function confirmBookingPlan(args: {
 
       if (pending) throw new Error("You already have an active booking");
 
-      return tx.booking.create({
+      let onlineChannelCategoryId: number | null = null;
+      if (payload.serviceMode === "ONLINE" && payload.onlineChannelCode) {
+        const channel = await tx.onlineChannelCategory.findFirst({
+          where: { online_channel_code: payload.onlineChannelCode }
+        });
+        if (!channel) {
+          throw new Error("Invalid online channel code");
+        }
+        onlineChannelCategoryId = channel.online_channel_category_id;
+      }
+
+      const booking = await tx.booking.create({
         data: {
           university_id: activeUniversityId,
           student_id: studentId,
@@ -80,10 +91,29 @@ export async function confirmBookingPlan(args: {
           problem_category_id: problemCategoryId,
           booking_detail_text: detailText,
           booking_status: BookingStatus.PENDING_ASSIGNMENT,
-          booking_service_mode: "ONSITE",
+          booking_service_mode: payload.serviceMode || "ONSITE",
+          online_channel_category_id: onlineChannelCategoryId,
         },
-        select: { booking_id: true },
+        select: { booking_id: true, university_id: true },
       });
+
+      if (payload.serviceMode === "ONLINE") {
+        if (!payload.agreementSignatureDataUrl) {
+          throw new Error("Signature is required for online booking");
+        }
+
+        await tx.bookingAgreementSignature.create({
+          data: {
+            university_id: booking.university_id,
+            booking_id: booking.booking_id,
+            student_id: studentId,
+            signature_method: "DRAW",
+            signature_payload: { dataUrl: payload.agreementSignatureDataUrl },
+          },
+        });
+      }
+
+      return booking;
     });
 
     return {
