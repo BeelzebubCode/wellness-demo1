@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireTenant } from "@/lib/tenant/server";
 import { AttendanceStatus } from "@prisma/client";
-import { applyNoShowPenalty } from "@/services/booking/penaltyEngine";
+import { applyNoShowPenalty, reverseNoShowPenalty } from "@/services/booking/penaltyEngine";
 
 type Params = { params: { id: string } };
 
@@ -73,17 +73,17 @@ export async function POST(req: NextRequest, { params }: Params) {
       return NextResponse.json({ success: false, error: "ท่านไม่ได้รับมอบหมายการจองนี้" }, { status: 403 });
     }
 
-    // Grace period check for NO_SHOW
-    if (status === "NO_SHOW" && timeSlot?.time_slot_start_datetime) {
-      const slotStart = new Date(timeSlot.time_slot_start_datetime);
-      const minAllowed = new Date(slotStart.getTime() + GRACE_MINUTES * 60 * 1000);
-      if (new Date() < minAllowed) {
-        return NextResponse.json(
-          { success: false, error: `ต้องรอ ${GRACE_MINUTES} นาทีหลังเวลานัดเริ่มจึงจะกด NO_SHOW ได้` },
-          { status: 422 },
-        );
-      }
-    }
+    // Grace period check for NO_SHOW(Temporarily disabled for testing)
+    //   if (status === "NO_SHOW" && timeSlot?.time_slot_start_datetime) {
+    //     const slotStart = new Date(timeSlot.time_slot_start_datetime);
+    //     const minAllowed = new Date(slotStart.getTime() + GRACE_MINUTES * 60 * 1000);
+    //     if (new Date() < minAllowed) {
+    //       return NextResponse.json(
+    //         { success: false, error: `ต้องรอ ${GRACE_MINUTES} นาทีหลังเวลานัดเริ่มจึงจะกด NO_SHOW ได้` },
+    //         { status: 422 },
+    //       );
+    //     }
+    //   }
 
     const lateMinutes = status === "LATE" ? Number(body.late_minutes ?? 0) : null;
     const note = String(body.note ?? "").trim() || null;
@@ -91,6 +91,13 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     // Upsert attendance + conditionally apply penalty — all atomic
     await prisma.$transaction(async (tx) => {
+      const existingAttendance = await tx.bookingAttendance.findUnique({
+        where: { university_id_booking_id: { university_id: activeUniversityId, booking_id: bookingId } },
+        select: { booking_attendance_status: true }
+      });
+      const wasNoShow = existingAttendance?.booking_attendance_status === "NO_SHOW";
+      const isNowNoShow = status === "NO_SHOW";
+
       await tx.bookingAttendance.upsert({
         where: { university_id_booking_id: { university_id: activeUniversityId, booking_id: bookingId } },
         create: {
@@ -113,8 +120,15 @@ export async function POST(req: NextRequest, { params }: Params) {
         },
       });
 
-      if (status === "NO_SHOW" && booking.student_id) {
+      if (isNowNoShow && !wasNoShow && booking.student_id) {
         await applyNoShowPenalty(tx as any, {
+          universityId: activeUniversityId,
+          studentId: booking.student_id,
+          bookingId,
+          actorAccountId: account.accountId,
+        });
+      } else if (!isNowNoShow && wasNoShow && booking.student_id) {
+        await reverseNoShowPenalty(tx as any, {
           universityId: activeUniversityId,
           studentId: booking.student_id,
           bookingId,

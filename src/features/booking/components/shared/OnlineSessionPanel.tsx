@@ -48,7 +48,7 @@ export function OnlineSessionPanel({ booking }: { booking: MyBookingDto }) {
         <div className="mt-2 space-y-3">
           <div className="text-sm text-gray-700">
             <span className="text-gray-500">ช่องทาง: </span>
-            <span className="font-semibold">{channelLabel ?? (isPhone ? "โทรศัพท์" : "-")}</span>
+            <span className="font-semibold">{channelLabel ?? (isPhone ? "Phone" : "-")}</span>
           </div>
 
           <div className="flex flex-wrap gap-2">

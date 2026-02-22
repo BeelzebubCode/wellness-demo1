@@ -15,6 +15,7 @@ import { JobItem } from "./JobItem";
 import { ConfirmAcceptModal } from "./ConfirmAcceptModal";
 import { OutcomeModal } from "./OutcomeModal";
 import { OnlineChannelModal } from "./OnlineChannelModal";
+import { CancelNoShowModal } from "./CancelNoShowModal";
 
 function toISODateString(date: Date) {
   const y = date.getFullYear();
@@ -267,7 +268,18 @@ export function ConsultantMyJobsPageClient() {
         onClose={() => vm.setOutcomeModal({ open: false, job: null })}
         onSubmit={vm.submitOutcomeAndComplete}
       />
+
+      <CancelNoShowModal
+        open={vm.cancelNoShowModal.open}
+        job={vm.cancelNoShowModal.job}
+        loading={!!vm.cancelNoShowModal.job && vm.actionLoadingId === vm.cancelNoShowModal.job.id}
+        onClose={() => vm.setCancelNoShowModal({ open: false, job: null })}
+        onConfirm={() => {
+          if (vm.cancelNoShowModal.job) {
+            vm.submitCancelNoShow(vm.cancelNoShowModal.job);
+          }
+        }}
+      />
     </div>
   );
-
 }

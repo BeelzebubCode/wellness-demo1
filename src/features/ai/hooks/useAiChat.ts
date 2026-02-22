@@ -13,13 +13,14 @@ type UiMsg = { role: Role; content: string };
 type AgentState = {
   intent: AgentIntent;
   confirmToken: string | null;
-  plan?: any;                 // map state->plan ได้
+  plan?: any;
   suggested?: any;
   candidates?: any[];
   missingFields?: string[];
   questions?: AgentQuestion[];
-  categories?: any[];          // ✅ added categories list
-  channels?: any[];            // ✅ added channels list
+  categories?: any[];
+  channels?: any[];
+  cancelReasons?: Array<{ id: number; code: string; name: string }>; // ✅ cancel reasons from DB
 };
 
 function pickConfirmToken(data: any): string | null {
@@ -98,8 +99,9 @@ export function useAiChat(input: { mode: Mode; onConfirmed?: () => void }) {
           candidates: Array.isArray((data as any)?.candidates) ? (data as any).candidates : [],
           missingFields: Array.isArray((data as any)?.missingFields) ? (data as any).missingFields : [],
           questions: Array.isArray((data as any)?.questions) ? (data as any).questions : [],
-          categories: Array.isArray((data as any)?.categories) ? (data as any).categories : [], // ✅ Capture categories
-          channels: Array.isArray((data as any)?.channels) ? (data as any).channels : [], // ✅ Capture channels
+          categories: Array.isArray((data as any)?.categories) ? (data as any).categories : [],
+          channels: Array.isArray((data as any)?.channels) ? (data as any).channels : [],
+          cancelReasons: Array.isArray((data as any)?.cancelReasons) ? (data as any).cancelReasons : [], // ✅
         });
       }
     } catch (e: any) {

@@ -206,6 +206,38 @@ export async function applyNoShowPenalty(tx: Tx, ctx: PenaltyCtx) {
 }
 
 /**
+ * Reverse a no-show penalty when a consultant edits attendance to correct an accidental NO_SHOW.
+ * Restores 30 pts, decrements count, and removes lock if count becomes 0.
+ */
+export async function reverseNoShowPenalty(tx: Tx, ctx: PenaltyCtx) {
+  const trust = await getOrCreateTrust(tx, ctx.universityId, ctx.studentId);
+  if (trust.student_trust_no_show_count <= 0) return; // Nothing to reverse
+
+  const newCount = trust.student_trust_no_show_count - 1;
+  const lockUntil = newCount === 0 ? null : trust.student_trust_locked_until;
+
+  await tx.studentTrustStatus.update({
+    where: { university_id_student_id: { university_id: ctx.universityId, student_id: ctx.studentId } },
+    data: {
+      student_trust_no_show_count: newCount,
+      student_trust_locked_until: lockUntil,
+    },
+  });
+
+  await restorePoints(tx, ctx.studentId, ctx.universityId, 30);
+  await writeDisciplineLog(tx, {
+    universityId: ctx.universityId,
+    studentId: ctx.studentId,
+    bookingId: ctx.bookingId,
+    eventType: "EXCEPTION_APPROVED_ROLLBACK",
+    deltaPoints: 30,
+    lockUntil,
+    note: `แก้ไขบันทึก (ยกเลิก No Show) — คืน 30 แต้ม`,
+    createdById: ctx.actorAccountId,
+  });
+}
+
+/**
  * Roll back penalty when HeadConsultant approves an exception request.
  * Restores: lock_until, count, points, and writes audit log.
  */

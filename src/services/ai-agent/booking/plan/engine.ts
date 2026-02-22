@@ -75,22 +75,24 @@ export class BookingPlanEngine {
     });
 
     if (!llmPlan) {
-      return {
-        reply: "ผมอ่านแผนจองจาก AI ไม่ได้ ลองพิมพ์ใหม่เช่น “จองพรุ่งนี้ 09:00 เรื่องความเครียด”",
-      };
+      // ✅ Graceful fallback — ถ้า LLM อ่านไม่ออก (เช่น user พิมพ์แค่ "จอง") ให้ treat เป็น empty plan
+      // แทนที่จะ return error ซึ่งทำให้ UX แย่
     }
 
     // ✅ Merge with previous state (Fix "Amnesia")
+    // llmPlan may be null when user sends short intent like "จอง" — treat as empty plan
+    const safePlan = llmPlan ?? ({} as Partial<PlanLLM>);
     const prevPlan = body.plan as PlanLLM | undefined;
     const plan: PlanLLM = {
-      intent: llmPlan.intent ?? prevPlan?.intent ?? "BOOK",
-      date: llmPlan.date ?? prevPlan?.date ?? null,
-      timeRange: llmPlan.timeRange ?? prevPlan?.timeRange ?? null,
-      problemCategoryCode: llmPlan.problemCategoryCode ?? prevPlan?.problemCategoryCode ?? null,
-      detailText: llmPlan.detailText ?? prevPlan?.detailText ?? null,
-      serviceMode: llmPlan.serviceMode ?? prevPlan?.serviceMode ?? null,
-      onlineChannelCode: llmPlan.onlineChannelCode ?? prevPlan?.onlineChannelCode ?? null,
+      intent: safePlan.intent ?? prevPlan?.intent ?? "BOOK",
+      date: safePlan.date ?? prevPlan?.date ?? null,
+      timeRange: safePlan.timeRange ?? prevPlan?.timeRange ?? null,
+      problemCategoryCode: safePlan.problemCategoryCode ?? prevPlan?.problemCategoryCode ?? null,
+      detailText: safePlan.detailText ?? prevPlan?.detailText ?? null,
+      serviceMode: safePlan.serviceMode ?? prevPlan?.serviceMode ?? null,
+      onlineChannelCode: safePlan.onlineChannelCode ?? prevPlan?.onlineChannelCode ?? null,
     };
+
 
     // Reset triggers
     if (/เปลี่ยนรูปแบบ|เปลี่ยนประเภท|เปลี่ยนการเข้าพบ/i.test(question)) {
@@ -496,7 +498,7 @@ export class BookingPlanEngine {
         text: "สะดวกใช้ช่องทางออนไลน์ไหนครับ?",
         options: channels.map(c => ({
           value: c.online_channel_code,
-          label: c.online_channel_name_th || c.online_channel_code
+          label: c.online_channel_name_en || c.online_channel_name_th || c.online_channel_code
         })),
       };
 
@@ -505,12 +507,12 @@ export class BookingPlanEngine {
           header: "💻 **เลือกช่องทางออนไลน์ครับ**",
           progress,
           ask: "ช่องทางออนไลน์",
-          examples: channels.map(c => c.online_channel_name_th || c.online_channel_code),
+          examples: channels.map(c => c.online_channel_name_en || c.online_channel_name_th || c.online_channel_code),
         }),
         state: plan,
         candidates,
         categories: mapCategoriesForUi(cats),
-        channels: channels.map(c => ({ code: c.online_channel_code, name: c.online_channel_name_th || c.online_channel_code })),
+        channels: channels.map(c => ({ code: c.online_channel_code, name: c.online_channel_name_en || c.online_channel_name_th || c.online_channel_code })),
         missingFields: ["onlineChannelCode"],
         questions: [q],
       };
@@ -553,7 +555,7 @@ export class BookingPlanEngine {
       candidates,
       suggested,
       categories: mapCategoriesForUi(cats),
-      channels: channels.map(c => ({ code: c.online_channel_code, name: c.online_channel_name_th || c.online_channel_code })),
+      channels: channels.map(c => ({ code: c.online_channel_code, name: c.online_channel_name_en || c.online_channel_name_th || c.online_channel_code })),
       confirmToken,
       missingFields: [],
       questions: [],

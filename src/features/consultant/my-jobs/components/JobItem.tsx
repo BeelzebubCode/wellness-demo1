@@ -100,7 +100,12 @@ export function JobItem({
   const isPending = job.status === "PENDING";
   const isInProgress = job.status === "IN_PROGRESS";
 
-  const actionLabel = isPending ? "รับเคส" : isInProgress ? "ส่งงาน" : "ดูรายละเอียด";
+  const isNoShow = job.attendanceStatus === "NO_SHOW";
+  const actionLabel = isPending
+    ? "รับเคส"
+    : isInProgress
+      ? (isNoShow ? "ยกเลิกเคส" : "ส่งงาน")
+      : "ดูรายละเอียด";
 
   return (
     <div
@@ -291,7 +296,8 @@ export function JobItem({
             {(job.status === "IN_PROGRESS" || job.attendanceStatus) && (
               <AttendancePanel
                 bookingId={job.id}
-                currentStatus={job.attendanceStatus}
+                currentStatus={job.attendanceStatus as "CHECKED_IN" | "LATE" | "NO_SHOW" | null}
+                isCompletedOrCancelled={isDisabled}
                 onSuccess={onRefresh}
               />
             )}

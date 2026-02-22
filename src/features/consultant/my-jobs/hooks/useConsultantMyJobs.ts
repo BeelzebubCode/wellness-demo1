@@ -16,6 +16,7 @@ import {
   startBooking,
   completeBooking,
   setOnlineChannel,
+  cancelNoShowBooking,
 } from "../api/myJobs";
 import { normalizeYMD, fromYMD } from "@/lib/date";
 
@@ -101,6 +102,11 @@ export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
     note: "",
   });
 
+  const [cancelNoShowModal, setCancelNoShowModal] = useState<{ open: boolean; job: Job | null }>({
+    open: false,
+    job: null,
+  });
+
   useEffect(() => {
     let alive = true;
 
@@ -152,6 +158,10 @@ export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
             universityName: r.universityName ?? null,
             universityCode: r.universityCode ?? null,
 
+            attendanceStatus: r.attendanceStatus ?? null,
+            attendanceNote: r.attendanceNote ?? null,
+            attendanceLateMinutes: r.attendanceLateMinutes ?? null,
+
             raw: {
               date: r.date,
               startTime: r.startTime,
@@ -196,6 +206,10 @@ export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
       return;
     }
     if (job.status === "IN_PROGRESS") {
+      if (job.attendanceStatus === "NO_SHOW") {
+        setCancelNoShowModal({ open: true, job });
+        return;
+      }
       setOutcomeDraft({ consultantNote: "", nextStep: "", riskLevel: 2 });
       setOutcomeModal({ open: true, job });
       return;
@@ -314,6 +328,27 @@ export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
     }
   };
 
+  const submitCancelNoShow = async (job: Job) => {
+    setActionLoadingId(job.id);
+    try {
+      await cancelNoShowBooking(job.id);
+
+      setJobs((prev) => prev.map((j) => (j.id === job.id ? { ...j, status: "CANCELLED" } : j)));
+      setStats((s) => ({
+        ...s,
+        inProgress: Math.max(0, s.inProgress - 1),
+      }));
+
+      setCancelNoShowModal({ open: false, job: null });
+      setExpandedId(job.id);
+      triggerRefresh();
+    } catch (e: any) {
+      alert(e?.message ?? "ยกเลิกงานไม่สำเร็จ");
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
   return {
     selectedDate,
     jobs,
@@ -340,6 +375,10 @@ export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
     onlineDraft,
     setOnlineDraft,
     submitOnlineChannel,
+
+    cancelNoShowModal,
+    setCancelNoShowModal,
+    submitCancelNoShow,
 
     handleAction,
     handleEditChannel,

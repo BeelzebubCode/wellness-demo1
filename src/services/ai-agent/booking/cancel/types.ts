@@ -16,5 +16,9 @@ export type BookingCancelResponse = {
 
   confirmToken?: string | null;
 
+  /** DB reasons — sent to UI so it can render option pills */
+  cancelReasons?: Array<{ id: number; code: string; name: string }>;
+
   debug?: any;
 };
+

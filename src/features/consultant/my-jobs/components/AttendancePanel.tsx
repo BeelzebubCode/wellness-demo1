@@ -8,24 +8,28 @@ import { markAttendance } from "../api/myJobs";
 export function AttendancePanel({
     bookingId,
     currentStatus,
+    isCompletedOrCancelled = false,
     onSuccess
 }: {
     bookingId: number;
-    currentStatus?: string | null;
+    currentStatus?: "CHECKED_IN" | "LATE" | "NO_SHOW" | null;
+    isCompletedOrCancelled?: boolean;
     onSuccess: () => void;
 }) {
     const [loading, setLoading] = useState(false);
     const [lateMinutes, setLateMinutes] = useState("");
     const [note, setNote] = useState("");
+    const [isEditing, setIsEditing] = useState(false);
 
     const handleMark = async (type: "CHECKED_IN" | "LATE" | "NO_SHOW") => {
-        if (type === "LATE" && !lateMinutes) {
-            alert("กรุณาระบุจำนวนนาทีที่มาสาย");
-            return;
-        }
+        // if (type === "LATE" && !lateMinutes) {
+        //     alert("กรุณาระบุจำนวนนาทีที่มาสาย");
+        //     return;
+        // }
         setLoading(true);
         try {
-            await markAttendance(bookingId, type, type === "LATE" ? parseInt(lateMinutes) : undefined, note);
+            await markAttendance(bookingId, type, type === "LATE" ? parseInt(lateMinutes) || undefined : undefined, note);
+            setIsEditing(false);
             onSuccess();
         } catch (e: any) {
             alert(e.message ?? "บันทึกการเข้าพบไม่สำเร็จ");
@@ -34,19 +38,35 @@ export function AttendancePanel({
         }
     };
 
-    if (currentStatus) {
-        return (
-            <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4 shadow-sm flex items-start gap-3">
-                {currentStatus === "CHECKED_IN" && <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />}
-                {currentStatus === "LATE" && <Clock className="w-5 h-5 text-amber-500 mt-0.5" />}
-                {currentStatus === "NO_SHOW" && <AlertCircle className="w-5 h-5 text-red-500 mt-0.5" />}
+    const statusLabels: Record<string, string> = {
+        "CHECKED_IN": "เข้าพบตรงเวลา",
+        "LATE": "มาสาย",
+        "NO_SHOW": "ไม่มาตามนัด",
+    };
 
-                <div>
-                    <p className="font-semibold text-sm text-gray-800">
-                        สถานะการเข้าพบ: <span className="text-gray-900">{currentStatus}</span>
-                    </p>
-                    <p className="text-xs text-gray-500 mt-0.5">ถูกบันทึกเรียบร้อยแล้ว</p>
+    if (currentStatus && !isEditing) {
+        return (
+            <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4 shadow-sm flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                    {currentStatus === "CHECKED_IN" && <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5" />}
+                    {currentStatus === "LATE" && <Clock className="w-5 h-5 text-amber-500 mt-0.5" />}
+                    {currentStatus === "NO_SHOW" && <AlertCircle className="w-5 h-5 text-red-500 mt-0.5" />}
+
+                    <div>
+                        <p className="font-semibold text-sm text-gray-800">
+                            สถานะการเข้าพบ: <span className="text-gray-900">{statusLabels[currentStatus] || currentStatus}</span>
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">ถูกบันทึกเรียบร้อยแล้ว</p>
+                    </div>
                 </div>
+                {!isCompletedOrCancelled && (
+                    <button
+                        onClick={() => setIsEditing(true)}
+                        className="text-xs font-semibold text-blue-600 hover:text-blue-700 underline px-2 py-1 transition-colors"
+                    >
+                        แก้ไข
+                    </button>
+                )}
             </div>
         );
     }
@@ -72,7 +92,7 @@ export function AttendancePanel({
 
                     <button
                         onClick={() => handleMark("LATE")}
-                        disabled={loading || !lateMinutes}
+                        disabled={loading}
                         className="flex flex-col items-center justify-center p-3 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-xs transition-colors disabled:opacity-50"
                     >
                         <Clock className="w-5 h-5 mb-1" />
@@ -80,11 +100,7 @@ export function AttendancePanel({
                     </button>
 
                     <button
-                        onClick={() => {
-                            if (confirm("ยืนยันบันทึก No Show? การกระทำนี้จะส่งผลให้ระบบหักคะแนนผู้รับบริการโดยอัตโนมัติ")) {
-                                handleMark("NO_SHOW");
-                            }
-                        }}
+                        onClick={() => handleMark("NO_SHOW")}
                         disabled={loading}
                         className="flex flex-col items-center justify-center p-3 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs transition-colors disabled:opacity-50"
                     >

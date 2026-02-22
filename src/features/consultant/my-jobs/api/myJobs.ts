@@ -43,6 +43,10 @@ export async function fetchMyBookings(): Promise<MyBookingApiRow[]> {
 
     universityName: item.universityName ?? null,
     universityCode: item.universityCode ?? null,
+
+    attendanceStatus: item.attendanceStatus ?? item.bookingAttendance?.booking_attendance_status ?? null,
+    attendanceNote: item.attendanceNote ?? item.bookingAttendance?.booking_attendance_note ?? null,
+    attendanceLateMinutes: item.attendanceLateMinutes ?? item.bookingAttendance?.booking_attendance_late_minutes ?? null,
   }));
 }
 
@@ -134,5 +138,22 @@ export async function markAttendance(
   if (!res.ok) throw new Error(data?.error ?? "บันทึกการเข้าพบไม่สำเร็จ");
 
   return data as { success: boolean };
+}
+
+/**
+ * ✅ ยกเลิกการจองเมื่อนิสิตไม่มาตามนัด (NO_SHOW)
+ */
+export async function cancelNoShowBooking(bookingId: number) {
+  const res = await fetch(`/api/v2/bookings/${bookingId}/cancel-no-show`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    cache: "no-store",
+  });
+
+  const data = await safeJson(res);
+  if (!res.ok) throw new Error(data?.error ?? "ยกเลิกงานไม่สำเร็จ");
+
+  return data as { success: boolean; status: string };
 }
 

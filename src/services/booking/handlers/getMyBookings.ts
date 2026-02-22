@@ -60,6 +60,7 @@ export async function getMyBookings(params: GetMyBookingsParams) {
           onlineChannel: true,
           feedback: { select: { feedback_id: true } },
           exceptionRequest: { select: { booking_exception_request_id: true, booking_exception_status: true, booking_exception_decision_note: true } },
+          attendance: true,
         },
         orderBy: { booking_created_at: "desc" },
         skip,
@@ -114,6 +115,9 @@ export async function getMyBookings(params: GetMyBookingsParams) {
         hasExceptionRequest: !!(b as any).exceptionRequest,
         exceptionRequestStatus: (b as any).exceptionRequest?.booking_exception_status ?? null,
         exceptionRequestNote: (b as any).exceptionRequest?.booking_exception_decision_note ?? null,
+        attendanceStatus: (b as any).attendance?.booking_attendance_status ?? null,
+        attendanceNote: (b as any).attendance?.booking_attendance_note ?? null,
+        attendanceLateMinutes: (b as any).attendance?.booking_attendance_late_minutes ?? null,
       };
     });
 
@@ -164,6 +168,7 @@ export async function getMyBookings(params: GetMyBookingsParams) {
         BookingSession: { include: { onlineChannel: true } },
         onlineChannel: true,
         university: { select: { university_name_th: true, university_code: true } },
+        attendance: true,
       },
       orderBy: { booking_updated_at: "desc" },
       skip,
@@ -202,6 +207,9 @@ export async function getMyBookings(params: GetMyBookingsParams) {
       studentName: sp ? `${sp.student_first_name_th} ${sp.student_last_name_th}` : "ไม่ทราบชื่อ",
       consultantOrg: null,
       session,
+      attendanceStatus: (b as any).attendance?.booking_attendance_status ?? null,
+      attendanceNote: (b as any).attendance?.booking_attendance_note ?? null,
+      attendanceLateMinutes: (b as any).attendance?.booking_attendance_late_minutes ?? null,
     };
   });
 

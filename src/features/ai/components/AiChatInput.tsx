@@ -46,6 +46,11 @@ export default function AiChatInput({
   const [consentChecked, setConsentChecked] = useState(false);
   const [agreementSignature, setAgreementSignature] = useState<string | null>(null);
   const [isCardCollapsed, setIsCardCollapsed] = useState(false);
+  const [customReasonMode, setCustomReasonMode] = useState(false);
+  const [customReasonText, setCustomReasonText] = useState("");
+  // Per-question-index custom input mode for BOOK flow options
+  const [qCustomMode, setQCustomMode] = useState<Record<number, boolean>>({});
+  const [qCustomText, setQCustomText] = useState<Record<number, string>>({});
 
   const isCancelIntent = (chat.agent?.plan as any)?.intent === "CANCEL";
   const planServiceMode = (chat.agent?.plan as any)?.serviceMode;
@@ -264,36 +269,180 @@ export default function AiChatInput({
           </div>
         )}
 
-        {/* ✅ Question Options */}
-        {mode === "booking_agent" && !chat.agent?.confirmToken && chat.agent?.questions && chat.agent.questions.length > 0 && (
-          <div className="mb-4 animate-in slide-in-from-bottom-5 fade-in zoom-in-95">
-            {chat.agent.questions.map((q: any, idx: number) => (
-              q.options && q.options.length > 0 && (
-                <div key={idx} className="relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-2 md:p-2.5 shadow-sm">
-                  <p className="mb-1 text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-                    {q.text || "เลือกตัวเลือก:"}
-                  </p>
-                  <div className="flex flex-wrap gap-1 md:gap-1.5">
-                    {q.options.map((opt: any) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        disabled={isLoading}
-                        onClick={() => {
-                          const val = opt.label || opt.value;
-                          chat.sendMessage(val);
-                        }}
-                        className="inline-flex items-center rounded-full border border-indigo-50 bg-white px-2 py-0.5 md:px-3 md:py-1 text-[11px] md:text-[12px] text-indigo-600 font-medium shadow-sm hover:bg-indigo-50 hover:text-indigo-700 transition-all active:scale-95 disabled:opacity-50"
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
+        {/* ✅ Cancel Reason Pills — shown when CANCEL intent and no confirm token yet */}
+        {mode === "booking_agent" && !chat.agent?.confirmToken &&
+          chat.agent?.intent === "CANCEL" &&
+          chat.agent?.cancelReasons && chat.agent.cancelReasons.length > 0 && (
+            <div className="mb-3 animate-in slide-in-from-bottom-5 fade-in zoom-in-95">
+              <div className="relative overflow-hidden rounded-2xl border border-rose-100 bg-rose-50/60 p-2 md:p-3 shadow-sm">
+                <p className="mb-2 text-[9px] md:text-[10px] font-black text-rose-400 uppercase tracking-widest pl-1">
+                  เลือกเหตุผลการยกเลิก:
+                </p>
+
+                {/* Custom reason input — shown when user clicked "อื่นๆ" */}
+                {customReasonMode ? (
+                  <div className="flex items-center gap-2 mt-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <input
+                      type="text"
+                      autoFocus
+                      value={customReasonText}
+                      onChange={(e) => setCustomReasonText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && customReasonText.trim()) {
+                          chat.sendMessage(customReasonText.trim());
+                          setCustomReasonMode(false);
+                          setCustomReasonText("");
+                        }
+                        if (e.key === "Escape") {
+                          setCustomReasonMode(false);
+                          setCustomReasonText("");
+                        }
+                      }}
+                      placeholder="ระบุเหตุผลของคุณ..."
+                      className="flex-1 rounded-xl border border-rose-200 bg-white px-3 py-1.5 text-[13px] text-slate-700 placeholder:text-slate-400 outline-none focus:border-rose-400 focus:ring-1 focus:ring-rose-200 transition-all"
+                    />
+                    <button
+                      type="button"
+                      disabled={!customReasonText.trim() || isLoading}
+                      onClick={() => {
+                        if (!customReasonText.trim()) return;
+                        chat.sendMessage(customReasonText.trim());
+                        setCustomReasonMode(false);
+                        setCustomReasonText("");
+                      }}
+                      className="shrink-0 inline-flex items-center rounded-xl bg-rose-500 hover:bg-rose-600 px-3 py-1.5 text-[12px] font-semibold text-white transition-colors disabled:opacity-40"
+                    >
+                      ส่ง
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setCustomReasonMode(false); setCustomReasonText(""); }}
+                      className="shrink-0 text-[12px] text-rose-400 hover:text-rose-600 px-1"
+                    >
+                      ×
+                    </button>
                   </div>
-                </div>
-              )
-            ))}
-          </div>
-        )}
+                ) : (
+                  <div className="flex flex-wrap gap-1 md:gap-1.5">
+                    {chat.agent.cancelReasons.map((r: any) => {
+                      const isOther = r.code === "OTHER" || (r.name || "").toLowerCase().includes("other") || r.name.includes("อื่น");
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          disabled={isLoading}
+                          onClick={() => {
+                            if (isOther) {
+                              setCustomReasonMode(true);
+                            } else {
+                              chat.sendMessage(r.name);
+                            }
+                          }}
+                          className="inline-flex items-center rounded-full border border-rose-200 bg-white px-2 py-0.5 md:px-3 md:py-1 text-[11px] md:text-[12px] text-rose-600 font-medium shadow-sm hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300 transition-all active:scale-95 disabled:opacity-50"
+                        >
+                          {r.name}
+                          {isOther && <span className="ml-1 text-[10px] opacity-60">✏️</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+        {/* ✅ Question Options (BOOK flow — categories, time etc.) */}
+        {mode === "booking_agent" && !chat.agent?.confirmToken &&
+          chat.agent?.intent !== "CANCEL" &&
+          chat.agent?.questions && chat.agent.questions.length > 0 && (
+            <div className="mb-4 animate-in slide-in-from-bottom-5 fade-in zoom-in-95 flex flex-col gap-2">
+              {chat.agent.questions.map((q: any, idx: number) => (
+                q.options && q.options.length > 0 && (
+                  <div key={idx} className="relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-2 md:p-2.5 shadow-sm">
+                    <p className="mb-1 text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+                      {q.text || "เลือกตัวเลือก:"}
+                    </p>
+
+                    {qCustomMode[idx] ? (
+                      /* Custom text input when user picked "OTHER" */
+                      <div className="flex items-center gap-2 mt-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <input
+                          type="text"
+                          autoFocus
+                          value={qCustomText[idx] ?? ""}
+                          onChange={(e) => setQCustomText((prev) => ({ ...prev, [idx]: e.target.value }))}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && (qCustomText[idx] ?? "").trim()) {
+                              chat.sendMessage((qCustomText[idx] ?? "").trim());
+                              setQCustomMode((prev) => ({ ...prev, [idx]: false }));
+                              setQCustomText((prev) => ({ ...prev, [idx]: "" }));
+                            }
+                            if (e.key === "Escape") {
+                              setQCustomMode((prev) => ({ ...prev, [idx]: false }));
+                            }
+                          }}
+                          placeholder="ระบุสั้น ๆ..."
+                          className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-[13px] text-slate-700 placeholder:text-slate-400 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 transition-all"
+                        />
+                        <button
+                          type="button"
+                          disabled={!(qCustomText[idx] ?? "").trim() || isLoading}
+                          onClick={() => {
+                            const val = (qCustomText[idx] ?? "").trim();
+                            if (!val) return;
+                            chat.sendMessage(val);
+                            setQCustomMode((prev) => ({ ...prev, [idx]: false }));
+                            setQCustomText((prev) => ({ ...prev, [idx]: "" }));
+                          }}
+                          className="shrink-0 inline-flex items-center rounded-xl bg-indigo-500 hover:bg-indigo-600 px-3 py-1.5 text-[12px] font-semibold text-white transition-colors disabled:opacity-40"
+                        >
+                          ส่ง
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setQCustomMode((prev) => ({ ...prev, [idx]: false }))}
+                          className="shrink-0 text-[12px] text-slate-400 hover:text-slate-600 px-1"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-1 md:gap-1.5">
+                        {q.options.map((opt: any) => {
+                          const valStr = String(opt.value ?? "").toUpperCase();
+                          const lblStr = String(opt.label ?? "").toLowerCase();
+                          const isOther =
+                            opt.code === "OTHER" ||
+                            valStr === "OTHER" ||
+                            lblStr.includes("other") ||
+                            lblStr.includes("อื่น");
+                          return (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              disabled={isLoading}
+                              onClick={() => {
+                                if (isOther) {
+                                  setQCustomMode((prev) => ({ ...prev, [idx]: true }));
+                                } else {
+                                  chat.sendMessage(opt.label || opt.value);
+                                }
+                              }}
+                              className="inline-flex items-center rounded-full border border-indigo-50 bg-white px-2 py-0.5 md:px-3 md:py-1 text-[11px] md:text-[12px] text-indigo-600 font-medium shadow-sm hover:bg-indigo-50 hover:text-indigo-700 transition-all active:scale-95 disabled:opacity-50"
+                            >
+                              {opt.label}
+                              {isOther && <span className="ml-1 text-[10px] opacity-60">✏️</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              ))}
+            </div>
+          )}
+
 
         <div className="flex flex-col gap-3">
           {/* Input Box */}
