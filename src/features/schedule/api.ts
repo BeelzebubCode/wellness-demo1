@@ -87,12 +87,21 @@ export const scheduleApi = {
     return { success: true, date: json?.date, slots };
   },
 
-  /**
-   * v2: ยังไม่รองรับ create รายตัว
-   * ✅ แต่ให้ signature รับ data เพื่อให้ hook/UI type ตรงกัน
-   */
-  async createSlot(_data: CreateSlotDTO): Promise<SlotsResponse> {
-    return { success: false, slots: [], error: "v2 ยังไม่รองรับการสร้าง slot รายตัว" };
+  async createSlot(data: CreateSlotDTO): Promise<SlotsResponse> {
+    const res = await fetch(`${API_BASE}`, {
+      method: "POST",
+      credentials: "include",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    const json = await safeJson<any>(res);
+    if (!res.ok || json?.success === false) {
+      return { success: false, slots: [], error: pickError(res, json) };
+    }
+
+    return this.getSlots(data.date);
   },
 
   async autoGenerateSlots(data: AutoGenerateSlotDTO): Promise<SlotsResponse> {

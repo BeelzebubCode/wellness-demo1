@@ -6,6 +6,8 @@ export type PatchSlotBody = {
   capacity?: number;
   isAvailable?: boolean;
   status?: "OPEN" | "CLOSED" | "CANCELLED" | "FULL";
+  startTime?: string;
+  endTime?: string;
 };
 
 export async function updateTimeSlot(
@@ -20,6 +22,7 @@ export async function updateTimeSlot(
       university_id: true,
       time_slot_max_capacity: true,
       time_slot_status: true,
+      time_slot_start_datetime: true,
     },
   });
 
@@ -59,6 +62,82 @@ export async function updateTimeSlot(
 
   if (typeof body.status === "string") {
     data.time_slot_status = body.status as TimeSlotStatus;
+  }
+
+  // Handle time updates
+  if (body.startTime || body.endTime) {
+    if (activeCount > 0) {
+      return { ok: false as const, status: 400, error: "Cannot change time because there are active bookings." };
+    }
+
+    // Need to dynamically import or use existing utilities for date formatting
+    const { createDateTime, fmtDateBkk } = require("./utils");
+
+    // Extract date from existing start datetime
+    const dateStr = fmtDateBkk(slot.time_slot_start_datetime);
+
+    // Use existing or new times
+    const currentStartTimeStr = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Bangkok",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(slot.time_slot_start_datetime);
+
+    const currentEndTimeStr = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Bangkok",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format((await prisma.timeSlot.findUnique({ where: { time_slot_id: slotId }, select: { time_slot_end_datetime: true } }))!.time_slot_end_datetime);
+
+    const newStartTimeStr = body.startTime || currentStartTimeStr;
+    const newEndTimeStr = body.endTime || currentEndTimeStr;
+
+    const newStartDateTime = createDateTime(dateStr, newStartTimeStr);
+    const newEndDateTime = createDateTime(dateStr, newEndTimeStr);
+
+    if (newStartDateTime >= newEndDateTime) {
+      return { ok: false as const, status: 400, error: "End time must be after start time." };
+    }
+
+    // Check for overlaps with other slots
+    const overlappingSlots = await prisma.timeSlot.findMany({
+      where: {
+        university_id: universityId,
+        time_slot_id: { not: slotId },
+        time_slot_start_datetime: { lt: newEndDateTime },
+        time_slot_end_datetime: { gt: newStartDateTime },
+      },
+    });
+
+    if (overlappingSlots.length > 0) {
+      const slotIds = overlappingSlots.map(s => s.time_slot_id);
+
+      const activeBookingsInOverlaps = await prisma.booking.count({
+        where: {
+          time_slot_id: { in: slotIds },
+          booking_status: { not: BookingStatus.CANCELLED }
+        }
+      });
+
+      if (activeBookingsInOverlaps > 0) {
+        return { ok: false as const, status: 409, error: "ช่วงเวลาที่เลือกทับซ้อนกับช่วงเวลาที่มีการจองแล้ว หรือไม่สามารถแทนที่ได้" };
+      }
+
+      const hasOpenOverlap = overlappingSlots.some(s => s.time_slot_status !== TimeSlotStatus.CLOSED);
+      if (hasOpenOverlap) {
+        return { ok: false as const, status: 409, error: "ช่วงเวลาที่เลือกทับซ้อนกับช่วงเวลาอื่นที่เปิดอยู่" };
+      }
+
+      // Overlaps are CLOSED and have 0 bookings. Delete them.
+      await prisma.timeSlot.deleteMany({
+        where: { time_slot_id: { in: slotIds } }
+      });
+    }
+
+    data.time_slot_start_datetime = newStartDateTime;
+    data.time_slot_end_datetime = newEndDateTime;
   }
 
   if (Object.keys(data).length === 0) {

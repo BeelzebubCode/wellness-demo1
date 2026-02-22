@@ -33,6 +33,7 @@ interface SlotEditorProps {
     slotId: number,
     isAvailable: boolean
   ) => Promise<void>;
+  maxTotalCapacity: number;
 }
 
 export function SlotEditor({
@@ -45,6 +46,7 @@ export function SlotEditor({
   onDeleteSlot,
   onDeleteAllSlots,
   onToggleSlotAvailability,
+  maxTotalCapacity,
 }: SlotEditorProps) {
   // Modal states
   const [showSlotForm, setShowSlotForm] = useState(false);
@@ -136,7 +138,7 @@ export function SlotEditor({
 
         currentMinutes += config.slotDuration;
       }
-      
+
       await onAddSlotsBatch(payload);
     },
     [onAddSlotsBatch]
@@ -192,6 +194,7 @@ export function SlotEditor({
         onDelete={handleDeleteSlot}
         editingSlot={editingSlot}
         existingSlots={slots}
+        maxTotalCapacity={maxTotalCapacity}
       />
 
       {/* Auto Generate Modal */}

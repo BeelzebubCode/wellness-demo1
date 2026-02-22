@@ -11,7 +11,7 @@ async function safeJson(res: Response) {
 }
 
 export async function fetchAssignees(date?: string): Promise<AssigneeOption[]> {
-  const url = date 
+  const url = date
     ? `/api/v2/consultants?includeBorrowed=true&date=${date}`
     : `/api/v2/consultants?includeBorrowed=true`;
 
@@ -48,6 +48,9 @@ export async function fetchAssignees(date?: string): Promise<AssigneeOption[]> {
       } as AssigneeOption;
     })
     .filter((c): c is AssigneeOption => c !== null)
-    // ✅ Filter out HEAD_CONSULTANT — head should not assign work to themselves
-    .filter((c) => c.accountRole !== "HEAD_CONSULTANT");
+    // ✅ Filter out staff/head roles — head should not assign work to themselves
+    .filter((c) => {
+      const staffRoles = ["HEAD_CONSULTANT", "ADMIN", "SUPER_ADMIN", "RECTOR"];
+      return !staffRoles.includes(c.accountRole ?? "");
+    });
 }

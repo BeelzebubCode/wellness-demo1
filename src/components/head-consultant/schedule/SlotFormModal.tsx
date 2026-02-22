@@ -3,13 +3,13 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Modal, Button } from '@/components/ui';
-import { 
-  Clock, 
-  Users, 
-  Save, 
-  Plus, 
-  AlertCircle, 
-  Loader2, 
+import {
+  Clock,
+  Users,
+  Save,
+  Plus,
+  AlertCircle,
+  Loader2,
   Trash2,
   Power,
   AlertTriangle
@@ -31,6 +31,7 @@ interface SlotFormModalProps {
   onDelete?: (slotId: number) => Promise<void>;
   editingSlot?: TimeSlot | null;
   existingSlots?: TimeSlot[];
+  maxTotalCapacity?: number;
 }
 
 // Time presets
@@ -61,10 +62,11 @@ export function SlotFormModal({
   onToggleAvailability,
   onDelete,
   editingSlot,
-  existingSlots = []
+  existingSlots = [],
+  maxTotalCapacity = 99
 }: SlotFormModalProps) {
   const isEditing = !!editingSlot;
-  
+
   const [formData, setFormData] = useState<SlotFormData>({
     startTime: '09:00',
     endTime: '10:00',
@@ -113,7 +115,12 @@ export function SlotFormModal({
 
     return existingSlots.some(slot => {
       if (isEditing && slot.id === editingSlot?.id) return false;
-      
+
+      // If the slot is closed and has no bookings, treat it as overwriteable (no conflict)
+      const isSlotClosed = slot.status === 'CLOSED' || !slot.isAvailable;
+      const hasNoBookings = (slot.bookedCount ?? 0) === 0;
+      if (isSlotClosed && hasNoBookings) return false;
+
       const [startH, startM] = slot.startTime.split(':').map(Number);
       const [endH, endM] = slot.endTime.split(':').map(Number);
       const start = startH * 60 + startM;
@@ -123,7 +130,7 @@ export function SlotFormModal({
     });
   }, [formData.startTime, formData.endTime, existingSlots, isEditing, editingSlot]);
 
-  const isValid = duration > 0 && !hasConflict && formData.maxCapacity >= 1;
+  const isValid = duration > 0 && formData.maxCapacity >= 1;
 
   // Slot status
   const isLocked = editingSlot?.status === 'CLOSED' || !editingSlot?.isAvailable;
@@ -136,7 +143,7 @@ export function SlotFormModal({
     const endMinutes = startMinutes + minutes;
     const endH = Math.floor(endMinutes / 60);
     const endM = endMinutes % 60;
-    
+
     if (endH <= 20) {
       setFormData({
         ...formData,
@@ -166,7 +173,7 @@ export function SlotFormModal({
   // Handle toggle availability
   const handleToggleStatus = async () => {
     if (!editingSlot || !onToggleAvailability || hasBookings) return;
-    
+
     setIsTogglingStatus(true);
     setError(null);
 
@@ -183,7 +190,7 @@ export function SlotFormModal({
   // Handle delete
   const handleDelete = async () => {
     if (!editingSlot || !onDelete || hasBookings) return;
-    
+
     setIsDeleting(true);
     setError(null);
 
@@ -254,11 +261,11 @@ export function SlotFormModal({
           {isEditing && (
             <div className={cn(
               'flex items-center justify-between p-2 rounded-lg',
-              isLocked ? 'bg-slate-100' : 'bg-emerald-50'
+              isLocked ? 'bg-slate-100' : 'bg-primary-50'
             )}>
               <div className="flex items-center gap-2">
-                <Power className={cn('w-4 h-4', isLocked ? 'text-slate-500' : 'text-emerald-600')} />
-                <span className={cn('text-sm font-medium', isLocked ? 'text-slate-600' : 'text-emerald-700')}>
+                <Power className={cn('w-4 h-4', isLocked ? 'text-slate-500' : 'text-primary-600')} />
+                <span className={cn('text-sm font-medium', isLocked ? 'text-slate-600' : 'text-primary-700')}>
                   {isLocked ? 'ปิดอยู่' : 'เปิดให้จอง'}
                 </span>
               </div>
@@ -269,10 +276,10 @@ export function SlotFormModal({
                   disabled={isLoading || hasBookings}
                   className={cn(
                     'px-3 py-1 text-xs font-medium rounded-md transition-colors',
-                    hasBookings 
+                    hasBookings
                       ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                       : isLocked
-                        ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                        ? 'bg-primary-500 text-white hover:bg-primary-600'
                         : 'bg-slate-500 text-white hover:bg-slate-600'
                   )}
                 >
@@ -305,8 +312,12 @@ export function SlotFormModal({
                 <select
                   value={formData.startTime}
                   onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
-                  disabled={isLoading}
+                  className={cn("w-full px-3 py-2 text-sm border rounded-lg outline-none",
+                    (isEditing && hasBookings) || isLoading
+                      ? "bg-slate-50 border-slate-200 text-slate-500 cursor-not-allowed"
+                      : "bg-white border-slate-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  )}
+                  disabled={(isEditing && hasBookings) || isLoading}
                 >
                   {TIME_OPTIONS.map(time => (
                     <option key={time} value={time}>{time}</option>
@@ -320,10 +331,14 @@ export function SlotFormModal({
                   value={formData.endTime}
                   onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                   className={cn(
-                    'w-full px-3 py-2 text-sm border rounded-lg bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none',
-                    duration <= 0 ? 'border-red-300 bg-red-50' : 'border-slate-200'
+                    'w-full px-3 py-2 text-sm border rounded-lg outline-none',
+                    (isEditing && hasBookings) || isLoading
+                      ? 'bg-slate-50 border-slate-200 text-slate-500 cursor-not-allowed'
+                      : duration <= 0
+                        ? 'border-red-300 bg-red-50 focus:ring-red-500/20 focus:border-red-500'
+                        : 'bg-white border-slate-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500'
                   )}
-                  disabled={isLoading}
+                  disabled={(isEditing && hasBookings) || isLoading}
                 >
                   {TIME_OPTIONS.map(time => (
                     <option key={time} value={time}>{time}</option>
@@ -341,11 +356,13 @@ export function SlotFormModal({
                   onClick={() => applyPreset(preset.duration)}
                   className={cn(
                     'px-2.5 py-1 text-xs font-medium rounded-md border transition-all',
-                    duration === preset.duration
-                      ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
-                      : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-300'
+                    isEditing && hasBookings
+                      ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed hidden'
+                      : duration === preset.duration
+                        ? 'bg-primary-50 border-primary-300 text-primary-700'
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-primary-300'
                   )}
-                  disabled={isLoading}
+                  disabled={(isEditing && hasBookings) || isLoading}
                 >
                   {preset.label}
                 </button>
@@ -355,7 +372,7 @@ export function SlotFormModal({
             {/* Warnings */}
             {duration > 0 && (
               <p className="text-xs text-slate-500">
-                ระยะเวลา: <span className="font-medium text-emerald-600">{duration} นาที</span>
+                ระยะเวลา: <span className="font-medium text-primary-600">{duration} นาที</span>
               </p>
             )}
             {hasConflict && (
@@ -380,7 +397,7 @@ export function SlotFormModal({
             </div>
 
             <div className="flex items-center gap-2">
-              {[1, 2, 3, 4, 5].map(n => (
+              {Array.from({ length: Math.min(5, maxTotalCapacity) }, (_, i) => i + 1).map(n => (
                 <button
                   key={n}
                   type="button"
@@ -388,8 +405,8 @@ export function SlotFormModal({
                   className={cn(
                     'w-9 h-9 rounded-lg border text-sm font-semibold transition-all',
                     formData.maxCapacity === n
-                      ? 'bg-emerald-500 border-emerald-500 text-white'
-                      : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-300'
+                      ? 'bg-primary-500 border-primary-500 text-white'
+                      : 'bg-white border-slate-200 text-slate-600 hover:border-primary-300'
                   )}
                   disabled={isLoading}
                 >
@@ -399,13 +416,13 @@ export function SlotFormModal({
               <input
                 type="number"
                 min={Math.max(1, editingSlot?.bookedCount ?? 1)}
-                max="99"
+                max={maxTotalCapacity}
                 value={formData.maxCapacity}
-                onChange={(e) => setFormData({ 
-                  ...formData, 
-                  maxCapacity: Math.max(1, parseInt(e.target.value) || 1) 
+                onChange={(e) => setFormData({
+                  ...formData,
+                  maxCapacity: Math.min(maxTotalCapacity, Math.max(1, parseInt(e.target.value) || 1))
                 })}
-                className="w-14 px-2 py-2 text-sm text-center border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                className="w-14 px-2 py-2 text-sm text-center border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
                 disabled={isLoading}
               />
               <span className="text-xs text-slate-500">คน</span>
@@ -446,7 +463,7 @@ export function SlotFormModal({
               <Button
                 type="submit"
                 disabled={!isValid || isLoading}
-                className={isEditing ? 'bg-blue-600 hover:bg-blue-700' : 'bg-emerald-600 hover:bg-emerald-700'}
+                className="bg-primary-600 hover:bg-primary-700"
               >
                 {isSubmitting ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

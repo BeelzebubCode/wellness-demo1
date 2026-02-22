@@ -23,4 +23,6 @@ export interface UpdateSlotDTO {
   capacity?: number;
   isAvailable?: boolean;
   status?: SlotStatus; // ✅ เพิ่มได้ (เพราะ backend รองรับ)
+  startTime?: string;
+  endTime?: string;
 }

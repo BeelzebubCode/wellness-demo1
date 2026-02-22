@@ -11,6 +11,7 @@ import { ScheduleCalendar, SlotEditor } from "@/components/head-consultant/sched
 import type { TimeSlot } from "@/features/schedule/types";
 import { scheduleApi } from "@/features/schedule/api";
 import { useSlotEditor } from "@/features/schedule/hooks/useSlotEditor";
+import { useAssigneesQuery } from "@/features/head-consultant/bookings/hook/useAssigneesQuery";
 
 export default function AdminSchedulePage() {
   // Calendar state
@@ -29,6 +30,10 @@ export default function AdminSchedulePage() {
 
   // Date string
   const dateStr = useMemo(() => toISODateString(selectedDate), [selectedDate]);
+
+  // Consultant data for capacity limits
+  const { assignees } = useAssigneesQuery(dateStr);
+  const maxTotalCapacity = Math.max(1, assignees.length);
 
   // ===============================
   // Data Fetching
@@ -96,9 +101,15 @@ export default function AdminSchedulePage() {
   const handleEditSlot = useCallback(
     async (
       slotId: number,
-      data: { startTime?: string; endTime?: string; capacity?: number }
+      data: { startTime?: string; endTime?: string; capacity?: number; maxCapacity?: number }
     ) => {
-      const res = await updateSlot(slotId, data);
+      const capacityValue = data.capacity ?? data.maxCapacity;
+
+      const res = await updateSlot(slotId, {
+        capacity: capacityValue,
+        startTime: data.startTime,
+        endTime: data.endTime,
+      });
       if (res.success) {
         await fetchDailyData(dateStr);
       }
@@ -137,12 +148,12 @@ export default function AdminSchedulePage() {
     <div className="max-w-[1400px] mx-auto px-4 py-6 space-y-6">
       {/* Page Header */}
       <div className="flex items-center gap-3">
-        <div className="p-2 bg-emerald-100 rounded-lg">
-          <CalendarDays className="w-6 h-6 text-emerald-600" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 text-white shadow-md shadow-primary-200/40">
+          <CalendarDays className="w-5 h-5" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-gray-800">จัดการตารางคิว</h1>
-          <p className="text-gray-500 text-sm">
+          <h1 className="text-xl font-bold text-gray-800 tracking-tight">จัดการตารางคิว</h1>
+          <p className="text-gray-400 text-sm">
             จัดการช่วงเวลาและความจุของแต่ละวัน
           </p>
         </div>
@@ -172,6 +183,7 @@ export default function AdminSchedulePage() {
             onDeleteSlot={handleDeleteSlot}
             onDeleteAllSlots={handleDeleteAllSlots}
             onToggleSlotAvailability={handleToggleSlotAvailability}
+            maxTotalCapacity={maxTotalCapacity}
           />
         </div>
       </div>

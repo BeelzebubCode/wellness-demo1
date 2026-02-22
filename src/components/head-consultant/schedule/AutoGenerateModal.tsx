@@ -110,11 +110,11 @@ export function AutoGenerateModal({
     >
       <div className="space-y-4">
         {/* Date Display */}
-        <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-xl">
-          <Sparkles className="w-5 h-5 text-emerald-600" />
+        <div className="flex items-center gap-3 p-3 bg-primary-50 rounded-xl">
+          <Sparkles className="w-5 h-5 text-primary-600" />
           <div>
-            <p className="text-sm font-medium text-emerald-800">สร้างช่วงเวลาสำหรับ</p>
-            <p className="text-xs text-emerald-600">{formattedDate}</p>
+            <p className="text-sm font-medium text-primary-800">สร้างช่วงเวลาสำหรับ</p>
+            <p className="text-xs text-primary-600">{formattedDate}</p>
           </div>
         </div>
 
@@ -130,20 +130,20 @@ export function AutoGenerateModal({
                 className={cn(
                   'flex items-center justify-between p-2.5 rounded-lg border-2 transition-all text-left',
                   selectedPreset === preset.id
-                    ? 'border-emerald-500 bg-emerald-50'
+                    ? 'border-primary-500 bg-primary-50'
                     : 'border-slate-200 hover:border-slate-300 bg-white'
                 )}
                 disabled={isSubmitting}
               >
                 <span className={cn(
                   'text-sm font-medium',
-                  selectedPreset === preset.id ? 'text-emerald-700' : 'text-slate-700'
+                  selectedPreset === preset.id ? 'text-primary-700' : 'text-slate-700'
                 )}>
                   {preset.name}
                 </span>
                 <ChevronRight className={cn(
                   'w-4 h-4',
-                  selectedPreset === preset.id ? 'text-emerald-500' : 'text-slate-300'
+                  selectedPreset === preset.id ? 'text-primary-500' : 'text-slate-300'
                 )} />
               </button>
             ))}
@@ -158,7 +158,7 @@ export function AutoGenerateModal({
               <button
                 type="button"
                 onClick={() => setSelectedPreset(null)}
-                className="text-xs text-emerald-600 hover:underline"
+                className="text-xs text-primary-600 hover:underline"
               >
                 ใช้ค่าที่กำหนดเอง
               </button>
@@ -249,7 +249,7 @@ export function AutoGenerateModal({
         {/* Preview */}
         <div className="flex items-center justify-between p-3 bg-slate-100 rounded-lg">
           <span className="text-sm text-slate-600">จะสร้างทั้งหมด</span>
-          <span className="text-lg font-bold text-emerald-600">{slotsCount} ช่วงเวลา</span>
+          <span className="text-lg font-bold text-primary-600">{slotsCount} ช่วงเวลา</span>
         </div>
 
         {/* Actions */}
@@ -266,7 +266,7 @@ export function AutoGenerateModal({
           <Button
             onClick={handleSubmit}
             disabled={slotsCount === 0 || isSubmitting}
-            className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+            className="flex-1 bg-primary-600 hover:bg-primary-700 border-none"
           >
             {isSubmitting ? (
               <Loader2 className="w-4 h-4 animate-spin" />
