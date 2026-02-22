@@ -30,6 +30,7 @@ export default function ChatMessage({
   const isUser = role === "user";
   const [reportState, setReportState] = useState<ReportState>("idle");
   const [selectedReason, setSelectedReason] = useState<string>("wrong_answer");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const mdComponents = useMemo(
     () => ({
@@ -50,7 +51,7 @@ export default function ChatMessage({
   );
 
   const submitReport = async () => {
-    setReportState("loading");
+    setIsSubmitting(true);
     try {
       await fetch("/api/v2/agent/feedback", {
         method: "POST",
@@ -63,7 +64,9 @@ export default function ChatMessage({
       });
       setReportState("done");
     } catch {
-      setReportState("idle");
+      setReportState("confirming");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -172,10 +175,10 @@ export default function ChatMessage({
             <div className="flex items-center gap-2">
               <button
                 onClick={submitReport}
-                disabled={reportState === "loading"}
+                disabled={isSubmitting}
                 className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 px-3 py-1.5 text-[12px] font-semibold text-white transition-colors disabled:opacity-50"
               >
-                {reportState === "loading" ? (
+                {isSubmitting ? (
                   <>
                     <span className="h-3 w-3 rounded-full border-2 border-white/40 border-t-white animate-spin" />
                     กำลังส่ง...
@@ -189,7 +192,7 @@ export default function ChatMessage({
               </button>
               <button
                 onClick={() => setReportState("idle")}
-                disabled={reportState === "loading"}
+                disabled={isSubmitting}
                 className="px-3 py-1.5 rounded-lg border border-orange-200 text-[12px] text-orange-600 hover:bg-orange-100 transition-colors disabled:opacity-50"
               >
                 ยกเลิก
