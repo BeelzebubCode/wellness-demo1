@@ -1,5 +1,5 @@
 // path: src/components/filters/types.ts
-export type FilterType = "select" | "text" | "numberMin" | "boolean" | "date";
+export type FilterType = "select" | "searchable_select" | "text" | "numberMin" | "boolean" | "date";
 
 export type FilterOption = {
   label: string;
@@ -12,4 +12,5 @@ export type FilterDef<TFilters extends Record<string, any>> = {
   type: FilterType;
   options?: FilterOption[];
   placeholder?: string;
+  searchPlaceholder?: string;
 };

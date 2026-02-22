@@ -6,18 +6,18 @@ export const MINISTRY_NAV: NavItem[] = [
   {
     href: "/ministry",
     label: "ภาพรวมระดับประเทศ",
-    icon: LayoutDashboard,
+    icon: Map,
     exact: true,
+  },
+  {
+    href: "/ministry/dashboard",
+    label: "แดชบอร์ดส่วนกลาง",
+    icon: LayoutDashboard,
   },
   {
     href: "/ministry/universities",
     label: "มหาวิทยาลัย",
     icon: Building2,
-  },
-  {
-    href: "/ministry/heat-map",
-    label: "แผนที่ความเสี่ยง",
-    icon: Map,
   },
   {
     href: "/ministry/students",

@@ -117,7 +117,7 @@ export function FilterBar<TFilters extends Record<string, any>>({
           />
         )}
 
-        <div className="relative shrink-0">
+        <div className="relative shrink-0 ml-auto">
           <Button variant="outline" size="sm" onClick={() => setOpen((o) => !o)}>
             <SlidersHorizontal className="w-4 h-4 mr-1" />
             ตัวกรอง

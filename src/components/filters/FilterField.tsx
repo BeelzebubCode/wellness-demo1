@@ -1,6 +1,7 @@
 // path: src/components/filters/FilterField.tsx
 "use client";
 
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { DatePickerInput } from "./inputs/DatePickerInput";
 
 export function FilterField({ def, value, onChange }: any) {
@@ -28,6 +29,23 @@ export function FilterField({ def, value, onChange }: any) {
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
         </div>
       </div>
+    );
+  }
+
+  if (def.type === "searchable_select") {
+    return (
+      <SearchableSelect
+        options={(def.options || []).map((opt: any) => ({
+          value: String(opt.value),
+          label: opt.label,
+        }))}
+        value={value ? String(value) : undefined}
+        onValueChange={(val) => {
+          onChange(val ? normalizeSelect(val) : undefined);
+        }}
+        placeholder={def.placeholder || "เลือก..."}
+        searchPlaceholder={def.searchPlaceholder || "ค้นหา..."}
+      />
     );
   }
 

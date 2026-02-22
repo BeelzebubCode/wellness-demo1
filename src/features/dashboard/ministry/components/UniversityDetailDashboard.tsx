@@ -1,4 +1,3 @@
-// src/features/dashboard/ministry/components/UniversityDetailDashboard.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -6,50 +5,57 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import {
-    ArrowLeft, Users, TrendingUp, MapPin, Network,
-    BarChart3, Activity, Heart, Brain, ChevronRight, X, Trophy
+    ArrowLeft, Users, MapPin, Network,
+    BarChart3, ChevronRight, X, Trophy
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
-// Components
+// Analytics & Sub-components
+import { useAnalytics } from "../../shared/useAnalytics";
+import { AnalyticsFilterBar } from "../../shared/AnalyticsFilterBar";
+import { SummaryKPICards } from "../../shared/SummaryKPICards";
+import { CancellationSummary } from "../../shared/CancellationSummary";
+
+const LoadIndexChart = dynamic(
+    () => import("../../shared/LoadIndexChart").then((m) => ({ default: m.LoadIndexChart })),
+    { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
+);
+const ProblemCategoryChart = dynamic(
+    () => import("../../shared/ProblemCategoryChart").then((m) => ({ default: m.ProblemCategoryChart })),
+    { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
+);
+const AttendanceChart = dynamic(
+    () => import("../../shared/AttendanceChart").then((m) => ({ default: m.AttendanceChart })),
+    { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
+);
+const RiskDistributionChart = dynamic(
+    () => import("../../shared/RiskDistributionChart").then((m) => ({ default: m.RiskDistributionChart })),
+    { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
+);
+const TrendChart = dynamic(
+    () => import("../../shared/TrendChart").then((m) => ({ default: m.TrendChart })),
+    { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
+);
+
 const UniversityNetworkMap = dynamic(
     () => import("./map/UniversityNetworkMap").then((mod) => mod.UniversityNetworkMap),
     { ssr: false }
 );
-import { UniversityRankings } from "./map/UniversityRankings";
 
 interface UniversityDetailProps {
     universityCode: string;
 }
 
-// ChartJS setup
-import {
-    Chart as ChartJS,
-    ArcElement,
-    Tooltip,
-    Legend,
-    CategoryScale,
-    LinearScale,
-    BarElement,
-    Title,
-} from "chart.js";
-import { Doughnut, Bar } from "react-chartjs-2";
-
-ChartJS.register(
-    ArcElement,
-    Tooltip,
-    Legend,
-    CategoryScale,
-    LinearScale,
-    BarElement,
-    Title
-);
-
 export function UniversityDetailDashboard({ universityCode }: UniversityDetailProps) {
     const [university, setUniversity] = useState<any>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState("dashboard"); // Default to Dashboard (Combined View)
+    const [isUniLoading, setIsUniLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState("dashboard"); // Default to Dashboard
     const [showRankings, setShowRankings] = useState(false);
+
+    // Fetch analytical data
+    const { data: analyticsData, loading: analyticsLoading, params, setParams } = useAnalytics({
+        university_code: universityCode
+    });
 
     useEffect(() => {
         async function fetchUniversity() {
@@ -62,16 +68,15 @@ export function UniversityDetailDashboard({ universityCode }: UniversityDetailPr
             } catch (error) {
                 console.error("Error fetching university:", error);
             } finally {
-                setIsLoading(false);
+                setIsUniLoading(false);
             }
         }
         fetchUniversity();
     }, [universityCode]);
 
-    if (isLoading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div></div>;
+    if (isUniLoading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div></div>;
     if (!university) return <div>Not Found</div>;
 
-    // --- Data Mapping ---
     const networkUniversities = (university.connections || [])
         .sort((a: any, b: any) => a.distance - b.distance)
         .slice(0, 10)
@@ -81,64 +86,17 @@ export function UniversityDetailDashboard({ universityCode }: UniversityDetailPr
             logo: `/images/logo/${conn.universityCode}_logo.png`,
             students: conn.students || 0,
             dominantProblemCount: Math.round(conn.distance * 10) / 10,
-            problemBreakdown: {}
         }));
-
-    const genderStats = university.stats?.gender || [];
-    const genderData = {
-        labels: genderStats.map((g: any) => g.label === "MALE" ? "ชาย" : g.label === "FEMALE" ? "หญิง" : "อื่นๆ"),
-        datasets: [{
-            data: genderStats.map((g: any) => g.count),
-            backgroundColor: ["#3b82f6", "#ec4899", "#9ca3af"],
-            borderWidth: 0,
-        }],
-    };
-
-    const problemStats = university.stats?.problems || [];
-    const problemData = {
-        labels: problemStats.map((p: any) => p.label),
-        datasets: [{
-            label: "จำนวนเคส",
-            data: problemStats.map((p: any) => p.count),
-            backgroundColor: "#818cf8",
-            borderRadius: 4,
-        }],
-    };
-
-    const facultyStats = university.stats?.faculties || [];
-    const facultyData = {
-        labels: facultyStats.map((f: any) => f.label),
-        datasets: [{
-            label: "จำนวนนักศึกษา",
-            data: facultyStats.map((f: any) => f.count),
-            backgroundColor: "#34d399",
-            borderRadius: 4,
-        }],
-    };
-
-    const chartOptions = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: { position: 'bottom' as const, labels: { font: { family: "'IBM Plex Sans Thai', sans-serif", size: 12 }, usePointStyle: true, color: 'rgb(var(--fg))' } },
-        },
-        scales: {
-            x: { grid: { display: false }, ticks: { font: { family: "'IBM Plex Sans Thai', sans-serif" }, color: 'rgb(var(--muted))' } },
-            y: { border: { display: false }, ticks: { font: { family: "'IBM Plex Sans Thai', sans-serif" }, color: 'rgb(var(--muted))' } }
-        }
-    };
 
     const tabs = [
         { id: "dashboard", label: "ภาพรวมทั้งหมด", icon: BarChart3 },
-        { id: "students", label: "นักศึกษา", icon: Users },
-        { id: "mental-health", label: "สุขภาพจิต", icon: Brain },
         { id: "network-map", label: "แผนที่เครือข่าย", icon: Network },
     ];
 
     return (
         <div className="min-h-screen bg-bg font-sans text-fg pb-20">
 
-            {/* 💎 Premium Immersive Header - "Fiew Fiew" Style (Full Height, No White Gap) */}
+            {/* 💎 Premium Immersive Header - "Fiew Fiew" Style */}
             <div className="relative w-full h-[400px] group overflow-hidden bg-slate-900">
                 {/* Background Image with Zoom Effect */}
                 <div className="absolute inset-0 transition-transform duration-1000 scale-105 group-hover:scale-100 z-0">
@@ -146,7 +104,7 @@ export function UniversityDetailDashboard({ universityCode }: UniversityDetailPr
                     <div className="absolute inset-0 bg-gradient-to-r from-primary-900/80 via-primary-800/80 to-primary-900/80"></div>
                 </div>
 
-                {/* Gradient Overlay for Readability (Bottom Up) */}
+                {/* Gradient Overlay for Readability */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent z-10 pointer-events-none"></div>
 
                 {/* Navigation Back Button */}
@@ -158,10 +116,9 @@ export function UniversityDetailDashboard({ universityCode }: UniversityDetailPr
                     กลับหน้าหลัก
                 </Link>
 
-                {/* Content Container (Positioned Absolute Bottom) */}
+                {/* Content Container */}
                 <div className="absolute bottom-0 left-0 right-0 z-20 px-4 sm:px-6 pb-6">
                     <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-end gap-8">
-
                         {/* 🌟 Glowing Logo */}
                         <div className="relative shrink-0 mb-2">
                             <div className="absolute -inset-4 bg-primary/30 rounded-full blur-xl animate-pulse"></div>
@@ -180,19 +137,19 @@ export function UniversityDetailDashboard({ universityCode }: UniversityDetailPr
                             </div>
                         </div>
 
-                        {/* Typography Info (White Text) */}
+                        {/* Typography Info */}
                         <div className="flex-1 pb-2 text-white">
                             <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-3 leading-tight drop-shadow-xl text-white">
                                 {university.name}
                             </h1>
                             <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-white/90">
-                                <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-lg backdrop-blur-md border border-white/10 hover:bg-white/20 transition-colors shadow-sm">
+                                <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-lg backdrop-blur-md border border-white/10 shadow-sm">
                                     <MapPin className="w-4 h-4 text-emerald-300" /> {university.province}
                                 </span>
-                                <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-lg backdrop-blur-md border border-white/10 hover:bg-white/20 transition-colors shadow-sm">
+                                <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-lg backdrop-blur-md border border-white/10 shadow-sm">
                                     <Network className="w-4 h-4 text-amber-300" /> {university.regionNameTh || "ประเทศไทย"}
                                 </span>
-                                <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-lg backdrop-blur-md border border-white/10 hover:bg-white/20 transition-colors shadow-sm">
+                                <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-lg backdrop-blur-md border border-white/10 shadow-sm">
                                     <Users className="w-4 h-4 text-sky-300" /> {university.students.toLocaleString()} คน
                                 </span>
                             </div>
@@ -201,7 +158,7 @@ export function UniversityDetailDashboard({ universityCode }: UniversityDetailPr
                 </div>
             </div>
 
-            {/* Tabs Bar (Sticky below header) */}
+            {/* Tabs Bar */}
             <div className="sticky top-0 z-40 bg-card/95 backdrop-blur-xl border-b border-border shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center gap-8 overflow-x-auto no-scrollbar">
                     {tabs.map((tab) => (
@@ -210,10 +167,7 @@ export function UniversityDetailDashboard({ universityCode }: UniversityDetailPr
                             onClick={() => setActiveTab(tab.id)}
                             className={`
                         relative py-4 px-2 text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2
-                        ${activeTab === tab.id
-                                    ? "text-primary"
-                                    : "text-muted hover:text-fg"
-                                }
+                        ${activeTab === tab.id ? "text-primary" : "text-muted hover:text-fg"}
                     `}
                         >
                             <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? "text-primary" : "text-muted"}`} />
@@ -232,138 +186,65 @@ export function UniversityDetailDashboard({ universityCode }: UniversityDetailPr
             {/* Content Area */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 min-h-[500px] space-y-12">
 
-                {/* Combined Dashboard View */}
+                {/* Dashboard View */}
                 {activeTab === "dashboard" && (
-                    <div className="space-y-12 animate-in fade-in duration-500">
-                        <SectionWrapper title="ภาพรวม (Overview)">
-                            <OverviewContent university={university} />
-                        </SectionWrapper>
+                    <div className="space-y-8 animate-in fade-in duration-500">
+                        {/* Filters */}
+                        <section>
+                            <AnalyticsFilterBar params={params} onChange={setParams} />
+                        </section>
 
-                        <SectionWrapper title="ข้อมูลนักศึกษา (Students)">
-                            <StudentsContent genderData={genderData} facultyData={facultyData} chartOptions={chartOptions} />
-                        </SectionWrapper>
+                        {/* KPIs */}
+                        <section>
+                            <SummaryKPICards data={analyticsData?.summary ?? null} loading={analyticsLoading} />
+                        </section>
 
-                        <SectionWrapper title="สุขภาพจิต (Mental Health)">
-                            <MentalHealthContent problemData={problemData} chartOptions={chartOptions} />
-                        </SectionWrapper>
-
-                        <SectionWrapper title="เครือข่าย (Network)">
-                            <NetworkMapContent
-                                university={university}
-                                networkUniversities={networkUniversities}
-                                showRankings={showRankings}
-                                setShowRankings={setShowRankings}
+                        {/* Charts Row */}
+                        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <LoadIndexChart
+                                data={analyticsData?.loadIndex ?? []}
+                                loading={analyticsLoading}
+                                title="Load Index ตามคณะ"
+                                subtitle="คณะไหนมีภาระงานสูงสุด"
                             />
-                        </SectionWrapper>
+                            <RiskDistributionChart data={analyticsData?.riskDistribution ?? null} loading={analyticsLoading} />
+                        </section>
+
+                        {/* Problems */}
+                        <section>
+                            <ProblemCategoryChart data={analyticsData?.problemCategories ?? []} loading={analyticsLoading} />
+                        </section>
+
+                        {/* Breakdowns */}
+                        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <AttendanceChart data={analyticsData?.attendanceByGroup ?? []} loading={analyticsLoading} />
+                            <CancellationSummary data={analyticsData?.cancellationByGroup ?? []} loading={analyticsLoading} />
+                        </section>
+
+                        {/* Trend */}
+                        <section>
+                            <TrendChart data={analyticsData?.trend ?? []} loading={analyticsLoading} />
+                        </section>
                     </div>
                 )}
 
-                {/* Individual Tabs */}
-                {activeTab === "overview" && <OverviewContent university={university} />}
-                {activeTab === "students" && <StudentsContent genderData={genderData} facultyData={facultyData} chartOptions={chartOptions} />}
-                {activeTab === "mental-health" && <MentalHealthContent problemData={problemData} chartOptions={chartOptions} />}
+                {/* Network Map */}
                 {activeTab === "network-map" && (
-                    <NetworkMapContent
-                        university={university}
-                        networkUniversities={networkUniversities}
-                        showRankings={showRankings}
-                        setShowRankings={setShowRankings}
-                    />
+                    <div className="animate-in fade-in duration-500">
+                        <NetworkMapContent
+                            university={university}
+                            networkUniversities={networkUniversities}
+                            showRankings={showRankings}
+                            setShowRankings={setShowRankings}
+                        />
+                    </div>
                 )}
             </div>
         </div>
     );
 }
 
-// --- Sub-components (Extracted for Dashboard Reuse) ---
-
-function SectionWrapper({ title, children }: { title: string, children: React.ReactNode }) {
-    return (
-        <div className="space-y-4">
-            <h2 className="text-xl font-bold text-fg flex items-center gap-2">
-                <div className="w-1.5 h-6 bg-primary rounded-full"></div>
-                {title}
-            </h2>
-            {children}
-        </div>
-    );
-}
-
-function OverviewContent({ university }: { university: any }) {
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-card p-6 rounded-3xl shadow-sm border border-border hover:shadow-md transition-all">
-                <div className="flex justify-between items-start mb-4">
-                    <div className="p-3 bg-rose-50 rounded-2xl text-rose-500"><Heart className="w-6 h-6" /></div>
-                    <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full">+12%</span>
-                </div>
-                <div className="text-4xl font-black text-fg tracking-tight">87%</div>
-                <div className="text-sm font-medium text-muted mt-1">คะแนนสุขภาพ (Wellbeing)</div>
-            </div>
-            <div className="bg-card p-6 rounded-3xl shadow-sm border border-border hover:shadow-md transition-all">
-                <div className="p-3 w-fit bg-amber-50 rounded-2xl text-amber-500 mb-4"><Activity className="w-6 h-6" /></div>
-                <div className="text-4xl font-black text-fg tracking-tight">23</div>
-                <div className="text-sm font-medium text-muted mt-1">นักศึกษาเสี่ยงสูง (High Risk)</div>
-            </div>
-            <div className="bg-card p-6 rounded-3xl shadow-sm border border-border hover:shadow-md transition-all">
-                <div className="p-3 w-fit bg-indigo-50 rounded-2xl text-indigo-500 mb-4"><Users className="w-6 h-6" /></div>
-                <div className="text-4xl font-black text-fg tracking-tight">142</div>
-                <div className="text-sm font-medium text-muted mt-1">การให้คำปรึกษา (Sessions)</div>
-            </div>
-            <div className="bg-card p-6 rounded-3xl shadow-sm border border-border hover:shadow-md transition-all">
-                <div className="p-3 w-fit bg-cyan-50 rounded-2xl text-cyan-500 mb-4"><BarChart3 className="w-6 h-6" /></div>
-                <div className="text-4xl font-black text-fg tracking-tight">4.8</div>
-                <div className="text-sm font-medium text-muted mt-1">คะแนนความพึงพอใจ (Rating)</div>
-            </div>
-        </div>
-    )
-}
-
-function StudentsContent({ genderData, facultyData, chartOptions }: any) {
-    return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-card p-6 rounded-3xl shadow-sm border border-border">
-                <h3 className="text-lg font-bold text-fg mb-6">สัดส่วนนักศึกษา (Gender Ratio)</h3>
-                <div className="h-72 flex justify-center">
-                    <Doughnut data={genderData} options={chartOptions} />
-                </div>
-            </div>
-            <div className="bg-card p-6 rounded-3xl shadow-sm border border-border">
-                <h3 className="text-lg font-bold text-fg mb-6">จำนวนนักศึกษาแยกตามคณะ (By Faculty)</h3>
-                <div className="h-72">
-                    <Bar data={facultyData} options={{ ...chartOptions, indexAxis: 'y' as const }} />
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function MentalHealthContent({ problemData, chartOptions }: any) {
-    return (
-        <div className="space-y-6">
-            <div className="grid grid-cols-3 gap-4">
-                <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-3xl text-center shadow-sm">
-                    <div className="text-3xl font-bold text-emerald-700">78%</div>
-                    <div className="text-sm text-emerald-600 font-medium">ความเสี่ยงต่ำ (Low)</div>
-                </div>
-                <div className="bg-amber-50 border border-amber-100 p-6 rounded-3xl text-center shadow-sm">
-                    <div className="text-3xl font-bold text-amber-700">19%</div>
-                    <div className="text-sm text-amber-600 font-medium">ความเสี่ยงปานกลาง (Medium)</div>
-                </div>
-                <div className="bg-rose-50 border border-rose-100 p-6 rounded-3xl text-center shadow-sm">
-                    <div className="text-3xl font-bold text-rose-700">3%</div>
-                    <div className="text-sm text-rose-600 font-medium">ความเสี่ยงสูง (High)</div>
-                </div>
-            </div>
-            <div className="bg-card p-6 rounded-3xl shadow-sm border border-border">
-                <h3 className="text-lg font-bold text-fg mb-6">ประเภทปัญหาที่พบ (Issues Breakdown)</h3>
-                <div className="h-80">
-                    <Bar data={problemData} options={{ ...chartOptions, indexAxis: 'y' as const }} />
-                </div>
-            </div>
-        </div>
-    );
-}
+// Sub-components
 
 function NetworkMapContent({ university, networkUniversities, showRankings, setShowRankings }: any) {
     return (

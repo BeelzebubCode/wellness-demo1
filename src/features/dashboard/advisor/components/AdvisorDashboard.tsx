@@ -1,69 +1,33 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useAdvisorStats } from "../hooks/useAdvisorStats";
-import { AdvisorStatsCards } from "./AdvisorStatsCards";
-import { StudentListTable } from "./StudentListTable";
-import { AdvisorAdvancedFilter } from "./AdvisorAdvancedFilter";
-import { AdvisorDashboardFilters } from "../types";
 import dynamic from "next/dynamic";
+import { useAnalytics } from "../../shared/useAnalytics";
+import { AnalyticsFilterBar } from "../../shared/AnalyticsFilterBar";
+import { SummaryKPICards } from "../../shared/SummaryKPICards";
 
-const AdvisorRiskChart = dynamic(() => import("./AdvisorRiskChart").then(mod => mod.AdvisorRiskChart), {
-  loading: () => <div className="h-64 bg-slate-50 animate-pulse rounded-xl" />,
-  ssr: false
-});
-const AdvisorAnalyticsCharts = dynamic(() => import("./AdvisorAnalyticsCharts").then(mod => mod.AdvisorAnalyticsCharts), {
-  loading: () => <div className="h-64 bg-slate-50 animate-pulse rounded-xl" />,
-  ssr: false
-});
-import { LoadingSpinner } from "@/components/ui";
+const ProblemCategoryChart = dynamic(
+  () => import("../../shared/ProblemCategoryChart").then((m) => ({ default: m.ProblemCategoryChart })),
+  { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
+);
+const AttendanceChart = dynamic(
+  () => import("../../shared/AttendanceChart").then((m) => ({ default: m.AttendanceChart })),
+  { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
+);
+const RiskDistributionChart = dynamic(
+  () => import("../../shared/RiskDistributionChart").then((m) => ({ default: m.RiskDistributionChart })),
+  { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
+);
+const TrendChart = dynamic(
+  () => import("../../shared/TrendChart").then((m) => ({ default: m.TrendChart })),
+  { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
+);
+const StudentRankTable = dynamic(
+  () => import("../../shared/StudentRankTable").then((m) => ({ default: m.StudentRankTable })),
+  { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
+);
 
 export function AdvisorDashboard() {
-  const {
-    stats,
-    students,
-    riskTrends,
-    analytics,
-    isLoading,
-    filters,
-    setFilters,
-  } = useAdvisorStats();
-
-  const [activeQuickFilter, setActiveQuickFilter] = useState("all");
-
-  const handleQuickFilterChange = useCallback((id: string) => {
-    setActiveQuickFilter(id);
-    const now = new Date();
-    now.setHours(23, 59, 59, 999);
-
-    if (id === "all") {
-      const from = new Date(now);
-      from.setDate(from.getDate() - 30);
-      from.setHours(0, 0, 0, 0);
-      setFilters(prev => ({ search: prev.search, startDate: from, endDate: now }));
-    } else if (id === "high-risk") {
-      setFilters(prev => ({
-        ...prev,
-        riskLevel: "HIGH",
-      }));
-    } else if (id === "new-cases") {
-      const from = new Date(now);
-      from.setDate(from.getDate() - 7);
-      from.setHours(0, 0, 0, 0);
-      setFilters(prev => ({ search: prev.search, startDate: from, endDate: now }));
-    }
-  }, [setFilters]);
-
-  // Check if filters are active beyond defaults
-  const hasActiveFilters = !!(filters.riskLevel || filters.problemCategoryId || filters.gender);
-
-  if (isLoading || !stats) {
-    return (
-      <div className="h-64 flex items-center justify-center bg-slate-50 rounded-xl">
-        <LoadingSpinner />
-      </div>
-    );
-  }
+  const { data, loading, params, setParams } = useAnalytics();
 
   return (
     <div className="space-y-8 bg-slate-50 p-6 rounded-2xl">
@@ -77,69 +41,48 @@ export function AdvisorDashboard() {
         </p>
       </div>
 
-      {/* ===== Advanced Filter (Dean-style) ===== */}
-      <AdvisorAdvancedFilter
-        filters={filters}
-        onFilterChange={setFilters}
-        activeQuickFilter={activeQuickFilter}
-        onQuickFilterChange={handleQuickFilterChange}
-      />
-      {hasActiveFilters && (
-        <div className="flex justify-end -mt-4">
-          <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full animate-pulse">
-            🔍 กำลังกรองข้อมูล
-          </span>
-        </div>
-      )}
+      {/* ===== Advanced Filter ===== */}
+      <AnalyticsFilterBar params={params} onChange={setParams} hideFaculty />
 
       {/* ===== Stats Cards ===== */}
       <div className="bg-white rounded-2xl p-4 shadow-sm">
-        <AdvisorStatsCards stats={stats} />
+        <SummaryKPICards data={data?.summary ?? null} loading={loading} />
+      </div>
+
+      {/* ===== Student Risk Rank — featured ===== */}
+      <div className="bg-white rounded-2xl shadow-sm">
+        <StudentRankTable data={data?.studentRank ?? []} loading={loading} />
       </div>
 
       {/* ===== Analytics Section ===== */}
-      {analytics && (
-        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-4 shadow-sm">
-          <div className="mb-3">
-            <h2 className="text-lg font-semibold text-indigo-900">
-              ภาพรวมเชิงวิเคราะห์
-            </h2>
-            <p className="text-sm text-indigo-600">
-              แนวโน้มและสถิติด้านสุขภาวะของนิสิต
-            </p>
-          </div>
-          <AdvisorAnalyticsCharts analytics={analytics} />
+      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-4 shadow-sm">
+        <div className="mb-3">
+          <h2 className="text-lg font-semibold text-indigo-900">
+            ภาพรวมเชิงวิเคราะห์
+          </h2>
+          <p className="text-sm text-indigo-600">
+            แนวโน้มและสถิติด้านสุขภาวะของนิสิต
+          </p>
         </div>
-      )}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ProblemCategoryChart data={data?.problemCategories ?? []} loading={loading} />
+          <RiskDistributionChart data={data?.riskDistribution ?? null} loading={loading} />
+        </div>
+      </div>
 
       {/* ===== Main Content ===== */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* --- Student List --- */}
-        <div className="lg:col-span-2 bg-white rounded-2xl p-4 shadow-sm space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">
-              รายชื่อนิสิตในที่ปรึกษา
-            </h2>
-            <p className="text-sm text-slate-500">
-              ค้นหาและคัดกรองนิสิตตามระดับความเสี่ยง
-            </p>
-          </div>
-
-          <StudentListTable students={students} />
-        </div>
-
-        {/* --- Risk Trend --- */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <AttendanceChart data={data?.attendanceByGroup ?? []} loading={loading} />
         <div className="bg-gradient-to-br from-rose-50 to-orange-50 rounded-2xl p-4 shadow-sm">
           <div className="mb-3">
             <h2 className="text-lg font-semibold text-rose-900">
-              แนวโน้มความเสี่ยง
+              แนวโน้มตามเวลา
             </h2>
             <p className="text-sm text-rose-600">
-              การเปลี่ยนแปลงระดับความเสี่ยงของนิสิต
+              การเปลี่ยนแปลงจำนวนการจอง/ยกเลิก
             </p>
           </div>
-
-          <AdvisorRiskChart data={riskTrends} />
+          <TrendChart data={data?.trend ?? []} loading={loading} />
         </div>
       </div>
     </div>
