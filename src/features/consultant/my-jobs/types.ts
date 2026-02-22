@@ -1,6 +1,6 @@
 // src/features/consultant/my-jobs/types.ts
 
-export type BookingStatusUI = "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+export type BookingStatusUI = "PENDING" | "PENDING_ASSIGNMENT" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
 
 /** ของจริงจาก API (/api/v2/bookings/my) */
 export type MyBookingApiRow = {

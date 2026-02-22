@@ -692,18 +692,19 @@ model BookingCancellation {
 // ==========================================
 
 model Feedback {
-  feedback_id   Int @id @default(autoincrement())
-  university_id Int
-  booking_id    Int
-  student_id    Int
-  consultant_id Int
+  feedback_id              Int @id @default(autoincrement())
+  university_id            Int
+  booking_id               Int
+  student_id               Int
+  consultant_id            Int
+  consultant_university_id Int // university ของ consultant จริง (อาจต่างจาก university_id กรณียืมตัว)
 
   feedback_is_anonymous Boolean  @default(true)
   feedback_created_at   DateTime @default(now())
 
-  booking    Booking          @relation(fields: [university_id, booking_id], references: [university_id, booking_id])
-  consultant Consultant       @relation(fields: [university_id, consultant_id], references: [university_id, consultant_id])
-  student    Student          @relation(fields: [university_id, student_id], references: [university_id, student_id])
+  booking    Booking    @relation(fields: [university_id, booking_id], references: [university_id, booking_id])
+  consultant Consultant @relation(fields: [consultant_university_id, consultant_id], references: [university_id, consultant_id])
+  student    Student    @relation(fields: [university_id, student_id], references: [university_id, student_id])
   comment    FeedbackComment?
   ratings    FeedbackRating[]
 
@@ -711,6 +712,7 @@ model Feedback {
   @@index([consultant_id])
   @@index([student_id])
   @@index([university_id])
+  @@index([consultant_university_id, consultant_id])
   @@map("feedback")
 }
 

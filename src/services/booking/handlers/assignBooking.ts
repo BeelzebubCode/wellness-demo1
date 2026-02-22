@@ -166,10 +166,8 @@ export async function handleAssignBooking(
   try {
     await prisma.$transaction(async (tx) => {
       // update booking (กัน race condition)
-      // ✅ ถ้า consultant อยู่คนละมหาลัย (Ghost / Borrow) ห้าม update consultant_id ใน Booking
-      // เพราะ Booking ผูก FK [university_id, consultant_id] ซึ่ง consultant ไม่ได้อยู่ที่นี่
-      const isLocalConsultant = consultantUniversityId === activeUniversityId;
-
+      // ✅ Booking FK ใช้แค่ consultant_id (autoincrement, globally unique)
+      // ไม่ใช่ composite [university_id, consultant_id] → set ได้เลยแม้ข้ามมหาลัย
       const upd = await tx.booking.updateMany({
         where: {
           university_id: activeUniversityId,
@@ -178,7 +176,7 @@ export async function handleAssignBooking(
         },
         data: {
           booking_status: BookingStatus.ASSIGNED,
-          consultant_id: isLocalConsultant ? consultantId : undefined,
+          consultant_id: consultantId,
         },
       });
 

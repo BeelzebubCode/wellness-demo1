@@ -132,7 +132,7 @@ export default function LoginPage() {
                   <HeartPulse className="w-4 h-4 text-white" />
                 </span>
                 <span className="text-lg font-semibold text-slate-900">
-                  Wellness Center
+                  Wellness System
                 </span>
               </div>
 

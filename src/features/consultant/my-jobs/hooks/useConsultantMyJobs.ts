@@ -22,10 +22,11 @@ import { normalizeYMD, fromYMD } from "@/lib/date";
 function mapStatus(dbStatus: string): BookingStatusUI {
   const s = String(dbStatus || "").toUpperCase();
   if (s === "ASSIGNED") return "PENDING";
+  if (s === "PENDING_ASSIGNMENT") return "PENDING_ASSIGNMENT";
   if (s === "IN_PROGRESS") return "IN_PROGRESS";
   if (s === "COMPLETED") return "COMPLETED";
   if (s === "CANCELLED") return "CANCELLED";
-  return "PENDING";
+  return "PENDING_ASSIGNMENT"; // unknown statuses default to non-actionable
 }
 
 // ✅ กัน API ส่ง field วันไม่เหมือนกัน
@@ -241,7 +242,14 @@ export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
         setOnlineModal({ open: true, job: { ...job, status: "IN_PROGRESS" } });
       }
     } catch (e: any) {
-      alert(e?.message ?? "เริ่มงานไม่สำเร็จ");
+      const msg = e?.message ?? "เริ่มงานไม่สำเร็จ";
+      // 409 = status already changed (double-click or race condition)
+      if (msg.includes("สถานะ") || msg.includes("409") || msg.includes("ASSIGNED")) {
+        alert("เคสนี้ถูกรับแล้ว หรือสถานะเปลี่ยนไปแล้ว ระบบจะรีเฟรชข้อมูลให้");
+      } else {
+        alert(msg);
+      }
+      triggerRefresh();
     } finally {
       setActionLoadingId(null);
     }

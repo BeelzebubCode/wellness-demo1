@@ -109,7 +109,21 @@ export async function POST(
         };
       }
 
-      if (!booking.consultant_id) {
+      // ✅ หา consultant ตัวจริงจาก active BookingAssignment (รองรับ cross-university)
+      const activeAssignment = await tx.bookingAssignment.findFirst({
+        where: {
+          university_id: activeUniversityId,
+          booking_id: booking.booking_id,
+          is_active: true,
+        },
+        select: { consultant_id: true, consultant_university_id: true },
+        orderBy: { assigned_at: "desc" },
+      });
+
+      const realConsultantId = activeAssignment?.consultant_id ?? booking.consultant_id;
+      const consultantUniversityId = activeAssignment?.consultant_university_id ?? activeUniversityId;
+
+      if (!realConsultantId) {
         return { ok: false as const, status: 400, error: "ยังไม่มีผู้ให้คำปรึกษา" };
       }
 
@@ -121,13 +135,14 @@ export async function POST(
         };
       }
 
-      // ✅ สร้าง feedback (ต้องใส่ university_id ตาม schema)
+      // ✅ สร้าง feedback (ใช้ consultant_university_id สำหรับ FK ข้ามมหาลัย)
       const created = await tx.feedback.create({
         data: {
           university_id: activeUniversityId,
           booking_id: booking.booking_id,
           student_id: booking.student_id,
-          consultant_id: booking.consultant_id,
+          consultant_id: realConsultantId,
+          consultant_university_id: consultantUniversityId,
           feedback_is_anonymous: isAnonymous,
 
           ratings: {

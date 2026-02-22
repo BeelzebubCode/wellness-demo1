@@ -7,6 +7,14 @@ import { ChevronDown, Loader2, Send, Link as LinkIcon, Clock, User, Info, Edit, 
 import type { Job } from "../types";
 
 function StatusBadge({ status }: { status: Job["status"] }) {
+  if (status === "PENDING_ASSIGNMENT") {
+    return (
+      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gradient-to-r from-slate-50 to-gray-50 text-slate-600 text-xs font-bold border border-slate-200/60 shadow-sm">
+        <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse"></span>
+        รอมอบหมาย
+      </span>
+    );
+  }
   if (status === "PENDING") {
     return (
       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gradient-to-r from-amber-50 to-orange-50 text-amber-700 text-xs font-bold border border-amber-200/60 shadow-sm">
@@ -85,7 +93,7 @@ export function JobItem({
   onEditChannel?: (job: Job) => void;
   isActing: boolean;
 }) {
-  const isDisabled = job.status === "COMPLETED" || job.status === "CANCELLED";
+  const isDisabled = job.status === "COMPLETED" || job.status === "CANCELLED" || job.status === "PENDING_ASSIGNMENT";
   const isPending = job.status === "PENDING";
   const isInProgress = job.status === "IN_PROGRESS";
 

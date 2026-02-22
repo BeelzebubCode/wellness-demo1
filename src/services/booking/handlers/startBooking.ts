@@ -85,36 +85,41 @@ export async function handleStartBooking(
   // ✅ บังคับ flow
   if (booking.booking_status !== BookingStatus.ASSIGNED) {
     return NextResponse.json(
-      { error: `สถานะต้องเป็น ASSIGNED ก่อนรับเคส (ตอนนี้: ${booking.booking_status})` },
+      {
+        error: `สถานะต้องเป็น ASSIGNED ก่อนรับเคส (ตอนนี้: ${booking.booking_status})`,
+        currentStatus: booking.booking_status,
+      },
       { status: 409 },
     );
   }
 
-  // ✅ update สถานะ (กัน race)
-  // ถ้า consultant_id ตรง ก็ใช้ consultant_id
-  // ถ้าไม่ตรง (Ghost/Borrow case) ก็เช็คว่าเป็น null หรือไม่
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const whereClause: any = {
-    university_id: activeUniversityId,
-    booking_id: bookingId,
-    booking_status: BookingStatus.ASSIGNED,
-  };
-
-  if (booking.consultant_id === consultantId) {
-    whereClause.consultant_id = consultantId;
-  } else {
-    // Ghost/Borrow: consultant_id ใน booking เป็น null
-    whereClause.consultant_id = null;
-  }
-
+  // ✅ update สถานะ (กัน race — เช็คว่ายังเป็น ASSIGNED อยู่)
+  // Authorization ได้ verify ไปแล้วข้างบน ไม่ต้องเช็ค consultant_id อีก
   const upd = await prisma.booking.updateMany({
-    where: whereClause,
+    where: {
+      university_id: activeUniversityId,
+      booking_id: bookingId,
+      booking_status: BookingStatus.ASSIGNED,
+    },
     data: { booking_status: BookingStatus.IN_PROGRESS },
   });
 
   if (upd.count === 0) {
+    // Re-fetch เพื่อหาสถานะปัจจุบัน
+    const current = await prisma.booking.findUnique({
+      where: {
+        university_id_booking_id: {
+          university_id: activeUniversityId,
+          booking_id: bookingId,
+        },
+      },
+      select: { booking_status: true },
+    });
     return NextResponse.json(
-      { error: "สถานะไม่อนุญาตให้รับเคส หรือรายการถูกเปลี่ยนไปแล้ว" },
+      {
+        error: "สถานะไม่อนุญาตให้รับเคส หรือรายการถูกเปลี่ยนไปแล้ว",
+        currentStatus: current?.booking_status ?? null,
+      },
       { status: 409 },
     );
   }
