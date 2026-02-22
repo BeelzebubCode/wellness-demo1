@@ -137,7 +137,7 @@ export function SlotGrid({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-8">
       {TIME_PERIODS.map((period) => {
         const periodSlots = groupedSlots[period.id];
         if (periodSlots.length === 0) return null;
@@ -150,10 +150,9 @@ export function SlotGrid({
             <div className="flex items-center gap-2.5 mb-3">
               <div
                 className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-xl",
+                  "flex items-center gap-2 px-3.5 py-1.5 rounded-full border shadow-sm",
                   period.bg,
-                  period.borderColor,
-                  "border"
+                  period.borderColor
                 )}
               >
                 <Icon className={cn("w-4 h-4", period.color)} />
@@ -161,21 +160,20 @@ export function SlotGrid({
                   {period.label}
                 </span>
               </div>
-              <span className="text-xs text-slate-400">
+              <span className="text-xs font-medium text-slate-400">
                 ({period.range})
               </span>
-              <div className="flex-1 h-px bg-slate-100" />
-              <span className="text-xs font-semibold text-slate-400">
+              <div className="flex-1 h-px bg-slate-200/60" />
+              <span className="text-xs font-bold text-slate-400">
                 {periodSlots.length} ช่วง
               </span>
             </div>
 
-            {/* Slots Grid */}
             <div
               className="
-                grid gap-3 justify-start
-                [grid-template-columns:repeat(auto-fill,minmax(140px,1fr))]
-                max-[420px]:[grid-template-columns:repeat(auto-fill,minmax(120px,1fr))]
+                grid gap-4 justify-start
+                [grid-template-columns:repeat(auto-fill,minmax(150px,1fr))]
+                max-[420px]:[grid-template-columns:repeat(auto-fill,minmax(130px,1fr))]
               "
             >
               {periodSlots.map((slot) => (
@@ -194,10 +192,10 @@ export function SlotGrid({
       {/* Add Button */}
       <button
         onClick={onAddSlot}
-        className="w-full py-3.5 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 hover:border-primary-300 hover:text-primary-600 hover:bg-primary-50/50 transition-all flex items-center justify-center gap-2 group"
+        className="w-full py-4 border-2 border-dashed border-slate-300 rounded-2xl text-slate-500 hover:border-primary-400 hover:text-primary-700 hover:bg-primary-50/50 hover:shadow-sm transition-all flex items-center justify-center gap-2 group"
       >
-        <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
-        <span className="text-sm font-semibold">เพิ่มช่วงเวลา</span>
+        <Plus className="w-5 h-5 group-hover:scale-110 group-hover:rotate-90 transition-transform duration-300" />
+        <span className="text-sm font-bold">เพิ่มช่วงเวลาใหม่</span>
       </button>
     </div>
   );

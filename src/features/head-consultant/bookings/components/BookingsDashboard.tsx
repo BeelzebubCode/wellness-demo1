@@ -183,10 +183,6 @@ export function BookingsDashboard({
                       setActiveRow(r);
                       setOpenAssign(true);
                     }}
-                    onClickReschedule={() => {
-                      setActiveRow(r);
-                      setOpenReschedule(true);
-                    }}
                   />
                 </div>
               ))}

@@ -157,12 +157,10 @@ export function BookingsListCard({
   row,
   onClickDetails,
   onClickAssign,
-  onClickReschedule,
 }: {
   row: AdminBookingRow;
   onClickDetails: () => void;
   onClickAssign: () => void;
-  onClickReschedule: () => void;
 }) {
   const studentName = row.userName || row.student?.name || row.student?.username || "ไม่ทราบชื่อ";
   const assign = getAssignState(row);
@@ -275,13 +273,6 @@ export function BookingsListCard({
           </div>
 
           <div className="flex items-end gap-2">
-            <IconAction
-              tone="amber"
-              icon={ArrowRightLeft}
-              label="เลื่อนเวลา"
-              onClick={onClickReschedule}
-            />
-
             <IconAction
               tone={assign.can ? (assign.isEdit ? "blue" : "emerald") : "slate"}
               icon={UserCheck}

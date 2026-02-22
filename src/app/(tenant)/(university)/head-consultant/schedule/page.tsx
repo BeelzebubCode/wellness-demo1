@@ -148,14 +148,12 @@ export default function AdminSchedulePage() {
     <div className="max-w-[1400px] mx-auto px-4 py-6 space-y-6">
       {/* Page Header */}
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 text-white shadow-md shadow-primary-200/40">
-          <CalendarDays className="w-5 h-5" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-500 text-white shadow-sm ring-4 ring-primary-50">
+          <CalendarDays className="h-5 w-5" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-gray-800 tracking-tight">จัดการตารางคิว</h1>
-          <p className="text-gray-400 text-sm">
-            จัดการช่วงเวลาและความจุของแต่ละวัน
-          </p>
+          <h5 className="text-2xl font-bold tracking-tight text-gray-900">จัดการตารางคิว</h5>
+          <p className="text-sm text-gray-500">จัดการช่วงเวลาและความจุของแต่ละวัน</p>
         </div>
       </div>
 

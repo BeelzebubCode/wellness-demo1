@@ -212,7 +212,8 @@ export function SlotFormModal({
       isOpen={isOpen}
       onClose={onClose}
       title={isEditing ? 'แก้ไขช่วงเวลา' : 'เพิ่มช่วงเวลาใหม่'}
-      size="md"
+      size="lg"
+      className="p-6"
     >
       {/* Delete Confirmation */}
       {showDeleteConfirm ? (
@@ -260,13 +261,15 @@ export function SlotFormModal({
           {/* Status Badge (editing only) */}
           {isEditing && (
             <div className={cn(
-              'flex items-center justify-between p-2 rounded-lg',
-              isLocked ? 'bg-slate-100' : 'bg-primary-50'
+              'flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border',
+              isLocked ? 'bg-slate-50 border-slate-200' : 'bg-primary-50 border-primary-100'
             )}>
-              <div className="flex items-center gap-2">
-                <Power className={cn('w-4 h-4', isLocked ? 'text-slate-500' : 'text-primary-600')} />
-                <span className={cn('text-sm font-medium', isLocked ? 'text-slate-600' : 'text-primary-700')}>
-                  {isLocked ? 'ปิดอยู่' : 'เปิดให้จอง'}
+              <div className="flex items-center gap-2.5">
+                <div className={cn('p-1.5 rounded-md', isLocked ? 'bg-white' : 'bg-primary-100/50')}>
+                  <Power className={cn('w-4 h-4', isLocked ? 'text-slate-500' : 'text-primary-600')} />
+                </div>
+                <span className={cn('text-sm font-bold', isLocked ? 'text-slate-600' : 'text-primary-700')}>
+                  {isLocked ? 'ปิดให้จอง' : 'เปิดให้จอง'}
                 </span>
               </div>
               {onToggleAvailability && (
@@ -293,29 +296,31 @@ export function SlotFormModal({
 
           {/* Booking Warning */}
           {isEditing && hasBookings && (
-            <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-xs">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <div className="flex items-center gap-2 p-3 bg-amber-50/80 border border-amber-200 rounded-xl text-amber-700 text-sm shadow-sm">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
               มีการจอง {editingSlot?.bookedCount} รายการ ไม่สามารถปิดหรือลบได้
             </div>
           )}
 
           {/* Time Selection */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <Clock className="w-4 h-4 text-slate-400" />
-              เวลา
+          <div className="space-y-4 bg-slate-50/50 p-4 sm:p-5 rounded-2xl border border-slate-100">
+            <div className="flex items-center gap-2 text-base font-bold text-slate-700">
+              <div className="p-1.5 bg-white shadow-sm rounded-lg border border-slate-100">
+                <Clock className="w-5 h-5 text-primary-500" />
+              </div>
+              เวลาที่ให้บริการ
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs text-slate-500 mb-1">เริ่มต้น</label>
+                <label className="block text-xs font-medium text-slate-500 mb-1.5">เวลาเริ่มต้น</label>
                 <select
                   value={formData.startTime}
                   onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                  className={cn("w-full px-3 py-2 text-sm border rounded-lg outline-none",
+                  className={cn("w-full px-3 py-2.5 text-sm font-medium border rounded-xl outline-none shadow-sm transition-shadow",
                     (isEditing && hasBookings) || isLoading
-                      ? "bg-slate-50 border-slate-200 text-slate-500 cursor-not-allowed"
-                      : "bg-white border-slate-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                      ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                      : "bg-white border-slate-200 focus:ring-4 focus:ring-primary-500/10 focus:border-primary-400 hover:border-slate-300"
                   )}
                   disabled={(isEditing && hasBookings) || isLoading}
                 >
@@ -326,17 +331,17 @@ export function SlotFormModal({
               </div>
 
               <div>
-                <label className="block text-xs text-slate-500 mb-1">สิ้นสุด</label>
+                <label className="block text-xs font-medium text-slate-500 mb-1.5">เวลาสิ้นสุด</label>
                 <select
                   value={formData.endTime}
                   onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                   className={cn(
-                    'w-full px-3 py-2 text-sm border rounded-lg outline-none',
+                    'w-full px-3 py-2.5 text-sm font-medium border rounded-xl outline-none shadow-sm transition-shadow',
                     (isEditing && hasBookings) || isLoading
-                      ? 'bg-slate-50 border-slate-200 text-slate-500 cursor-not-allowed'
+                      ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
                       : duration <= 0
-                        ? 'border-red-300 bg-red-50 focus:ring-red-500/20 focus:border-red-500'
-                        : 'bg-white border-slate-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500'
+                        ? 'border-red-300 bg-red-50 focus:ring-4 focus:ring-red-500/10 focus:border-red-400'
+                        : 'bg-white border-slate-200 focus:ring-4 focus:ring-primary-500/10 focus:border-primary-400 hover:border-slate-300'
                   )}
                   disabled={(isEditing && hasBookings) || isLoading}
                 >
@@ -348,19 +353,19 @@ export function SlotFormModal({
             </div>
 
             {/* Duration Presets */}
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2 pt-1">
               {TIME_PRESETS.map(preset => (
                 <button
                   key={preset.duration}
                   type="button"
                   onClick={() => applyPreset(preset.duration)}
                   className={cn(
-                    'px-2.5 py-1 text-xs font-medium rounded-md border transition-all',
+                    'px-3 py-1.5 text-xs font-semibold rounded-full border transition-all shadow-sm',
                     isEditing && hasBookings
                       ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed hidden'
                       : duration === preset.duration
-                        ? 'bg-primary-50 border-primary-300 text-primary-700'
-                        : 'bg-white border-slate-200 text-slate-600 hover:border-primary-300'
+                        ? 'bg-primary-500 border-primary-500 text-white shadow-primary-200/50'
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-primary-300 hover:text-primary-600'
                   )}
                   disabled={(isEditing && hasBookings) || isLoading}
                 >
@@ -382,55 +387,58 @@ export function SlotFormModal({
               </div>
             )}
             {duration <= 0 && (
-              <div className="flex items-center gap-1 text-xs text-red-600">
-                <AlertCircle className="w-3 h-3" />
+              <div className="flex items-center gap-1.5 text-xs font-medium text-red-600 bg-red-50 p-2 rounded-lg">
+                <AlertCircle className="w-3.5 h-3.5" />
                 เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้น
               </div>
             )}
           </div>
 
           {/* Capacity */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <Users className="w-4 h-4 text-slate-400" />
-              จำนวนที่รับได้
+          <div className="space-y-4 bg-slate-50/50 p-4 sm:p-5 rounded-2xl border border-slate-100">
+            <div className="flex items-center gap-2 text-base font-bold text-slate-700">
+              <div className="p-1.5 bg-white shadow-sm rounded-lg border border-slate-100">
+                <Users className="w-5 h-5 text-primary-500" />
+              </div>
+              จำนวนที่รับได้ (Capacity)
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap pt-1">
               {Array.from({ length: Math.min(5, maxTotalCapacity) }, (_, i) => i + 1).map(n => (
                 <button
                   key={n}
                   type="button"
                   onClick={() => setFormData({ ...formData, maxCapacity: n })}
                   className={cn(
-                    'w-9 h-9 rounded-lg border text-sm font-semibold transition-all',
+                    'w-10 h-10 rounded-xl border text-sm font-bold transition-all flex items-center justify-center shadow-sm',
                     formData.maxCapacity === n
-                      ? 'bg-primary-500 border-primary-500 text-white'
-                      : 'bg-white border-slate-200 text-slate-600 hover:border-primary-300'
+                      ? 'bg-primary-500 border-primary-500 text-white shadow-primary-200/50'
+                      : 'bg-white border-slate-200 text-slate-600 hover:border-primary-300 hover:text-primary-600'
                   )}
                   disabled={isLoading}
                 >
                   {n}
                 </button>
               ))}
-              <input
-                type="number"
-                min={Math.max(1, editingSlot?.bookedCount ?? 1)}
-                max={maxTotalCapacity}
-                value={formData.maxCapacity}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  maxCapacity: Math.min(maxTotalCapacity, Math.max(1, parseInt(e.target.value) || 1))
-                })}
-                className="w-14 px-2 py-2 text-sm text-center border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
-                disabled={isLoading}
-              />
-              <span className="text-xs text-slate-500">คน</span>
+              <div className="relative ml-2">
+                <input
+                  type="number"
+                  min={Math.max(1, editingSlot?.bookedCount ?? 1)}
+                  max={maxTotalCapacity}
+                  value={formData.maxCapacity}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    maxCapacity: Math.min(maxTotalCapacity, Math.max(1, parseInt(e.target.value) || 1))
+                  })}
+                  className="w-20 pl-3 pr-8 py-2.5 text-sm font-bold border border-slate-200 rounded-xl focus:ring-4 focus:ring-primary-500/10 focus:border-primary-400 outline-none shadow-sm text-center"
+                  disabled={isLoading}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">คน</span>
+              </div>
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+          <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100">
             {/* Delete Button (editing only) */}
             {isEditing && onDelete ? (
               <button
@@ -438,45 +446,46 @@ export function SlotFormModal({
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={isLoading || hasBookings}
                 className={cn(
-                  'flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors',
+                  'flex items-center gap-1.5 px-3 py-2 text-sm font-bold rounded-xl transition-colors shrink-0',
                   hasBookings
-                    ? 'text-slate-400 cursor-not-allowed'
-                    : 'text-red-600 hover:bg-red-50'
+                    ? 'text-slate-400 cursor-not-allowed hidden'
+                    : 'text-red-500 hover:bg-red-50 hover:text-red-600'
                 )}
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="w-4 h-4" />
                 ลบ
               </button>
             ) : (
               <div />
             )}
 
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2 sm:gap-3">
               <Button
                 type="button"
                 variant="outline"
                 onClick={onClose}
                 disabled={isLoading}
+                className="rounded-xl px-4 sm:px-5 font-bold text-slate-600 shrink-0"
               >
                 ยกเลิก
               </Button>
               <Button
                 type="submit"
                 disabled={!isValid || isLoading}
-                className="bg-primary-600 hover:bg-primary-700"
+                className="bg-primary-600 hover:bg-primary-700 rounded-xl px-4 sm:px-6 shadow-sm shadow-primary-500/30 font-bold shrink-0"
               >
                 {isSubmitting ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : isEditing ? (
-                  <>
-                    <Save className="w-4 h-4 mr-1" />
+                  <div className="flex items-center">
+                    <Save className="w-4 h-4 mr-1.5" />
                     บันทึก
-                  </>
+                  </div>
                 ) : (
-                  <>
-                    <Plus className="w-4 h-4 mr-1" />
+                  <div className="flex items-center">
+                    <Plus className="w-4 h-4 mr-1.5" />
                     เพิ่ม
-                  </>
+                  </div>
                 )}
               </Button>
             </div>
