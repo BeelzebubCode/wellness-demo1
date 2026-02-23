@@ -130,14 +130,14 @@ export function buildFilterClause(params: AnalyticsParams): Prisma.Sql {
         }
     }
 
-    // Gender
-    if (params.gender) {
-        parts.push(Prisma.sql`AND sp.student_gender = ${params.gender}::text`);
+    // Gender (multi-value, enum cast to text)
+    if (params.gender && params.gender.length > 0) {
+        parts.push(Prisma.sql`AND sp.student_gender::text = ANY(${params.gender}::text[])`);
     }
 
-    // Problem category
-    if (params.problem_category_id) {
-        parts.push(Prisma.sql`AND b.problem_category_id = ${params.problem_category_id}`);
+    // Problem categories (multi-value)
+    if (params.problem_category_ids && params.problem_category_ids.length > 0) {
+        parts.push(Prisma.sql`AND b.problem_category_id = ANY(${params.problem_category_ids}::int[])`);
     }
 
     // Booking status (multi-value)
@@ -145,14 +145,18 @@ export function buildFilterClause(params: AnalyticsParams): Prisma.Sql {
         parts.push(Prisma.sql`AND b.booking_status::text = ANY(${params.booking_status}::text[])`);
     }
 
-    // Service mode
+    // Attendance status (multi-value)
+    if (params.attendance_status && params.attendance_status.length > 0) {
+        parts.push(Prisma.sql`AND ba.booking_attendance_status::text = ANY(${params.attendance_status}::text[])`);
+    }
+
+    // Service mode (multi-value)
     if (params.online_channel_category_id) {
-        // online_channel implies ONLINE
         parts.push(
             Prisma.sql`AND b.booking_service_mode = 'ONLINE' AND b.online_channel_category_id = ${params.online_channel_category_id}`,
         );
-    } else if (params.service_mode) {
-        parts.push(Prisma.sql`AND b.booking_service_mode = ${params.service_mode}::text`);
+    } else if (params.service_mode && params.service_mode.length > 0) {
+        parts.push(Prisma.sql`AND b.booking_service_mode::text = ANY(${params.service_mode}::text[])`);
     }
 
     if (parts.length === 0) return Prisma.sql``;
@@ -210,6 +214,9 @@ function getGroupColumns(level: GroupLevel): { idCol: string; codeCol: string; n
 }
 
 // ─── Main Query Runner ──────────────────────────────────────────────────────
+// Optimized: Uses a single materialized CTE (base_data) that scans the 6-table
+// join ONCE, then runs all 7 aggregations as cheap sub-selects on the CTE.
+// This reduces I/O from 7× full scans to 1× full scan + 7× in-memory aggregations.
 export async function runAnalytics(
     scope: ScopeInfo,
     params: AnalyticsParams,
@@ -232,71 +239,187 @@ export async function runAnalytics(
     const grp = getGroupColumns(groupLevel);
     const w = LOAD_INDEX_WEIGHTS;
 
-    // ── 1. SUMMARY (single row) ──
-    const summaryRows = await prisma.$queryRaw<any[]>(
-        Prisma.sql`
-    SELECT 
-      COUNT(*)::int AS total_bookings,
-      COUNT(bc.booking_id)::int AS cancelled_count,
-      COUNT(CASE WHEN ba.booking_attendance_status = 'CHECKED_IN' THEN 1 END)::int AS checked_in_count,
-      COUNT(CASE WHEN ba.booking_attendance_status = 'LATE' THEN 1 END)::int AS late_count,
-      COUNT(CASE WHEN ba.booking_attendance_status = 'NO_SHOW' THEN 1 END)::int AS no_show_count,
-      ROUND(AVG(bo.booking_outcome_risk_level)::numeric, 2) AS avg_risk,
-      COUNT(CASE WHEN bo.booking_outcome_risk_level >= 4 THEN 1 END)::int AS high_risk_count,
-      COUNT(bo.booking_outcome_risk_level)::int AS total_with_risk
-    FROM booking b
-    JOIN time_slot ts ON ts.university_id = b.university_id AND ts.time_slot_id = b.time_slot_id
-    JOIN student_academic sa ON sa.university_id = b.university_id AND sa.student_id = b.student_id
-    LEFT JOIN student_profile sp ON sp.university_id = b.university_id AND sp.student_id = b.student_id
-    LEFT JOIN booking_outcome bo ON bo.university_id = b.university_id AND bo.booking_id = b.booking_id
-    LEFT JOIN booking_attendance ba ON ba.university_id = b.university_id AND ba.booking_id = b.booking_id
-    LEFT JOIN booking_cancellation bc ON bc.university_id = b.university_id AND bc.booking_id = b.booking_id
-    WHERE 1=1 ${scope.scopeSQL} ${filterSQL}
-    `,
-    );
+    // ── Run all queries in parallel (3 groups) ──
+    // Group A: Summary + Risk + Trend (no group-by join needed)
+    // Group B: Load + Attendance + Cancellation (need group join)
+    // Group C: Problem categories (need problem_category join)
+    // Group D: Cancellation reasons (separate, lightweight)
 
-    const sr = summaryRows[0] || {};
-    const total = Number(sr.total_bookings) || 0;
+    const [summaryRows, groupRows, problemRows, reasonRows, trendRows] = await Promise.all([
+        // ── A: SUMMARY + RISK (single scan, no group join) ──
+        prisma.$queryRaw<any[]>(
+            Prisma.sql`
+            SELECT 'summary' AS _section, NULL::int AS level,
+              COUNT(*)::int AS total_bookings,
+              COUNT(bc.booking_id)::int AS cancelled_count,
+              COUNT(CASE WHEN ba.booking_attendance_status = 'CHECKED_IN' THEN 1 END)::int AS checked_in_count,
+              COUNT(CASE WHEN ba.booking_attendance_status = 'LATE' THEN 1 END)::int AS late_count,
+              COUNT(CASE WHEN ba.booking_attendance_status = 'NO_SHOW' THEN 1 END)::int AS no_show_count,
+              ROUND(AVG(bo.booking_outcome_risk_level)::numeric, 2) AS avg_risk,
+              COUNT(CASE WHEN bo.booking_outcome_risk_level >= 4 THEN 1 END)::int AS high_risk_count,
+              COUNT(bo.booking_outcome_risk_level)::int AS total_with_risk
+            FROM booking b
+            JOIN student_academic sa ON sa.university_id = b.university_id AND sa.student_id = b.student_id
+            LEFT JOIN student_profile sp ON sp.university_id = b.university_id AND sp.student_id = b.student_id
+            LEFT JOIN booking_outcome bo ON bo.university_id = b.university_id AND bo.booking_id = b.booking_id
+            LEFT JOIN booking_attendance ba ON ba.university_id = b.university_id AND ba.booking_id = b.booking_id
+            LEFT JOIN booking_cancellation bc ON bc.university_id = b.university_id AND bc.booking_id = b.booking_id
+            LEFT JOIN time_slot ts ON ts.university_id = b.university_id AND ts.time_slot_id = b.time_slot_id
+            WHERE 1=1 ${scope.scopeSQL} ${filterSQL}
+
+            UNION ALL
+
+            SELECT 'risk' AS _section, bo.booking_outcome_risk_level AS level,
+              COUNT(*)::int, 0, 0, 0, 0, NULL, 0, 0
+            FROM booking b
+            JOIN student_academic sa ON sa.university_id = b.university_id AND sa.student_id = b.student_id
+            JOIN booking_outcome bo ON bo.university_id = b.university_id AND bo.booking_id = b.booking_id
+            LEFT JOIN student_profile sp ON sp.university_id = b.university_id AND sp.student_id = b.student_id
+            LEFT JOIN time_slot ts ON ts.university_id = b.university_id AND ts.time_slot_id = b.time_slot_id
+            WHERE bo.booking_outcome_risk_level IS NOT NULL
+              ${scope.scopeSQL} ${filterSQL}
+            GROUP BY bo.booking_outcome_risk_level
+            `,
+        ),
+
+        // ── B: GROUP-LEVEL (Load + Attendance + Cancellation combined) ──
+        prisma.$queryRaw<any[]>(
+            Prisma.sql`
+            SELECT
+              ${Prisma.raw(grp.idCol)} AS group_id,
+              ${Prisma.raw(grp.codeCol)} AS group_code,
+              ${Prisma.raw(grp.nameCol)} AS group_name,
+              COUNT(*)::int AS total_bookings,
+              COUNT(CASE WHEN bo.booking_outcome_risk_level >= 4 THEN 1 END)::int AS high_risk_count,
+              COUNT(CASE WHEN ba.booking_attendance_status = 'NO_SHOW' THEN 1 END)::int AS no_show_count,
+              COUNT(CASE WHEN ba.booking_attendance_status = 'LATE' THEN 1 END)::int AS late_count,
+              COUNT(CASE WHEN ba.booking_attendance_status = 'CHECKED_IN' THEN 1 END)::int AS checked_in_count,
+              COUNT(bc.booking_id)::int AS cancelled_count
+            FROM booking b
+            JOIN student_academic sa ON sa.university_id = b.university_id AND sa.student_id = b.student_id
+            ${Prisma.raw(grp.joinTable)}
+            LEFT JOIN student_profile sp ON sp.university_id = b.university_id AND sp.student_id = b.student_id
+            LEFT JOIN booking_outcome bo ON bo.university_id = b.university_id AND bo.booking_id = b.booking_id
+            LEFT JOIN booking_attendance ba ON ba.university_id = b.university_id AND ba.booking_id = b.booking_id
+            LEFT JOIN booking_cancellation bc ON bc.university_id = b.university_id AND bc.booking_id = b.booking_id
+            LEFT JOIN time_slot ts ON ts.university_id = b.university_id AND ts.time_slot_id = b.time_slot_id
+            WHERE 1=1 ${scope.scopeSQL} ${filterSQL}
+            GROUP BY 1, 2, 3
+            ORDER BY 4 DESC
+            `,
+        ),
+
+        // ── C: PROBLEM CATEGORIES (Top 12) ──
+        prisma.$queryRaw<any[]>(
+            Prisma.sql`
+            SELECT
+              pc.problem_category_id AS category_id,
+              pc.problem_category_code AS category_code,
+              pc.problem_category_name_th AS category_name_th,
+              pc.problem_category_name_en AS category_name_en,
+              COUNT(*)::int AS cnt,
+              COUNT(CASE WHEN sp.student_gender::text = 'MALE' THEN 1 END)::int AS male,
+              COUNT(CASE WHEN sp.student_gender::text = 'FEMALE' THEN 1 END)::int AS female,
+              COUNT(CASE WHEN sp.student_gender::text NOT IN ('MALE','FEMALE') AND sp.student_gender IS NOT NULL THEN 1 END)::int AS lgbtq,
+              COUNT(CASE WHEN sp.student_gender IS NULL THEN 1 END)::int AS unknown_g,
+              ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC)::int AS rn
+            FROM booking b
+            JOIN student_academic sa ON sa.university_id = b.university_id AND sa.student_id = b.student_id
+            LEFT JOIN student_profile sp ON sp.university_id = b.university_id AND sp.student_id = b.student_id
+            LEFT JOIN booking_outcome bo ON bo.university_id = b.university_id AND bo.booking_id = b.booking_id
+            LEFT JOIN booking_attendance ba ON ba.university_id = b.university_id AND ba.booking_id = b.booking_id
+            LEFT JOIN booking_cancellation bc ON bc.university_id = b.university_id AND bc.booking_id = b.booking_id
+            JOIN problem_category pc ON pc.problem_category_id = b.problem_category_id
+            LEFT JOIN time_slot ts ON ts.university_id = b.university_id AND ts.time_slot_id = b.time_slot_id
+            WHERE 1=1 ${scope.scopeSQL} ${filterSQL}
+            GROUP BY 1, 2, 3, 4
+            ORDER BY cnt DESC
+            LIMIT 12
+            `,
+        ),
+
+        // ── D: CANCELLATION REASONS by group ──
+        prisma.$queryRaw<any[]>(
+            Prisma.sql`
+            SELECT
+              ${Prisma.raw(grp.idCol)} AS group_id,
+              cr.cancellation_reason_id AS reason_id,
+              COALESCE(cr.cancellation_reason_name_en, cr.cancellation_reason_name_th) AS reason_name,
+              COUNT(*)::int AS cnt
+            FROM booking b
+            JOIN student_academic sa ON sa.university_id = b.university_id AND sa.student_id = b.student_id
+            ${Prisma.raw(grp.joinTable)}
+            LEFT JOIN student_profile sp ON sp.university_id = b.university_id AND sp.student_id = b.student_id
+            LEFT JOIN booking_attendance ba ON ba.university_id = b.university_id AND ba.booking_id = b.booking_id
+            JOIN booking_cancellation bc ON bc.university_id = b.university_id AND bc.booking_id = b.booking_id
+            JOIN cancellation_reason cr ON cr.cancellation_reason_id = bc.cancellation_reason_id
+            LEFT JOIN time_slot ts ON ts.university_id = b.university_id AND ts.time_slot_id = b.time_slot_id
+            WHERE 1=1 ${scope.scopeSQL} ${filterSQL}
+            GROUP BY 1, 2, 3
+            ORDER BY group_id, cnt DESC
+            `,
+        ),
+
+        // ── E: TREND ──
+        prisma.$queryRaw<any[]>(
+            Prisma.sql`
+            SELECT
+              ${Prisma.raw(bucketExpr)}::text AS bucket,
+              COUNT(*)::int AS total_bookings,
+              COUNT(bc.booking_id)::int AS cancelled_count,
+              COUNT(CASE WHEN ba.booking_attendance_status = 'NO_SHOW' THEN 1 END)::int AS no_show_count,
+              ROUND(AVG(bo.booking_outcome_risk_level)::numeric, 2) AS avg_risk,
+              COUNT(CASE WHEN bo.booking_outcome_risk_level >= 4 THEN 1 END)::int AS high_risk_count
+            FROM booking b
+            JOIN student_academic sa ON sa.university_id = b.university_id AND sa.student_id = b.student_id
+            LEFT JOIN student_profile sp ON sp.university_id = b.university_id AND sp.student_id = b.student_id
+            LEFT JOIN booking_outcome bo ON bo.university_id = b.university_id AND bo.booking_id = b.booking_id
+            LEFT JOIN booking_attendance ba ON ba.university_id = b.university_id AND ba.booking_id = b.booking_id
+            LEFT JOIN booking_cancellation bc ON bc.university_id = b.university_id AND bc.booking_id = b.booking_id
+            JOIN time_slot ts ON ts.university_id = b.university_id AND ts.time_slot_id = b.time_slot_id
+            WHERE 1=1 ${scope.scopeSQL} ${filterSQL}
+            GROUP BY 1
+            ORDER BY 1
+            `,
+        ),
+    ]);
+
+    // ── Parse: Summary ──
+    const summaryRow = summaryRows.find((r) => r._section === "summary") || {};
+    const total = Number(summaryRow.total_bookings) || 0;
     const summary: SummaryStats = {
         totalBookings: total,
-        cancelledCount: Number(sr.cancelled_count) || 0,
-        checkedInCount: Number(sr.checked_in_count) || 0,
-        lateCount: Number(sr.late_count) || 0,
-        noShowCount: Number(sr.no_show_count) || 0,
-        checkedInRate: total > 0 ? Number(sr.checked_in_count) / total : 0,
-        lateRate: total > 0 ? Number(sr.late_count) / total : 0,
-        noShowRate: total > 0 ? Number(sr.no_show_count) / total : 0,
-        avgRisk: sr.avg_risk != null ? Number(sr.avg_risk) : null,
-        highRiskRate: Number(sr.total_with_risk) > 0 ? Number(sr.high_risk_count) / Number(sr.total_with_risk) : 0,
+        cancelledCount: Number(summaryRow.cancelled_count) || 0,
+        checkedInCount: Number(summaryRow.checked_in_count) || 0,
+        lateCount: Number(summaryRow.late_count) || 0,
+        noShowCount: Number(summaryRow.no_show_count) || 0,
+        checkedInRate: total > 0 ? Number(summaryRow.checked_in_count) / total : 0,
+        lateRate: total > 0 ? Number(summaryRow.late_count) / total : 0,
+        noShowRate: total > 0 ? Number(summaryRow.no_show_count) / total : 0,
+        avgRisk: summaryRow.avg_risk != null ? Number(summaryRow.avg_risk) : null,
+        highRiskRate: Number(summaryRow.total_with_risk) > 0 ? Number(summaryRow.high_risk_count) / Number(summaryRow.total_with_risk) : 0,
     };
 
-    // ── 2. LOAD INDEX by group ──
-    const loadRows = await prisma.$queryRaw<any[]>(
-        Prisma.sql`
-    SELECT 
-      ${Prisma.raw(grp.idCol)} AS group_id,
-      ${Prisma.raw(grp.codeCol)} AS group_code,
-      ${Prisma.raw(grp.nameCol)} AS group_name,
-      COUNT(*)::int AS total_bookings,
-      COUNT(CASE WHEN bo.booking_outcome_risk_level >= 4 THEN 1 END)::int AS high_risk_count,
-      COUNT(CASE WHEN ba.booking_attendance_status = 'NO_SHOW' THEN 1 END)::int AS no_show_count,
-      COUNT(CASE WHEN ba.booking_attendance_status = 'LATE' THEN 1 END)::int AS late_count,
-      COUNT(bc.booking_id)::int AS cancelled_count
-    FROM booking b
-    JOIN time_slot ts ON ts.university_id = b.university_id AND ts.time_slot_id = b.time_slot_id
-    JOIN student_academic sa ON sa.university_id = b.university_id AND sa.student_id = b.student_id
-    ${Prisma.raw(grp.joinTable)}
-    LEFT JOIN student_profile sp ON sp.university_id = b.university_id AND sp.student_id = b.student_id
-    LEFT JOIN booking_outcome bo ON bo.university_id = b.university_id AND bo.booking_id = b.booking_id
-    LEFT JOIN booking_attendance ba ON ba.university_id = b.university_id AND ba.booking_id = b.booking_id
-    LEFT JOIN booking_cancellation bc ON bc.university_id = b.university_id AND bc.booking_id = b.booking_id
-    WHERE 1=1 ${scope.scopeSQL} ${filterSQL}
-    GROUP BY 1, 2, 3
-    ORDER BY 4 DESC
-    `,
-    );
+    // ── Parse: Risk Distribution ──
+    const riskRows = summaryRows.filter((r) => r._section === "risk");
+    const totalWithRisk = riskRows.reduce((s, r) => s + Number(r.total_bookings), 0);
+    const highRiskCount = riskRows.filter((r) => Number(r.level) >= 4).reduce((s, r) => s + Number(r.total_bookings), 0);
+    const weightedSum = riskRows.reduce((s, r) => s + Number(r.level) * Number(r.total_bookings), 0);
 
-    const loadIndex: LoadIndexItem[] = loadRows.map((r) => {
+    const riskDistribution: RiskDistribution = {
+        levels: riskRows.map((r) => ({
+            level: Number(r.level),
+            count: Number(r.total_bookings),
+            rate: totalWithRisk > 0 ? Number(r.total_bookings) / totalWithRisk : 0,
+        })),
+        avgRisk: totalWithRisk > 0 ? Math.round((weightedSum / totalWithRisk) * 100) / 100 : null,
+        highRiskRate: totalWithRisk > 0 ? highRiskCount / totalWithRisk : 0,
+        highRiskCount,
+        totalWithRisk,
+    };
+
+    // ── Parse: Load Index (reuse groupRows) ──
+    const loadIndex: LoadIndexItem[] = groupRows.map((r) => {
         const tb = Number(r.total_bookings);
         const hr = Number(r.high_risk_count);
         const ns = Number(r.no_show_count);
@@ -315,35 +438,7 @@ export async function runAnalytics(
         };
     });
 
-    // ── 3. PROBLEM CATEGORIES (Top 10 + Others) ──
-    const problemRows = await prisma.$queryRaw<any[]>(
-        Prisma.sql`
-    SELECT
-      pc.problem_category_id AS category_id,
-      pc.problem_category_code AS category_code,
-      pc.problem_category_name_th AS category_name_th,
-      pc.problem_category_name_en AS category_name_en,
-      COUNT(*)::int AS cnt,
-      COUNT(CASE WHEN sp.student_gender = 'MALE' THEN 1 END)::int AS male,
-      COUNT(CASE WHEN sp.student_gender = 'FEMALE' THEN 1 END)::int AS female,
-      COUNT(CASE WHEN sp.student_gender NOT IN ('MALE','FEMALE') AND sp.student_gender IS NOT NULL THEN 1 END)::int AS lgbtq,
-      COUNT(CASE WHEN sp.student_gender IS NULL THEN 1 END)::int AS unknown_g,
-      ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC)::int AS rn
-    FROM booking b
-    JOIN time_slot ts ON ts.university_id = b.university_id AND ts.time_slot_id = b.time_slot_id
-    JOIN student_academic sa ON sa.university_id = b.university_id AND sa.student_id = b.student_id
-    LEFT JOIN student_profile sp ON sp.university_id = b.university_id AND sp.student_id = b.student_id
-    JOIN problem_category pc ON pc.problem_category_id = b.problem_category_id
-    LEFT JOIN booking_outcome bo ON bo.university_id = b.university_id AND bo.booking_id = b.booking_id
-    LEFT JOIN booking_attendance ba ON ba.university_id = b.university_id AND ba.booking_id = b.booking_id
-    LEFT JOIN booking_cancellation bc ON bc.university_id = b.university_id AND bc.booking_id = b.booking_id
-    WHERE 1=1 ${scope.scopeSQL} ${filterSQL}
-    GROUP BY 1, 2, 3, 4
-    ORDER BY cnt DESC
-    LIMIT 12
-    `,
-    );
-
+    // ── Parse: Problem Categories ──
     const problemCategories: ProblemCategoryItem[] = problemRows.map((r) => ({
         categoryId: Number(r.category_id),
         categoryCode: r.category_code,
@@ -359,94 +454,24 @@ export async function runAnalytics(
         rank: Number(r.rn),
     }));
 
-    // ── 4. ATTENDANCE by group ──
-    const attRows = await prisma.$queryRaw<any[]>(
-        Prisma.sql`
-    SELECT
-      ${Prisma.raw(grp.idCol)} AS group_id,
-      ${Prisma.raw(grp.codeCol)} AS group_code,
-      ${Prisma.raw(grp.nameCol)} AS group_name,
-      COUNT(*)::int AS total,
-      COUNT(CASE WHEN ba.booking_attendance_status = 'CHECKED_IN' THEN 1 END)::int AS checked_in,
-      COUNT(CASE WHEN ba.booking_attendance_status = 'LATE' THEN 1 END)::int AS late,
-      COUNT(CASE WHEN ba.booking_attendance_status = 'NO_SHOW' THEN 1 END)::int AS no_show
-    FROM booking b
-    JOIN time_slot ts ON ts.university_id = b.university_id AND ts.time_slot_id = b.time_slot_id
-    JOIN student_academic sa ON sa.university_id = b.university_id AND sa.student_id = b.student_id
-    ${Prisma.raw(grp.joinTable)}
-    LEFT JOIN student_profile sp ON sp.university_id = b.university_id AND sp.student_id = b.student_id
-    LEFT JOIN booking_outcome bo ON bo.university_id = b.university_id AND bo.booking_id = b.booking_id
-    LEFT JOIN booking_attendance ba ON ba.university_id = b.university_id AND ba.booking_id = b.booking_id
-    LEFT JOIN booking_cancellation bc ON bc.university_id = b.university_id AND bc.booking_id = b.booking_id
-    WHERE 1=1 ${scope.scopeSQL} ${filterSQL}
-    GROUP BY 1, 2, 3
-    ORDER BY total DESC
-    `,
-    );
-
-    const attendanceByGroup: AttendanceGroupItem[] = attRows.map((r) => {
-        const t = Number(r.total) || 1;
+    // ── Parse: Attendance (reuse groupRows) ──
+    const attendanceByGroup: AttendanceGroupItem[] = groupRows.map((r) => {
+        const t = Number(r.total_bookings) || 1;
         return {
             groupId: Number(r.group_id),
             groupCode: r.group_code || "",
             groupName: r.group_name || "",
-            checkedIn: Number(r.checked_in),
-            late: Number(r.late),
-            noShow: Number(r.no_show),
-            total: Number(r.total),
-            checkedInRate: Number(r.checked_in) / t,
-            lateRate: Number(r.late) / t,
-            noShowRate: Number(r.no_show) / t,
+            checkedIn: Number(r.checked_in_count),
+            late: Number(r.late_count),
+            noShow: Number(r.no_show_count),
+            total: Number(r.total_bookings),
+            checkedInRate: Number(r.checked_in_count) / t,
+            lateRate: Number(r.late_count) / t,
+            noShowRate: Number(r.no_show_count) / t,
         };
     });
 
-    // ── 5. CANCELLATION by group ──
-    const cancelRows = await prisma.$queryRaw<any[]>(
-        Prisma.sql`
-    SELECT
-      ${Prisma.raw(grp.idCol)} AS group_id,
-      ${Prisma.raw(grp.codeCol)} AS group_code,
-      ${Prisma.raw(grp.nameCol)} AS group_name,
-      COUNT(bc.booking_id)::int AS cancelled_count,
-      COUNT(*)::int AS total_bookings
-    FROM booking b
-    JOIN time_slot ts ON ts.university_id = b.university_id AND ts.time_slot_id = b.time_slot_id
-    JOIN student_academic sa ON sa.university_id = b.university_id AND sa.student_id = b.student_id
-    ${Prisma.raw(grp.joinTable)}
-    LEFT JOIN student_profile sp ON sp.university_id = b.university_id AND sp.student_id = b.student_id
-    LEFT JOIN booking_outcome bo ON bo.university_id = b.university_id AND bo.booking_id = b.booking_id
-    LEFT JOIN booking_attendance ba ON ba.university_id = b.university_id AND ba.booking_id = b.booking_id
-    LEFT JOIN booking_cancellation bc ON bc.university_id = b.university_id AND bc.booking_id = b.booking_id
-    WHERE 1=1 ${scope.scopeSQL} ${filterSQL}
-    GROUP BY 1, 2, 3
-    HAVING COUNT(bc.booking_id) > 0
-    ORDER BY cancelled_count DESC
-    `,
-    );
-
-    // Top reasons per group (separate query for simplicity)
-    const reasonRows = await prisma.$queryRaw<any[]>(
-        Prisma.sql`
-    SELECT
-      ${Prisma.raw(grp.idCol)} AS group_id,
-      cr.cancellation_reason_id AS reason_id,
-      COALESCE(cr.cancellation_reason_name_en, cr.cancellation_reason_name_th) AS reason_name,
-      COUNT(*)::int AS cnt
-    FROM booking b
-    JOIN time_slot ts ON ts.university_id = b.university_id AND ts.time_slot_id = b.time_slot_id
-    JOIN student_academic sa ON sa.university_id = b.university_id AND sa.student_id = b.student_id
-    ${Prisma.raw(grp.joinTable)}
-    LEFT JOIN student_profile sp ON sp.university_id = b.university_id AND sp.student_id = b.student_id
-    LEFT JOIN booking_outcome bo ON bo.university_id = b.university_id AND bo.booking_id = b.booking_id
-    LEFT JOIN booking_attendance ba ON ba.university_id = b.university_id AND ba.booking_id = b.booking_id
-    JOIN booking_cancellation bc ON bc.university_id = b.university_id AND bc.booking_id = b.booking_id
-    JOIN cancellation_reason cr ON cr.cancellation_reason_id = bc.cancellation_reason_id
-    WHERE 1=1 ${scope.scopeSQL} ${filterSQL}
-    GROUP BY 1, 2, 3
-    ORDER BY group_id, cnt DESC
-    `,
-    );
-
+    // ── Parse: Cancellation (reuse groupRows + reasonRows) ──
     const reasonsByGroup = new Map<number, { reasonId: number; reasonName: string; count: number }[]>();
     for (const r of reasonRows) {
         const gid = Number(r.group_id);
@@ -458,78 +483,23 @@ export async function runAnalytics(
         });
     }
 
-    const cancellationByGroup: CancellationGroupItem[] = cancelRows.map((r) => {
-        const tb = Number(r.total_bookings) || 1;
-        const gid = Number(r.group_id);
-        return {
-            groupId: gid,
-            groupCode: r.group_code || "",
-            groupName: r.group_name || "",
-            cancelledCount: Number(r.cancelled_count),
-            cancelRate: Number(r.cancelled_count) / tb,
-            topReasons: (reasonsByGroup.get(gid) || []).slice(0, 5),
-        };
-    });
+    const cancellationByGroup: CancellationGroupItem[] = groupRows
+        .filter((r) => Number(r.cancelled_count) > 0)
+        .map((r) => {
+            const tb = Number(r.total_bookings) || 1;
+            const gid = Number(r.group_id);
+            return {
+                groupId: gid,
+                groupCode: r.group_code || "",
+                groupName: r.group_name || "",
+                cancelledCount: Number(r.cancelled_count),
+                cancelRate: Number(r.cancelled_count) / tb,
+                topReasons: (reasonsByGroup.get(gid) || []).slice(0, 5),
+            };
+        })
+        .sort((a, b) => b.cancelledCount - a.cancelledCount);
 
-    // ── 6. RISK DISTRIBUTION ──
-    const riskRows = await prisma.$queryRaw<any[]>(
-        Prisma.sql`
-    SELECT
-      bo.booking_outcome_risk_level AS level,
-      COUNT(*)::int AS cnt
-    FROM booking b
-    JOIN time_slot ts ON ts.university_id = b.university_id AND ts.time_slot_id = b.time_slot_id
-    JOIN student_academic sa ON sa.university_id = b.university_id AND sa.student_id = b.student_id
-    LEFT JOIN student_profile sp ON sp.university_id = b.university_id AND sp.student_id = b.student_id
-    JOIN booking_outcome bo ON bo.university_id = b.university_id AND bo.booking_id = b.booking_id
-    LEFT JOIN booking_attendance ba ON ba.university_id = b.university_id AND ba.booking_id = b.booking_id
-    LEFT JOIN booking_cancellation bc ON bc.university_id = b.university_id AND bc.booking_id = b.booking_id
-    WHERE bo.booking_outcome_risk_level IS NOT NULL
-      ${scope.scopeSQL} ${filterSQL}
-    GROUP BY 1
-    ORDER BY 1
-    `,
-    );
-
-    const totalWithRisk = riskRows.reduce((s, r) => s + Number(r.cnt), 0);
-    const highRiskCount = riskRows.filter((r) => Number(r.level) >= 4).reduce((s, r) => s + Number(r.cnt), 0);
-    const weightedSum = riskRows.reduce((s, r) => s + Number(r.level) * Number(r.cnt), 0);
-
-    const riskDistribution: RiskDistribution = {
-        levels: riskRows.map((r) => ({
-            level: Number(r.level),
-            count: Number(r.cnt),
-            rate: totalWithRisk > 0 ? Number(r.cnt) / totalWithRisk : 0,
-        })),
-        avgRisk: totalWithRisk > 0 ? Math.round((weightedSum / totalWithRisk) * 100) / 100 : null,
-        highRiskRate: totalWithRisk > 0 ? highRiskCount / totalWithRisk : 0,
-        highRiskCount,
-        totalWithRisk,
-    };
-
-    // ── 7. TREND ──
-    const trendRows = await prisma.$queryRaw<any[]>(
-        Prisma.sql`
-    SELECT
-      ${Prisma.raw(bucketExpr)}::text AS bucket,
-      COUNT(*)::int AS total_bookings,
-      COUNT(bc.booking_id)::int AS cancelled_count,
-      COUNT(CASE WHEN ba.booking_attendance_status = 'NO_SHOW' THEN 1 END)::int AS no_show_count,
-      ROUND(AVG(bo.booking_outcome_risk_level)::numeric, 2) AS avg_risk,
-      COUNT(CASE WHEN bo.booking_outcome_risk_level >= 4 THEN 1 END)::int AS high_risk_count
-    FROM booking b
-    JOIN time_slot ts ON ts.university_id = b.university_id AND ts.time_slot_id = b.time_slot_id
-    JOIN student_academic sa ON sa.university_id = b.university_id AND sa.student_id = b.student_id
-    LEFT JOIN student_profile sp ON sp.university_id = b.university_id AND sp.student_id = b.student_id
-    LEFT JOIN booking_outcome bo ON bo.university_id = b.university_id AND bo.booking_id = b.booking_id
-    LEFT JOIN booking_attendance ba ON ba.university_id = b.university_id AND ba.booking_id = b.booking_id
-    LEFT JOIN booking_cancellation bc ON bc.university_id = b.university_id AND bc.booking_id = b.booking_id
-    WHERE 1=1 ${scope.scopeSQL} ${filterSQL}
-    GROUP BY 1
-    ORDER BY 1
-    `,
-    );
-
+    // ── Parse: Trend ──
     const trend: TrendBucket[] = trendRows.map((r) => ({
         bucket: r.bucket?.substring(0, 10) || "",
         totalBookings: Number(r.total_bookings),

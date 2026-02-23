@@ -184,7 +184,7 @@ export const DeanService = {
       : Prisma.empty;
 
     const whereGender = filters?.gender && filters.gender !== 'ALL'
-      ? Prisma.sql`AND sp.student_gender = ${filters.gender}`
+      ? Prisma.sql`AND sp.student_gender::text = ${filters.gender}`
       : Prisma.empty;
 
     const whereSearch = filters?.search

@@ -157,6 +157,7 @@ export function SearchableSelect({
             {isOpen && typeof document !== "undefined" && createPortal(
                 <div
                     ref={dropdownRef}
+                    data-searchable-dropdown="true"
                     style={portalStyle}
                     className="bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
                 >

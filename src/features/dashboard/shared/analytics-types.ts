@@ -13,10 +13,11 @@ export interface AnalyticsParams {
     faculty_id?: number;
     faculty_code?: string; // e.g. "AGR" — backend resolves to faculty_id
     department_id?: number;
-    gender?: string;       // MALE | FEMALE | LGBTQ
-    problem_category_id?: number;
+    gender?: string[];             // multi-value e.g. ["MALE","FEMALE"]
+    problem_category_ids?: number[];  // multi-value e.g. [1,3,5]
     booking_status?: string[];     // multi-value e.g. ["COMPLETED","CANCELLED"]
-    service_mode?: string;         // ONLINE | ONSITE
+    service_mode?: string[];       // multi-value e.g. ["ONLINE","ONSITE"]
+    attendance_status?: string[];  // multi-value e.g. ["CHECKED_IN","LATE","NO_SHOW"]
     online_channel_category_id?: number;
 }
 

@@ -190,7 +190,7 @@ export function UniversityDetailDashboard({ universityCode }: UniversityDetailPr
                 {activeTab === "dashboard" && (
                     <div className="space-y-8 animate-in fade-in duration-500">
                         {/* Filters */}
-                        <section>
+                        <section className="relative z-40">
                             <AnalyticsFilterBar params={params} onChange={setParams} />
                         </section>
 

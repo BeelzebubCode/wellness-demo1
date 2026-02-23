@@ -49,6 +49,45 @@ export function FilterField({ def, value, onChange }: any) {
     );
   }
 
+  if (def.type === "multi_select") {
+    // value is comma-separated string e.g. "MALE,FEMALE"
+    const selected = new Set(
+      value ? String(value).split(",").filter(Boolean) : []
+    );
+    const toggle = (optVal: string) => {
+      const next = new Set(selected);
+      if (next.has(optVal)) next.delete(optVal);
+      else next.add(optVal);
+      onChange(next.size > 0 ? Array.from(next).join(",") : "");
+    };
+    return (
+      <div className="space-y-1.5 max-h-48 overflow-y-auto">
+        {(def.options ?? []).map((op: any) => {
+          const val = String(op.value);
+          const isChecked = selected.has(val);
+          return (
+            <label
+              key={val}
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition-all text-sm font-medium ${
+                isChecked
+                  ? "bg-primary-50 text-primary-700 border border-primary-200"
+                  : "bg-gray-50 text-gray-700 border border-transparent hover:bg-gray-100"
+              }`}
+            >
+              <input
+                type="checkbox"
+                className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/30"
+                checked={isChecked}
+                onChange={() => toggle(val)}
+              />
+              <span className="truncate">{op.label}</span>
+            </label>
+          );
+        })}
+      </div>
+    );
+  }
+
   if (def.type === "text") {
     return (
       <input

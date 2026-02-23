@@ -12,7 +12,9 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "db:seed:bookings": "npx tsx prisma/seed-2m-bookings.ts",
+    "db:seed:bookings:clean": "npx tsx prisma/seed-2m-bookings.ts --clean"
   },
   "dependencies": {
     "@line/bot-sdk": "^9.2.0",

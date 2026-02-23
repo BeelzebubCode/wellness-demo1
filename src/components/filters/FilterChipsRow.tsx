@@ -13,9 +13,18 @@ function renderPreview(def: any, v: any) {
   if (isEmptyValue(v)) return "ทั้งหมด";
   if (def.type === "boolean") return v ? "ใช่" : "ไม่";
   if (def.type === "date") return formatDateDMY(v) || String(v);
-  if (def.type === "select") {
+  if (def.type === "select" || def.type === "searchable_select") {
     const hit = def.options?.find((o: any) => String(o.value) === String(v));
     return hit?.label ?? String(v);
+  }
+  if (def.type === "multi_select") {
+    const vals = String(v).split(",").filter(Boolean);
+    if (vals.length === 0) return "ทั้งหมด";
+    const labels = vals.map((val: string) => {
+      const hit = def.options?.find((o: any) => String(o.value) === val);
+      return hit?.label ?? val;
+    });
+    return labels.length <= 2 ? labels.join(", ") : `${labels.length} รายการ`;
   }
   return String(v);
 }

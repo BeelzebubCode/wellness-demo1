@@ -42,7 +42,9 @@ export function AdvisorDashboard() {
       </div>
 
       {/* ===== Advanced Filter ===== */}
-      <AnalyticsFilterBar params={params} onChange={setParams} hideFaculty />
+      <section className="relative z-40">
+        <AnalyticsFilterBar params={params} onChange={setParams} hideFaculty />
+      </section>
 
       {/* ===== Stats Cards ===== */}
       <div className="bg-white rounded-2xl p-4 shadow-sm">

@@ -52,7 +52,7 @@ export function RectorDashboard() {
         </div>
 
         {/* Filter Bar */}
-        <section>
+        <section className="relative z-40">
           <AnalyticsFilterBar params={params} onChange={setParams} />
         </section>
 

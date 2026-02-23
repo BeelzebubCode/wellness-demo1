@@ -1,12 +1,55 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
-import { Calendar, ToggleLeft, ToggleRight } from "lucide-react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
+import { Calendar, ToggleLeft, ToggleRight, Globe, Building2, MapPin, Landmark, X, RotateCcw } from "lucide-react";
 import { FilterBar } from "@/components/filters/FilterBar";
 import { DateCalendarPopover } from "@/components/filters/inputs/DateCalendarPopover";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import type { FilterDef } from "@/components/filters/types";
 import type { AnalyticsParams, FacultyOption, ProblemCategoryOption } from "./analytics-types";
 import { fetchFaculties, fetchProblemCategories, fetchRegions, fetchProvinces, fetchUniversities } from "./analytics-api";
+
+// ─── Toggle chip for multi-select ──────────────────────────────────────────
+function ToggleChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all whitespace-nowrap ${active
+                    ? "bg-primary text-white border-primary shadow-sm"
+                    : "bg-white text-slate-600 border-slate-200 hover:border-primary/40 hover:text-primary"
+                }`}
+        >
+            {label}
+            {active && <X className="w-3 h-3 ml-0.5 opacity-80" />}
+        </button>
+    );
+}
+
+// ─── Filter group row ──────────────────────────────────────────────────────
+function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+        <div className="flex items-start gap-2">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider pt-1 min-w-[60px] shrink-0">
+                {label}
+            </span>
+            <div className="flex flex-wrap items-center gap-1.5">{children}</div>
+        </div>
+    );
+}
+
+// ─── Helper: toggle a value in an array ────────────────────────────────────
+function toggleArray<T>(arr: T[] | undefined, val: T): T[] | undefined {
+    const set = new Set(arr ?? []);
+    if (set.has(val)) set.delete(val); else set.add(val);
+    return set.size > 0 ? Array.from(set) : undefined;
+}
+
+function toggleNumberArray(arr: number[] | undefined, val: number): number[] | undefined {
+    const set = new Set(arr ?? []);
+    if (set.has(val)) set.delete(val); else set.add(val);
+    return set.size > 0 ? Array.from(set) : undefined;
+}
 
 export function AnalyticsFilterBar({
     params,
@@ -22,189 +65,56 @@ export function AnalyticsFilterBar({
     const [regions, setRegions] = useState<any[]>([]);
     const [provinces, setProvinces] = useState<any[]>([]);
     const [universities, setUniversities] = useState<any[]>([]);
-
     const [faculties, setFaculties] = useState<FacultyOption[]>([]);
     const [categories, setCategories] = useState<ProblemCategoryOption[]>([]);
 
     useEffect(() => {
-        if (!showNationalFilters) {
-            fetchFaculties().then(setFaculties).catch(() => { });
-        }
+        if (!showNationalFilters) fetchFaculties().then(setFaculties).catch(() => { });
         fetchProblemCategories().then(setCategories).catch(() => { });
     }, [showNationalFilters]);
 
-    // Fetch Regions / Provinces / Universities for National Level
     useEffect(() => {
         if (!showNationalFilters) return;
-
         fetchRegions().then(setRegions).catch(() => { });
-
         fetchProvinces(params.region_id).then(setProvinces).catch(() => { });
-
         fetchUniversities(params.region_id, params.province_id).then(setUniversities).catch(() => { });
-
     }, [showNationalFilters, params.region_id, params.province_id]);
 
-    const filterDefs = useMemo<FilterDef<any>[]>(() => {
-        const defs: FilterDef<any>[] = [];
+    const regionOptions = useMemo(() => regions.map(r => ({ value: String(r.region_id), label: r.region_name_th })), [regions]);
+    const provinceOptions = useMemo(() => provinces.map(p => ({ value: String(p.province_id), label: p.province_name_th })), [provinces]);
+    const universityOptions = useMemo(() => universities.map(u => ({ value: String(u.university_id), label: u.university_name_th })), [universities]);
+    const universityTypeOptions = useMemo(() => [
+        { value: "SUPERVISED", label: "ในกำกับ" },
+        { value: "PUBLIC", label: "รัฐ" },
+        { value: "PRIVATE", label: "เอกชน" },
+    ], []);
 
-        if (showNationalFilters) {
-            defs.push({
-                key: "region_id",
-                label: "ภูมิภาค",
-                type: "searchable_select",
-                options: regions.map(r => ({ value: r.region_id, label: r.region_name_th })),
-                placeholder: "ทุกภูมิภาค",
-                searchPlaceholder: "ค้นหาภูมิภาค..."
-            });
-            defs.push({
-                key: "province_id",
-                label: "จังหวัด",
-                type: "searchable_select",
-                options: provinces.map(p => ({ value: p.province_id, label: p.province_name_th })),
-                placeholder: "ทุกจังหวัด",
-                searchPlaceholder: "ค้นหาจังหวัด..."
-            });
-            defs.push({
-                key: "university_type",
-                label: "สังกัด",
-                type: "searchable_select",
-                options: [
-                    { value: "SUPERVISED", label: "มหาวิทยาลัยในกำกับ" },
-                    { value: "PUBLIC", label: "มหาวิทยาลัยรัฐ" },
-                    { value: "PRIVATE", label: "มหาวิทยาลัยเอกชน" },
-                ],
-                placeholder: "ทุกสังกัด",
-                searchPlaceholder: "ค้นหาสังกัด..."
-            });
-            defs.push({
-                key: "university_id",
-                label: "มหาวิทยาลัย",
-                type: "searchable_select",
-                options: universities.map(u => ({ value: u.university_id, label: u.university_name_th })),
-                placeholder: "ทุกมหาวิทยาลัย",
-                searchPlaceholder: "ค้นหามหาวิทยาลัย..."
-            });
-        }
-
-        if (!hideFaculty && !showNationalFilters) {
-            defs.push({
-                key: "faculty_id",
-                label: "คณะ",
-                type: "searchable_select",
-                options: faculties.map(f => ({ value: f.facultyId, label: f.facultyNameTh })),
-                placeholder: "ทุกคณะ",
-                searchPlaceholder: "ค้นหาคณะ..."
-            });
-        }
-
-        defs.push({
-            key: "gender",
-            label: "เพศ",
-            type: "searchable_select",
-            options: [
-                { value: "MALE", label: "ชาย" },
-                { value: "FEMALE", label: "หญิง" },
-                { value: "OTHER", label: "LGBTQ+" },
-            ],
-            placeholder: "ทุกเพศ",
-            searchPlaceholder: "ค้นหาเพศ..."
-        });
-
-        defs.push({
-            key: "problem_category_id",
-            label: "หมวดปัญหา",
-            type: "searchable_select",
-            options: categories.map(c => ({ value: c.problemCategoryId, label: c.problemCategoryNameTh })),
-            placeholder: "ทุกหมวดปัญหา",
-            searchPlaceholder: "ค้นหาปัญหา..."
-        });
-
-        defs.push({
-            key: "service_mode",
-            label: "รูปแบบบริการ",
-            type: "searchable_select",
-            options: [
-                { value: "ONLINE", label: "ออนไลน์" },
-                { value: "ONSITE", label: "พบหน้า" },
-            ],
-            placeholder: "ทุกรูปแบบ",
-            searchPlaceholder: "ค้นหารูปแบบ..."
-        });
-
-        defs.push({
-            key: "booking_status_string",
-            label: "สถานะ",
-            type: "searchable_select",
-            options: [
-                { value: "COMPLETED", label: "เสร็จสิ้น" },
-                { value: "CANCELLED", label: "ยกเลิก" },
-                { value: "IN_PROGRESS", label: "กำลังดำเนินการ" },
-                { value: "COMPLETED,CANCELLED", label: "เสร็จสิ้น + ยกเลิก" },
-            ],
-            placeholder: "ทุกสถานะ",
-            searchPlaceholder: "ค้นหาสถานะ..."
-        });
-
-        return defs;
-    }, [showNationalFilters, hideFaculty, regions, provinces, universities, faculties, categories]);
-
-    const filterBarValue = useMemo(() => {
-        const val: any = { ...params };
-        if (params.booking_status && params.booking_status.length > 0) {
-            val.booking_status_string = params.booking_status.join(",");
-        }
-        delete val.booking_status;
-        return val;
-    }, [params]);
-
-    const handleFilterChange = (next: any) => {
-        const patch: any = {};
-
-        // 1. Check for removed keys and explicitly set them to undefined
-        for (const key of Object.keys(filterBarValue)) {
-            // we ignore date_start, date_end, all_time from FilterBar mapping since we handle those separately
-            if (["date_start", "date_end", "all_time"].includes(key)) continue;
-
-            if (!(key in next) || next[key] === undefined || next[key] === "") {
-                if (key === 'booking_status_string') {
-                    patch.booking_status = undefined;
-                } else {
-                    patch[key] = undefined;
-                }
-            }
-        }
-
-        // 2. Check for newly added or changed keys
-        for (const key of Object.keys(next)) {
-            if (["date_start", "date_end", "all_time"].includes(key)) continue;
-
-            if (key === 'booking_status_string') {
-                if (next[key] !== filterBarValue[key]) {
-                    patch.booking_status = next[key] ? String(next[key]).split(",") : undefined;
-                }
-            } else if (next[key] !== filterBarValue[key]) {
-                patch[key] = next[key];
-            }
-        }
-
-        // 3. Handle cascading resets dynamically
-        if ('region_id' in patch && patch.region_id !== params.region_id) {
-            patch.province_id = undefined;
-            patch.university_id = undefined;
-        }
-        if ('province_id' in patch && patch.province_id !== params.province_id) {
-            patch.university_id = undefined;
-        }
-        if ('university_type' in patch && patch.university_type !== params.university_type) {
-            patch.university_id = undefined;
-        }
-        if ('faculty_id' in patch && patch.faculty_id !== params.faculty_id) {
-            patch.department_id = undefined;
-        }
-
+    const handleNationalChange = useCallback((key: string, val: string | undefined) => {
+        const numVal = val ? Number(val) : undefined;
+        const patch: Partial<AnalyticsParams> = { [key]: key === "university_type" ? val : numVal };
+        if (key === "region_id") { patch.province_id = undefined; patch.university_id = undefined; }
+        if (key === "province_id") { patch.university_id = undefined; }
+        if (key === "university_type") { patch.university_id = undefined; }
         onChange(patch);
-    };
+    }, [onChange]);
+
+    // Check if any advanced filters are active
+    const hasActiveFilters = !!(
+        params.gender?.length || params.problem_category_ids?.length ||
+        params.service_mode?.length || params.booking_status?.length ||
+        params.attendance_status?.length || params.faculty_id
+    );
+
+    const clearAllFilters = useCallback(() => {
+        onChange({
+            gender: undefined,
+            problem_category_ids: undefined,
+            service_mode: undefined,
+            booking_status: undefined,
+            attendance_status: undefined,
+            faculty_id: undefined,
+        });
+    }, [onChange]);
 
     return (
         <div className="relative z-[60] bg-white/70 backdrop-blur-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.06)] rounded-3xl px-6 py-5 space-y-5 transition-all duration-500 hover:shadow-[0_12px_48px_rgba(0,0,0,0.08)]">
@@ -254,15 +164,106 @@ export function AnalyticsFilterBar({
                         <div className="absolute inset-0 bg-gradient-to-r from-primary to-primary-600 opacity-90 group-hover:opacity-100 transition-opacity" />
                     )}
                 </button>
+
+                {hasActiveFilters && (
+                    <button type="button" onClick={clearAllFilters}
+                        className="flex items-center gap-1 text-xs font-medium text-red-500 hover:text-red-700 ml-auto">
+                        <RotateCcw className="w-3.5 h-3.5" /> ล้างตัวกรอง
+                    </button>
+                )}
             </div>
 
-            {/* Row 2: Beautiful FilterBar */}
-            <div className="pt-2">
-                <FilterBar
-                    defs={filterDefs}
-                    value={filterBarValue}
-                    onChange={handleFilterChange}
-                />
+            {/* Row 2: National filters (Ministry only) */}
+            {showNationalFilters && (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 pt-2 border-t border-slate-100">
+                    <div className="space-y-0.5">
+                        <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-400"><Globe className="w-3 h-3" /> ภูมิภาค</label>
+                        <SearchableSelect options={regionOptions} value={params.region_id ? String(params.region_id) : undefined}
+                            onValueChange={(v) => handleNationalChange("region_id", v)} placeholder="ทุกภูมิภาค" searchPlaceholder="ค้นหาภูมิภาค..." />
+                    </div>
+                    <div className="space-y-0.5">
+                        <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-400"><MapPin className="w-3 h-3" /> จังหวัด</label>
+                        <SearchableSelect options={provinceOptions} value={params.province_id ? String(params.province_id) : undefined}
+                            onValueChange={(v) => handleNationalChange("province_id", v)} placeholder="ทุกจังหวัด" searchPlaceholder="ค้นหาจังหวัด..." />
+                    </div>
+                    <div className="space-y-0.5">
+                        <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-400"><Landmark className="w-3 h-3" /> สังกัด</label>
+                        <SearchableSelect options={universityTypeOptions} value={params.university_type || undefined}
+                            onValueChange={(v) => handleNationalChange("university_type", v)} placeholder="ทุกสังกัด" searchPlaceholder="ค้นหาสังกัด..." />
+                    </div>
+                    <div className="space-y-0.5">
+                        <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-400"><Building2 className="w-3 h-3" /> มหาวิทยาลัย</label>
+                        <SearchableSelect options={universityOptions} value={params.university_id ? String(params.university_id) : undefined}
+                            onValueChange={(v) => handleNationalChange("university_id", v)} placeholder="ทุกมหาวิทยาลัย" searchPlaceholder="ค้นหามหาวิทยาลัย..." />
+                    </div>
+                </div>
+            )}
+
+            {/* Row 3: Inline toggle chip filters — all visible, click to toggle */}
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+                {/* Faculty (for non-national dashboards) */}
+                {!hideFaculty && !showNationalFilters && faculties.length > 0 && (
+                    <FilterGroup label="คณะ">
+                        {faculties.map(f => (
+                            <ToggleChip key={f.facultyId} label={f.facultyNameTh}
+                                active={params.faculty_id === f.facultyId}
+                                onClick={() => onChange({ faculty_id: params.faculty_id === f.facultyId ? undefined : f.facultyId, department_id: undefined })} />
+                        ))}
+                    </FilterGroup>
+                )}
+
+                {/* Gender */}
+                <FilterGroup label="เพศ">
+                    <ToggleChip label="ชาย" active={!!params.gender?.includes("MALE")}
+                        onClick={() => onChange({ gender: toggleArray(params.gender, "MALE") })} />
+                    <ToggleChip label="หญิง" active={!!params.gender?.includes("FEMALE")}
+                        onClick={() => onChange({ gender: toggleArray(params.gender, "FEMALE") })} />
+                    <ToggleChip label="LGBTQ+" active={!!params.gender?.includes("LGBTQ")}
+                        onClick={() => onChange({ gender: toggleArray(params.gender, "LGBTQ") })} />
+                </FilterGroup>
+
+                {/* Problem Categories */}
+                {categories.length > 0 && (
+                    <FilterGroup label="ปัญหา">
+                        {categories.map(c => (
+                            <ToggleChip key={c.problemCategoryId} label={c.problemCategoryNameTh}
+                                active={!!params.problem_category_ids?.includes(c.problemCategoryId)}
+                                onClick={() => onChange({ problem_category_ids: toggleNumberArray(params.problem_category_ids, c.problemCategoryId) })} />
+                        ))}
+                    </FilterGroup>
+                )}
+
+                {/* Service Mode */}
+                <FilterGroup label="บริการ">
+                    <ToggleChip label="ออนไลน์" active={!!params.service_mode?.includes("ONLINE")}
+                        onClick={() => onChange({ service_mode: toggleArray(params.service_mode, "ONLINE") })} />
+                    <ToggleChip label="ออนไซต์" active={!!params.service_mode?.includes("ONSITE")}
+                        onClick={() => onChange({ service_mode: toggleArray(params.service_mode, "ONSITE") })} />
+                </FilterGroup>
+
+                {/* Booking Status */}
+                <FilterGroup label="สถานะจอง">
+                    <ToggleChip label="รอดำเนินการ" active={!!params.booking_status?.includes("PENDING")}
+                        onClick={() => onChange({ booking_status: toggleArray(params.booking_status, "PENDING") })} />
+                    <ToggleChip label="ยืนยันแล้ว" active={!!params.booking_status?.includes("CONFIRMED")}
+                        onClick={() => onChange({ booking_status: toggleArray(params.booking_status, "CONFIRMED") })} />
+                    <ToggleChip label="กำลังดำเนินการ" active={!!params.booking_status?.includes("IN_PROGRESS")}
+                        onClick={() => onChange({ booking_status: toggleArray(params.booking_status, "IN_PROGRESS") })} />
+                    <ToggleChip label="เสร็จสิ้น" active={!!params.booking_status?.includes("COMPLETED")}
+                        onClick={() => onChange({ booking_status: toggleArray(params.booking_status, "COMPLETED") })} />
+                    <ToggleChip label="ยกเลิก" active={!!params.booking_status?.includes("CANCELLED")}
+                        onClick={() => onChange({ booking_status: toggleArray(params.booking_status, "CANCELLED") })} />
+                </FilterGroup>
+
+                {/* Attendance Status */}
+                <FilterGroup label="การเข้าพบ">
+                    <ToggleChip label="เข้าพบ" active={!!params.attendance_status?.includes("CHECKED_IN")}
+                        onClick={() => onChange({ attendance_status: toggleArray(params.attendance_status, "CHECKED_IN") })} />
+                    <ToggleChip label="มาสาย" active={!!params.attendance_status?.includes("LATE")}
+                        onClick={() => onChange({ attendance_status: toggleArray(params.attendance_status, "LATE") })} />
+                    <ToggleChip label="ไม่มาตามนัด" active={!!params.attendance_status?.includes("NO_SHOW")}
+                        onClick={() => onChange({ attendance_status: toggleArray(params.attendance_status, "NO_SHOW") })} />
+                </FilterGroup>
             </div>
         </div>
     );

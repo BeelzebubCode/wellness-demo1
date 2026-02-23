@@ -50,7 +50,12 @@ export function FilterBar<TFilters extends Record<string, any>>({
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
       if (!open) return;
-      if (popRef.current && !popRef.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as HTMLElement;
+      // Don't close if clicking inside the popover itself
+      if (popRef.current && popRef.current.contains(target)) return;
+      // Don't close if clicking inside a SearchableSelect Portal dropdown
+      if (target.closest?.("[data-searchable-dropdown]")) return;
+      setOpen(false);
     };
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);

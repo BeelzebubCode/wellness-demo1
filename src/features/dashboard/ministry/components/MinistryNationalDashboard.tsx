@@ -33,7 +33,8 @@ const TrendChart = dynamic(
 
 export function MinistryNationalDashboard() {
     // 🌍 useAnalytics without any hardcoded university_code implies National Scope (tenant overrides skipped by Backend logic)
-    const { data, loading, params, setParams } = useAnalytics();
+    // Default to all_time so national data across all periods is visible
+    const { data, loading, params, setParams } = useAnalytics({ all_time: true });
 
     return (
         <div className="space-y-6 max-w-[1600px] mx-auto pb-12">

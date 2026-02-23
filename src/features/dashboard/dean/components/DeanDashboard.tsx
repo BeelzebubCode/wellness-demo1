@@ -51,7 +51,7 @@ export function DeanDashboard({ facultyCode }: { facultyCode?: string } = {}) {
                 </div>
 
                 {/* Filter Bar — faculty hidden (pre-locked by API scope) */}
-                <section>
+                <section className="relative z-40">
                     <AnalyticsFilterBar params={params} onChange={setParams} hideFaculty />
                 </section>
 

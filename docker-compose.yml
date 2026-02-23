@@ -1,11 +1,11 @@
 version: "3.8"
 
 services:
-
   db:
     container_name: wellness-db
     image: postgres:16
     restart: always
+    shm_size: 1gb
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgrespassword
@@ -14,6 +14,18 @@ services:
       - "5434:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "work_mem=64MB"
+      - "-c"
+      - "effective_cache_size=512MB"
+      - "-c"
+      - "max_parallel_workers_per_gather=2"
+    mem_limit: 2g
+    cpus: 2.0
 
   mongodb:
     container_name: wellness-mongo
@@ -26,6 +38,8 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    mem_limit: 1g
+    cpus: 1.0
 
   mongo-express:
     container_name: wellness-mongo-express
@@ -40,6 +54,8 @@ services:
       ME_CONFIG_BASICAUTH: false
     depends_on:
       - mongodb
+    mem_limit: 512m
+    cpus: 0.5
 
   pgadmin:
     container_name: wellness-admin
@@ -48,10 +64,23 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@local.com
       PGADMIN_DEFAULT_PASSWORD: adminpassword
+      # กัน pgadmin เก็บ session / cache บวม และลดภาระ
+      PGADMIN_CONFIG_MAX_LOGIN_ATTEMPTS: 10
+      PGADMIN_CONFIG_CONSOLE_LOG_LEVEL: 30
     ports:
       - "8080:80"
     depends_on:
       - db
+    # ✅ ตัวสำคัญ: ล็อก RAM pgAdmin (แนะนำ 512MB–1GB)
+    mem_limit: 1g
+    memswap_limit: 1g
+    cpus: 1.0
+    # เพิ่ม healthcheck กันค้าง
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/misc/ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
 
 volumes:
   db_data:

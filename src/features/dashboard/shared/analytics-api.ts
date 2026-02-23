@@ -20,9 +20,14 @@ function buildSearchParams(params: AnalyticsParams): URLSearchParams {
     if (params.faculty_id) sp.set("faculty_id", String(params.faculty_id));
     if (params.faculty_code) sp.set("faculty_code", params.faculty_code);
     if (params.department_id) sp.set("department_id", String(params.department_id));
-    if (params.gender) sp.set("gender", params.gender);
-    if (params.problem_category_id) sp.set("problem_category_id", String(params.problem_category_id));
-    if (params.service_mode) sp.set("service_mode", params.service_mode);
+    if (params.gender && params.gender.length > 0) sp.set("gender", params.gender.join(","));
+    if (params.problem_category_ids && params.problem_category_ids.length > 0) {
+        sp.set("problem_category_ids", params.problem_category_ids.join(","));
+    }
+    if (params.service_mode && params.service_mode.length > 0) sp.set("service_mode", params.service_mode.join(","));
+    if (params.attendance_status && params.attendance_status.length > 0) {
+        sp.set("attendance_status", params.attendance_status.join(","));
+    }
     if (params.online_channel_category_id) sp.set("online_channel_category_id", String(params.online_channel_category_id));
     if (params.booking_status && params.booking_status.length > 0) {
         sp.set("booking_status", params.booking_status.join(","));

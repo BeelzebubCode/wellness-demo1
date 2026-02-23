@@ -244,7 +244,7 @@ export const RectorService = {
             sqlFilters.push(Prisma.sql`AND sa.department_id = ${departmentId}`);
         }
         if (gender) {
-            sqlFilters.push(Prisma.sql`AND sp.student_gender = ${gender}`);
+            sqlFilters.push(Prisma.sql`AND sp.student_gender::text = ${gender}`);
         }
         if (problemCategoryId) {
             sqlFilters.push(Prisma.sql`AND b.problem_category_id = ${problemCategoryId}`);
@@ -265,7 +265,7 @@ export const RectorService = {
         const populationFilters: Prisma.Sql[] = [];
         if (facultyId) populationFilters.push(Prisma.sql`AND sa.faculty_id = ${facultyId}`);
         if (departmentId) populationFilters.push(Prisma.sql`AND sa.department_id = ${departmentId}`);
-        if (gender) populationFilters.push(Prisma.sql`AND sp.student_gender = ${gender}`);
+        if (gender) populationFilters.push(Prisma.sql`AND sp.student_gender::text = ${gender}`);
 
         const totalStudentsQuery = await prisma.$queryRaw<{ count: bigint }[]>`
              SELECT COUNT(DISTINCT s.student_id)::int as count 
@@ -475,7 +475,7 @@ export const RectorService = {
                      ${
                         // Note: If gender filter is on, we should filter student count too?
                         // Yes, "Total Students (Female) in Engineering"
-                        gender ? Prisma.sql`AND sp2.student_gender = ${gender}` : Prisma.empty
+                        gender ? Prisma.sql`AND sp2.student_gender::text = ${gender}` : Prisma.empty
                      }
                      ${
                         // If department filter is on, filter population
@@ -491,7 +491,7 @@ export const RectorService = {
              LEFT JOIN "student_academic" sa ON f.faculty_id = sa.faculty_id
                 ${departmentId ? Prisma.sql`AND sa.department_id = ${departmentId}` : Prisma.empty}
              LEFT JOIN "student_profile" sp ON sa.student_id = sp.student_id
-                ${gender ? Prisma.sql`AND sp.student_gender = ${gender}` : Prisma.empty}
+                ${gender ? Prisma.sql`AND sp.student_gender::text = ${gender}` : Prisma.empty}
              LEFT JOIN "booking" b ON sa.student_id = b.student_id AND b.university_id = ${universityId} 
                 AND b.booking_created_at >= ${start} AND b.booking_created_at <= ${end}
                 ${problemCategoryId ? Prisma.sql`AND b.problem_category_id = ${problemCategoryId}` : Prisma.empty}

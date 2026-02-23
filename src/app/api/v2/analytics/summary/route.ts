@@ -20,9 +20,15 @@ function parseParams(url: URL): AnalyticsParams {
 
     const allTime = sp.get("all_time") === "true";
 
-    // booking_status multi-value
-    const statusRaw = sp.get("booking_status");
-    const bookingStatus = statusRaw ? statusRaw.split(",").map((s) => s.trim()).filter(Boolean) : undefined;
+    // Helper to parse comma-separated multi-value params
+    const parseCSV = (key: string): string[] | undefined => {
+        const raw = sp.get(key);
+        return raw ? raw.split(",").map((s) => s.trim()).filter(Boolean) : undefined;
+    };
+    const parseCSVNumbers = (key: string): number[] | undefined => {
+        const arr = parseCSV(key);
+        return arr ? arr.map(Number).filter((n) => !isNaN(n)) : undefined;
+    };
 
     return {
         date_start: sp.get("date_start") || defaultStart,
@@ -36,10 +42,11 @@ function parseParams(url: URL): AnalyticsParams {
         faculty_id: sp.get("faculty_id") ? Number(sp.get("faculty_id")) : undefined,
         faculty_code: sp.get("faculty_code") || undefined,
         department_id: sp.get("department_id") ? Number(sp.get("department_id")) : undefined,
-        gender: sp.get("gender") || undefined,
-        problem_category_id: sp.get("problem_category_id") ? Number(sp.get("problem_category_id")) : undefined,
-        booking_status: bookingStatus,
-        service_mode: sp.get("service_mode") || undefined,
+        gender: parseCSV("gender"),
+        problem_category_ids: parseCSVNumbers("problem_category_ids"),
+        booking_status: parseCSV("booking_status"),
+        service_mode: parseCSV("service_mode"),
+        attendance_status: parseCSV("attendance_status"),
         online_channel_category_id: sp.get("online_channel_category_id")
             ? Number(sp.get("online_channel_category_id"))
             : undefined,
