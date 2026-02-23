@@ -7,7 +7,7 @@ import { CalendarDays, X, Check } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { MiniCalendar } from "./MiniCalendar";
 import { formatDateDMY } from "../utils/date";
-import { fromYMD, toYMD, normalizeYMD } from "@/lib/date";
+import { fromYMD, toYMD, normalizeYMD, isPast } from "@/lib/date";
 
 function startOfMonth(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -101,50 +101,40 @@ export function DateCalendarPopover({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
+        disabled={disablePast && !!valueYMD && isPast(fromYMD(valueYMD))} // Just an example, maybe not needed here
         className={cn(
-          "group flex items-center gap-2 h-11 px-3.5 rounded-xl border transition-all duration-200 w-full", // h-10 -> h-11
-          "focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-400",
+          "group flex items-center gap-3 h-11 px-4 rounded-2xl transition-all duration-300 w-full",
+          "focus:outline-none focus:ring-4 focus:ring-primary/10",
           open
-            ? "border-primary-400 bg-white ring-2 ring-primary-100" // bg-primary-50/50 -> bg-white
-            : "border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300",
-          hasValue ? "text-gray-900" : "text-gray-500"
+            ? "bg-white border-primary/40 shadow-[0_0_0_1px_rgba(var(--primary-rgb),0.4)] shadow-lg shadow-primary/5"
+            : "bg-white border-slate-200 hover:border-primary/30 hover:bg-slate-50/50 shadow-sm",
+          "border",
+          hasValue ? "text-slate-900" : "text-slate-400"
         )}
       >
         <CalendarDays
           className={cn(
-            "w-4 h-4 transition-colors",
-            hasValue || open ? "text-primary-600" : "text-gray-400 group-hover:text-gray-600"
+            "w-4 h-4 transition-colors duration-300",
+            hasValue || open ? "text-primary" : "text-slate-400 group-hover:text-primary/70"
           )}
         />
-        <span className="text-sm font-medium tabular-nums">{label}</span>
+        <span className="text-sm font-bold tracking-tight tabular-nums">{label}</span>
       </button>
 
       {open && (
         <div
           className={cn(
-            "absolute top-full mt-2 z-50",
+            "absolute top-full mt-3 z-[100]",
             align === "right" ? "right-0" : "left-0",
-            "w-[360px] max-w-[95vw]",
-            "bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100",
-            "flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 origin-top"
+            "w-[340px] max-w-[95vw]",
+            "bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100",
+            "flex flex-col overflow-hidden transition-all animate-in fade-in zoom-in-95 duration-300 origin-top"
           )}
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100/80 bg-white">
-            <span className="text-sm font-semibold text-gray-700">เลือกวันที่</span>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="p-4">
+          <div className="p-6">
             <MiniCalendar
               selectedDate={selectedDate}
               onSelectDate={(d) => {
-                // ✅ ใช้ toYMD จาก lib (ไม่เพี้ยน + format มาตรฐาน)
                 onChangeYMD(toYMD(d));
                 if (closeOnSelect) setOpen(false);
               }}
@@ -161,19 +151,19 @@ export function DateCalendarPopover({
             />
           </div>
 
-          <div className="px-4 py-3 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between">
+          <div className="px-6 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3">
             <button
               type="button"
               onClick={() => {
-                onChangeYMD(""); // Clear value
+                onChangeYMD("");
                 if (closeOnSelect) setOpen(false);
               }}
-              className="text-xs font-semibold text-red-600 hover:text-red-700 px-2 py-1.5 rounded-lg hover:bg-red-50 transition"
+              className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all duration-300 uppercase tracking-wider"
             >
               ล้าง
             </button>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => {
@@ -182,7 +172,7 @@ export function DateCalendarPopover({
                   setCurrentMonth(startOfMonth(t));
                   if (closeOnSelect) setOpen(false);
                 }}
-                className="text-xs font-semibold text-primary-600 hover:text-primary-700 px-2 py-1.5 rounded-lg hover:bg-primary-50 transition"
+                className="px-4 py-2 text-xs font-bold text-primary hover:bg-primary/10 rounded-xl transition-all duration-300 uppercase tracking-wider"
               >
                 วันนี้
               </button>
@@ -190,9 +180,8 @@ export function DateCalendarPopover({
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 text-white text-xs font-semibold rounded-lg hover:bg-primary-700 shadow-sm shadow-primary-200 transition"
+                className="px-6 py-2.5 bg-primary text-white text-xs font-black rounded-2xl shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 active:scale-95"
               >
-                <Check className="w-3.5 h-3.5" />
                 เสร็จสิ้น
               </button>
             </div>

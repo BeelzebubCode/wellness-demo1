@@ -98,15 +98,17 @@ export function FilterBar<TFilters extends Record<string, any>>({
   const dateYMD = dateKey ? String((value as any)[dateKey] ?? "").trim() : "";
 
   return (
-    <div className="bg-white border rounded-2xl p-4">
+    <div className="bg-slate-50/50 rounded-2xl p-4 border border-slate-200/60 shadow-inner">
       <div className="flex items-center gap-3">
         {searchKey && (
-          <input
-            className="border rounded-xl px-3 py-2 text-sm flex-1 min-w-0"
-            value={(value as any)[searchKey] ?? ""}
-            onChange={(e) => setFilter(searchKey, e.target.value as any)}
-            placeholder={searchPlaceholder}
-          />
+          <div className="relative flex-1 min-w-0 group">
+            <input
+              className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none group-hover:border-slate-300"
+              value={(value as any)[searchKey] ?? ""}
+              onChange={(e) => setFilter(searchKey, e.target.value as any)}
+              placeholder={searchPlaceholder}
+            />
+          </div>
         )}
 
         {dateKey && (
@@ -117,17 +119,24 @@ export function FilterBar<TFilters extends Record<string, any>>({
           />
         )}
 
-        <div className="relative shrink-0 ml-auto">
-          <Button variant="outline" size="sm" onClick={() => setOpen((o) => !o)}>
-            <SlidersHorizontal className="w-4 h-4 mr-1" />
-            ตัวกรอง
+        <div className="relative shrink-0 ml-auto group">
+          <button
+            onClick={() => setOpen((o) => !o)}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${open
+                ? "bg-primary text-white shadow-lg ring-4 ring-primary/10 scale-[0.98]"
+                : "bg-white text-slate-700 border border-slate-200 hover:border-primary/50 hover:bg-slate-50 shadow-sm"
+              }`}
+          >
+            <SlidersHorizontal className={`w-4 h-4 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
+            <span>ตัวกรอง</span>
             {activeDefs.length > 0 && (
-              <span className="ml-2 px-2 py-0.5 text-xs bg-primary-100 text-primary-600 rounded-full font-bold">
+              <span className={`ml-1 px-2 py-0.5 text-[10px] rounded-full transition-colors duration-300 ${open ? "bg-white text-primary" : "bg-primary text-white"
+                }`}>
                 {activeDefs.length}
               </span>
             )}
-            <ChevronDown className="w-4 h-4 ml-1 opacity-70" />
-          </Button>
+            <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${open ? 'rotate-180' : 'opacity-50'}`} />
+          </button>
 
           <FilterPopover
             defs={defs}
@@ -144,7 +153,7 @@ export function FilterBar<TFilters extends Record<string, any>>({
       </div>
 
       {activeDefs.length > 0 && (
-        <div className="mt-3">
+        <div className="mt-4 pt-3 border-t border-slate-200/60 transition-all duration-500 animate-in fade-in slide-in-from-top-2">
           <FilterChipsRow
             activeDefs={activeDefs}
             value={value}

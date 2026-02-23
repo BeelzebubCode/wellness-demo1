@@ -61,38 +61,38 @@ export function MiniCalendar({
   };
 
   return (
-    <div className={cn("w-full", className)}>
+    <div className={cn("w-full bg-white", className)}>
       {/* Header: Month Navigation */}
-      <div className="flex items-center justify-between mb-2 px-1"> {/* ✅ แก้ไข: ลด mb-4 เป็น mb-2 */}
+      <div className="flex items-center justify-between mb-6 px-1">
         <button
           type="button"
           onClick={onPreviousMonth}
-          className="p-1 rounded-full text-gray-400 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+          className="w-10 h-10 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-all duration-300 shadow-sm"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
 
-        <span className="text-base font-bold text-gray-900">
+        <span className="text-base font-black text-slate-800 tracking-tight">
           {formatMonthYearTH(currentMonth)}
         </span>
 
         <button
           type="button"
           onClick={onNextMonth}
-          className="p-1 rounded-full text-gray-400 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+          className="w-10 h-10 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-all duration-300 shadow-sm"
         >
           <ChevronRight className="w-5 h-5" />
         </button>
       </div>
 
       {/* Weekday Header */}
-      <div className="grid grid-cols-7 mb-2 text-center gap-x-2"> {/* ✅ แก้ไข: ลด mb-3 เป็น mb-2 */}
+      <div className="grid grid-cols-7 mb-4 text-center">
         {THAI_DAYS_SHORT.map((d, i) => (
           <span
             key={d}
             className={cn(
-              "text-[0.85rem] font-medium text-gray-400",
-              (i === 0 || i === 6) && "text-red-400"
+              "text-[10px] font-black text-slate-300 uppercase tracking-widest",
+              (i === 0 || i === 6) && "text-rose-300"
             )}
           >
             {d}
@@ -101,7 +101,7 @@ export function MiniCalendar({
       </div>
 
       {/* Days Grid */}
-      <div className="grid grid-cols-7 gap-y-1 gap-x-2"> {/* ✅ แก้ไข: ลด gap-y-2 เป็น gap-y-1 (แต่คง gap-x-2 ไว้ให้กว้าง) */}
+      <div className="grid grid-cols-7 gap-y-1">
         {calendarDays.map((date, idx) => {
           const selected = isSameDay(date, selectedDate);
           const today = isToday(date);
@@ -109,36 +109,36 @@ export function MiniCalendar({
           const inMonth = isCurrentMonth(date);
 
           return (
-            <button
-              key={idx}
-              type="button"
-              disabled={disabled}
-              onClick={() => !disabled && onSelectDate(date)}
-              className={cn(
-                "relative h-9 w-full rounded-lg flex items-center justify-center text-sm transition-all duration-200", // ✅ แก้ไข: ลด h-10 เป็น h-9
+            <div key={idx} className="aspect-square flex items-center justify-center">
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => !disabled && onSelectDate(date)}
+                className={cn(
+                  "relative w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300",
 
-                // Normal State
-                inMonth && !disabled && !selected && "text-gray-700 hover:bg-primary-50 hover:text-primary-600",
+                  // Normal State
+                  inMonth && !disabled && !selected && "text-slate-600 hover:bg-slate-50 hover:text-primary",
 
-                // Ghost State (Out of month)
-                !inMonth && !disabled && "text-gray-300 hover:text-gray-400",
+                  // Ghost State (Out of month)
+                  !inMonth && !disabled && "text-slate-200",
 
-                // Disabled
-                disabled && "text-gray-300 opacity-40 cursor-not-allowed",
+                  // Disabled
+                  disabled && "text-slate-200 cursor-not-allowed",
 
-                // Selected
-                selected && "bg-primary-600 text-white shadow-md shadow-primary-200 font-semibold hover:bg-primary-700",
+                  // Selected
+                  selected && "bg-primary text-white shadow-lg shadow-primary/30 scale-110",
 
-                // Today
-                today && !selected && "bg-primary-50 text-primary-600 font-semibold ring-1 ring-inset ring-primary-200"
-              )}
-            >
-              <span className="z-10 relative">{date.getDate()}</span>
-
-              {today && !selected && (
-                <span className="absolute bottom-1 w-1 h-1 rounded-full bg-primary-400" />
-              )}
-            </button>
+                  // Today
+                  today && !selected && "text-primary border-2 border-primary/20"
+                )}
+              >
+                <span className="relative z-10">{date.getDate()}</span>
+                {today && !selected && (
+                  <div className="absolute top-1 right-1 w-1 h-1 rounded-full bg-primary" />
+                )}
+              </button>
+            </div>
           );
         })}
       </div>
