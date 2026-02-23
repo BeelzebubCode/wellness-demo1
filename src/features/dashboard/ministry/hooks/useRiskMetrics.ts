@@ -2,82 +2,39 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { fetchRiskMetrics } from "../services/ministry-api";
+import type { RiskMetricsResponse, RiskMetricsFilters } from "../services/ministry-types";
 
-export interface UniversityRiskMetrics {
-  universityId: number;
-  universityCode: string;
-  universityName: string;
-  universityType: string;
-  province: string;
-  regionCode: string;
-  regionName: string;
-  queueSize: number;
-  avgWaitTime: number;
-  highRiskPercentage: number;
-  therapistUtilization: number;
-  riskScore: number;
-}
+// Re-export types so existing consumers don't break
+export type { UniversityRiskMetrics, RegionalRiskMetrics } from "../services/ministry-types";
 
-export interface RegionalRiskMetrics {
-  regionCode: string;
-  regionName: string;
-  totalUniversities: number;
-  avgRiskScore: number;
-  totalQueue: number;
-  avgWaitTime: number;
-  highRiskPercentage: number;
-  status: "normal" | "warning" | "critical";
-}
-
-interface RiskMetricsResponse {
-  universities: UniversityRiskMetrics[];
-  regions: RegionalRiskMetrics[];
-  metadata: {
-    totalUniversities: number;
-    dateRange: {
-      start: string;
-      end: string;
-    };
-    filters: {
-      region?: string;
-      type?: string;
-      days: number;
-    };
-  };
-}
-
-export function useRiskMetrics(filters?: {
-  region?: string;
-  type?: string;
-  days?: number;
-}) {
+export function useRiskMetrics(filters?: RiskMetricsFilters) {
   const [data, setData] = useState<RiskMetricsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchMetrics() {
+    let cancelled = false;
+
+    async function load() {
       try {
         setIsLoading(true);
-        const params = new URLSearchParams();
-        if (filters?.region) params.set("region", filters.region);
-        if (filters?.type) params.set("type", filters.type);
-        if (filters?.days) params.set("days", filters.days.toString());
-
-        const res = await fetch(`/api/v2/dashboards/ministry?${params.toString()}`);
-        if (!res.ok) throw new Error("Failed to fetch risk metrics");
-
-        const json = await res.json();
-        setData(json);
-        setError(null);
+        const result = await fetchRiskMetrics(filters);
+        if (!cancelled) {
+          setData(result);
+          setError(null);
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Unknown error");
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     }
 
-    fetchMetrics();
+    load();
+    return () => { cancelled = true; };
   }, [filters?.region, filters?.type, filters?.days]);
 
   return { data, isLoading, error };

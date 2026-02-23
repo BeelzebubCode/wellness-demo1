@@ -2,28 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { getMinistryStats, getRiskyUniversities, getMinistryRiskDistribution } from "../actions";
+import type { MinistryStats, UniversityRiskData, RiskDistributionItem } from "../services/ministry-types";
 
-export interface MinistryStats {
-  totalUniversities: number;
-  totalStudents: number;
-  totalBookings: number;
-  highRiskCases: number;
-  nationalAvgRisk: number;
-  criticalUniversities: number;
-}
-
-export interface UniversityRiskData {
-  id: number;
-  name: string;
-  code: string;
-  highRiskCount: number;
-}
-
-export interface RiskDistributionItem {
-    level: number;
-    count: number;
-    label: string;
-}
+// Re-export types so existing consumers don't break
+export type { MinistryStats, UniversityRiskData, RiskDistributionItem } from "../services/ministry-types";
 
 export function useMinistryStats() {
   const [stats, setStats] = useState<MinistryStats | null>(null);

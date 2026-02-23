@@ -1,27 +1,10 @@
 // src/features/dashboard/ministry/hooks/useUniversitiesMap.ts
 import { useEffect, useState } from "react";
+import { fetchUniversitiesMap } from "../services/ministry-api";
+import type { UniversityMapData } from "../services/ministry-types";
 
-export interface UniversityMapData {
-  id: string;
-  code: string;
-  name: string;
-  nameEn: string | null;
-  lat: number;
-  lng: number;
-  region: string;
-  regionCode: string;
-  province: string;
-  students: number;
-  type: string;
-  logo: string;
-  dominantProblem?: string | null;
-  dominantProblemCode?: string | null;
-  dominantProblemTH?: string | null;
-  dominantProblemCount: number;
-  problemBreakdown: Record<string, number>;
-  statusBreakdown: Record<string, number>; // 🔥 Added status breakdown
-  granularStats: Record<string, Record<string, number>>; // 🔥 Added 2D breakdown
-}
+// Re-export type so existing consumers don't break
+export type { UniversityMapData } from "../services/ministry-types";
 
 export function useUniversitiesMap() {
   const [universities, setUniversities] = useState<UniversityMapData[]>([]);
@@ -29,36 +12,24 @@ export function useUniversitiesMap() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchUniversities() {
+    let cancelled = false;
+
+    async function load() {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/v2/master/universities?pageSize=500");
-        
-        if (!response.ok) {
-          throw new Error("Failed to fetch universities");
-        }
-
-        const result = await response.json();
-        
-        if (result.success) {
-          setUniversities(result.data);
-        } else {
-          throw new Error(result.error || "Unknown error");
-        }
+        const data = await fetchUniversitiesMap();
+        if (!cancelled) setUniversities(data);
       } catch (err) {
         console.error("Error loading universities:", err);
-        setError(err instanceof Error ? err.message : "Failed to load universities");
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load universities");
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     }
 
-    fetchUniversities();
+    load();
+    return () => { cancelled = true; };
   }, []);
 
-  return {
-    universities,
-    isLoading,
-    error,
-  };
+  return { universities, isLoading, error };
 }

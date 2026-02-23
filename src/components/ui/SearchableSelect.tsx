@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Check, Search, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -33,9 +34,11 @@ export function SearchableSelect({
 }: SearchableSelectProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
-    const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+    const [portalStyle, setPortalStyle] = useState<React.CSSProperties>({});
+    const [listMaxH, setListMaxH] = useState(260);
 
     const containerRef = useRef<HTMLDivElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
 
     const selectedOption = options.find((opt) => opt.value === value);
@@ -46,35 +49,53 @@ export function SearchableSelect({
         return options.filter(opt => opt.label.toLowerCase().includes(lowerSearch));
     }, [options, searchTerm]);
 
+    const recalcPosition = useCallback(() => {
+        if (!containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom - 16;
+        const spaceAbove = rect.top - 16;
+        const openBelow = spaceBelow >= 180 || spaceBelow >= spaceAbove;
+        const maxH = Math.min(300, Math.max(140, openBelow ? spaceBelow - 50 : spaceAbove - 50));
+
+        setListMaxH(maxH);
+        setPortalStyle({
+            position: "fixed",
+            left: rect.left,
+            width: rect.width,
+            zIndex: 9999,
+            ...(openBelow
+                ? { top: rect.bottom + 4 }
+                : { bottom: window.innerHeight - rect.top + 4 }),
+        });
+    }, []);
+
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+            const target = event.target as Node;
+            if (
+                containerRef.current && !containerRef.current.contains(target) &&
+                dropdownRef.current && !dropdownRef.current.contains(target)
+            ) {
                 setIsOpen(false);
             }
         }
 
         if (isOpen) {
+            recalcPosition();
             document.addEventListener("mousedown", handleClickOutside);
-            // Focus search input when opened
-            setTimeout(() => {
-                searchInputRef.current?.focus();
-            }, 50);
+            window.addEventListener("scroll", recalcPosition, true);
+            window.addEventListener("resize", recalcPosition);
+            setTimeout(() => searchInputRef.current?.focus(), 50);
         } else {
-            setSearchTerm(""); // Reset search when closed
+            setSearchTerm("");
         }
 
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [isOpen]);
-
-    // Calculate dropdown max-height
-    useEffect(() => {
-        if (isOpen && containerRef.current) {
-            const rect = containerRef.current.getBoundingClientRect();
-            const spaceBelow = window.innerHeight - rect.bottom - 20;
-            const maxHeight = Math.min(300, Math.max(160, spaceBelow)); // slightly taller for search
-            setDropdownStyle({ maxHeight: `${maxHeight}px` });
-        }
-    }, [isOpen]);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+            window.removeEventListener("scroll", recalcPosition, true);
+            window.removeEventListener("resize", recalcPosition);
+        };
+    }, [isOpen, recalcPosition]);
 
     return (
         <div ref={containerRef} className={cn("relative w-full", disabled && "opacity-50 cursor-not-allowed")}>
@@ -132,10 +153,13 @@ export function SearchableSelect({
                 />
             </div>
 
-            {/* Dropdown Menu with Search */}
-            {isOpen && (
-                <div className="absolute z-[100] w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-
+            {/* Dropdown Menu — rendered via Portal to escape overflow parents */}
+            {isOpen && typeof document !== "undefined" && createPortal(
+                <div
+                    ref={dropdownRef}
+                    style={portalStyle}
+                    className="bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+                >
                     {/* Search Input Box */}
                     <div className="p-2 border-b border-gray-100 bg-white relative">
                         <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
@@ -150,7 +174,7 @@ export function SearchableSelect({
                     </div>
 
                     {/* Options List */}
-                    <div className="overflow-y-auto py-1 scrollbar-thin" style={dropdownStyle}>
+                    <div className="overflow-y-auto py-1 scrollbar-thin" style={{ maxHeight: listMaxH }}>
                         {filteredOptions.length === 0 ? (
                             <div className="px-4 py-6 text-center text-sm text-gray-500">
                                 ไม่พบข้อมูลที่ค้นหา
@@ -183,7 +207,8 @@ export function SearchableSelect({
                             ))
                         )}
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
