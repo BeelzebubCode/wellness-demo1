@@ -17,9 +17,9 @@ import type { BorrowRequest } from "@/features/borrow-requests/types";
 const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
   SUBMITTED: {
     label: "รอดำเนินการ",
-    bg: "bg-blue-50",
-    text: "text-blue-700",
-    dot: "bg-blue-500",
+    bg: "bg-amber-50",
+    text: "text-amber-700",
+    dot: "bg-amber-500",
   },
   APPROVED: {
     label: "อนุมัติแล้ว",
@@ -29,9 +29,9 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; d
   },
   ASSIGNED: {
     label: "มอบหมายแล้ว",
-    bg: "bg-purple-50",
-    text: "text-purple-700",
-    dot: "bg-purple-500",
+    bg: "bg-violet-50",
+    text: "text-violet-700",
+    dot: "bg-violet-500",
   },
   COMPLETED: {
     label: "เสร็จสิ้น",

@@ -29,7 +29,7 @@ export default function BorrowRequestDetailPage() {
   if (!data) {
     return (
       <div className="space-y-3">
-        <Button variant="outline" onClick={() => router.back()}>
+        <Button variant="outline" onClick={() => router.push("/head-consultant/borrow-consultants")}>
           กลับ
         </Button>
         <div className="text-sm text-slate-600">
@@ -42,7 +42,7 @@ export default function BorrowRequestDetailPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <Button size="sm" variant="outline" onClick={() => router.back()} className="shadow-sm bg-white hover:bg-gray-50">
+        <Button size="sm" variant="outline" onClick={() => router.push("/head-consultant/borrow-consultants")} className="shadow-sm bg-white hover:bg-gray-50">
           กลับ
         </Button>
 

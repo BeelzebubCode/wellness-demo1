@@ -97,7 +97,7 @@ export default function SuperBorrowRequestDetailPage() {
 
           {data.borrowRequestStatus === "SUBMITTED" && (
             <Button
-              variant="success"
+              variant="primary"
               size="sm"
               onClick={async () => {
                 setIsApproving(true);
@@ -111,7 +111,7 @@ export default function SuperBorrowRequestDetailPage() {
               isLoading={isApproving}
               leftIcon={!isApproving ? <CheckCircle className="w-4 h-4" /> : undefined}
             >
-              Approve
+              อนุมัติคำขอ
             </Button>
           )}
 

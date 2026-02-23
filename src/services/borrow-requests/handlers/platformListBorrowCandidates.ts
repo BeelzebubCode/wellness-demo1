@@ -85,11 +85,74 @@ export async function platformListBorrowCandidates(input: {
   const fromLat = decToNumber(fromUni.university_latitude);
   const fromLng = decToNumber(fromUni.university_longitude);
 
-  // 3) ดึง consultant ทั้งหมดที่ "อยู่มหาลัยอื่น" พร้อมข้อมูลที่เกี่ยวข้อง
+  // 3) Calculate active shift teams during the requested borrow period
+  let activeTeamOrders: number[] | null = null;
+  if (br.borrow_needed_from && br.borrow_needed_to) {
+    const epochDate = new Date("2024-01-01"); // from config
+    const cycleDays = 56;
+    const teamLengthDays = 14;
+    const msPerDay = 24 * 60 * 60 * 1000;
+
+    const startMs = br.borrow_needed_from.getTime();
+    const endMs = br.borrow_needed_to.getTime();
+    const activeTeamsSet = new Set<number>();
+
+    const checkTime = (time: number) => {
+      const d = new Date(time);
+      const diffMs = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(epochDate.getFullYear(), Math.floor(epochDate.getMonth()), epochDate.getDate());
+      const daysSinceEpoch = Math.floor(diffMs / msPerDay);
+      if (daysSinceEpoch >= 0) {
+        const cycleDay = daysSinceEpoch % cycleDays;
+        const teamOrder = Math.floor(cycleDay / teamLengthDays) + 1;
+        activeTeamsSet.add(teamOrder);
+      }
+    };
+
+    // Check each day in the range
+    for (let t = startMs; t <= endMs; t += msPerDay) {
+      checkTime(t);
+    }
+    // Check end time specifically to catch overlaps
+    checkTime(endMs);
+
+    activeTeamOrders = Array.from(activeTeamsSet);
+  }
+
+  // 4) Fetch the exact shift_team_ids that correspond to the active team orders
+  let activeShiftTeamIds: number[] = [];
+  const shiftTeamMap = new Map<number, { order: number; name: string }>();
+
+  if (activeTeamOrders && activeTeamOrders.length > 0) {
+    const teams = await prisma.consultantShiftTeam.findMany({
+      where: {
+        team_order: { in: activeTeamOrders },
+      },
+      select: {
+        shift_team_id: true,
+        team_order: true,
+        team_name: true,
+      },
+    });
+    activeShiftTeamIds = teams.map((t) => t.shift_team_id);
+    teams.forEach((t) => {
+      shiftTeamMap.set(t.shift_team_id, { order: t.team_order, name: t.team_name });
+    });
+  }
+
+  // 5) ดึง consultant ทั้งหมดที่ "อยู่มหาลัยอื่น" พร้อมข้อมูลที่เกี่ยวข้อง
   // ✅ Optimize: Include relations to avoid "too many parameters" error from large IN clauses
   const consultants = await prisma.consultant.findMany({
     where: {
       university_id: { not: fromUniversityId }, // ✅ exclude ม.ต้นทาง
+      account: {
+        account_role: { not: "HEAD_CONSULTANT" }, // ✅ ไม่รวม Head Consultant
+      },
+      // ✅ Must be in an active shift team during the requested period
+      ...(activeShiftTeamIds.length > 0
+        ? {
+          shift_team_id: { in: activeShiftTeamIds },
+        }
+        : {}),
     },
     select: {
       consultant_id: true,
@@ -119,31 +182,10 @@ export async function platformListBorrowCandidates(input: {
         },
       },
 
-      // ✅ Include BUSY shifts (Active)
-      borrowAvailabilities: {
-        where: {
-          status: "ACTIVE",
-          ...(br.borrow_needed_from && br.borrow_needed_to
-            ? {
-                availability_start_date: { lt: br.borrow_needed_to },
-                availability_end_date: { gt: br.borrow_needed_from },
-              }
-            : {}),
-        },
-        select: {
-          consultant_borrow_availability_id: true,
-          availability_start_date: true,
-          availability_end_date: true,
-          status: true,
-          targetUniversity: {
-            select: {
-              university_name_th: true,
-            },
-          },
-        },
-      },
+      // ✅ Remove consultantShiftTeam relation select as it relies on a broken foreign key
 
-      // ✅ Include Active Assignments (Already assigned to this or other requests)
+      // Also need to select shift_team_id so we can map it later
+      shift_team_id: true,
       borrowAssignments: {
         where: {
           borrowRequest: {
@@ -151,9 +193,9 @@ export async function platformListBorrowCandidates(input: {
           },
           ...(br.borrow_needed_from && br.borrow_needed_to
             ? {
-                borrow_assign_start_at: { lt: br.borrow_needed_to },
-                borrow_assign_end_at: { gt: br.borrow_needed_from },
-              }
+              borrow_assign_start_at: { lt: br.borrow_needed_to },
+              borrow_assign_end_at: { gt: br.borrow_needed_from },
+            }
             : {}),
         },
         select: {
@@ -231,19 +273,20 @@ export async function platformListBorrowCandidates(input: {
 
     const topicMatchCount = problemTopics.length
       ? specializations.filter((spec) =>
-          problemTopics.some((req) => spec.includes(req) || req.includes(spec))
-        ).length
+        problemTopics.some((req) => spec.includes(req) || req.includes(spec))
+      ).length
       : 0;
 
-    // ✅ Map shifts from relation
-    const mappedShifts = c.borrowAvailabilities.map((shift) => ({
-      shiftId: shift.consultant_borrow_availability_id,
-      startAt: shift.availability_start_date.toISOString(),
-      endAt: shift.availability_end_date.toISOString(),
-      status: shift.status,
-      currentBorrowCount: 1, 
-      targetUniversityName: shift.targetUniversity.university_name_th,
-    }));
+    // ✅ Map shifts from manual lookup (since relation is broken)
+    const teamInfo = c.shift_team_id ? shiftTeamMap.get(c.shift_team_id) : null;
+    const mappedShifts = teamInfo ? [{
+      shiftId: teamInfo.order,
+      startAt: br.borrow_needed_from?.toISOString() || new Date().toISOString(),
+      endAt: br.borrow_needed_to?.toISOString() || new Date().toISOString(),
+      status: "ACTIVE",
+      currentBorrowCount: 0,
+      targetUniversityName: "พร้อมถูกยืม",
+    }] : [];
 
     // ✅ Check active assignments from relation
     const isAlreadyAssigned = c.borrowAssignments.length > 0;
