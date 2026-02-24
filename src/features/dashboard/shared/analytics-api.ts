@@ -18,6 +18,9 @@ function buildSearchParams(params: AnalyticsParams): URLSearchParams {
     if (params.university_id) sp.set("university_id", String(params.university_id));
     if (params.university_code) sp.set("university_code", params.university_code);
     if (params.faculty_id) sp.set("faculty_id", String(params.faculty_id));
+    if (params.faculty_ids && params.faculty_ids.length > 0) {
+        sp.set("faculty_ids", params.faculty_ids.join(","));
+    }
     if (params.faculty_code) sp.set("faculty_code", params.faculty_code);
     if (params.department_id) sp.set("department_id", String(params.department_id));
     if (params.gender && params.gender.length > 0) sp.set("gender", params.gender.join(","));

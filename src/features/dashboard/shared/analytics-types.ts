@@ -11,6 +11,7 @@ export interface AnalyticsParams {
     university_id?: number;   // Ministry/SuperAdmin only
     university_code?: string; // Ministry/SuperAdmin only
     faculty_id?: number;
+    faculty_ids?: number[];
     faculty_code?: string; // e.g. "AGR" — backend resolves to faculty_id
     department_id?: number;
     gender?: string[];             // multi-value e.g. ["MALE","FEMALE"]
@@ -33,6 +34,10 @@ export interface SummaryStats {
     noShowRate: number;
     avgRisk: number | null;
     highRiskRate: number;   // risk >= 4
+    mentalHealthCount: number; // [NEW] Count of Mental Health cases
+    completedCount: number;    // [NEW] Count of completed bookings
+    totalWithRisk: number;      // [NEW] Total bookings that have a risk level assigned
+    highRiskCount: number;      // [NEW] Count of risk level 4-5
 }
 
 // ─── Load/Stress Index ──────────────────────────────────────────────────────
@@ -46,6 +51,8 @@ export interface LoadIndexItem {
     lateCount: number;
     cancelledCount: number;
     loadIndex: number;
+    mentalHealthCount: number; // [NEW] Count of Mental Health cases
+    completedCount: number;   // [NEW] Count of completed bookings
 }
 
 // ─── Problem Category ───────────────────────────────────────────────────────
@@ -127,6 +134,7 @@ export interface StudentRankRow {
 // ─── Full API Response ──────────────────────────────────────────────────────
 export interface AnalyticsResult {
     summary: SummaryStats;
+    previousSummary?: SummaryStats; // [NEW] Summary stats for the equivalent previous period
     loadIndex: LoadIndexItem[];
     problemCategories: ProblemCategoryItem[];
     attendanceByGroup: AttendanceGroupItem[];

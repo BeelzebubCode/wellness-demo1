@@ -104,6 +104,8 @@ export function buildFilterClause(params: AnalyticsParams): Prisma.Sql {
     // Faculty
     if (params.faculty_id) {
         parts.push(Prisma.sql`AND sa.faculty_id = ${params.faculty_id}`);
+    } else if (params.faculty_ids && params.faculty_ids.length > 0) {
+        parts.push(Prisma.sql`AND sa.faculty_id = ANY(${params.faculty_ids}::int[])`);
     }
 
     // Department
@@ -234,7 +236,32 @@ export async function runAnalytics(
         }
     }
 
+    // Resolve MENTAL problem category ID
+    const mentalCat = await prisma.problemCategory.findUnique({
+        where: { problem_category_code: "MENTAL" },
+        select: { problem_category_id: true }
+    });
+    const mentalId = mentalCat?.problem_category_id ?? 0;
+
     const filterSQL = buildFilterClause(params);
+
+    // ── Pre-calculate Previous Period for Trend % ──
+    let prevFilterSQL: Prisma.Sql | null = null;
+    if (!params.all_time && params.date_start && params.date_end) {
+        const start = new Date(params.date_start);
+        const end = new Date(params.date_end);
+        const diff = end.getTime() - start.getTime();
+        const prevEnd = new Date(start.getTime() - 1); // 1ms before start
+        const prevStart = new Date(prevEnd.getTime() - diff);
+
+        const prevParams = {
+            ...params,
+            date_start: prevStart.toISOString(),
+            date_end: prevEnd.toISOString()
+        };
+        prevFilterSQL = buildFilterClause(prevParams);
+    }
+
     const { bucketExpr } = getTimeBucketSQL(params);
     const grp = getGroupColumns(groupLevel);
     const w = LOAD_INDEX_WEIGHTS;
@@ -244,8 +271,9 @@ export async function runAnalytics(
     // Group B: Load + Attendance + Cancellation (need group join)
     // Group C: Problem categories (need problem_category join)
     // Group D: Cancellation reasons (separate, lightweight)
+    // Group E: Previous Period Summary (Conditional)
 
-    const [summaryRows, groupRows, problemRows, reasonRows, trendRows] = await Promise.all([
+    const [summaryRows, groupRows, problemRows, reasonRows, trendRows, prevSummaryRows] = await Promise.all([
         // ── A: SUMMARY + RISK (single scan, no group join) ──
         prisma.$queryRaw<any[]>(
             Prisma.sql`
@@ -257,7 +285,9 @@ export async function runAnalytics(
               COUNT(CASE WHEN ba.booking_attendance_status = 'NO_SHOW' THEN 1 END)::int AS no_show_count,
               ROUND(AVG(bo.booking_outcome_risk_level)::numeric, 2) AS avg_risk,
               COUNT(CASE WHEN bo.booking_outcome_risk_level >= 4 THEN 1 END)::int AS high_risk_count,
-              COUNT(bo.booking_outcome_risk_level)::int AS total_with_risk
+              COUNT(bo.booking_outcome_risk_level)::int AS total_with_risk,
+              COUNT(CASE WHEN b.problem_category_id = ${mentalId} THEN 1 END)::int AS mental_count,
+              COUNT(CASE WHEN b.booking_status = 'COMPLETED' THEN 1 END)::int AS completed_count
             FROM booking b
             JOIN student_academic sa ON sa.university_id = b.university_id AND sa.student_id = b.student_id
             LEFT JOIN student_profile sp ON sp.university_id = b.university_id AND sp.student_id = b.student_id
@@ -270,7 +300,7 @@ export async function runAnalytics(
             UNION ALL
 
             SELECT 'risk' AS _section, bo.booking_outcome_risk_level AS level,
-              COUNT(*)::int, 0, 0, 0, 0, NULL, 0, 0
+              COUNT(*)::int, 0, 0, 0, 0, NULL, 0, 0, 0, 0 -- 12 columns
             FROM booking b
             JOIN student_academic sa ON sa.university_id = b.university_id AND sa.student_id = b.student_id
             JOIN booking_outcome bo ON bo.university_id = b.university_id AND bo.booking_id = b.booking_id
@@ -294,7 +324,9 @@ export async function runAnalytics(
               COUNT(CASE WHEN ba.booking_attendance_status = 'NO_SHOW' THEN 1 END)::int AS no_show_count,
               COUNT(CASE WHEN ba.booking_attendance_status = 'LATE' THEN 1 END)::int AS late_count,
               COUNT(CASE WHEN ba.booking_attendance_status = 'CHECKED_IN' THEN 1 END)::int AS checked_in_count,
-              COUNT(bc.booking_id)::int AS cancelled_count
+              COUNT(bc.booking_id)::int AS cancelled_count,
+              COUNT(CASE WHEN b.problem_category_id = ${mentalId} THEN 1 END)::int AS mental_count,
+              COUNT(CASE WHEN b.booking_status = 'COMPLETED' THEN 1 END)::int AS completed_count
             FROM booking b
             JOIN student_academic sa ON sa.university_id = b.university_id AND sa.student_id = b.student_id
             ${Prisma.raw(grp.joinTable)}
@@ -334,7 +366,7 @@ export async function runAnalytics(
             WHERE 1=1 ${scope.scopeSQL} ${filterSQL}
             GROUP BY 1, 2, 3, 4
             ORDER BY cnt DESC
-            LIMIT 12
+            LIMIT 100
             `,
         ),
 
@@ -382,6 +414,33 @@ export async function runAnalytics(
             ORDER BY 1
             `,
         ),
+
+        // ── F: PREVIOUS PERIOD SUMMARY (Conditional) ──
+        prevFilterSQL
+            ? prisma.$queryRaw<any[]>(
+                Prisma.sql`
+                SELECT 'summary' AS _section, NULL::int AS level,
+                  COUNT(*)::int AS total_bookings,
+                  COUNT(bc.booking_id)::int AS cancelled_count,
+                  COUNT(CASE WHEN ba.booking_attendance_status = 'CHECKED_IN' THEN 1 END)::int AS checked_in_count,
+                  COUNT(CASE WHEN ba.booking_attendance_status = 'LATE' THEN 1 END)::int AS late_count,
+                  COUNT(CASE WHEN ba.booking_attendance_status = 'NO_SHOW' THEN 1 END)::int AS no_show_count,
+                  ROUND(AVG(bo.booking_outcome_risk_level)::numeric, 2) AS avg_risk,
+                  COUNT(CASE WHEN bo.booking_outcome_risk_level >= 4 THEN 1 END)::int AS high_risk_count,
+                  COUNT(bo.booking_outcome_risk_level)::int AS total_with_risk,
+                  COUNT(CASE WHEN b.problem_category_id = ${mentalId} THEN 1 END)::int AS mental_count,
+                  COUNT(CASE WHEN b.booking_status = 'COMPLETED' THEN 1 END)::int AS completed_count
+                FROM booking b
+                JOIN student_academic sa ON sa.university_id = b.university_id AND sa.student_id = b.student_id
+                LEFT JOIN student_profile sp ON sp.university_id = b.university_id AND sp.student_id = b.student_id
+                LEFT JOIN booking_outcome bo ON bo.university_id = b.university_id AND bo.booking_id = b.booking_id
+                LEFT JOIN booking_attendance ba ON ba.university_id = b.university_id AND ba.booking_id = b.booking_id
+                LEFT JOIN booking_cancellation bc ON bc.university_id = b.university_id AND bc.booking_id = b.booking_id
+                LEFT JOIN time_slot ts ON ts.university_id = b.university_id AND ts.time_slot_id = b.time_slot_id
+                WHERE 1=1 ${scope.scopeSQL} ${prevFilterSQL}
+                `,
+            )
+            : Promise.resolve([]),
     ]);
 
     // ── Parse: Summary ──
@@ -398,7 +457,34 @@ export async function runAnalytics(
         noShowRate: total > 0 ? Number(summaryRow.no_show_count) / total : 0,
         avgRisk: summaryRow.avg_risk != null ? Number(summaryRow.avg_risk) : null,
         highRiskRate: Number(summaryRow.total_with_risk) > 0 ? Number(summaryRow.high_risk_count) / Number(summaryRow.total_with_risk) : 0,
+        mentalHealthCount: Number(summaryRow.mental_count) || 0,
+        completedCount: Number(summaryRow.completed_count) || 0,
+        totalWithRisk: Number(summaryRow.total_with_risk) || 0,
+        highRiskCount: Number(summaryRow.high_risk_count) || 0,
     };
+
+    // ── Parse: Previous Summary ──
+    let previousSummary: SummaryStats | undefined = undefined;
+    const prevSummaryRow = (prevSummaryRows as any[]).find((r) => r._section === "summary");
+    if (prevSummaryRow) {
+        const pTotal = Number(prevSummaryRow.total_bookings) || 0;
+        previousSummary = {
+            totalBookings: pTotal,
+            cancelledCount: Number(prevSummaryRow.cancelled_count) || 0,
+            checkedInCount: Number(prevSummaryRow.checked_in_count) || 0,
+            lateCount: Number(prevSummaryRow.late_count) || 0,
+            noShowCount: Number(prevSummaryRow.no_show_count) || 0,
+            checkedInRate: pTotal > 0 ? Number(prevSummaryRow.checked_in_count) / pTotal : 0,
+            lateRate: pTotal > 0 ? Number(prevSummaryRow.late_count) / pTotal : 0,
+            noShowRate: pTotal > 0 ? Number(prevSummaryRow.no_show_count) / pTotal : 0,
+            avgRisk: prevSummaryRow.avg_risk != null ? Number(prevSummaryRow.avg_risk) : null,
+            highRiskRate: Number(prevSummaryRow.total_with_risk) > 0 ? Number(prevSummaryRow.high_risk_count) / Number(prevSummaryRow.total_with_risk) : 0,
+            mentalHealthCount: Number(prevSummaryRow.mental_count) || 0,
+            completedCount: Number(prevSummaryRow.completed_count) || 0,
+            totalWithRisk: Number(prevSummaryRow.total_with_risk) || 0,
+            highRiskCount: Number(prevSummaryRow.high_risk_count) || 0,
+        };
+    }
 
     // ── Parse: Risk Distribution ──
     const riskRows = summaryRows.filter((r) => r._section === "risk");
@@ -435,6 +521,8 @@ export async function runAnalytics(
             lateCount: lt,
             cancelledCount: cc,
             loadIndex: tb * w.booking + hr * w.highRisk + ns * w.noShow + lt * w.late + cc * w.cancelled,
+            mentalHealthCount: Number(r.mental_count) || 0,
+            completedCount: Number(r.completed_count) || 0,
         };
     });
 
@@ -511,6 +599,7 @@ export async function runAnalytics(
 
     return {
         summary,
+        previousSummary,
         loadIndex,
         problemCategories,
         attendanceByGroup,

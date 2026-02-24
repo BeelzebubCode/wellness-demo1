@@ -40,6 +40,7 @@ function parseParams(url: URL): AnalyticsParams {
         university_id: sp.get("university_id") ? Number(sp.get("university_id")) : undefined,
         university_code: sp.get("university_code") || undefined,
         faculty_id: sp.get("faculty_id") ? Number(sp.get("faculty_id")) : undefined,
+        faculty_ids: parseCSVNumbers("faculty_ids"),
         faculty_code: sp.get("faculty_code") || undefined,
         department_id: sp.get("department_id") ? Number(sp.get("department_id")) : undefined,
         gender: parseCSV("gender"),

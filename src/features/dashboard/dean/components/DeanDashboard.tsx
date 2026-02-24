@@ -1,30 +1,12 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useAnalytics } from "../../shared/useAnalytics";
 import { AnalyticsFilterBar } from "../../shared/AnalyticsFilterBar";
-import { SummaryKPICards } from "../../shared/SummaryKPICards";
-import { CancellationSummary } from "../../shared/CancellationSummary";
+import dynamic from "next/dynamic";
 
-const LoadIndexChart = dynamic(
-    () => import("../../shared/LoadIndexChart").then((m) => ({ default: m.LoadIndexChart })),
-    { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
-);
-const ProblemCategoryChart = dynamic(
-    () => import("../../shared/ProblemCategoryChart").then((m) => ({ default: m.ProblemCategoryChart })),
-    { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
-);
-const AttendanceChart = dynamic(
-    () => import("../../shared/AttendanceChart").then((m) => ({ default: m.AttendanceChart })),
-    { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
-);
-const RiskDistributionChart = dynamic(
-    () => import("../../shared/RiskDistributionChart").then((m) => ({ default: m.RiskDistributionChart })),
-    { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
-);
-const TrendChart = dynamic(
-    () => import("../../shared/TrendChart").then((m) => ({ default: m.TrendChart })),
-    { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
+const ProblemLandscapeChart = dynamic(
+    () => import("../../shared/ProblemLandscapeChart").then((m) => ({ default: m.ProblemLandscapeChart })),
+    { loading: () => <div className="h-[600px] bg-slate-50 animate-pulse rounded-3xl" />, ssr: false }
 );
 
 export function DeanDashboard({ facultyCode }: { facultyCode?: string } = {}) {
@@ -55,53 +37,21 @@ export function DeanDashboard({ facultyCode }: { facultyCode?: string } = {}) {
                     <AnalyticsFilterBar params={params} onChange={setParams} hideFaculty />
                 </section>
 
-                {/* 1. KEY PERFORMANCE INDICATORS */}
+                {/* Problem Landscape */}
                 <section>
-                    <div className="mb-4">
-                        <h3 className="text-lg font-bold text-slate-800">ภาพรวม</h3>
-                        <p className="text-sm text-slate-500">ดัชนีชี้วัดสำคัญของคณะ</p>
-                    </div>
-                    <SummaryKPICards data={data?.summary ?? null} loading={loading} />
+                    <ProblemLandscapeChart data={data?.problemCategories ?? []} loading={loading} />
                 </section>
 
-                {/* 2. ANALYTICS & INSIGHTS */}
-                <section>
-                    <div className="mb-4">
-                        <h3 className="text-lg font-bold text-slate-800">การวิเคราะห์</h3>
-                        <p className="text-sm text-slate-500">แนวโน้ม ความเสี่ยง และประเภทปัญหา</p>
+                {/* [CLEARED] Space for new designs */}
+                <div className="min-h-[200px] flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-3xl bg-slate-100/30 p-12 text-center">
+                    <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-4 text-2xl">
+                        💡
                     </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <LoadIndexChart
-                            data={data?.loadIndex ?? []}
-                            loading={loading}
-                            title="Load Index ตามสาขา"
-                            subtitle="สาขาไหนมีภาระมากสุด"
-                        />
-                        <RiskDistributionChart data={data?.riskDistribution ?? null} loading={loading} />
-                    </div>
-                </section>
-
-                {/* 3. PROBLEM CATEGORIES */}
-                <section>
-                    <ProblemCategoryChart data={data?.problemCategories ?? []} loading={loading} />
-                </section>
-
-                {/* 4. DEPARTMENT BREAKDOWN */}
-                <section>
-                    <div className="mb-4">
-                        <h3 className="text-lg font-bold text-slate-800">ภาพรวมภาควิชา</h3>
-                        <p className="text-sm text-slate-500">เปรียบเทียบสถิติระหว่างภาควิชาในคณะ</p>
-                    </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <AttendanceChart data={data?.attendanceByGroup ?? []} loading={loading} />
-                        <CancellationSummary data={data?.cancellationByGroup ?? []} loading={loading} />
-                    </div>
-                </section>
-
-                {/* 5. TREND */}
-                <section>
-                    <TrendChart data={data?.trend ?? []} loading={loading} />
-                </section>
+                    <h3 className="text-lg font-semibold text-slate-800">พื้นที่รวบรวมข้อมูลใหม่</h3>
+                    <p className="text-slate-500 text-sm max-w-sm mt-2">
+                        ขณะนี้ได้นำการแสดงผลเดิมออกแล้ว เพื่อเตรียมความพร้อมสำหรับหน้า Dashboard รูปแบบใหม่ที่มีประสิทธิภาพกว่าเดิม
+                    </p>
+                </div>
 
                 {/* FOOTER */}
                 <div className="pt-6 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-400">
@@ -118,3 +68,4 @@ export function DeanDashboard({ facultyCode }: { facultyCode?: string } = {}) {
         </div>
     );
 }
+

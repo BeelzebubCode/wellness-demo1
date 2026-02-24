@@ -16,8 +16,8 @@ function ToggleChip({ label, active, onClick }: { label: string; active: boolean
             type="button"
             onClick={onClick}
             className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all whitespace-nowrap ${active
-                    ? "bg-primary text-white border-primary shadow-sm"
-                    : "bg-white text-slate-600 border-slate-200 hover:border-primary/40 hover:text-primary"
+                ? "bg-primary text-white border-primary shadow-sm"
+                : "bg-white text-slate-600 border-slate-200 hover:border-primary/40 hover:text-primary"
                 }`}
         >
             {label}
@@ -102,7 +102,7 @@ export function AnalyticsFilterBar({
     const hasActiveFilters = !!(
         params.gender?.length || params.problem_category_ids?.length ||
         params.service_mode?.length || params.booking_status?.length ||
-        params.attendance_status?.length || params.faculty_id
+        params.attendance_status?.length || params.faculty_id || params.faculty_ids?.length
     );
 
     const clearAllFilters = useCallback(() => {
@@ -113,6 +113,7 @@ export function AnalyticsFilterBar({
             booking_status: undefined,
             attendance_status: undefined,
             faculty_id: undefined,
+            faculty_ids: undefined,
         });
     }, [onChange]);
 
@@ -167,7 +168,7 @@ export function AnalyticsFilterBar({
 
                 {hasActiveFilters && (
                     <button type="button" onClick={clearAllFilters}
-                        className="flex items-center gap-1 text-xs font-medium text-red-500 hover:text-red-700 ml-auto">
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition-colors border border-rose-100 shadow-sm ml-auto">
                         <RotateCcw className="w-3.5 h-3.5" /> ล้างตัวกรอง
                     </button>
                 )}
@@ -206,8 +207,12 @@ export function AnalyticsFilterBar({
                     <FilterGroup label="คณะ">
                         {faculties.map(f => (
                             <ToggleChip key={f.facultyId} label={f.facultyNameTh}
-                                active={params.faculty_id === f.facultyId}
-                                onClick={() => onChange({ faculty_id: params.faculty_id === f.facultyId ? undefined : f.facultyId, department_id: undefined })} />
+                                active={params.faculty_id === f.facultyId || !!params.faculty_ids?.includes(f.facultyId)}
+                                onClick={() => onChange({
+                                    faculty_ids: toggleNumberArray(params.faculty_ids, f.facultyId),
+                                    faculty_id: undefined, // Clear single-select if multi is used
+                                    department_id: undefined
+                                })} />
                         ))}
                     </FilterGroup>
                 )}
@@ -218,8 +223,8 @@ export function AnalyticsFilterBar({
                         onClick={() => onChange({ gender: toggleArray(params.gender, "MALE") })} />
                     <ToggleChip label="หญิง" active={!!params.gender?.includes("FEMALE")}
                         onClick={() => onChange({ gender: toggleArray(params.gender, "FEMALE") })} />
-                    <ToggleChip label="LGBTQ+" active={!!params.gender?.includes("LGBTQ")}
-                        onClick={() => onChange({ gender: toggleArray(params.gender, "LGBTQ") })} />
+                    <ToggleChip label="LGBTQ+" active={!!params.gender?.includes("LGBTQ_PLUS")}
+                        onClick={() => onChange({ gender: toggleArray(params.gender, "LGBTQ_PLUS") })} />
                 </FilterGroup>
 
                 {/* Problem Categories */}
@@ -243,10 +248,10 @@ export function AnalyticsFilterBar({
 
                 {/* Booking Status */}
                 <FilterGroup label="สถานะจอง">
-                    <ToggleChip label="รอดำเนินการ" active={!!params.booking_status?.includes("PENDING")}
-                        onClick={() => onChange({ booking_status: toggleArray(params.booking_status, "PENDING") })} />
-                    <ToggleChip label="ยืนยันแล้ว" active={!!params.booking_status?.includes("CONFIRMED")}
-                        onClick={() => onChange({ booking_status: toggleArray(params.booking_status, "CONFIRMED") })} />
+                    <ToggleChip label="รอดำเนินการ" active={!!params.booking_status?.includes("PENDING_ASSIGNMENT")}
+                        onClick={() => onChange({ booking_status: toggleArray(params.booking_status, "PENDING_ASSIGNMENT") })} />
+                    <ToggleChip label="ยืนยันแล้ว" active={!!params.booking_status?.includes("ASSIGNED")}
+                        onClick={() => onChange({ booking_status: toggleArray(params.booking_status, "ASSIGNED") })} />
                     <ToggleChip label="กำลังดำเนินการ" active={!!params.booking_status?.includes("IN_PROGRESS")}
                         onClick={() => onChange({ booking_status: toggleArray(params.booking_status, "IN_PROGRESS") })} />
                     <ToggleChip label="เสร็จสิ้น" active={!!params.booking_status?.includes("COMPLETED")}

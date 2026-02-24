@@ -95,7 +95,7 @@ const FILTER_DEFS: FilterDef<FacultyFilters>[] = [
       { label: "ทั้งหมด", value: "ALL" },
       { label: "ชาย", value: "MALE" },
       { label: "หญิง", value: "FEMALE" },
-      { label: "อื่นๆ", value: "OTHER" },
+      { label: "LGBTQ+", value: "LGBTQ_PLUS" },
     ],
   },
 ];
@@ -111,7 +111,7 @@ interface CaseItem {
   department: string;
   year: string;
   serviceMode: "ONSITE" | "ONLINE";
-  gender: "MALE" | "FEMALE" | "OTHER";
+  gender: "MALE" | "FEMALE" | "LGBTQ_PLUS";
 }
 
 interface FacultyFilterViewProps {
@@ -123,12 +123,12 @@ const ITEMS_PER_PAGE = 15;
 const MOCK_CASES: CaseItem[] = [
   { id: "CASE-8821", name: "นิสิตปี 2 - อายุรศาสตร์", risk: "HIGH", problem: "ความเครียดจากการเรียน", date: "12 ก.พ. 2569", status: "กำลังดำเนินการ", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=A", department: "MED_MED", year: "YEAR_2", serviceMode: "ONSITE", gender: "MALE" },
   { id: "CASE-8819", name: "นิสิตปี 1 - ศัลยศาสตร์", risk: "CRITICAL", problem: "ปัญหาสุขภาพจิต/อารมณ์", date: "11 ก.พ. 2569", status: "ติดตามผล", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=B", department: "MED_SUR", year: "YEAR_1", serviceMode: "ONLINE", gender: "FEMALE" },
-  { id: "CASE-8815", name: "นิสิตปี 4 - จิตเวชศาสตร์", risk: "NORMAL", problem: "การปรับตัว", date: "10 ก.พ. 2569", status: "ปิดเคสแล้ว", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=C", department: "MED_PSY", year: "YEAR_4", serviceMode: "ONSITE", gender: "OTHER" },
+  { id: "CASE-8815", name: "นิสิตปี 4 - จิตเวชศาสตร์", risk: "NORMAL", problem: "การปรับตัว", date: "10 ก.พ. 2569", status: "ปิดเคสแล้ว", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=C", department: "MED_PSY", year: "YEAR_4", serviceMode: "ONSITE", gender: "LGBTQ_PLUS" },
   { id: "CASE-8810", name: "นิสิตปี 3 - กุมารเวชศาสตร์", risk: "MODERATE", problem: "ความสัมพันธ์", date: "09 ก.พ. 2569", status: "นัดหมายครั้งถัดไป", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=D", department: "MED_PED", year: "YEAR_3", serviceMode: "ONLINE", gender: "MALE" },
   { id: "CASE-8805", name: "นิสิตปี 1 - อายุรศาสตร์", risk: "HIGH", problem: "ปัญหาสุขภาพจิต/อารมณ์", date: "08 ก.พ. 2569", status: "กำลังดำเนินการ", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=E", department: "MED_MED", year: "YEAR_1", serviceMode: "ONSITE", gender: "FEMALE" },
   { id: "CASE-8798", name: "นิสิตปี 5 - ศัลยศาสตร์", risk: "CRITICAL", problem: "ความเครียด", date: "07 ก.พ. 2569", status: "รอรับบัตร", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=F", department: "MED_SUR", year: "YEAR_5_PLUS", serviceMode: "ONLINE", gender: "MALE" },
   { id: "CASE-8790", name: "นิสิตปี 2 - จิตเวชศาสตร์", risk: "MODERATE", problem: "การปรับตัว", date: "06 ก.พ. 2569", status: "กำลังดำเนินการ", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=G", department: "MED_PSY", year: "YEAR_2", serviceMode: "ONSITE", gender: "FEMALE" },
-  { id: "CASE-8785", name: "นิสิตปี 4 - กุมารเวชศาสตร์", risk: "NORMAL", problem: "ความสัมพันธ์", date: "05 ก.พ. 2569", status: "ติดตามผล", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=H", department: "MED_PED", year: "YEAR_4", serviceMode: "ONLINE", gender: "OTHER" },
+  { id: "CASE-8785", name: "นิสิตปี 4 - กุมารเวชศาสตร์", risk: "NORMAL", problem: "ความสัมพันธ์", date: "05 ก.พ. 2569", status: "ติดตามผล", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=H", department: "MED_PED", year: "YEAR_4", serviceMode: "ONLINE", gender: "LGBTQ_PLUS" },
   { id: "CASE-8780", name: "นิสิตปี 1 - อายุรศาสตร์", risk: "CRITICAL", problem: "ปัญหาสุขภาพจิต/อารมณ์", date: "04 ก.พ. 2569", status: "ฉุกเฉิน", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=I", department: "MED_MED", year: "YEAR_1", serviceMode: "ONSITE", gender: "MALE" },
   { id: "CASE-8775", name: "นิสิตปี 3 - ศัลยศาสตร์", risk: "HIGH", problem: "ความเครียดจากการเรียน", date: "03 ก.พ. 2569", status: "ปิดเคสแล้ว", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=J", department: "MED_SUR", year: "YEAR_3", serviceMode: "ONLINE", gender: "FEMALE" },
 ];
@@ -201,7 +201,7 @@ export function FacultyFilterView({ cases: initialCases = [] }: FacultyFilterVie
     // However, since useMemo only depends on filters, we can just reset inside setter or use a watcher.
     // To be clean, we'll reset page in the FilterBar's onChange if we wrap it, 
     // but better to just do it here if possible or use a separate useEffect.
-    
+
     // Apply Sorting
     const riskOrder: Record<string, number> = { "NORMAL": 1, "MODERATE": 2, "HIGH": 3, "CRITICAL": 4 };
     if (sortOrder === "risk-low-high") {
@@ -230,12 +230,12 @@ export function FacultyFilterView({ cases: initialCases = [] }: FacultyFilterVie
     const highRisk = filteredResults.filter((r: CaseItem) => ["HIGH", "CRITICAL"].includes(r.risk)).length;
     const onsite = filteredResults.filter((r: CaseItem) => r.serviceMode === "ONSITE").length;
     const online = filteredResults.filter((r: CaseItem) => r.serviceMode === "ONLINE").length;
-    
+
     return [
       { label: "เคสที่พบ (Filtered)", value: total.toString(), sub: `จากทั้งหมด ${initialCases.length} เคส`, icon: <Search className="text-primary" /> },
-      { label: "ความเสี่ยงสูง (High Risk)", value: highRisk.toString(), sub: `${((highRisk/total || 0) * 100).toFixed(1)}% ของที่กรอง`, icon: <AlertTriangle className="text-orange-500" /> },
-      { label: "บริการ Onsite", value: onsite.toString(), sub: `${((onsite/total || 0) * 100).toFixed(1)}% ของที่กรอง`, icon: <MapPin className="text-green-500" /> },
-      { label: "บริการ Online", value: online.toString(), sub: `${((online/total || 0) * 100).toFixed(1)}% ของที่กรอง`, icon: <Zap className="text-blue-500" /> },
+      { label: "ความเสี่ยงสูง (High Risk)", value: highRisk.toString(), sub: `${((highRisk / total || 0) * 100).toFixed(1)}% ของที่กรอง`, icon: <AlertTriangle className="text-orange-500" /> },
+      { label: "บริการ Onsite", value: onsite.toString(), sub: `${((onsite / total || 0) * 100).toFixed(1)}% ของที่กรอง`, icon: <MapPin className="text-green-500" /> },
+      { label: "บริการ Online", value: online.toString(), sub: `${((online / total || 0) * 100).toFixed(1)}% ของที่กรอง`, icon: <Zap className="text-blue-500" /> },
     ];
   }, [filteredResults]);
 
