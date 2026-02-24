@@ -139,6 +139,10 @@ export function BookingCalendar(props: BookingCalendarProps) {
             const disabled = isDateDisabled(date) || isPast(date);
             const inMonth = isCurrentMonth(date);
 
+            if (!inMonth) {
+              return <div key={index} className="aspect-square" aria-hidden="true" />;
+            }
+
             return (
               <button
                 key={index}
@@ -154,18 +158,17 @@ export function BookingCalendar(props: BookingCalendarProps) {
                   "text-sm font-medium",
                   "transition-all duration-200",
 
-                  !inMonth && "text-gray-300",
-                  inMonth && !disabled && "text-gray-700 hover:bg-gray-100",
+                  !disabled && "text-gray-700 hover:bg-gray-100",
 
                   selected &&
-                    "bg-primary-500 text-white shadow-sm hover:bg-primary-600",
+                  "bg-primary-500 text-white shadow-sm hover:bg-primary-600",
 
                   today &&
-                    !selected &&
-                    "border border-primary-300 text-primary-600 font-semibold",
+                  !selected &&
+                  "border border-primary-300 text-primary-600 font-semibold",
 
                   (disabled || isPending) &&
-                    "text-gray-300 cursor-not-allowed hover:bg-transparent",
+                  "text-gray-300 cursor-not-allowed hover:bg-transparent",
                 )}
               >
                 {date.getDate()}

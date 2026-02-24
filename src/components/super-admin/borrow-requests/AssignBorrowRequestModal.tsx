@@ -16,6 +16,7 @@ import {
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { useToast } from "@/contexts/ToastContext";
 
 // ==============================
 // Types
@@ -109,6 +110,8 @@ export function AssignBorrowRequestModal({
   );
   const [uniSearch, setUniSearch] = useState("");
 
+  const { warning } = useToast();
+
   // Reset & fetch on open
   useEffect(() => {
     if (!open) return;
@@ -188,7 +191,7 @@ export function AssignBorrowRequestModal({
     c: CandidateConsultant,
   ) => {
     if (items.length >= needed) {
-      alert(`เลือกได้สูงสุด ${needed} คนเท่านั้น`);
+      warning(`เลือกได้สูงสุด ${needed} คนเท่านั้น`);
       return;
     }
     const key = `${u.universityId}:${c.consultantId}`;

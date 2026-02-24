@@ -13,13 +13,24 @@ interface TimelineCalendarProps {
   borrowShifts: BorrowShift[];
 }
 
+// Use local time precisely
 function dateToKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function parseYMD(s: string): Date {
+  if (!s) return new Date();
+
+  // If it's a full ISO string, parse it directly so the browser handles the UTC-to-local offset correctly
+  if (s.includes('T')) {
+    const d = new Date(s);
+    d.setHours(12, 0, 0, 0);
+    return d;
+  }
+
+  // Fallback for simple "YYYY-MM-DD"
   const [y, m, d] = s.split("-").map(Number);
-  return new Date(y, m - 1, d);
+  return new Date(y, m - 1, d, 12, 0, 0, 0);
 }
 
 const thaiMonths = [
@@ -56,12 +67,12 @@ export function TimelineCalendar({ teamOrder, teamName, config, borrowShifts }: 
   // Algorithmic Shift Calculation
   const isDateOnDuty = (date: Date) => {
     const epoch = new Date(config.epochDate);
-    epoch.setHours(0, 0, 0, 0);
+    epoch.setHours(12, 0, 0, 0);
     const target = new Date(date);
-    target.setHours(0, 0, 0, 0);
+    target.setHours(12, 0, 0, 0);
 
     const diffTime = target.getTime() - epoch.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) return false; // Before epoch is not handled
 
@@ -95,6 +106,10 @@ export function TimelineCalendar({ teamOrder, teamName, config, borrowShifts }: 
       const start = parseYMD(shift.startDate);
       const end = parseYMD(shift.endDate);
       const cursor = new Date(start);
+      // Set to noon to avoid daylight saving time skips
+      cursor.setHours(12, 0, 0, 0);
+      end.setHours(12, 0, 0, 0);
+
       while (cursor <= end) {
         const key = dateToKey(cursor);
         const existing = map.get(key) || [];
@@ -261,7 +276,8 @@ export function TimelineCalendar({ teamOrder, teamName, config, borrowShifts }: 
                 const borrows = borrowMap.get(key) || [];
                 const isSelected = selectedDate === key;
 
-                // Active borrows are those that are not completed
+                // Active borrows are those that are currently active (not completed or cancelled)
+                // The backend marks past dates as "COMPLETED"
                 const activeBorrows = borrows.filter(b => b.status === "ACTIVE");
                 const hasActiveBorrow = activeBorrows.length > 0;
 
@@ -269,8 +285,11 @@ export function TimelineCalendar({ teamOrder, teamName, config, borrowShifts }: 
                 if (onDuty) {
                   cellClass = "bg-primary-50/50 border-primary-200/60 ring-1 ring-inset ring-primary-50 hover:bg-primary-50";
                 }
+
+                // Override with borrow styling if the consultant is borrowed on this day
+                // Ensure bg-amber overrides other backgrounds forcefully
                 if (hasActiveBorrow) {
-                  cellClass = "bg-amber-50/70 border-amber-200 hover:bg-amber-50 ring-1 ring-inset ring-transparent";
+                  cellClass = "bg-amber-100 border-amber-300 ring-2 ring-inset ring-amber-400 hover:bg-amber-200";
                 }
 
                 return (
@@ -286,21 +305,21 @@ export function TimelineCalendar({ teamOrder, teamName, config, borrowShifts }: 
                   >
                     {/* Top Section */}
                     <span className={cn(
-                      "text-sm font-black transition-colors w-8 h-8 flex items-center justify-center rounded-xl",
-                      isToday ? "bg-primary text-white" : onDuty ? "text-primary-700 bg-white shadow-sm" : hasActiveBorrow ? "text-amber-700 bg-white shadow-sm" : "text-slate-400"
+                      "text-sm font-black transition-colors w-8 h-8 flex items-center justify-center rounded-xl z-20",
+                      isToday ? "bg-primary text-white" : hasActiveBorrow ? "text-amber-800 bg-amber-50 shadow-sm border border-amber-200/50" : onDuty ? "text-primary-700 bg-white shadow-sm" : "text-slate-400"
                     )}>
                       {date.getDate()}
                     </span>
 
                     {/* Indicators Area */}
-                    <div className="mt-auto space-y-1">
+                    <div className="mt-auto space-y-1 relative z-20">
                       {onDuty && !hasActiveBorrow && (
                         <div className="w-full h-1.5 rounded-full bg-gradient-to-r from-primary-400 to-indigo-400 group-hover:h-2 transition-all"></div>
                       )}
                       {hasActiveBorrow && (
-                        <div className="flex items-center gap-1.5 px-2 py-1 bg-white rounded-lg border border-amber-100 shadow-sm">
-                          <Briefcase className="w-3 h-3 text-amber-500" />
-                          <span className="text-[9px] font-bold text-amber-700 truncate">ถูกยืมตัว</span>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-white/90 backdrop-blur-sm rounded-lg border border-amber-200 shadow-sm">
+                          <Briefcase className="w-3 h-3 text-amber-600" />
+                          <span className="text-[10px] font-bold text-amber-800 truncate">ถูกยืมตัว</span>
                         </div>
                       )}
                       {borrows.filter(b => b.status === "COMPLETED").length > 0 && !hasActiveBorrow && (
@@ -312,7 +331,8 @@ export function TimelineCalendar({ teamOrder, teamName, config, borrowShifts }: 
                     </div>
 
                     {/* Interactive Background Glow on Duty */}
-                    {onDuty && <div className="absolute -bottom-10 -right-10 w-24 h-24 bg-primary-200/20 blur-xl rounded-full group-hover:scale-150 transition-transform duration-700 pointer-events-none"></div>}
+                    {onDuty && !hasActiveBorrow && <div className="absolute -bottom-10 -right-10 w-24 h-24 bg-primary-200/20 blur-xl rounded-full group-hover:scale-150 transition-transform duration-700 pointer-events-none z-10"></div>}
+                    {hasActiveBorrow && <div className="absolute -bottom-10 -right-10 w-24 h-24 bg-amber-300/30 blur-xl rounded-full group-hover:scale-150 transition-transform duration-700 pointer-events-none z-10"></div>}
                   </div>
                 );
               })}

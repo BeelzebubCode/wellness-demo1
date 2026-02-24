@@ -43,69 +43,69 @@ export async function GET(req: NextRequest) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // 3. Fetch shifts (Now ConsultantBorrowAvailability)
-    const shifts = await prisma.consultantBorrowAvailability.findMany({
+    // 3. Fetch shifts (from BorrowAssignment properly)
+    // BorrowAssignment represents actual finalized borrowing shifts where this consultant is assigned to another university
+    const shifts = await prisma.borrowAssignment.findMany({
       where: {
         consultant_id: consultantId,
       },
       include: {
-        homeUniversity: {
+        consultantUniversity: {
           select: {
             university_name_th: true,
             university_name_en: true,
           }
         },
-        targetUniversity: {
-          select: {
-            university_id: true,
-            university_name_th: true,
-            university_name_en: true,
-            university_code: true,
-          },
+        borrowRequest: {
+          include: {
+            fromUniversity: {
+              select: {
+                university_id: true,
+                university_name_th: true,
+                university_name_en: true,
+                university_code: true,
+              },
+            }
+          }
         },
       },
       orderBy: {
-        availability_start_date: "desc",
+        borrow_assign_start_at: "desc",
       },
     });
 
-    // 4. Categorize shifts
+    // 4. Categorize shifts (Optional depending on usage, but keep identical structure for frontend compat)
     const currentShift = shifts.find(
       (s) =>
-        s.availability_start_date <= today &&
-        s.availability_end_date >= today &&
-        s.status === BorrowAvailabilityStatus.ACTIVE
-    );
-
-    // History = Completed, Cancelled, or Past Active
-    const historyShifts = shifts.filter(
-      (s) => s.consultant_borrow_availability_id !== currentShift?.consultant_borrow_availability_id
+        s.borrow_assign_start_at <= today &&
+        s.borrow_assign_end_at >= today
     );
 
     // 5. Format response
-    const formatShift = (shift: typeof shifts[number]) => ({
-      // Map new DB fields to API response keys (keeping old keys for frontend compat if needed, or updating to new)
-      // User said "API พัง" => 500 error. I will align response keys to what they likely expect or were using
-      // But clearer to use new names? I will keep "borrowShiftId" as key to avoid breaking frontend that expects it,
-      // mapping it from the new ID.
-      borrowShiftId: shift.consultant_borrow_availability_id,
-      borrowPlanId: shift.borrow_plan_id,
-      startDate: shift.availability_start_date.toISOString().split("T")[0],
-      endDate: shift.availability_end_date.toISOString().split("T")[0],
-      status: shift.status,
-      homeUniversity: {
-        nameTh: shift.homeUniversity.university_name_th,
-        nameEn: shift.homeUniversity.university_name_en,
-      },
-      targetUniversity: {
-        id: shift.targetUniversity.university_id,
-        nameTh: shift.targetUniversity.university_name_th,
-        nameEn: shift.targetUniversity.university_name_en,
-        code: shift.targetUniversity.university_code,
-      },
-      createdAt: shift.created_at.toISOString(),
-      completedAt: shift.completed_at?.toISOString() || null,
-    });
+    const formatShift = (shift: typeof shifts[number]) => {
+      // If we are mapping BorrowAssignment, status is ACTIVE implicitly if not CANCELLED
+      // (Assumption: assignments are ACTIVE unless their system adds cancellation, we default to ACTIVE)
+      const isPast = shift.borrow_assign_end_at < today;
+      return {
+        borrowShiftId: shift.borrow_assignment_id,
+        borrowPlanId: String(shift.borrow_request_id),
+        startDate: shift.borrow_assign_start_at.toISOString(),
+        endDate: shift.borrow_assign_end_at.toISOString(),
+        status: isPast ? "COMPLETED" : "ACTIVE",
+        homeUniversity: {
+          nameTh: shift.consultantUniversity.university_name_th,
+          nameEn: shift.consultantUniversity.university_name_en,
+        },
+        targetUniversity: {
+          id: shift.borrowRequest.fromUniversity.university_id,
+          nameTh: shift.borrowRequest.fromUniversity.university_name_th,
+          nameEn: shift.borrowRequest.fromUniversity.university_name_en,
+          code: shift.borrowRequest.fromUniversity.university_code,
+        },
+        createdAt: shift.borrow_assigned_at.toISOString(),
+        completedAt: isPast ? shift.borrow_assign_end_at.toISOString() : null,
+      };
+    };
 
     // Fetch shift team manually via raw query to bypass old Prisma client memory in dev server
     const rawConsultant = await prisma.$queryRaw<any[]>`SELECT shift_team_id FROM consultant WHERE consultant_id = ${consultantId}`;

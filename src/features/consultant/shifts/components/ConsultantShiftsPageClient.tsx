@@ -53,6 +53,9 @@ export function ConsultantShiftsPageClient() {
     );
   }
 
+  console.log("TimelineCalendar Input - config:", config);
+  console.log("TimelineCalendar Input - borrowShifts:", borrowShifts);
+
   return (
     <TimelineCalendar
       teamOrder={teamOrder}
