@@ -28,15 +28,19 @@ const AiChatMessages = forwardRef<HTMLDivElement, Props>(
         <div className="mx-auto max-w-4xl px-6">
           {messages.length === 0 ? (
             <div className="mx-auto mt-3 max-w-[520px] rounded-2xl border-0 border-slate-200 bg-white p-4">
-              {/* ✅ คุมฟอนต์จาก CSS module */}
               <div className={cn("mb-2 flex items-center gap-2 font-semibold text-slate-800", styles.headerTitle)}>
                 <Bot className="h-4 w-4" />
-                AI Help Center
+                {mode === "analyst" ? "📊 AI สรุปผล" : mode === "booking_agent" ? "🗓️ AI จองคิว" : "AI Help Center"}
               </div>
 
-              {/* ✅ hint list ใช้ class จาก CSS module แทน text-xs */}
               <ul className={cn("list-disc space-y-1 pl-5 text-slate-600", styles.hintList)}>
-                {mode === "booking_agent" ? (
+                {mode === "analyst" ? (
+                  <>
+                    <li>มหาลัยไหนมีปัญหามากสุด</li>
+                    <li>สรุปภาพรวมระบบ</li>
+                    <li>สถิติตามภูมิภาค</li>
+                  </>
+                ) : mode === "booking_agent" ? (
                   <>
                     <li>จองพรุ่งนี้ช่วงบ่าย</li>
                     <li>อยากได้ 10:00 - 12:00</li>

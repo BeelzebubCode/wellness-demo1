@@ -257,10 +257,6 @@ export default function ExceptionRequestDetailPage() {
                                 <p className="text-gray-500 mb-2">ประวัติคะแนนความน่าเชื่อถือ</p>
 
                                 <div className="bg-orange-50 rounded-md p-3 border border-orange-100 space-y-2">
-                                    <div className="flex justify-between">
-                                        <span className="text-orange-800">คะแนน Trust:</span>
-                                        <span className="font-bold text-orange-900">{student.trustStatus?.student_trust_score ?? 100}</span>
-                                    </div>
                                     <div className="flex justify-between text-xs">
                                         <span className="text-orange-700">ยกเลิกสายสะสม:</span>
                                         <span className="font-semibold font-mono">{student.trustStatus?.student_trust_late_cancel_count ?? 0} ครั้ง</span>

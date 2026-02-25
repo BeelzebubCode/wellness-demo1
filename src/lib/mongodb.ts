@@ -35,3 +35,9 @@ export async function getAiSummariesCollection() {
   const db = connectedClient.db('wellness_ai_db');
   return db.collection('ai_summaries');
 }
+
+export async function getAiKnowledgeContextCollection() {
+  const connectedClient = await clientPromise;
+  const db = connectedClient.db('wellness_ai_db');
+  return db.collection('ai_knowledge_contexts');
+}

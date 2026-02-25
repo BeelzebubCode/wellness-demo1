@@ -106,6 +106,18 @@ export default function AiChatInput({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isModeOpen]);
 
+  // Handle SQL Approval events from ChatMessage
+  useEffect(() => {
+    const handleApproveSql = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail && customEvent.detail.query) {
+        chat.sendMessage(`[APPROVED_SQL] ${customEvent.detail.query}`);
+      }
+    };
+    window.addEventListener("ai:approve_sql", handleApproveSql);
+    return () => window.removeEventListener("ai:approve_sql", handleApproveSql);
+  }, [chat]);
+
   return (
     <div className="w-full pb-4">
       <div className="mx-auto max-w-4xl">

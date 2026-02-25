@@ -32,6 +32,11 @@ export default function ChatMessage({
   const [selectedReason, setSelectedReason] = useState<string>("wrong_answer");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Hide the technical fast-track approval query from the user visually
+  if (isUser && content.includes("[APPROVED_SQL]")) {
+    return null;
+  }
+
   const mdComponents = useMemo(
     () => ({
       p: ({ children }: any) => <p>{children}</p>,
@@ -97,9 +102,36 @@ export default function ChatMessage({
             <span className="block whitespace-pre-wrap">{content}</span>
           ) : (
             <div className={styles.md}>
-              <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
-                {String(content || "")}
-              </ReactMarkdown>
+              {content.includes("[SQL_APPROVAL_REQUEST]") ? (
+                <>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+                    {String(
+                      content
+                        .replace("[SQL_APPROVAL_REQUEST]", "")
+                        .replace(/\`\`\`(?:sql)?\s*([\s\S]*?)\`\`\`/i, "⚠️ **ต้องการเข้าถึงฐานข้อมูลระดับลึก (Database SQL)**\n\nAI จำเป็นต้องดึงข้อมูลเชิงลึกเพิ่มเติมจากระบบเพื่อตอบคำถามนี้ให้แม่นยำที่สุด")
+                        .trim() || ""
+                    )}
+                  </ReactMarkdown>
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      onClick={() => {
+                        const sqlMatch = content.match(/\`\`\`(?:sql)?\s*([\s\S]*?)\`\`\`/i);
+                        if (sqlMatch && sqlMatch[1]) {
+                          const query = typeof window !== "undefined" ? sqlMatch[1].trim() : "";
+                          window.dispatchEvent(new CustomEvent("ai:approve_sql", { detail: { query } }));
+                        }
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-600 transition-colors"
+                    >
+                      <Check size={14} /> อนุญาตให้ดึงข้อมูล (Approve)
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+                  {String(content || "")}
+                </ReactMarkdown>
+              )}
             </div>
           )}
         </div>

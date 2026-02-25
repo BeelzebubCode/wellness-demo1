@@ -18,6 +18,7 @@ export async function callChatLLM(args: {
   messages: ChatMsg[];
   timeoutMs?: number;
   temperature?: number;
+  tools?: any[];
 }) {
   const {
     baseURL,
@@ -26,19 +27,26 @@ export async function callChatLLM(args: {
     messages,
     timeoutMs = 20000,
     temperature = 0.2,
+    tools,
   } = args;
+
+  const bodyPayload: any = {
+    model,
+    stream: false,
+    messages: [system, ...messages],
+    options: { temperature },
+  };
+
+  if (tools && tools.length > 0) {
+    bodyPayload.tools = tools;
+  }
 
   return fetchWithTimeout(
     `${baseURL.replace(/\/+$/, "")}/api/chat`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        stream: false,
-        messages: [system, ...messages],
-        options: { temperature },
-      }),
+      body: JSON.stringify(bodyPayload),
     },
     timeoutMs,
   );

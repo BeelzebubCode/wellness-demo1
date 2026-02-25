@@ -572,6 +572,7 @@ model Booking {
   @@index([university_id, problem_category_id]) // 🔥 Optimization for Dashboard Maps (Heatmap)
   @@index([student_id, booking_status])
   @@index([university_id, time_slot_id, booking_status])
+  @@index([booking_status, university_id, student_id]) // 🔥 Optimization for AI Text-to-SQL Analytics
   @@map("booking")
 }
 
@@ -733,9 +734,9 @@ model Feedback {
   feedback_is_anonymous Boolean  @default(true)
   feedback_created_at   DateTime @default(now())
 
-  booking    Booking    @relation(fields: [university_id, booking_id], references: [university_id, booking_id])
-  consultant Consultant @relation(fields: [consultant_university_id, consultant_id], references: [university_id, consultant_id])
-  student    Student    @relation(fields: [university_id, student_id], references: [university_id, student_id])
+  booking    Booking          @relation(fields: [university_id, booking_id], references: [university_id, booking_id])
+  consultant Consultant       @relation(fields: [consultant_university_id, consultant_id], references: [university_id, consultant_id])
+  student    Student          @relation(fields: [university_id, student_id], references: [university_id, student_id])
   comment    FeedbackComment?
   ratings    FeedbackRating[]
 
@@ -887,7 +888,6 @@ model StudentTrustStatus {
   student_id                      Int
   university_id                   Int
   student_trust_term_code         String?   @db.VarChar(20)
-  student_trust_score             Int       @default(100)
   student_trust_late_cancel_count Int       @default(0)
   student_trust_no_show_count     Int       @default(0)
   student_trust_locked_until      DateTime? @db.Timestamptz(3)

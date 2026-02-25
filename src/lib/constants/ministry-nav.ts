@@ -19,11 +19,11 @@ export const MINISTRY_NAV: NavItem[] = [
     label: "มหาวิทยาลัย",
     icon: Building2,
   },
-  {
-    href: "/ministry/students",
-    label: "สถิตินิสิต",
-    icon: Users,
-  },
+  // {
+  //   href: "/ministry/students",
+  //   label: "สถิตินิสิต",
+  //   icon: Users,
+  // },
   {
     href: "/ministry/ai-insight",
     label: "AI สรุปผล",
