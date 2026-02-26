@@ -54,7 +54,7 @@ export type ExceptionRequestDetail = {
       student_last_name_th: string | null;
       student_prefix: string | null;
     } | null;
-    trustStatus: {
+    behaviorStatus: {
       student_trust_late_cancel_count: number;
       student_trust_no_show_count: number;
       student_trust_locked_until: string | null;

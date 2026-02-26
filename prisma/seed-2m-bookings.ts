@@ -26,15 +26,15 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 // ─── Config ──────────────────────────────────────────────────────────────────
-const COMPLETED_COUNT  = 1_700_000;  // 85%
-const CANCELLED_COUNT  =   200_000;  // 10%
-const PENDING_COUNT    =    50_000;  // 2.5%
-const ASSIGNED_COUNT   =    30_000;  // 1.5%
-const IN_PROGRESS_COUNT =   20_000;  // 1%
+const COMPLETED_COUNT = 1_700_000;  // 85%
+const CANCELLED_COUNT = 200_000;  // 10%
+const PENDING_COUNT = 50_000;  // 2.5%
+const ASSIGNED_COUNT = 30_000;  // 1.5%
+const IN_PROGRESS_COUNT = 20_000;  // 1%
 
 // Date range: 12 months of data
 const DATE_START = "2025-01-01";
-const DATE_END   = "2025-12-31";
+const DATE_END = "2025-12-31";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function elapsed(start: number): string {
@@ -59,7 +59,7 @@ async function cleanBookingData() {
     "feedback",
     "booking_exception_evidence",
     "booking_exception_request",
-    "booking_discipline_log",
+    "booking_punishment_log",
     "booking_attendance",
     "booking_consent_signature",
     "booking_session",
@@ -432,7 +432,7 @@ async function seedAssignments() {
     ON CONFLICT DO NOTHING;
   `);
 
-  const count: [{count: bigint}] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM booking_assignment`);
+  const count: [{ count: bigint }] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM booking_assignment`);
   console.log(`   ✅ Created ${Number(count[0].count).toLocaleString()} assignments in ${elapsed(t)}`);
 }
 
@@ -483,7 +483,7 @@ async function seedSessions() {
     ON CONFLICT DO NOTHING;
   `);
 
-  const count: [{count: bigint}] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM booking_session`);
+  const count: [{ count: bigint }] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM booking_session`);
   console.log(`   ✅ Created ${Number(count[0].count).toLocaleString()} sessions in ${elapsed(t)}`);
 }
 
@@ -561,7 +561,7 @@ async function seedOutcomes() {
     ON CONFLICT DO NOTHING;
   `);
 
-  const count: [{count: bigint}] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM booking_outcome`);
+  const count: [{ count: bigint }] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM booking_outcome`);
   console.log(`   ✅ Created ${Number(count[0].count).toLocaleString()} outcomes in ${elapsed(t)}`);
 }
 
@@ -617,7 +617,7 @@ async function seedCancellations() {
     ON CONFLICT DO NOTHING;
   `);
 
-  const count: [{count: bigint}] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM booking_cancellation`);
+  const count: [{ count: bigint }] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM booking_cancellation`);
   console.log(`   ✅ Created ${Number(count[0].count).toLocaleString()} cancellations in ${elapsed(t)}`);
 }
 
@@ -669,7 +669,7 @@ async function seedAttendance() {
     ON CONFLICT DO NOTHING;
   `);
 
-  const count: [{count: bigint}] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM booking_attendance`);
+  const count: [{ count: bigint }] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM booking_attendance`);
   console.log(`   ✅ Created ${Number(count[0].count).toLocaleString()} attendance records in ${elapsed(t)}`);
 }
 
@@ -700,7 +700,7 @@ async function seedFeedback() {
     ON CONFLICT DO NOTHING;
   `);
 
-  const count: [{count: bigint}] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM feedback`);
+  const count: [{ count: bigint }] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM feedback`);
   console.log(`   ✅ Created ${Number(count[0].count).toLocaleString()} feedbacks in ${elapsed(t)}`);
 }
 
@@ -746,7 +746,7 @@ async function seedRatings() {
     ON CONFLICT DO NOTHING;
   `);
 
-  const count: [{count: bigint}] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM feedback_rating`);
+  const count: [{ count: bigint }] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM feedback_rating`);
   console.log(`   ✅ Created ${Number(count[0].count).toLocaleString()} ratings in ${elapsed(t)}`);
 }
 
@@ -780,7 +780,7 @@ async function seedComments() {
     ON CONFLICT DO NOTHING;
   `);
 
-  const count: [{count: bigint}] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM feedback_comment`);
+  const count: [{ count: bigint }] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM feedback_comment`);
   console.log(`   ✅ Created ${Number(count[0].count).toLocaleString()} comments in ${elapsed(t)}`);
 }
 
@@ -820,7 +820,7 @@ async function seedPoints() {
     ON CONFLICT DO NOTHING;
   `);
 
-  const txCount: [{count: bigint}] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM student_point_transaction`);
+  const txCount: [{ count: bigint }] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM student_point_transaction`);
   console.log(`   ✅ Created ${Number(txCount[0].count).toLocaleString()} point transactions`);
 
   // 10b. Aggregate into wallets
@@ -837,7 +837,7 @@ async function seedPoints() {
     DO UPDATE SET student_point_balance = EXCLUDED.student_point_balance;
   `);
 
-  const walletCount: [{count: bigint}] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM student_point_wallet`);
+  const walletCount: [{ count: bigint }] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM student_point_wallet`);
   console.log(`   ✅ Updated ${Number(walletCount[0].count).toLocaleString()} wallets in ${elapsed(t)}`);
 }
 
@@ -862,14 +862,14 @@ async function printSummary() {
   ];
 
   for (const table of tables) {
-    const result: [{count: bigint}] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM "${table}"`);
+    const result: [{ count: bigint }] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM "${table}"`);
     const count = Number(result[0].count);
     console.log(`   ${table.padEnd(30)} ${count.toLocaleString().padStart(12)}`);
   }
 
   // Status distribution
   console.log("\n   📈 Booking Status Distribution:");
-  const statuses: {booking_status: string; count: bigint}[] = await prisma.$queryRawUnsafe(`
+  const statuses: { booking_status: string; count: bigint }[] = await prisma.$queryRawUnsafe(`
     SELECT booking_status, COUNT(*)::bigint as count
     FROM booking GROUP BY booking_status ORDER BY count DESC
   `);
@@ -879,7 +879,7 @@ async function printSummary() {
 
   // Risk distribution
   console.log("\n   🎯 Risk Level Distribution:");
-  const risks: {booking_outcome_risk_level: number; count: bigint}[] = await prisma.$queryRawUnsafe(`
+  const risks: { booking_outcome_risk_level: number; count: bigint }[] = await prisma.$queryRawUnsafe(`
     SELECT booking_outcome_risk_level, COUNT(*)::bigint as count
     FROM booking_outcome
     WHERE booking_outcome_risk_level IS NOT NULL

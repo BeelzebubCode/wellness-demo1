@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
         }
 
         // ── 1. Student's trust status (penalty info) ──
-        const trustStatus = await prisma.studentTrustStatus.findUnique({
+        const trustStatus = await prisma.studentBehaviorStatus.findUnique({
             where: {
                 university_id_student_id: {
                     university_id: activeUniversityId,

@@ -27,7 +27,7 @@ export async function GET(req: NextRequest, { params }: Params) {
         student: {
           include: {
             profile: true,
-            trustStatus: true,
+            behaviorStatus: true,
           },
         },
         booking: {

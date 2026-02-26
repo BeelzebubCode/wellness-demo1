@@ -16,7 +16,7 @@ export async function getSuperAdminDocs(request: NextRequest, id?: string, slug?
   if (!auth.ok) throw new Error("Unauthorized");
 
   if (id) {
-    const document = await prisma.document.findUnique({
+    const document = await prisma.guidebookDocument.findUnique({
       where: { document_id: parseInt(id) }
     });
     if (!document) throw new Error("Not found");
@@ -24,14 +24,14 @@ export async function getSuperAdminDocs(request: NextRequest, id?: string, slug?
   }
 
   if (slug) {
-    const document = await prisma.document.findUnique({
+    const document = await prisma.guidebookDocument.findUnique({
       where: { document_slug: slug }
     });
     if (!document) throw new Error("Not found");
     return document;
   }
 
-  const documents = await prisma.document.findMany({
+  const documents = await prisma.guidebookDocument.findMany({
     orderBy: { document_order: 'asc' },
   });
   return documents;
@@ -43,13 +43,13 @@ export async function createSuperAdminDoc(request: NextRequest, data: Record<str
 
   const validatedData = createDocumentSchema.parse(data);
 
-  const existingSlug = await prisma.document.findUnique({
+  const existingSlug = await prisma.guidebookDocument.findUnique({
     where: { document_slug: validatedData.document_slug }
   });
 
   if (existingSlug) throw new Error("Slug already exists");
 
-  return prisma.document.create({ data: validatedData });
+  return prisma.guidebookDocument.create({ data: validatedData });
 }
 
 export async function updateSuperAdminDoc(request: NextRequest, data: Record<string, unknown>) {
@@ -62,7 +62,7 @@ export async function updateSuperAdminDoc(request: NextRequest, data: Record<str
 
   const { document_id, ...validatedData } = updateSchema.parse(data);
 
-  const existingSlug = await prisma.document.findFirst({
+  const existingSlug = await prisma.guidebookDocument.findFirst({
     where: {
       document_slug: validatedData.document_slug,
       document_id: { not: document_id }
@@ -71,7 +71,7 @@ export async function updateSuperAdminDoc(request: NextRequest, data: Record<str
 
   if (existingSlug) throw new Error("Slug already exists");
 
-  return prisma.document.update({
+  return prisma.guidebookDocument.update({
     where: { document_id },
     data: validatedData,
   });
@@ -82,7 +82,7 @@ export async function deleteSuperAdminDoc(request: NextRequest, id: string) {
   if (!auth.ok) throw new Error("Unauthorized");
   if (!id) throw new Error("Document ID required");
 
-  await prisma.document.delete({
+  await prisma.guidebookDocument.delete({
     where: { document_id: parseInt(id) }
   });
   return true;

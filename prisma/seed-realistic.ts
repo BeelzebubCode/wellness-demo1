@@ -33,8 +33,8 @@ const MONTHLY_PLAN: { start: string; end: string; count: number; label: string }
   { start: "2025-03-01", end: "2025-03-31", count: 230_000, label: "Mar 2025 — midterm spike 📈" },
   { start: "2025-04-01", end: "2025-04-30", count: 110_000, label: "Apr 2025 — Songkran low" },
   { start: "2025-05-01", end: "2025-05-31", count: 200_000, label: "May 2025 — finals spike 📈" },
-  { start: "2025-06-01", end: "2025-06-30", count:  75_000, label: "Jun 2025 — summer break 🏖️" },
-  { start: "2025-07-01", end: "2025-07-31", count:  80_000, label: "Jul 2025 — summer break 🏖️" },
+  { start: "2025-06-01", end: "2025-06-30", count: 75_000, label: "Jun 2025 — summer break 🏖️" },
+  { start: "2025-07-01", end: "2025-07-31", count: 80_000, label: "Jul 2025 — summer break 🏖️" },
   { start: "2025-08-01", end: "2025-08-31", count: 155_000, label: "Aug 2025 — term 1 start" },
   { start: "2025-09-01", end: "2025-09-30", count: 165_000, label: "Sep 2025 — settling in" },
   { start: "2025-10-01", end: "2025-10-31", count: 250_000, label: "Oct 2025 — midterm spike 📈📈" },
@@ -54,7 +54,7 @@ async function cleanAll() {
     "student_point_transaction", "student_point_wallet",
     "feedback_comment", "feedback_rating", "feedback",
     "booking_exception_evidence", "booking_exception_request",
-    "booking_discipline_log", "booking_attendance",
+    "booking_punishment_log", "booking_attendance",
     "booking_consent_signature", "booking_session",
     "booking_assignment", "booking_outcome", "booking_cancellation",
     "notification", "booking",
@@ -92,7 +92,7 @@ async function updateGenders() {
 // ─── Phase 1: Create bookings with realistic monthly distribution ───────────
 async function seedBookings() {
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log(`📅 Phase 1: Creating ~${(TOTAL/1e6).toFixed(1)}M bookings (12 months)`);
+  console.log(`📅 Phase 1: Creating ~${(TOTAL / 1e6).toFixed(1)}M bookings (12 months)`);
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
   // Create weighted problem category pool (temp table)
@@ -130,11 +130,11 @@ async function seedBookings() {
     const m = MONTHLY_PLAN[i];
     const completed = Math.round(m.count * 0.85);
     const cancelled = Math.round(m.count * 0.10);
-    const pending   = Math.round(m.count * 0.025);
-    const assigned  = Math.round(m.count * 0.015);
-    const inProg    = m.count - completed - cancelled - pending - assigned;
+    const pending = Math.round(m.count * 0.025);
+    const assigned = Math.round(m.count * 0.015);
+    const inProg = m.count - completed - cancelled - pending - assigned;
 
-    console.log(`   [${i+1}/12] ${m.label} — ${m.count.toLocaleString()} total`);
+    console.log(`   [${i + 1}/12] ${m.label} — ${m.count.toLocaleString()} total`);
     const mt = Date.now();
 
     // ── COMPLETED ──
@@ -297,7 +297,7 @@ async function seedBookings() {
   }
 
   await exec(`DROP TABLE IF EXISTS _cat_pool`);
-  const total: [{count: bigint}] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM booking`);
+  const total: [{ count: bigint }] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM booking`);
   console.log(`\n   📊 Total bookings: ${Number(total[0].count).toLocaleString()}`);
 }
 
@@ -326,7 +326,7 @@ async function seedAssignments() {
     WHERE b.booking_status IN ('ASSIGNED', 'IN_PROGRESS', 'COMPLETED') AND b.consultant_id IS NOT NULL
     ON CONFLICT DO NOTHING
   `);
-  const c: [{count: bigint}] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM booking_assignment`);
+  const c: [{ count: bigint }] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM booking_assignment`);
   console.log(`   ✅ ${Number(c[0].count).toLocaleString()} assignments in ${elapsed(t)}`);
 }
 
@@ -364,7 +364,7 @@ async function seedSessions() {
     WHERE b.booking_status IN ('ASSIGNED', 'IN_PROGRESS', 'COMPLETED')
     ON CONFLICT DO NOTHING
   `);
-  const cnt: [{count: bigint}] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM booking_session`);
+  const cnt: [{ count: bigint }] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM booking_session`);
   console.log(`   ✅ ${Number(cnt[0].count).toLocaleString()} sessions in ${elapsed(t)}`);
 }
 
@@ -425,7 +425,7 @@ async function seedOutcomes() {
     WHERE b.booking_status = 'COMPLETED'
     ON CONFLICT DO NOTHING
   `);
-  const cnt: [{count: bigint}] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM booking_outcome`);
+  const cnt: [{ count: bigint }] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM booking_outcome`);
   console.log(`   ✅ ${Number(cnt[0].count).toLocaleString()} outcomes in ${elapsed(t)}`);
 }
 
@@ -463,7 +463,7 @@ async function seedCancellations() {
     WHERE b.booking_status = 'CANCELLED' AND st.account_id IS NOT NULL
     ON CONFLICT DO NOTHING
   `);
-  const cnt: [{count: bigint}] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM booking_cancellation`);
+  const cnt: [{ count: bigint }] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM booking_cancellation`);
   console.log(`   ✅ ${Number(cnt[0].count).toLocaleString()} cancellations in ${elapsed(t)}`);
 }
 
@@ -495,7 +495,7 @@ async function seedAttendance() {
     WHERE b.booking_status IN ('COMPLETED', 'IN_PROGRESS') AND b.consultant_id IS NOT NULL
     ON CONFLICT DO NOTHING
   `);
-  const cnt: [{count: bigint}] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM booking_attendance`);
+  const cnt: [{ count: bigint }] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM booking_attendance`);
   console.log(`   ✅ ${Number(cnt[0].count).toLocaleString()} attendance in ${elapsed(t)}`);
 }
 
@@ -515,7 +515,7 @@ async function seedFeedback() {
     WHERE b.booking_status = 'COMPLETED' AND b.consultant_id IS NOT NULL AND random() < 0.60
     ON CONFLICT DO NOTHING
   `);
-  const cnt: [{count: bigint}] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM feedback`);
+  const cnt: [{ count: bigint }] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM feedback`);
   console.log(`   ✅ ${Number(cnt[0].count).toLocaleString()} feedbacks in ${elapsed(t)}`);
 }
 
@@ -540,7 +540,7 @@ async function seedRatings() {
     FROM feedback f CROSS JOIN evaluation_criterion ec
     ON CONFLICT DO NOTHING
   `);
-  const cnt: [{count: bigint}] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM feedback_rating`);
+  const cnt: [{ count: bigint }] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM feedback_rating`);
   console.log(`   ✅ ${Number(cnt[0].count).toLocaleString()} ratings in ${elapsed(t)}`);
 }
 
@@ -566,7 +566,7 @@ async function seedComments() {
     FROM feedback f WHERE random() < 0.30
     ON CONFLICT DO NOTHING
   `);
-  const cnt: [{count: bigint}] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM feedback_comment`);
+  const cnt: [{ count: bigint }] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM feedback_comment`);
   console.log(`   ✅ ${Number(cnt[0].count).toLocaleString()} comments in ${elapsed(t)}`);
 }
 
@@ -604,8 +604,8 @@ async function printSummary() {
   console.log("📊 FINAL SUMMARY");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-  for (const table of ["booking","booking_assignment","booking_session","booking_outcome","booking_cancellation","booking_attendance","feedback","feedback_rating","feedback_comment","student_point_transaction","student_point_wallet"]) {
-    const r: [{count: bigint}] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM "${table}"`);
+  for (const table of ["booking", "booking_assignment", "booking_session", "booking_outcome", "booking_cancellation", "booking_attendance", "feedback", "feedback_rating", "feedback_comment", "student_point_transaction", "student_point_wallet"]) {
+    const r: [{ count: bigint }] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::bigint as count FROM "${table}"`);
     console.log(`   ${table.padEnd(30)} ${Number(r[0].count).toLocaleString().padStart(12)}`);
   }
 

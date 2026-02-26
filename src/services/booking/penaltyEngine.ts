@@ -32,7 +32,7 @@ type RollbackCtx = {
 
 // ─── upsert trust status ──────────────────────────────────────────────────────
 async function getOrCreateTrust(tx: Tx, universityId: number, studentId: number) {
-  return tx.studentTrustStatus.upsert({
+  return tx.studentBehaviorStatus.upsert({
     where: { university_id_student_id: { university_id: universityId, student_id: studentId } },
     create: { university_id: universityId, student_id: studentId },
     update: {},
@@ -111,7 +111,7 @@ async function writeDisciplineLog(
     createdById?: number;
   },
 ) {
-  await tx.bookingDisciplineLog.create({
+  await tx.bookingPunishmentLog.create({
     data: {
       university_id: data.universityId,
       student_id: data.studentId,
@@ -149,7 +149,7 @@ export async function applyLateCancelPenalty(tx: Tx, ctx: PenaltyCtx) {
   const shouldPenalize = newCount >= 3 && newCount % 3 === 0; // every 3rd offence
   const lockUntil = shouldPenalize ? addDays(7) : trust.student_trust_locked_until;
 
-  await tx.studentTrustStatus.update({
+  await tx.studentBehaviorStatus.update({
     where: { university_id_student_id: { university_id: ctx.universityId, student_id: ctx.studentId } },
     data: {
       student_trust_late_cancel_count: newCount,
@@ -184,7 +184,7 @@ export async function applyNoShowPenalty(tx: Tx, ctx: PenaltyCtx) {
   const lockDays = newCount >= 2 ? 14 : 7;
   const lockUntil = addDays(lockDays);
 
-  await tx.studentTrustStatus.update({
+  await tx.studentBehaviorStatus.update({
     where: { university_id_student_id: { university_id: ctx.universityId, student_id: ctx.studentId } },
     data: {
       student_trust_no_show_count: newCount,
@@ -216,7 +216,7 @@ export async function reverseNoShowPenalty(tx: Tx, ctx: PenaltyCtx) {
   const newCount = trust.student_trust_no_show_count - 1;
   const lockUntil = newCount === 0 ? null : trust.student_trust_locked_until;
 
-  await tx.studentTrustStatus.update({
+  await tx.studentBehaviorStatus.update({
     where: { university_id_student_id: { university_id: ctx.universityId, student_id: ctx.studentId } },
     data: {
       student_trust_no_show_count: newCount,
@@ -261,7 +261,7 @@ export async function rollbackPenalty(tx: Tx, ctx: RollbackCtx) {
 
   if (isNoShow) {
     // ── NO_SHOW (<6h): full reset ──
-    await tx.studentTrustStatus.update({
+    await tx.studentBehaviorStatus.update({
       where: { university_id_student_id: { university_id: ctx.universityId, student_id: ctx.studentId } },
       data: {
         student_trust_no_show_count: 0,
@@ -287,7 +287,7 @@ export async function rollbackPenalty(tx: Tx, ctx: RollbackCtx) {
     const newCount = Math.max(0, trust.student_trust_late_cancel_count - 1);
     const shouldUnlock = newCount < 3;
 
-    await tx.studentTrustStatus.update({
+    await tx.studentBehaviorStatus.update({
       where: { university_id_student_id: { university_id: ctx.universityId, student_id: ctx.studentId } },
       data: {
         student_trust_late_cancel_count: newCount,

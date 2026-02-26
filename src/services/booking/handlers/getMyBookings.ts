@@ -66,7 +66,7 @@ export async function getMyBookings(params: GetMyBookingsParams) {
         skip,
         take: l,
       }),
-      prisma.studentTrustStatus.findUnique({
+      prisma.studentBehaviorStatus.findUnique({
         where: {
           university_id_student_id: {
             university_id: activeUniversityId,

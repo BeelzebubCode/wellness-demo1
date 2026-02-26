@@ -174,7 +174,7 @@ model Student {
   agreementSignatures BookingAgreementSignature[]
 
   // Exception & Attendance
-  trustStatus       StudentTrustStatus?
+  behaviorStatus    StudentBehaviorStatus?
   exceptionRequests BookingExceptionRequest[]
 
   @@unique([university_id, student_id])
@@ -884,7 +884,7 @@ model StudentPointTransaction {
 // EXCEPTION & ATTENDANCE
 // ==========================================
 
-model StudentTrustStatus {
+model StudentBehaviorStatus {
   student_id                      Int
   university_id                   Int
   student_trust_term_code         String?   @db.VarChar(20)
@@ -897,7 +897,7 @@ model StudentTrustStatus {
 
   @@id([university_id, student_id])
   @@index([student_trust_locked_until])
-  @@map("student_trust_status")
+  @@map("student_behavior_status")
 }
 
 model BookingAttendance {
@@ -959,7 +959,7 @@ model BookingExceptionEvidence {
   @@map("booking_exception_evidence")
 }
 
-model BookingDisciplineLog {
+model BookingPunishmentLog {
   booking_discipline_log_id        Int                 @id @default(autoincrement())
   university_id                    Int
   student_id                       Int
@@ -974,7 +974,7 @@ model BookingDisciplineLog {
 
   @@index([university_id, student_id])
   @@index([booking_discipline_event_type, booking_discipline_created_at])
-  @@map("booking_discipline_log")
+  @@map("booking_punishment_log")
 }
 
 // ==========================================
@@ -1444,10 +1444,10 @@ enum DisciplineEventType {
 }
 
 // ==========================================
-// 📄 DOCUMENT MANAGEMENT
+// 📄 GUIDEBOOK DOCUMENT
 // ==========================================
 
-model Document {
+model GuidebookDocument {
   document_id        Int     @id @default(autoincrement())
   document_slug      String  @unique @db.VarChar(100)
   document_title     String  @db.VarChar(200)
@@ -1458,5 +1458,5 @@ model Document {
   document_created_at DateTime @default(now())
   document_updated_at DateTime @updatedAt
 
-  @@map("document")
+  @@map("guidebook_document")
 }

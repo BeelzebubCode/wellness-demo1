@@ -1,13 +1,16 @@
 // src/features/booking/components/exception-requests/ExceptionRequestsPageClient.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
     AlertTriangle, Clock, CheckCircle2, XCircle, FileText, Plus,
     ShieldAlert, Timer, Ban, Paperclip, ChevronDown, AlertCircle, Calendar, X,
+    CalendarRange, ArrowRight,
 } from "lucide-react";
 import { Card, LoadingSpinner, Button } from "@/components/ui";
 import { BookingExceptionRequestModal } from "../shared/BookingExceptionRequestModal";
+import { DateCalendarPopover } from "@/components/filters/inputs/DateCalendarPopover";
+import { fromYMD, toYMD } from "@/lib/date";
 import {
     useMyExceptionRequests,
     type ExceptionRequestItem,
@@ -47,6 +50,53 @@ function formatDateTime(iso: string | null | undefined) {
     if (!iso) return "-";
     const d = new Date(iso);
     return `${d.toLocaleDateString("th-TH", { day: "numeric", month: "short" })} ${d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })} น.`;
+}
+
+// ─── Date preset helpers ──────────────────────────────────────────────────────
+type DatePreset = "all" | "today" | "3days" | "week" | "month" | "custom";
+
+const DATE_PRESETS: { key: DatePreset; label: string; icon?: string }[] = [
+    { key: "all", label: "ทั้งหมด" },
+    { key: "today", label: "วันนี้" },
+    { key: "3days", label: "3 วันย้อนหลัง" },
+    { key: "week", label: "สัปดาห์นี้" },
+    { key: "month", label: "เดือนนี้" },
+    { key: "custom", label: "กำหนดเอง" },
+];
+
+function getPresetRange(key: DatePreset): { from: string; to: string } {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    switch (key) {
+        case "today": return { from: toYMD(today), to: toYMD(today) };
+        case "3days": {
+            const from = new Date(today); from.setDate(from.getDate() - 3);
+            return { from: toYMD(from), to: toYMD(today) };
+        }
+        case "week": {
+            const from = new Date(today); from.setDate(from.getDate() - 7);
+            return { from: toYMD(from), to: toYMD(today) };
+        }
+        case "month": {
+            const from = new Date(today.getFullYear(), today.getMonth(), 1);
+            return { from: toYMD(from), to: toYMD(today) };
+        }
+        default: return { from: "", to: "" };
+    }
+}
+
+/** Parse a YMD string (CE or BE) to  Date at start-of-day local */
+function parseFilterDate(ymd: string): Date | null {
+    if (!ymd) return null;
+    const d = fromYMD(ymd); // handles พ.ศ. → ค.ศ.
+    return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function formatYMDThai(ymd: string) {
+    if (!ymd) return "";
+    const d = parseFilterDate(ymd);
+    if (!d) return "";
+    return d.toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" });
 }
 
 // ─── Countdown Hook ───────────────────────────────────────────────────────────
@@ -189,16 +239,19 @@ function PenaltyBookingCard({ b, onSubmit }: { b: PenaltyBooking; onSubmit: (id:
     return (
         <div className={`flex items-center gap-3 p-3.5 rounded-lg border transition-colors ${expired && !hasRequest ? "bg-gray-50 border-gray-200 opacity-70" : "bg-white border-gray-200 hover:border-primary-200"}`}>
             {slotDate ? (
-                <div className="shrink-0 w-[48px] flex flex-col items-center rounded-lg border border-gray-200 bg-white overflow-hidden shadow-sm">
+                <div className="shrink-0 w-[52px] flex flex-col items-center rounded-lg border border-gray-200 bg-white overflow-hidden shadow-sm">
                     <div className="w-full bg-gray-100 text-[9px] font-medium text-gray-500 text-center py-0.5 border-b">
                         {new Date(slotDate).toLocaleDateString("th-TH", { weekday: "short" })}
                     </div>
-                    <div className="text-lg font-bold text-gray-800 py-0.5">
+                    <div className="text-lg font-bold text-gray-800 leading-tight pt-0.5">
                         {new Date(slotDate).getDate()}
+                    </div>
+                    <div className="text-[9px] text-gray-500 pb-0.5">
+                        {new Date(slotDate).toLocaleDateString("th-TH", { month: "short", year: "2-digit" })}
                     </div>
                 </div>
             ) : (
-                <div className="w-[48px] shrink-0" />
+                <div className="w-[52px] shrink-0" />
             )}
 
             <div className="flex-1 min-w-0">
@@ -211,7 +264,12 @@ function PenaltyBookingCard({ b, onSubmit }: { b: PenaltyBooking; onSubmit: (id:
                 </div>
                 <p className="text-sm font-medium text-gray-800 truncate mt-0.5">{problemName}</p>
                 <div className="flex items-center gap-3 mt-0.5 text-[11px] text-gray-400">
-                    {slotDate && <span>{formatTime(slotDate)}–{formatTime(b.timeSlot?.time_slot_end_datetime)} น.</span>}
+                    {slotDate && (
+                        <span>
+                            📅 {new Date(slotDate).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })}{" "}
+                            {formatTime(slotDate)}–{formatTime(b.timeSlot?.time_slot_end_datetime)} น.
+                        </span>
+                    )}
                     {b.cancellation?.cancellationReason && (
                         <span>เหตุผล: {b.cancellation.cancellationReason.cancellation_reason_name_th ?? b.cancellation.cancellationReason.cancellation_reason_name_en}</span>
                     )}
@@ -341,6 +399,21 @@ export function ExceptionRequestsPageClient() {
     const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
     const [dateFrom, setDateFrom] = useState("");
     const [dateTo, setDateTo] = useState("");
+    const [activePreset, setActivePreset] = useState<DatePreset>("all");
+
+    const handlePresetClick = (key: DatePreset) => {
+        setActivePreset(key);
+        if (key === "all") {
+            setDateFrom("");
+            setDateTo("");
+        } else if (key === "custom") {
+            // keep current — user will set via calendars
+        } else {
+            const range = getPresetRange(key);
+            setDateFrom(range.from);
+            setDateTo(range.to);
+        }
+    };
 
     const openModal = (bookingId: number) => { setSelectedBookingId(bookingId); setModalOpen(true); };
     const closeModal = () => { setModalOpen(false); setSelectedBookingId(null); };
@@ -349,22 +422,36 @@ export function ExceptionRequestsPageClient() {
     const approved = items.filter((i) => i.booking_exception_status === "APPROVED");
     const rejected = items.filter((i) => i.booking_exception_status === "REJECTED");
 
-    // Client-side date filter
-    const filteredPenaltyBookings = penaltyBookings.filter((b) => {
-        const slotDate = b.timeSlot?.time_slot_start_datetime;
-        if (!slotDate) return true;
-        const d = new Date(slotDate);
-        if (dateFrom && d < new Date(dateFrom)) return false;
-        if (dateTo) {
-            const toEnd = new Date(dateTo);
-            toEnd.setDate(toEnd.getDate() + 1);
-            if (d >= toEnd) return false;
-        }
-        return true;
-    });
+    // ── Robust date filter using fromYMD ──
+    const fromDate = useMemo(() => parseFilterDate(dateFrom), [dateFrom]);
+    const toDate = useMemo(() => {
+        const d = parseFilterDate(dateTo);
+        if (!d) return null;
+        // End of day: include the whole day
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+    }, [dateTo]);
+
+    const filteredPenaltyBookings = useMemo(() => {
+        return penaltyBookings.filter((b) => {
+            const slotDateStr = b.timeSlot?.time_slot_start_datetime;
+            if (!slotDateStr) return true;
+            const slotDate = new Date(slotDateStr);
+            if (fromDate && slotDate < fromDate) return false;
+            if (toDate && slotDate >= toDate) return false;
+            return true;
+        });
+    }, [penaltyBookings, fromDate, toDate]);
 
     const canSubmitCount = filteredPenaltyBookings.filter((b) => b.canSubmit).length;
     const hasDateFilter = dateFrom || dateTo;
+
+    // Active range label for display
+    const rangeLabel = useMemo(() => {
+        if (!dateFrom && !dateTo) return null;
+        const f = dateFrom ? formatYMDThai(dateFrom) : "ไม่จำกัด";
+        const t = dateTo ? formatYMDThai(dateTo) : "ไม่จำกัด";
+        return `${f}  →  ${t}`;
+    }, [dateFrom, dateTo]);
 
     if (isLoading) {
         return (
@@ -420,38 +507,112 @@ export function ExceptionRequestsPageClient() {
                     </div>
                 </div>
 
-                {/* Date Filter */}
+                {/* ── Date Filter Bar: Chips + Inline Custom Range ── */}
                 {penaltyBookings.length > 0 && (
-                    <div className="px-5 py-2.5 border-b border-amber-100 bg-white flex items-center gap-3 flex-wrap">
-                        <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium">
-                            <Calendar className="w-3.5 h-3.5" />
-                            กรองวันที่:
-                        </div>
-                        <input
-                            type="date"
-                            value={dateFrom}
-                            onChange={(e) => setDateFrom(e.target.value)}
-                            className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-gray-50 focus:ring-1 focus:ring-primary-300 focus:border-primary-300 outline-none"
-                        />
-                        <span className="text-xs text-gray-400">ถึง</span>
-                        <input
-                            type="date"
-                            value={dateTo}
-                            onChange={(e) => setDateTo(e.target.value)}
-                            className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-gray-50 focus:ring-1 focus:ring-primary-300 focus:border-primary-300 outline-none"
-                        />
-                        {hasDateFilter && (
+                    <div className="px-5 py-3 border-b border-amber-100 bg-white">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <CalendarRange className="w-4 h-4 text-amber-400 shrink-0" />
+                            {DATE_PRESETS.filter(p => p.key !== "custom").map((p) => (
+                                <button
+                                    key={p.key}
+                                    onClick={() => handlePresetClick(p.key)}
+                                    className={`
+                                        px-3 py-1.5 rounded-full text-xs font-semibold
+                                        transition-all duration-200 ease-out border select-none
+                                        ${activePreset === p.key
+                                            ? "bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-200/50"
+                                            : "bg-white text-gray-500 border-gray-200 hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700"
+                                        }
+                                    `}
+                                >
+                                    {p.label}
+                                </button>
+                            ))}
+
+                            {/* Divider */}
+                            <div className="w-px h-5 bg-gray-200 mx-0.5" />
+
+                            {/* Custom range toggle — different style: outline with icon */}
                             <button
-                                onClick={() => { setDateFrom(""); setDateTo(""); }}
-                                className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 transition-colors"
+                                onClick={() => handlePresetClick("custom")}
+                                className={`
+                                    inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
+                                    transition-all duration-200 border select-none
+                                    ${activePreset === "custom"
+                                        ? "bg-amber-500 text-white border-amber-500 shadow-sm"
+                                        : "bg-white text-gray-500 border-gray-200 hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700"
+                                    }
+                                `}
                             >
-                                <X className="w-3 h-3" />
-                                ล้าง
+                                <Calendar className="w-3 h-3" />
+                                ช่วงวันที่
                             </button>
-                        )}
-                        <span className="ml-auto text-[11px] text-gray-400">
-                            แสดง {filteredPenaltyBookings.length}/{penaltyBookings.length} รายการ
-                        </span>
+
+                            {/* Active range display */}
+                            {hasDateFilter && activePreset !== "custom" && rangeLabel && (
+                                <span className="text-[11px] text-amber-600 font-medium bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 ml-1">
+                                    {rangeLabel}
+                                </span>
+                            )}
+
+                            {/* Result count */}
+                            <span className="ml-auto text-[11px] text-gray-400 tabular-nums shrink-0">
+                                {filteredPenaltyBookings.length}/{penaltyBookings.length}
+                            </span>
+                        </div>
+
+                        {/* ── Custom range row — inline, no separate container ── */}
+                        <div
+                            className={`
+                                grid transition-all duration-300 ease-in-out
+                                ${activePreset === "custom" ? "grid-rows-[1fr] opacity-100 mt-3" : "grid-rows-[0fr] opacity-0 mt-0"}
+                            `}
+                        >
+                            <div className="overflow-hidden">
+                                <div className="flex items-center gap-3 flex-wrap">
+                                    {/* From */}
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[11px] text-gray-400 font-medium w-10">จาก</span>
+                                        <DateCalendarPopover
+                                            valueYMD={dateFrom}
+                                            onChangeYMD={(v) => { setDateFrom(v); setActivePreset("custom"); }}
+                                            placeholder="เลือกวันเริ่ม"
+                                            closeOnSelect
+                                            className="!w-auto"
+                                        />
+                                    </div>
+                                    <ArrowRight className="w-4 h-4 text-gray-300 shrink-0" />
+                                    {/* To */}
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[11px] text-gray-400 font-medium w-10">ถึง</span>
+                                        <DateCalendarPopover
+                                            valueYMD={dateTo}
+                                            onChangeYMD={(v) => { setDateTo(v); setActivePreset("custom"); }}
+                                            placeholder="เลือกวันสิ้นสุด"
+                                            closeOnSelect
+                                            className="!w-auto"
+                                        />
+                                    </div>
+
+                                    {/* Range display badge */}
+                                    {rangeLabel && (
+                                        <span className="text-[11px] text-amber-700 font-semibold bg-gradient-to-r from-amber-50 to-orange-50 px-3 py-1.5 rounded-full border border-amber-200 shadow-sm">
+                                            📅 {rangeLabel}
+                                        </span>
+                                    )}
+
+                                    {/* Clear button */}
+                                    {hasDateFilter && (
+                                        <button
+                                            onClick={() => { setDateFrom(""); setDateTo(""); setActivePreset("all"); }}
+                                            className="inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-red-500 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-red-50 border border-transparent hover:border-red-200"
+                                        >
+                                            <X className="w-3 h-3" /> ล้างทั้งหมด
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
 

@@ -10,7 +10,7 @@ export function useMyAppointments(opts?: { universityId?: number; statusGroup?: 
   const { universityId, statusGroup = "ALL", limit = 50 } = opts ?? {};
   const [items, setItems] = useState<MyBookingDto[]>([]);
   const [total, setTotal] = useState(0); // ✅ Total from server
-  const [trustStatus, setTrustStatus] = useState<any>(null); // ✅ Expose StudentTrustStatus
+  const [trustStatus, setTrustStatus] = useState<any>(null); // ✅ Expose StudentBehaviorStatus
   const [hasPendingGlobalException, setHasPendingGlobalException] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

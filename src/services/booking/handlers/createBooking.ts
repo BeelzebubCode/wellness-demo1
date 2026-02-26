@@ -97,7 +97,7 @@ export async function handleCreateBooking(
 
   try {
     // ✅ BOOKING LOCK GUARD — check StudentTrustStatus before any write
-    const trustStatus = await prisma.studentTrustStatus.findUnique({
+    const trustStatus = await prisma.studentBehaviorStatus.findUnique({
       where: { university_id_student_id: { university_id: activeUniversityId, student_id: studentId } },
       select: { student_trust_locked_until: true },
     });
@@ -177,13 +177,13 @@ export async function handleCreateBooking(
 
       let onlineChannelCategoryId: number | null = null;
       if (serviceMode === 'ONLINE' && onlineChannelCode) {
-          const channel = await tx.onlineChannelCategory.findFirst({
-              where: { online_channel_code: onlineChannelCode }
-          });
-          if (!channel) {
-              throw Object.assign(new Error("Invalid online channel code"), { status: 400 });
-          }
-          onlineChannelCategoryId = channel.online_channel_category_id;
+        const channel = await tx.onlineChannelCategory.findFirst({
+          where: { online_channel_code: onlineChannelCode }
+        });
+        if (!channel) {
+          throw Object.assign(new Error("Invalid online channel code"), { status: 400 });
+        }
+        onlineChannelCategoryId = channel.online_channel_category_id;
       }
 
       const booking = await tx.booking.create({
@@ -202,23 +202,23 @@ export async function handleCreateBooking(
         select: { booking_id: true, university_id: true },
       });
 
-        if (serviceMode === "ONLINE") {
-          // agreementSignatureDataUrl is required for ONLINE
-          if (!agreementSignatureDataUrl) {
-             throw new Error("Signature is required for online booking");
-          }
-
-          // Create the consent signature record
-          await tx.bookingAgreementSignature.create({
-            data: {
-              university_id: booking.university_id,
-              booking_id: booking.booking_id,
-              student_id: studentId, // Required by new schema
-              signature_method: "DRAW",
-              signature_payload: { dataUrl: agreementSignatureDataUrl }, // Store as JSON
-            },
-          });
+      if (serviceMode === "ONLINE") {
+        // agreementSignatureDataUrl is required for ONLINE
+        if (!agreementSignatureDataUrl) {
+          throw new Error("Signature is required for online booking");
         }
+
+        // Create the consent signature record
+        await tx.bookingAgreementSignature.create({
+          data: {
+            university_id: booking.university_id,
+            booking_id: booking.booking_id,
+            student_id: studentId, // Required by new schema
+            signature_method: "DRAW",
+            signature_payload: { dataUrl: agreementSignatureDataUrl }, // Store as JSON
+          },
+        });
+      }
 
 
       return booking;

@@ -259,19 +259,19 @@ export default function ExceptionRequestDetailPage() {
                                 <div className="bg-orange-50 rounded-md p-3 border border-orange-100 space-y-2">
                                     <div className="flex justify-between text-xs">
                                         <span className="text-orange-700">ยกเลิกสายสะสม:</span>
-                                        <span className="font-semibold font-mono">{student.trustStatus?.student_trust_late_cancel_count ?? 0} ครั้ง</span>
+                                        <span className="font-semibold font-mono">{student.behaviorStatus?.student_trust_late_cancel_count ?? 0} ครั้ง</span>
                                     </div>
                                     <div className="flex justify-between text-xs">
                                         <span className="text-orange-700">No Show สะสม:</span>
-                                        <span className="font-semibold font-mono">{student.trustStatus?.student_trust_no_show_count ?? 0} ครั้ง</span>
+                                        <span className="font-semibold font-mono">{student.behaviorStatus?.student_trust_no_show_count ?? 0} ครั้ง</span>
                                     </div>
 
-                                    {student.trustStatus?.student_trust_locked_until && new Date(student.trustStatus.student_trust_locked_until) > new Date() && (
+                                    {student.behaviorStatus?.student_trust_locked_until && new Date(student.behaviorStatus.student_trust_locked_until) > new Date() && (
                                         <div className="mt-2 pt-2 border-t border-orange-200 flex items-start gap-1.5 text-red-600 text-xs font-medium">
                                             <AlertTriangle className="w-3.5 h-3.5 mt-0.5" />
                                             <div>
                                                 ถูกระงับสิทธิ์การจองถึง<br />
-                                                {format(new Date(student.trustStatus.student_trust_locked_until), "d MMM yy HH:mm", { locale: th })}
+                                                {format(new Date(student.behaviorStatus.student_trust_locked_until), "d MMM yy HH:mm", { locale: th })}
                                             </div>
                                         </div>
                                     )}
