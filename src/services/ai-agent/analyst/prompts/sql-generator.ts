@@ -7,12 +7,28 @@ Adhere to these rules:
 - When counting, always cast to bigint: COUNT(*)::bigint
 - When averaging, cast to numeric: AVG(col)::numeric(10,2)
 - Start your answer directly with SELECT or WITH
+- ⛔ Column aliases MUST be simple English (e.g. booking_count, student_name). NEVER use Thai aliases like "AS ชื่อนิสิต" — PostgreSQL will error!
+- ⛔ NEVER output markdown fences (\`\`\`sql). Output raw SQL only.
+- Always LIMIT results to 20 rows max unless told otherwise
+- ⛔ Thai name columns ALWAYS end with _th: student_first_name_th (NOT student_first_name), student_last_name_th, university_name_th, faculty_name_th, department_name_th, problem_category_name_th, province_name_th, region_name_th
+- ⛔ booking_status values are ENGLISH enums: 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED' — NEVER use Thai values like 'ยกเลิก'!
+- ⛔ student_gender values are ENGLISH enums: 'MALE', 'FEMALE', 'LGBTQ_PLUS' — NEVER use Thai like 'หญิง' or 'ชาย'!
+- ⛔ To count cancelled bookings, use: booking_status = 'CANCELLED' (or use booking_cancellation table)
+- ⛔ "ปัญหาการเงิน" = filter on problem_category.problem_category_name_th LIKE '%การเงิน%', NOT on university name!
+- ⛔ Service mode column is booking.booking_service_mode (values: 'ONSITE', 'ONLINE'), NOT 'service_type'!
+- ⛔ When filtering universities by name, ALWAYS use LIKE '%คำค้น%' pattern, NOT exact match '='!
+- ⛔ Risk level is in booking_outcome.booking_outcome_risk_level (int 1-5), NOT in booking or booking_cancellation!
 - The student table has NO faculty_id — join through student_academic
 - booking_outcome stores risk assessment: booking_outcome_risk_level (int 1-5, 5=highest risk)
 - "stress/เครียด" = high booking count; "risk/เสี่ยง" = high booking_outcome_risk_level
+- ⛔ "ที่ปรึกษา/อาจารย์ที่ปรึกษา/advisor" = advisor table (via student_academic.advisor_id), NOT consultant!
+- ⛔ "ผู้ให้คำปรึกษา/consultant/นักจิตวิทยา" = consultant → consultant_profile (via booking.consultant_id)
+- advisor has: advisor_first_name, advisor_last_name, advisor_phone_number, advisor_email
+- consultant_profile has: consultant_first_name, consultant_last_name, consultant_phone_number, consultant_email
 - "จังหวัด/province" = filter university by province: university -> province (ON university.province_id = province.province_id)
 - Province name is in province.province_name_th (e.g. 'กรุงเทพมหานคร', 'เชียงใหม่')
 - "ภาค/region" = filter university by region: university -> province -> region (ON province.region_id = region.region_id)
+- ⛔ region_name_th is on the REGION table, NOT province! Always: JOIN region r ON r.region_id = p.region_id WHERE r.region_name_th LIKE '...'
 - Region name is in region.region_name_th (e.g. 'ภาคตะวันออก', 'ภาคเหนือ')
 - Always include the date filter provided in the context (booking.booking_created_at)
 - ⛔ NEVER hardcode IDs — always lookup by Thai name using JOIN + WHERE ... LIKE:
@@ -77,7 +93,19 @@ CREATE TABLE student_academic (
   university_id INT,
   faculty_id INT,
   department_id INT,
+  advisor_id INT, -- links to advisor table for อาจารย์ที่ปรึกษา
   PRIMARY KEY (university_id, student_id)
+);
+
+CREATE TABLE advisor (
+  advisor_id INT,
+  university_id INT,
+  faculty_id INT,
+  advisor_first_name VARCHAR(100),
+  advisor_last_name VARCHAR(100),
+  advisor_phone_number VARCHAR(20),
+  advisor_email VARCHAR(100),
+  PRIMARY KEY (university_id, advisor_id)
 );
 
 CREATE TABLE consultant (
@@ -89,7 +117,9 @@ CREATE TABLE consultant (
 CREATE TABLE consultant_profile (
   consultant_id INT PRIMARY KEY,
   consultant_first_name VARCHAR(100),
-  consultant_last_name VARCHAR(100)
+  consultant_last_name VARCHAR(100),
+  consultant_phone_number VARCHAR(20),
+  consultant_email VARCHAR(100)
 );
 
 CREATE TABLE time_slot (
@@ -237,4 +267,48 @@ SELECT cr.cancellation_reason_name_th, COUNT(*)::bigint AS cancel_count FROM boo
 -- Q: Top cancellation reasons for a specific university
 ### SQL:
 SELECT cr.cancellation_reason_name_th, COUNT(*)::bigint AS cancel_count FROM booking_cancellation bc JOIN cancellation_reason cr ON cr.cancellation_reason_id = bc.cancellation_reason_id JOIN booking b ON b.booking_id = bc.booking_id AND b.university_id = bc.university_id JOIN university u ON u.university_id = b.university_id WHERE u.university_name_th LIKE '%รามคำแหง%' AND b.booking_created_at >= '2025-02-26' AND b.booking_created_at < '2026-02-26' GROUP BY cr.cancellation_reason_name_th ORDER BY cancel_count DESC
+
+-- Q: มหาวิทยาลัยรามคำแหง ปัญหาด้านไหนมากสุด และนิสิตที่มีปัญหาด้านนั้นคือใคร ชื่ออะไร คณะอะไร สาขาไหน
+### SQL:
+WITH top_problem AS (SELECT b.problem_category_id, COUNT(*)::bigint AS booking_count FROM booking b JOIN university u ON u.university_id = b.university_id WHERE u.university_name_th LIKE '%รามคำแหง%' AND b.booking_created_at >= '2025-02-26' AND b.booking_created_at < '2026-02-26' GROUP BY b.problem_category_id ORDER BY booking_count DESC LIMIT 1), students_with_problem AS (SELECT b.student_id, b.university_id, COUNT(*)::bigint AS booking_count FROM booking b JOIN university u ON u.university_id = b.university_id WHERE u.university_name_th LIKE '%รามคำแหง%' AND b.problem_category_id = (SELECT problem_category_id FROM top_problem) AND b.booking_created_at >= '2025-02-26' AND b.booking_created_at < '2026-02-26' GROUP BY b.student_id, b.university_id ORDER BY booking_count DESC LIMIT 20) SELECT pc.problem_category_name_th, sp.student_first_name_th, sp.student_last_name_th, f.faculty_name_th, d.department_name_th, swp.booking_count FROM students_with_problem swp JOIN top_problem tp ON 1=1 JOIN problem_category pc ON pc.problem_category_id = tp.problem_category_id JOIN student_profile sp ON sp.student_id = swp.student_id AND sp.university_id = swp.university_id JOIN student_academic sa ON sa.student_id = swp.student_id AND sa.university_id = swp.university_id LEFT JOIN faculty f ON f.faculty_id = sa.faculty_id AND f.university_id = sa.university_id LEFT JOIN department d ON d.department_id = sa.department_id AND d.university_id = sa.university_id ORDER BY swp.booking_count DESC
+
+-- Q: มหาลัยไหนมีปัญหาการเงินมากสุด
+### SQL:
+WITH uni_fin AS (SELECT b.university_id, COUNT(*)::bigint AS booking_count FROM booking b JOIN problem_category pc ON pc.problem_category_id = b.problem_category_id WHERE pc.problem_category_name_th LIKE '%การเงิน%' AND b.booking_created_at >= '2025-02-26' AND b.booking_created_at < '2026-02-26' GROUP BY b.university_id ORDER BY booking_count DESC LIMIT 5) SELECT u.university_name_th, uf.booking_count FROM uni_fin uf JOIN university u ON u.university_id = uf.university_id ORDER BY uf.booking_count DESC
+
+-- Q: สัดส่วน Onsite กับ Online เป็นอย่างไร
+### SQL:
+SELECT booking_service_mode, COUNT(*)::bigint AS booking_count FROM booking WHERE booking_created_at >= '2025-02-26' AND booking_created_at < '2026-02-26' GROUP BY booking_service_mode ORDER BY booking_count DESC
+
+-- Q: นิสิตที่มีระดับความเสี่ยงสูงสุดคือใคร
+### SQL:
+WITH high_risk AS (SELECT b.student_id, b.university_id, AVG(bo.booking_outcome_risk_level)::numeric(10,2) AS avg_risk, COUNT(*)::bigint AS booking_count FROM booking b JOIN booking_outcome bo ON bo.booking_id = b.booking_id AND bo.university_id = b.university_id WHERE b.booking_created_at >= '2025-02-26' AND b.booking_created_at < '2026-02-26' AND bo.booking_outcome_risk_level >= 4 GROUP BY b.student_id, b.university_id ORDER BY avg_risk DESC, booking_count DESC LIMIT 10) SELECT sp.student_first_name_th, sp.student_last_name_th, u.university_name_th, hr.avg_risk, hr.booking_count FROM high_risk hr JOIN student_profile sp ON sp.student_id = hr.student_id AND sp.university_id = hr.university_id JOIN university u ON u.university_id = hr.university_id ORDER BY hr.avg_risk DESC, hr.booking_count DESC
+
+-- Q: นิสิตคนไหนเข้ารับบริการมากสุด 5 อันดับ ชื่ออะไร คณะอะไร สาขาไหน
+### SQL:
+WITH top_students AS (SELECT b.student_id, b.university_id, COUNT(*)::bigint AS booking_count FROM booking b WHERE b.booking_created_at >= '2025-02-26' AND b.booking_created_at < '2026-02-26' GROUP BY b.student_id, b.university_id ORDER BY booking_count DESC LIMIT 5) SELECT sp.student_first_name_th, sp.student_last_name_th, u.university_name_th, f.faculty_name_th, d.department_name_th, ts.booking_count FROM top_students ts JOIN student_profile sp ON sp.student_id = ts.student_id AND sp.university_id = ts.university_id JOIN student_academic sa ON sa.student_id = ts.student_id AND sa.university_id = ts.university_id JOIN university u ON u.university_id = ts.university_id LEFT JOIN faculty f ON f.faculty_id = sa.faculty_id AND f.university_id = sa.university_id LEFT JOIN department d ON d.department_id = sa.department_id AND d.university_id = sa.university_id ORDER BY ts.booking_count DESC
+
+-- Q: มหาวิทยาลัยในภาคเหนือ มีการจองมากสุดอันดับไหน
+### SQL:
+SELECT u.university_name_th, COUNT(*)::bigint AS booking_count FROM booking b JOIN university u ON u.university_id = b.university_id JOIN province p ON p.province_id = u.province_id JOIN region r ON r.region_id = p.region_id WHERE r.region_name_th LIKE '%เหนือ%' AND b.booking_created_at >= '2025-02-26' AND b.booking_created_at < '2026-02-26' GROUP BY u.university_name_th ORDER BY booking_count DESC LIMIT 10
+
+-- Q: คณะวิทยาศาสตร์ มีปัญหาอะไรมากสุด
+### SQL:
+SELECT pc.problem_category_name_th, COUNT(*)::bigint AS booking_count FROM booking b JOIN student_academic sa ON sa.student_id = b.student_id AND sa.university_id = b.university_id JOIN faculty f ON f.faculty_id = sa.faculty_id AND f.university_id = sa.university_id JOIN problem_category pc ON pc.problem_category_id = b.problem_category_id WHERE f.faculty_name_th LIKE '%วิทยาศาสตร์%' AND b.booking_created_at >= '2025-02-26' AND b.booking_created_at < '2026-02-26' GROUP BY pc.problem_category_name_th ORDER BY booking_count DESC LIMIT 5
+
+-- Q: นิสิตที่มีปัญหาเครียดและเสี่ยงสูง ชื่ออะไร คณะไหน สาขาไหน มหาลัยไหน อาจารย์ที่ปรึกษาชื่ออะไร เบอร์ติดต่อ
+### SQL:
+WITH stressed_risky AS (SELECT b.student_id, b.university_id, COUNT(*)::bigint AS booking_count, AVG(bo.booking_outcome_risk_level)::numeric(10,2) AS avg_risk FROM booking b JOIN problem_category pc ON pc.problem_category_id = b.problem_category_id JOIN booking_outcome bo ON bo.booking_id = b.booking_id AND bo.university_id = b.university_id WHERE pc.problem_category_name_th LIKE '%เครียด%' AND bo.booking_outcome_risk_level >= 4 AND b.booking_created_at >= '2025-02-26' AND b.booking_created_at < '2026-02-26' GROUP BY b.student_id, b.university_id ORDER BY avg_risk DESC, booking_count DESC LIMIT 10) SELECT sp.student_first_name_th, sp.student_last_name_th, u.university_name_th, f.faculty_name_th, d.department_name_th, sr.avg_risk, sr.booking_count, adv.advisor_first_name, adv.advisor_last_name, adv.advisor_phone_number FROM stressed_risky sr JOIN student_profile sp ON sp.student_id = sr.student_id AND sp.university_id = sr.university_id JOIN student_academic sa ON sa.student_id = sr.student_id AND sa.university_id = sr.university_id JOIN university u ON u.university_id = sr.university_id LEFT JOIN faculty f ON f.faculty_id = sa.faculty_id AND f.university_id = sa.university_id LEFT JOIN department d ON d.department_id = sa.department_id AND d.university_id = sa.university_id LEFT JOIN advisor adv ON adv.advisor_id = sa.advisor_id AND adv.university_id = sa.university_id ORDER BY sr.avg_risk DESC, sr.booking_count DESC
+
+-- Q: ผู้ให้คำปรึกษาคนไหนรับเคสมากสุด ชื่อ เบอร์ติดต่อ
+### SQL:
+SELECT cp.consultant_first_name, cp.consultant_last_name, cp.consultant_phone_number, u.university_name_th, COUNT(*)::bigint AS case_count FROM booking b JOIN consultant c ON c.consultant_id = b.consultant_id AND c.university_id = b.university_id JOIN consultant_profile cp ON cp.consultant_id = c.consultant_id JOIN university u ON u.university_id = b.university_id WHERE b.booking_created_at >= '2025-02-26' AND b.booking_created_at < '2026-02-26' GROUP BY cp.consultant_first_name, cp.consultant_last_name, cp.consultant_phone_number, u.university_name_th ORDER BY case_count DESC LIMIT 10
+
+-- Q: สัดส่วนเพศชายหญิงที่มาใช้บริการเป็นกี่เปอร์เซ็นต์
+### SQL:
+SELECT sp.student_gender, COUNT(*)::bigint AS total, ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) AS pct FROM booking b JOIN student_profile sp ON sp.student_id = b.student_id AND sp.university_id = b.university_id WHERE b.booking_created_at >= '2025-02-26' AND b.booking_created_at < '2026-02-26' GROUP BY sp.student_gender ORDER BY total DESC
+
+-- Q: อัตราการยกเลิกนัดเป็นกี่เปอร์เซ็นต์ของการจองทั้งหมด
+### SQL:
+SELECT COUNT(CASE WHEN booking_status = 'CANCELLED' THEN 1 END)::bigint AS cancelled, COUNT(*)::bigint AS total, ROUND(COUNT(CASE WHEN booking_status = 'CANCELLED' THEN 1 END) * 100.0 / COUNT(*), 2) AS cancel_pct FROM booking WHERE booking_created_at >= '2025-02-26' AND booking_created_at < '2026-02-26'
 `;

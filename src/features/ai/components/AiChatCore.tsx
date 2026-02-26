@@ -45,6 +45,7 @@ export default function AiChatCore({ mode, variant, onModeChange }: Props) {
         mode={mode}
         messages={chat.messages}
         isLoading={chat.isLoading}
+        onSend={chat.sendMessage}
       />
       <AiChatInput mode={mode} chat={chat} onModeChange={onModeChange as any} />
     </div>

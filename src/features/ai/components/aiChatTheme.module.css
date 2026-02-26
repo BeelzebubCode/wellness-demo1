@@ -45,8 +45,7 @@
 .msgContainer {
   display: flex;
   gap: 16px;
-  /* Increased gap */
-  max-width: 85%;
+  max-width: 95%;
 }
 
 .userContainer {
@@ -195,6 +194,66 @@
 
 .md a:hover {
   opacity: 0.8;
+}
+
+/* ===== Table Styles — Beautiful Thai-friendly tables ===== */
+.tableWrap {
+  overflow-x: auto;
+  margin: 10px -4px;
+  padding: 0 4px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px !important;
+  line-height: 18px !important;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.thead {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+}
+
+.th {
+  padding: 10px 14px !important;
+  text-align: left;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  color: #0369a1;
+  white-space: nowrap;
+  border-bottom: 2px solid #bae6fd;
+  letter-spacing: 0.02em;
+}
+
+.td {
+  padding: 8px 14px !important;
+  font-size: 13px !important;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: top;
+}
+
+/* Numbers align right */
+.td:last-child {
+  font-variant-numeric: tabular-nums;
+}
+
+.tr:last-child .td {
+  border-bottom: none;
+}
+
+/* Alternating row colors */
+.tr:nth-child(even) .td {
+  background: #f8fafc;
+}
+
+.tr:hover .td {
+  background: #f0f9ff;
 }
 
 /* ===== Page background ===== */

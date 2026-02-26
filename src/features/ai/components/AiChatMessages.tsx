@@ -8,14 +8,34 @@ import { AiChatMode } from "./AiChatCore";
 import { cn } from "@/lib/cn";
 import styles from "./aiChatTheme.module.css";
 
+const PROBLEM_CATEGORIES = [
+  { label: "ปัญหาการเรียน", emoji: "📚" },
+  { label: "ความเครียด", emoji: "😰" },
+  { label: "สุขภาพจิต/อารมณ์", emoji: "🧠" },
+  { label: "ปัญหาการเงิน", emoji: "💰" },
+  { label: "ครอบครัว", emoji: "👨‍👩‍👧" },
+  { label: "อาชีพ/อนาคต", emoji: "💼" },
+  { label: "ความสัมพันธ์", emoji: "💑" },
+  { label: "สุขภาพกาย", emoji: "🏥" },
+  { label: "การปรับตัว", emoji: "🔄" },
+];
+
+const QUICK_QUESTIONS = [
+  "มหาลัยไหนมีปัญหามากสุด",
+  "สรุปภาพรวมระบบ",
+  "สถิติตามภูมิภาค",
+  "Top 10 นิสิตที่เข้ารับบริการมากสุด",
+];
+
 type Props = {
   mode: AiChatMode;
   messages: { role: "user" | "assistant"; content: string }[];
   isLoading: boolean;
+  onSend?: (text: string) => void;
 };
 
 const AiChatMessages = forwardRef<HTMLDivElement, Props>(
-  ({ mode, messages, isLoading }, ref) => {
+  ({ mode, messages, isLoading, onSend }, ref) => {
     return (
       <div
         ref={ref}
@@ -27,33 +47,59 @@ const AiChatMessages = forwardRef<HTMLDivElement, Props>(
         {/* Centered container matching input width */}
         <div className="mx-auto max-w-4xl px-6">
           {messages.length === 0 ? (
-            <div className="mx-auto mt-3 max-w-[520px] rounded-2xl border-0 border-slate-200 bg-white p-4">
+            <div className="mx-auto mt-3 max-w-[560px] rounded-2xl border-0 border-slate-200 bg-white p-4">
               <div className={cn("mb-2 flex items-center gap-2 font-semibold text-slate-800", styles.headerTitle)}>
                 <Bot className="h-4 w-4" />
                 {mode === "analyst" ? "📊 AI สรุปผล" : mode === "booking_agent" ? "🗓️ AI จองคิว" : "AI Help Center"}
               </div>
 
-              <ul className={cn("list-disc space-y-1 pl-5 text-slate-600", styles.hintList)}>
-                {mode === "analyst" ? (
-                  <>
-                    <li>มหาลัยไหนมีปัญหามากสุด</li>
-                    <li>สรุปภาพรวมระบบ</li>
-                    <li>สถิติตามภูมิภาค</li>
-                  </>
-                ) : mode === "booking_agent" ? (
-                  <>
-                    <li>จองพรุ่งนี้ช่วงบ่าย</li>
-                    <li>อยากได้ 10:00 - 12:00</li>
-                    <li>ยกเลิกคิวยังไง</li>
-                  </>
-                ) : (
-                  <>
-                    <li>จองคิวยังไง</li>
-                    <li>ดูตารางนัดตรงไหน</li>
-                    <li>ยกเลิกนัดได้ไหม</li>
-                  </>
-                )}
-              </ul>
+              {mode === "analyst" ? (
+                <>
+                  {/* Quick questions */}
+                  <p className={cn("mb-2 text-slate-500", styles.hintList)}>ตัวอย่างคำถาม:</p>
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    {QUICK_QUESTIONS.map((q) => (
+                      <button
+                        key={q}
+                        onClick={() => onSend?.(q)}
+                        className="rounded-full bg-slate-100 px-3 py-1 text-[12px] text-slate-600 hover:bg-primary-50 hover:text-primary-700 transition-colors cursor-pointer"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Problem category chips */}
+                  <p className={cn("mb-2 text-slate-500", styles.hintList)}>เลือกประเภทปัญหา:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {PROBLEM_CATEGORIES.map((cat) => (
+                      <button
+                        key={cat.label}
+                        onClick={() => onSend?.(`มหาลัยไหนมี${cat.label}มากสุด`)}
+                        className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[12px] text-sky-700 hover:bg-sky-100 hover:border-sky-300 transition-colors cursor-pointer"
+                      >
+                        {cat.emoji} {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <ul className={cn("list-disc space-y-1 pl-5 text-slate-600", styles.hintList)}>
+                  {mode === "booking_agent" ? (
+                    <>
+                      <li>จองพรุ่งนี้ช่วงบ่าย</li>
+                      <li>อยากได้ 10:00 - 12:00</li>
+                      <li>ยกเลิกคิวยังไง</li>
+                    </>
+                  ) : (
+                    <>
+                      <li>จองคิวยังไง</li>
+                      <li>ดูตารางนัดตรงไหน</li>
+                      <li>ยกเลิกนัดได้ไหม</li>
+                    </>
+                  )}
+                </ul>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -88,7 +134,7 @@ const AiChatMessages = forwardRef<HTMLDivElement, Props>(
             </div>
           )}
         </div>
-      </div>
+      </div >
     );
   },
 );

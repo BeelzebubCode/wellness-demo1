@@ -51,6 +51,17 @@ export default function ChatMessage({
           {children}
         </a>
       ),
+      // Table renderers for beautiful Thai-friendly tables
+      table: ({ children }: any) => (
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>{children}</table>
+        </div>
+      ),
+      thead: ({ children }: any) => <thead className={styles.thead}>{children}</thead>,
+      tbody: ({ children }: any) => <tbody>{children}</tbody>,
+      tr: ({ children }: any) => <tr className={styles.tr}>{children}</tr>,
+      th: ({ children }: any) => <th className={styles.th}>{children}</th>,
+      td: ({ children }: any) => <td className={styles.td}>{children}</td>,
     }),
     [],
   );

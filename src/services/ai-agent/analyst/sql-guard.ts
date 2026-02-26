@@ -18,7 +18,50 @@ export function validateSql(rawSql: string, isMinistry: boolean = false): SqlVal
         .replace(/&lt;\|im_end\|&gt;/gi, "")
         .replace(/&lt;\|im_start\|&gt;/gi, "")
         .replace(/&lt;\|endoftext\|&gt;/gi, "")
+        .replace(/<\/?s>/gi, "")
+        .replace(/<\|im_end\|>/gi, "")
+        .replace(/<\|im_start\|>/gi, "")
+        .replace(/<\|endoftext\|>/gi, "")
+        .replace(/<think>[\s\S]*?<\/think>/g, "") // Strip Qwen3 thinking tags
         .trim();
+
+    // 2b. Quote Thai column aliases with double-quotes for PostgreSQL compatibility
+    // e.g. "AS ชื่อ-นามสกุล" → 'AS "ชื่อ-นามสกุล"' so ORDER BY still works
+    cleanSql = cleanSql
+        .replace(/\bAS\s+([\u0E00-\u0E7F][\u0E00-\u0E7F\w\-\/]*)/gi, (_m, alias) => `AS "${alias}"`)
+        .trim();
+
+    // 2c. Also quote bare Thai words in ORDER BY / GROUP BY
+    // e.g. "ORDER BY จำนวน DESC" → 'ORDER BY "จำนวน" DESC'
+    cleanSql = cleanSql
+        .replace(/\b(ORDER\s+BY|GROUP\s+BY)\s+([\u0E00-\u0E7F][\u0E00-\u0E7F\w\-\/]*)/gi,
+            (_m, clause, col) => `${clause} "${col}"`)
+        .trim();
+
+    // 2d. Auto-fix missing _th suffix on Thai name columns
+    // The LLM sometimes writes student_first_name instead of student_first_name_th
+    const thColumns = [
+        "student_first_name", "student_last_name", "student_nickname",
+        "university_name", "faculty_name", "department_name",
+        "problem_category_name", "province_name", "region_name",
+        "cancellation_reason_name",
+    ];
+    for (const col of thColumns) {
+        // Replace "col" but NOT "col_th" or "col_en"
+        const regex = new RegExp(`\\b(${col})(?!_(?:th|en))\\b`, "g");
+        cleanSql = cleanSql.replace(regex, `${col}_th`);
+    }
+
+    // 2e. Auto-fix Thai booking_status enum values
+    cleanSql = cleanSql
+        .replace(/'ยกเลิก'/g, "'CANCELLED'")
+        .replace(/'เสร็จ(?:สิ้น)?'/g, "'COMPLETED'")
+        .replace(/'รอ(?:ดำเนินการ)?'/g, "'PENDING'")
+        .replace(/'ยืนยัน'/g, "'CONFIRMED'")
+        // StudentGender enum
+        .replace(/'หญิง'/g, "'FEMALE'")
+        .replace(/'ชาย'/g, "'MALE'")
+        .replace(/'(?:LGBTQ|อื่น(?:ๆ)?|ทางเลือก)'/g, "'LGBTQ_PLUS'");
 
     // 3. Extract only the SQL part (find first SELECT or WITH)
     const upperTrimmed = cleanSql.toUpperCase();

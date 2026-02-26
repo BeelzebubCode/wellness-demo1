@@ -291,100 +291,102 @@ export async function GET(req: NextRequest) {
             const pLabel = months === 12 ? "1 ปี" : `${months} เดือน`;
             const dateLabel = `📅 ข้อมูลช่วง ${fThaiDate(pFrom)} - ${fThaiDate(currentDate)} (${pLabel})`;
             const sfx = `_${months}M`;
-            const df = `booking_created_at >= '${pFromStr}' AND booking_created_at < '${pToStr}'`;
-            const bdf = `b.booking_created_at >= '${pFromStr}' AND b.booking_created_at < '${pToStr}'`;
+
+            // Date filter using time_slot_start_datetime (actual appointment time, not booking creation time)
+            const tsJoin = `JOIN time_slot ts ON ts.time_slot_id = b.time_slot_id AND ts.university_id = b.university_id`;
+            const tsFilter = `ts.time_slot_start_datetime >= '${pFromStr}' AND ts.time_slot_start_datetime < '${pToStr}'`;
 
             console.log(`[CRON]   Period: ${pLabel}`);
 
             // ── 6.1 TOP_UNIVERSITIES ──
-            const q1 = await prisma.$queryRawUnsafe<any[]>(`WITH t AS (SELECT university_id, COUNT(*)::bigint AS c FROM booking WHERE ${df} GROUP BY university_id ORDER BY c DESC LIMIT 20) SELECT u.university_name_th, t.c FROM t JOIN university u ON u.university_id = t.university_id ORDER BY t.c DESC`);
+            const q1 = await prisma.$queryRawUnsafe<any[]>(`WITH t AS (SELECT b.university_id, COUNT(*)::bigint AS c FROM booking b ${tsJoin} WHERE ${tsFilter} GROUP BY b.university_id ORDER BY c DESC LIMIT 20) SELECT u.university_name_th, t.c FROM t JOIN university u ON u.university_id = t.university_id ORDER BY t.c DESC`);
             let s1 = `${dateLabel}\n\n### 🏆 Top 20 มหาวิทยาลัยที่มีการจองปรึกษามากสุด\n\n| อันดับ | มหาวิทยาลัย | จำนวนคิว |\n|---|---|---|\n`;
             q1.forEach((r, i) => s1 += `| ${i + 1} | **${r.university_name_th}** | ${Number(r.c).toLocaleString()} |\n`);
             pushLookup("TOP_UNIVERSITIES", sfx, "Top 20 มหาวิทยาลัย", s1);
 
             // ── 6.2 TOP_PROBLEMS ──
-            const q2 = await prisma.$queryRawUnsafe<any[]>(`SELECT pc.problem_category_name_th, COUNT(*)::bigint AS c FROM booking b JOIN problem_category pc ON pc.problem_category_id = b.problem_category_id WHERE ${bdf} GROUP BY pc.problem_category_name_th ORDER BY c DESC`);
+            const q2 = await prisma.$queryRawUnsafe<any[]>(`SELECT pc.problem_category_name_th, COUNT(*)::bigint AS c FROM booking b ${tsJoin} JOIN problem_category pc ON pc.problem_category_id = b.problem_category_id WHERE ${tsFilter} GROUP BY pc.problem_category_name_th ORDER BY c DESC`);
             let s2 = `${dateLabel}\n\n### 📊 ประเภทปัญหาที่พบมากสุด\n\n| อันดับ | ประเภทปัญหา | จำนวนคิว |\n|---|---|---|\n`;
             q2.forEach((r, i) => s2 += `| ${i + 1} | **${r.problem_category_name_th}** | ${Number(r.c).toLocaleString()} |\n`);
             pushLookup("TOP_PROBLEMS", sfx, "ปัญหาที่พบมากสุด", s2);
 
             // ── 6.3 REGIONAL_SUMMARY ──
-            const q3 = await prisma.$queryRawUnsafe<any[]>(`SELECT r.region_name_th, COUNT(*)::bigint AS c, COUNT(DISTINCT b.university_id)::bigint AS u FROM booking b JOIN university u2 ON u2.university_id = b.university_id JOIN province p ON p.province_id = u2.province_id JOIN region r ON r.region_id = p.region_id WHERE ${bdf} GROUP BY r.region_name_th ORDER BY c DESC`);
+            const q3 = await prisma.$queryRawUnsafe<any[]>(`SELECT r.region_name_th, COUNT(*)::bigint AS c, COUNT(DISTINCT b.university_id)::bigint AS u FROM booking b ${tsJoin} JOIN university u2 ON u2.university_id = b.university_id JOIN province p ON p.province_id = u2.province_id JOIN region r ON r.region_id = p.region_id WHERE ${tsFilter} GROUP BY r.region_name_th ORDER BY c DESC`);
             let s3 = `${dateLabel}\n\n### 🗺️ สถิติตามภูมิภาค\n\n| อันดับ | ภูมิภาค | มหาวิทยาลัย | จำนวนคิว |\n|---|---|---|---|\n`;
             q3.forEach((r, i) => s3 += `| ${i + 1} | **${r.region_name_th}** | ${Number(r.u)} | ${Number(r.c).toLocaleString()} |\n`);
             pushLookup("REGIONAL_SUMMARY", sfx, "สถิติตามภูมิภาค", s3);
 
             // ── 6.4 TOP_STUDENTS ──
-            const q4 = await prisma.$queryRawUnsafe<any[]>(`WITH t AS (SELECT student_id, university_id, COUNT(*)::bigint AS c FROM booking WHERE ${df} GROUP BY university_id, student_id ORDER BY c DESC LIMIT 20) SELECT sp.student_first_name_th, sp.student_last_name_th, u.university_name_th, t.c FROM t JOIN student_profile sp ON sp.student_id = t.student_id AND sp.university_id = t.university_id JOIN university u ON u.university_id = t.university_id ORDER BY t.c DESC`);
+            const q4 = await prisma.$queryRawUnsafe<any[]>(`WITH t AS (SELECT b.student_id, b.university_id, COUNT(*)::bigint AS c FROM booking b ${tsJoin} WHERE ${tsFilter} GROUP BY b.university_id, b.student_id ORDER BY c DESC LIMIT 20) SELECT sp.student_first_name_th, sp.student_last_name_th, u.university_name_th, t.c FROM t JOIN student_profile sp ON sp.student_id = t.student_id AND sp.university_id = t.university_id JOIN university u ON u.university_id = t.university_id ORDER BY t.c DESC`);
             let s4 = `${dateLabel}\n\n### 🏆 Top 20 นิสิต/นักศึกษาที่จองปรึกษามากสุด\n\n| อันดับ | ชื่อ-นามสกุล | มหาวิทยาลัย | จำนวนคิว |\n|---|---|---|---|\n`;
             q4.forEach((r, i) => s4 += `| ${i + 1} | **${r.student_first_name_th} ${r.student_last_name_th}** | ${r.university_name_th} | ${Number(r.c).toLocaleString()} |\n`);
             pushLookup("TOP_STUDENTS", sfx, "Top 20 นิสิต", s4);
 
             // ── 6.5 BOOKING_STATUS_SUMMARY ──
-            const q5 = await prisma.$queryRawUnsafe<any[]>(`SELECT booking_status, COUNT(*)::bigint AS c FROM booking WHERE ${df} GROUP BY booking_status ORDER BY c DESC`);
+            const q5 = await prisma.$queryRawUnsafe<any[]>(`SELECT b.booking_status, COUNT(*)::bigint AS c FROM booking b ${tsJoin} WHERE ${tsFilter} GROUP BY b.booking_status ORDER BY c DESC`);
             const tot5 = q5.reduce((s, r) => s + Number(r.c), 0);
             let s5 = `${dateLabel}\n\n### 📊 สรุปสถานะการจอง\n\n**จำนวนคิวทั้งหมด: ${tot5.toLocaleString()}**\n\n| สถานะ | จำนวน | สัดส่วน |\n|---|---|---|\n`;
             q5.forEach(r => { const pct = tot5 > 0 ? ((Number(r.c) / tot5) * 100).toFixed(1) : "0"; s5 += `| ${statusMap[r.booking_status] || r.booking_status} | ${Number(r.c).toLocaleString()} | ${pct}% |\n`; });
             pushLookup("BOOKING_STATUS_SUMMARY", sfx, "สรุปสถานะ", s5);
 
             // ── 6.6 GENDER_SUMMARY ──
-            const q6 = await prisma.$queryRawUnsafe<any[]>(`SELECT sp.student_gender, COUNT(*)::bigint AS c FROM booking b JOIN student_profile sp ON sp.student_id = b.student_id AND sp.university_id = b.university_id WHERE ${bdf} GROUP BY sp.student_gender ORDER BY c DESC`);
+            const q6 = await prisma.$queryRawUnsafe<any[]>(`SELECT sp.student_gender, COUNT(*)::bigint AS c FROM booking b ${tsJoin} JOIN student_profile sp ON sp.student_id = b.student_id AND sp.university_id = b.university_id WHERE ${tsFilter} GROUP BY sp.student_gender ORDER BY c DESC`);
             let s6 = `${dateLabel}\n\n### 📊 สถิติตามเพศ\n\n| เพศ | จำนวนคิว |\n|---|---|\n`;
             q6.forEach(r => s6 += `| ${genderMap[r.student_gender] || r.student_gender} | ${Number(r.c).toLocaleString()} |\n`);
             pushLookup("GENDER_SUMMARY", sfx, "สถิติตามเพศ", s6);
 
             // ── 6.7 TOP_FACULTIES ──
-            const q7 = await prisma.$queryRawUnsafe<any[]>(`WITH t AS (SELECT sa.faculty_id, sa.university_id, COUNT(*)::bigint AS c FROM booking b JOIN student_academic sa ON sa.student_id = b.student_id AND sa.university_id = b.university_id WHERE ${bdf} GROUP BY sa.faculty_id, sa.university_id ORDER BY c DESC LIMIT 20) SELECT f.faculty_name_th, u.university_name_th, t.c FROM t JOIN faculty f ON f.faculty_id = t.faculty_id AND f.university_id = t.university_id JOIN university u ON u.university_id = t.university_id ORDER BY t.c DESC`);
+            const q7 = await prisma.$queryRawUnsafe<any[]>(`WITH t AS (SELECT sa.faculty_id, sa.university_id, COUNT(*)::bigint AS c FROM booking b ${tsJoin} JOIN student_academic sa ON sa.student_id = b.student_id AND sa.university_id = b.university_id WHERE ${tsFilter} GROUP BY sa.faculty_id, sa.university_id ORDER BY c DESC LIMIT 20) SELECT f.faculty_name_th, u.university_name_th, t.c FROM t JOIN faculty f ON f.faculty_id = t.faculty_id AND f.university_id = t.university_id JOIN university u ON u.university_id = t.university_id ORDER BY t.c DESC`);
             let s7 = `${dateLabel}\n\n### 🏛️ Top 20 คณะที่มีการจองปรึกษามากสุด\n\n| อันดับ | คณะ | มหาวิทยาลัย | จำนวนคิว |\n|---|---|---|---|\n`;
             q7.forEach((r, i) => s7 += `| ${i + 1} | **${r.faculty_name_th}** | ${r.university_name_th} | ${Number(r.c).toLocaleString()} |\n`);
             pushLookup("TOP_FACULTIES", sfx, "Top 20 คณะ", s7);
 
             // ── 6.8 TOP_DEPARTMENTS ──
-            const q8 = await prisma.$queryRawUnsafe<any[]>(`WITH t AS (SELECT sa.department_id, sa.university_id, COUNT(*)::bigint AS c FROM booking b JOIN student_academic sa ON sa.student_id = b.student_id AND sa.university_id = b.university_id WHERE ${bdf} GROUP BY sa.department_id, sa.university_id ORDER BY c DESC LIMIT 20) SELECT d.department_name_th, u.university_name_th, t.c FROM t JOIN department d ON d.department_id = t.department_id AND d.university_id = t.university_id JOIN university u ON u.university_id = t.university_id ORDER BY t.c DESC`);
+            const q8 = await prisma.$queryRawUnsafe<any[]>(`WITH t AS (SELECT sa.department_id, sa.university_id, COUNT(*)::bigint AS c FROM booking b ${tsJoin} JOIN student_academic sa ON sa.student_id = b.student_id AND sa.university_id = b.university_id WHERE ${tsFilter} GROUP BY sa.department_id, sa.university_id ORDER BY c DESC LIMIT 20) SELECT d.department_name_th, u.university_name_th, t.c FROM t JOIN department d ON d.department_id = t.department_id AND d.university_id = t.university_id JOIN university u ON u.university_id = t.university_id ORDER BY t.c DESC`);
             let s8 = `${dateLabel}\n\n### � Top 20 สาขาวิชาที่มีการจองปรึกษามากสุด\n\n| อันดับ | สาขาวิชา | มหาวิทยาลัย | จำนวนคิว |\n|---|---|---|---|\n`;
             q8.forEach((r, i) => s8 += `| ${i + 1} | **${r.department_name_th}** | ${r.university_name_th} | ${Number(r.c).toLocaleString()} |\n`);
             pushLookup("TOP_DEPARTMENTS", sfx, "Top 20 สาขาวิชา", s8);
 
             // ── 6.9 TOP_CONSULTANTS ──
-            const q9 = await prisma.$queryRawUnsafe<any[]>(`WITH t AS (SELECT consultant_id, university_id, COUNT(*)::bigint AS c FROM booking WHERE ${df} AND consultant_id IS NOT NULL GROUP BY consultant_id, university_id ORDER BY c DESC LIMIT 20) SELECT cp.consultant_first_name, cp.consultant_last_name, u.university_name_th, t.c FROM t JOIN consultant_profile cp ON cp.consultant_id = t.consultant_id JOIN university u ON u.university_id = t.university_id ORDER BY t.c DESC`);
+            const q9 = await prisma.$queryRawUnsafe<any[]>(`WITH t AS (SELECT b.consultant_id, b.university_id, COUNT(*)::bigint AS c FROM booking b ${tsJoin} WHERE ${tsFilter} AND b.consultant_id IS NOT NULL GROUP BY b.consultant_id, b.university_id ORDER BY c DESC LIMIT 20) SELECT cp.consultant_first_name, cp.consultant_last_name, u.university_name_th, t.c FROM t JOIN consultant_profile cp ON cp.consultant_id = t.consultant_id JOIN university u ON u.university_id = t.university_id ORDER BY t.c DESC`);
             let s9 = `${dateLabel}\n\n### 👨‍⚕️ Top 20 ที่ปรึกษาที่รับเคสมากสุด\n\n| อันดับ | ที่ปรึกษา | มหาวิทยาลัย | จำนวนเคส |\n|---|---|---|---|\n`;
             q9.forEach((r, i) => s9 += `| ${i + 1} | **${r.consultant_first_name} ${r.consultant_last_name}** | ${r.university_name_th} | ${Number(r.c).toLocaleString()} |\n`);
             pushLookup("TOP_CONSULTANTS", sfx, "Top 20 ที่ปรึกษา", s9);
 
             // ── 6.10 SERVICE_MODE_SUMMARY ──
-            const q10 = await prisma.$queryRawUnsafe<any[]>(`SELECT booking_service_mode, COUNT(*)::bigint AS c FROM booking WHERE ${df} AND booking_service_mode IS NOT NULL GROUP BY booking_service_mode ORDER BY c DESC`);
+            const q10 = await prisma.$queryRawUnsafe<any[]>(`SELECT b.booking_service_mode, COUNT(*)::bigint AS c FROM booking b ${tsJoin} WHERE ${tsFilter} AND b.booking_service_mode IS NOT NULL GROUP BY b.booking_service_mode ORDER BY c DESC`);
             let s10 = `${dateLabel}\n\n### 🖥️ สถิติรูปแบบบริการ\n\n| รูปแบบ | จำนวนคิว |\n|---|---|\n`;
             q10.forEach(r => s10 += `| ${modeLabels[r.booking_service_mode] || r.booking_service_mode} | ${Number(r.c).toLocaleString()} |\n`);
             pushLookup("SERVICE_MODE_SUMMARY", sfx, "รูปแบบบริการ", s10);
 
             // ── 6.11 CANCELLATION_SUMMARY ──
-            const q11 = await prisma.$queryRawUnsafe<any[]>(`SELECT cr.cancellation_reason_name_th, COUNT(*)::bigint AS c FROM booking_cancellation bc JOIN cancellation_reason cr ON cr.cancellation_reason_id = bc.cancellation_reason_id JOIN booking b ON b.booking_id = bc.booking_id AND b.university_id = bc.university_id WHERE ${bdf} GROUP BY cr.cancellation_reason_name_th ORDER BY c DESC`);
+            const q11 = await prisma.$queryRawUnsafe<any[]>(`SELECT cr.cancellation_reason_name_th, COUNT(*)::bigint AS c FROM booking_cancellation bc JOIN cancellation_reason cr ON cr.cancellation_reason_id = bc.cancellation_reason_id JOIN booking b ON b.booking_id = bc.booking_id AND b.university_id = bc.university_id ${tsJoin} WHERE ${tsFilter} GROUP BY cr.cancellation_reason_name_th ORDER BY c DESC`);
             let s11 = `${dateLabel}\n\n### ❌ สาเหตุการยกเลิกคิว\n\n| อันดับ | สาเหตุ | จำนวน |\n|---|---|---|\n`;
             q11.forEach((r, i) => s11 += `| ${i + 1} | **${r.cancellation_reason_name_th}** | ${Number(r.c).toLocaleString()} |\n`);
             pushLookup("CANCELLATION_SUMMARY", sfx, "สาเหตุยกเลิก", s11);
 
             // ── 6.12 RISK_LEVEL_SUMMARY ──
-            const q12 = await prisma.$queryRawUnsafe<any[]>(`SELECT bo.booking_outcome_risk_level AS lvl, COUNT(*)::bigint AS c FROM booking_outcome bo JOIN booking b ON b.booking_id = bo.booking_id AND b.university_id = bo.university_id WHERE ${bdf} AND bo.booking_outcome_risk_level IS NOT NULL GROUP BY bo.booking_outcome_risk_level ORDER BY bo.booking_outcome_risk_level`);
+            const q12 = await prisma.$queryRawUnsafe<any[]>(`SELECT bo.booking_outcome_risk_level AS lvl, COUNT(*)::bigint AS c FROM booking_outcome bo JOIN booking b ON b.booking_id = bo.booking_id AND b.university_id = bo.university_id ${tsJoin} WHERE ${tsFilter} AND bo.booking_outcome_risk_level IS NOT NULL GROUP BY bo.booking_outcome_risk_level ORDER BY bo.booking_outcome_risk_level`);
             const tot12 = q12.reduce((s, r) => s + Number(r.c), 0);
             let s12 = `${dateLabel}\n\n### ⚠️ ระดับความเสี่ยง\n\n| ระดับ | จำนวน | สัดส่วน |\n|---|---|---|\n`;
             q12.forEach(r => { const pct = tot12 > 0 ? ((Number(r.c) / tot12) * 100).toFixed(1) : "0"; s12 += `| ${riskLabels[Number(r.lvl)] || `ระดับ ${r.lvl}`} | ${Number(r.c).toLocaleString()} | ${pct}% |\n`; });
             pushLookup("RISK_LEVEL_SUMMARY", sfx, "ระดับความเสี่ยง", s12);
 
             // ── 6.13 PROVINCIAL_SUMMARY ──
-            const q13 = await prisma.$queryRawUnsafe<any[]>(`SELECT p.province_name_th, COUNT(*)::bigint AS c, COUNT(DISTINCT b.university_id)::bigint AS u FROM booking b JOIN university u2 ON u2.university_id = b.university_id JOIN province p ON p.province_id = u2.province_id WHERE ${bdf} GROUP BY p.province_name_th ORDER BY c DESC LIMIT 20`);
+            const q13 = await prisma.$queryRawUnsafe<any[]>(`SELECT p.province_name_th, COUNT(*)::bigint AS c, COUNT(DISTINCT b.university_id)::bigint AS u FROM booking b ${tsJoin} JOIN university u2 ON u2.university_id = b.university_id JOIN province p ON p.province_id = u2.province_id WHERE ${tsFilter} GROUP BY p.province_name_th ORDER BY c DESC LIMIT 20`);
             let s13 = `${dateLabel}\n\n### 🏙️ Top 20 จังหวัดที่มีการจองมากสุด\n\n| อันดับ | จังหวัด | มหาวิทยาลัย | จำนวนคิว |\n|---|---|---|---|\n`;
             q13.forEach((r, i) => s13 += `| ${i + 1} | **${r.province_name_th}** | ${Number(r.u)} | ${Number(r.c).toLocaleString()} |\n`);
             pushLookup("PROVINCIAL_SUMMARY", sfx, "สถิติตามจังหวัด", s13);
 
             // ── 6.14 ONLINE_CHANNEL_SUMMARY ──
-            const q14 = await prisma.$queryRawUnsafe<any[]>(`SELECT oc.online_channel_name_th, COUNT(*)::bigint AS c FROM booking b JOIN online_channel_category oc ON oc.online_channel_category_id = b.online_channel_category_id WHERE ${bdf} AND b.online_channel_category_id IS NOT NULL GROUP BY oc.online_channel_name_th ORDER BY c DESC`);
+            const q14 = await prisma.$queryRawUnsafe<any[]>(`SELECT oc.online_channel_name_th, COUNT(*)::bigint AS c FROM booking b ${tsJoin} JOIN online_channel_category oc ON oc.online_channel_category_id = b.online_channel_category_id WHERE ${tsFilter} AND b.online_channel_category_id IS NOT NULL GROUP BY oc.online_channel_name_th ORDER BY c DESC`);
             let s14 = `${dateLabel}\n\n### 📱 สถิติช่องทาง Online\n\n| ช่องทาง | จำนวนคิว |\n|---|---|\n`;
             q14.forEach(r => s14 += `| **${r.online_channel_name_th}** | ${Number(r.c).toLocaleString()} |\n`);
             pushLookup("ONLINE_CHANNEL_SUMMARY", sfx, "ช่องทาง Online", s14);
 
             // ── 6.15 MONTHLY_TREND (only for 12M) ──
             if (months === 12) {
-                const q15 = await prisma.$queryRawUnsafe<any[]>(`SELECT TO_CHAR(booking_created_at, 'YYYY-MM') AS m, COUNT(*)::bigint AS c FROM booking WHERE ${df} GROUP BY m ORDER BY m`);
+                const q15 = await prisma.$queryRawUnsafe<any[]>(`SELECT TO_CHAR(ts2.time_slot_start_datetime, 'YYYY-MM') AS m, COUNT(*)::bigint AS c FROM booking b JOIN time_slot ts2 ON ts2.time_slot_id = b.time_slot_id AND ts2.university_id = b.university_id WHERE ts2.time_slot_start_datetime >= '${pFromStr}' AND ts2.time_slot_start_datetime < '${pToStr}' GROUP BY m ORDER BY m`);
                 let s15 = `${dateLabel}\n\n### 📈 เทรนด์การจองรายเดือน\n\n| เดือน | จำนวนคิว |\n|---|---|\n`;
                 q15.forEach(r => s15 += `| ${r.m} | ${Number(r.c).toLocaleString()} |\n`);
                 pushLookup("MONTHLY_TREND", sfx, "เทรนด์รายเดือน", s15);
@@ -393,19 +395,19 @@ export async function GET(req: NextRequest) {
             }
 
             // ── 6.16 HOURLY_SUMMARY ──
-            const q16 = await prisma.$queryRawUnsafe<any[]>(`SELECT EXTRACT(HOUR FROM ts.time_slot_start_datetime)::int AS h, COUNT(*)::bigint AS c FROM booking b JOIN time_slot ts ON ts.time_slot_id = b.time_slot_id AND ts.university_id = b.university_id WHERE ${bdf} GROUP BY h ORDER BY h`);
+            const q16 = await prisma.$queryRawUnsafe<any[]>(`SELECT EXTRACT(HOUR FROM ts.time_slot_start_datetime)::int AS h, COUNT(*)::bigint AS c FROM booking b JOIN time_slot ts ON ts.time_slot_id = b.time_slot_id AND ts.university_id = b.university_id WHERE ${tsFilter} GROUP BY h ORDER BY h`);
             let s16 = `${dateLabel}\n\n### ⏰ ช่วงเวลาที่มีการจองมากสุด\n\n| เวลา | จำนวนคิว |\n|---|---|\n`;
             q16.forEach(r => s16 += `| ${String(r.h).padStart(2, '0')}:00 | ${Number(r.c).toLocaleString()} |\n`);
             pushLookup("HOURLY_SUMMARY", sfx, "ช่วงเวลายอดนิยม", s16);
 
             // ── 6.17 TOP_HIGH_RISK_UNIVERSITIES ──
-            const q17 = await prisma.$queryRawUnsafe<any[]>(`WITH t AS (SELECT b.university_id, AVG(bo.booking_outcome_risk_level)::numeric(3,1) AS avg_risk, COUNT(*)::bigint AS c FROM booking b JOIN booking_outcome bo ON bo.booking_id = b.booking_id AND bo.university_id = b.university_id WHERE ${bdf} AND bo.booking_outcome_risk_level IS NOT NULL GROUP BY b.university_id HAVING COUNT(*) >= 5 ORDER BY avg_risk DESC LIMIT 20) SELECT u.university_name_th, t.avg_risk, t.c FROM t JOIN university u ON u.university_id = t.university_id ORDER BY t.avg_risk DESC`);
+            const q17 = await prisma.$queryRawUnsafe<any[]>(`WITH t AS (SELECT b.university_id, AVG(bo.booking_outcome_risk_level)::numeric(3,1) AS avg_risk, COUNT(*)::bigint AS c FROM booking b ${tsJoin} JOIN booking_outcome bo ON bo.booking_id = b.booking_id AND bo.university_id = b.university_id WHERE ${tsFilter} AND bo.booking_outcome_risk_level IS NOT NULL GROUP BY b.university_id HAVING COUNT(*) >= 5 ORDER BY avg_risk DESC LIMIT 20) SELECT u.university_name_th, t.avg_risk, t.c FROM t JOIN university u ON u.university_id = t.university_id ORDER BY t.avg_risk DESC`);
             let s17 = `${dateLabel}\n\n### � Top 20 มหาวิทยาลัยที่มีความเสี่ยงเฉลี่ยสูงสุด\n\n| อันดับ | มหาวิทยาลัย | ความเสี่ยงเฉลี่ย | จำนวนเคส |\n|---|---|---|---|\n`;
             q17.forEach((r, i) => s17 += `| ${i + 1} | **${r.university_name_th}** | ${Number(r.avg_risk).toFixed(1)}/5.0 | ${Number(r.c).toLocaleString()} |\n`);
             pushLookup("TOP_HIGH_RISK_UNIVERSITIES", sfx, "มหาลัยเสี่ยงสูง", s17);
 
             // ── 6.18 TOP_HIGH_RISK_STUDENTS ──
-            const q18 = await prisma.$queryRawUnsafe<any[]>(`WITH t AS (SELECT b.student_id, b.university_id, MAX(bo.booking_outcome_risk_level) AS max_risk, COUNT(*)::bigint AS c FROM booking b JOIN booking_outcome bo ON bo.booking_id = b.booking_id AND bo.university_id = b.university_id WHERE ${bdf} AND bo.booking_outcome_risk_level >= 4 GROUP BY b.student_id, b.university_id ORDER BY max_risk DESC, c DESC LIMIT 20) SELECT sp.student_first_name_th, sp.student_last_name_th, u.university_name_th, t.max_risk, t.c FROM t JOIN student_profile sp ON sp.student_id = t.student_id AND sp.university_id = t.university_id JOIN university u ON u.university_id = t.university_id ORDER BY t.max_risk DESC, t.c DESC`);
+            const q18 = await prisma.$queryRawUnsafe<any[]>(`WITH t AS (SELECT b.student_id, b.university_id, MAX(bo.booking_outcome_risk_level) AS max_risk, COUNT(*)::bigint AS c FROM booking b ${tsJoin} JOIN booking_outcome bo ON bo.booking_id = b.booking_id AND bo.university_id = b.university_id WHERE ${tsFilter} AND bo.booking_outcome_risk_level >= 4 GROUP BY b.student_id, b.university_id ORDER BY max_risk DESC, c DESC LIMIT 20) SELECT sp.student_first_name_th, sp.student_last_name_th, u.university_name_th, t.max_risk, t.c FROM t JOIN student_profile sp ON sp.student_id = t.student_id AND sp.university_id = t.university_id JOIN university u ON u.university_id = t.university_id ORDER BY t.max_risk DESC, t.c DESC`);
             let s18 = `${dateLabel}\n\n### 🚨 นิสิต/นักศึกษาที่มีความเสี่ยงสูง (ระดับ 4-5)\n\n| อันดับ | ชื่อ-นามสกุล | มหาวิทยาลัย | ระดับเสี่ยงสูงสุด | จำนวนเคส |\n|---|---|---|---|---|\n`;
             q18.forEach((r, i) => s18 += `| ${i + 1} | **${r.student_first_name_th} ${r.student_last_name_th}** | ${r.university_name_th} | ${riskLabels[Number(r.max_risk)] || r.max_risk} | ${Number(r.c).toLocaleString()} |\n`);
             pushLookup("TOP_HIGH_RISK_STUDENTS", sfx, "นิสิตเสี่ยงสูง", s18);
