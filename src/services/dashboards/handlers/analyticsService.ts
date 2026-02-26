@@ -166,7 +166,7 @@ export function buildFilterClause(params: AnalyticsParams): Prisma.Sql {
 }
 
 // ─── Time Bucket Helper ─────────────────────────────────────────────────────
-function getTimeBucketSQL(params: AnalyticsParams): { bucketExpr: string; bucketLabel: string } {
+function getTimeBucketSQL(params: AnalyticsParams): { bucketExpr: string; bucketLabel: "hour" | "day" | "week" | "month" } {
     if (params.all_time || !params.date_start || !params.date_end) {
         return { bucketExpr: "date_trunc('month', ts.time_slot_start_datetime)", bucketLabel: "month" };
     }
@@ -174,8 +174,9 @@ function getTimeBucketSQL(params: AnalyticsParams): { bucketExpr: string; bucket
     const end = new Date(params.date_end);
     const days = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
 
-    if (days <= 31) return { bucketExpr: "date_trunc('day', ts.time_slot_start_datetime)", bucketLabel: "day" };
-    if (days <= 120) return { bucketExpr: "date_trunc('week', ts.time_slot_start_datetime)", bucketLabel: "week" };
+    if (days <= 2) return { bucketExpr: "date_trunc('hour', ts.time_slot_start_datetime)", bucketLabel: "hour" };
+    if (days <= 45) return { bucketExpr: "date_trunc('day', ts.time_slot_start_datetime)", bucketLabel: "day" };
+    if (days <= 180) return { bucketExpr: "date_trunc('week', ts.time_slot_start_datetime)", bucketLabel: "week" };
     return { bucketExpr: "date_trunc('month', ts.time_slot_start_datetime)", bucketLabel: "month" };
 }
 
@@ -262,7 +263,7 @@ export async function runAnalytics(
         prevFilterSQL = buildFilterClause(prevParams);
     }
 
-    const { bucketExpr } = getTimeBucketSQL(params);
+    const { bucketExpr, bucketLabel } = getTimeBucketSQL(params);
     const grp = getGroupColumns(groupLevel);
     const w = LOAD_INDEX_WEIGHTS;
 
@@ -287,7 +288,9 @@ export async function runAnalytics(
               COUNT(CASE WHEN bo.booking_outcome_risk_level >= 4 THEN 1 END)::int AS high_risk_count,
               COUNT(bo.booking_outcome_risk_level)::int AS total_with_risk,
               COUNT(CASE WHEN b.problem_category_id = ${mentalId} THEN 1 END)::int AS mental_count,
-              COUNT(CASE WHEN b.booking_status = 'COMPLETED' THEN 1 END)::int AS completed_count
+              COUNT(CASE WHEN b.booking_status = 'COMPLETED' THEN 1 END)::int AS completed_count,
+              COUNT(CASE WHEN ba_res.consultant_university_id = b.university_id THEN 1 END)::int AS internal_res,
+              COUNT(CASE WHEN ba_res.consultant_university_id != b.university_id AND ba_res.consultant_university_id IS NOT NULL THEN 1 END)::int AS external_res
             FROM booking b
             JOIN student_academic sa ON sa.university_id = b.university_id AND sa.student_id = b.student_id
             LEFT JOIN student_profile sp ON sp.university_id = b.university_id AND sp.student_id = b.student_id
@@ -295,12 +298,13 @@ export async function runAnalytics(
             LEFT JOIN booking_attendance ba ON ba.university_id = b.university_id AND ba.booking_id = b.booking_id
             LEFT JOIN booking_cancellation bc ON bc.university_id = b.university_id AND bc.booking_id = b.booking_id
             LEFT JOIN time_slot ts ON ts.university_id = b.university_id AND ts.time_slot_id = b.time_slot_id
+            LEFT JOIN booking_assignment ba_res ON ba_res.university_id = b.university_id AND ba_res.booking_id = b.booking_id AND ba_res.is_active = true
             WHERE 1=1 ${scope.scopeSQL} ${filterSQL}
 
             UNION ALL
 
             SELECT 'risk' AS _section, bo.booking_outcome_risk_level AS level,
-              COUNT(*)::int, 0, 0, 0, 0, NULL, 0, 0, 0, 0 -- 12 columns
+              COUNT(*)::int, 0, 0, 0, 0, NULL, 0, 0, 0, 0, 0, 0 -- 14 columns
             FROM booking b
             JOIN student_academic sa ON sa.university_id = b.university_id AND sa.student_id = b.student_id
             JOIN booking_outcome bo ON bo.university_id = b.university_id AND bo.booking_id = b.booking_id
@@ -463,6 +467,12 @@ export async function runAnalytics(
         highRiskCount: Number(summaryRow.high_risk_count) || 0,
     };
 
+    const therapistResource = {
+        internal: Number(summaryRow.internal_res) || 0,
+        external: Number(summaryRow.external_res) || 0,
+        total: (Number(summaryRow.internal_res) || 0) + (Number(summaryRow.external_res) || 0),
+    };
+
     // ── Parse: Previous Summary ──
     let previousSummary: SummaryStats | undefined = undefined;
     const prevSummaryRow = (prevSummaryRows as any[]).find((r) => r._section === "summary");
@@ -589,7 +599,10 @@ export async function runAnalytics(
 
     // ── Parse: Trend ──
     const trend: TrendBucket[] = trendRows.map((r) => ({
-        bucket: r.bucket?.substring(0, 10) || "",
+        // Preserve full timestamp if hourly, otherwise date only
+        bucket: bucketLabel === "hour"
+            ? (r.bucket ? new Date(r.bucket).toISOString() : "")
+            : (r.bucket?.substring(0, 10) || ""),
         totalBookings: Number(r.total_bookings),
         cancelledCount: Number(r.cancelled_count),
         noShowCount: Number(r.no_show_count),
@@ -605,6 +618,8 @@ export async function runAnalytics(
         attendanceByGroup,
         cancellationByGroup,
         riskDistribution,
-        trend,
+        trend: trend,
+        trendResolution: bucketLabel,
+        therapistResource
     };
 }

@@ -141,6 +141,12 @@ export interface AnalyticsResult {
     cancellationByGroup: CancellationGroupItem[];
     riskDistribution: RiskDistribution;
     trend: TrendBucket[];
+    trendResolution: "hour" | "day" | "week" | "month"; // [NEW] The resolution used for the trend buckets
+    therapistResource?: {
+        internal: number;
+        external: number;
+        total: number;
+    };
     studentRank?: StudentRankRow[];   // only for ADVISOR
 }
 

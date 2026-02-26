@@ -36,6 +36,11 @@ const ProblemLandscapeChart = dynamic(
   { loading: () => <div className="h-[600px] bg-slate-50 animate-pulse rounded-3xl" />, ssr: false }
 );
 
+const TherapistResourceChart = dynamic(
+  () => import("./TherapistResourceChart").then((m) => ({ default: m.TherapistResourceChart })),
+  { loading: () => <div className="h-96 bg-slate-50 animate-pulse rounded-3xl" />, ssr: false }
+);
+
 export function RectorDashboard() {
   const { data, loading, params, setParams } = useAnalytics();
 
@@ -83,8 +88,8 @@ export function RectorDashboard() {
         </button>
       )}
 
-      {/* 1. STRATEGIC KPI CARDS */}
-      <section>
+      {/* 1. EXECUTIVE PULSE: Top-level KPIs */}
+      <section className="animate-in slide-in-from-bottom duration-500">
         <StrategicKPICards
           current={data?.summary}
           previous={data?.previousSummary}
@@ -92,32 +97,80 @@ export function RectorDashboard() {
         />
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* 2. DEMAND TREND */}
-        <div className="lg:col-span-2">
-          <ComparativeTrendChart data={data?.trend ?? []} loading={loading} />
+      {/* 2. STRATEGIC DYNAMICS: Demand Trend & Problem DNA */}
+      <section className="space-y-6">
+        <div className="flex items-center gap-3 px-2">
+          <div className="p-2 bg-indigo-50 rounded-xl">
+            <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-slate-800 tracking-tight">Strategic Demand Dynamics</h2>
+            <p className="text-xs text-slate-500 font-medium">วิเคราะห์แนวโน้มความต้องการและสัดส่วนประเภทปัญหาเชิงนโยบาย</p>
+          </div>
         </div>
 
-        {/* 3. PROBLEM DNA (Policy Focus) */}
-        <div>
-          <ProblemDNAChart data={data?.problemCategories ?? []} loading={loading} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2">
+            <ComparativeTrendChart
+              data={data?.trend ?? []}
+              resolution={data?.trendResolution}
+              loading={loading}
+            />
+          </div>
+          <div>
+            <ProblemDNAChart data={data?.problemCategories ?? []} loading={loading} />
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 4. SAFETY CLUSTERS (Risk Focus) */}
-        <StrategicRiskHeatmap data={data?.loadIndex ?? []} loading={loading} />
+      {/* 3. RESOURCE & CAPACITY: Resource Origins & Faculty Volume */}
+      <section className="space-y-6">
+        <div className="flex items-center gap-3 px-2">
+          <div className="p-2 bg-emerald-50 rounded-xl">
+            <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-slate-800 tracking-tight">Resource Capacity & Sustainability</h2>
+            <p className="text-xs text-slate-500 font-medium">การบริหารจัดการบุคลากรและศักยภาพการรองรับนิสิตแยกตามคณะ</p>
+          </div>
+        </div>
 
-        <FacultyVolumeChart
-          data={data?.loadIndex ?? []}
-          loading={loading}
-          onBarClick={(item) => setParams({ faculty_id: item.groupId })}
-        />
-      </div>
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+          <div className="lg:col-span-2">
+            <TherapistResourceChart data={data?.therapistResource} />
+          </div>
+          <div className="lg:col-span-3">
+            <FacultyVolumeChart
+              data={data?.loadIndex ?? []}
+              loading={loading}
+              onBarClick={(item) => setParams({ faculty_id: item.groupId })}
+            />
+          </div>
+        </div>
+      </section>
 
-      {/* 6. PROBLEM LANDSCAPE (Comprehensive Distribution) */}
-      <section>
-        <ProblemLandscapeChart data={data?.problemCategories ?? []} loading={loading} />
+      {/* 4. RISK & LANDSCAPE: Deep-Dive Analysis */}
+      <section className="space-y-6 bg-slate-50/50 p-8 rounded-[3rem] border border-slate-100 shadow-sm">
+        <div className="flex items-center gap-3 px-2">
+          <div className="p-2 bg-rose-50 rounded-xl">
+            <svg className="w-5 h-5 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-slate-800 tracking-tight">Institutional Risk & Holistic Landscape</h2>
+            <p className="text-xs text-slate-500 font-medium">การเฝ้าระวังกลุ่มเสี่ยงและการกระจายตัวของปัญหาในระดับมหภาค</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-8">
+          <StrategicRiskHeatmap data={data?.loadIndex ?? []} loading={loading} />
+          <ProblemLandscapeChart data={data?.problemCategories ?? []} loading={loading} />
+        </div>
       </section>
 
       {/* FOOTER */}
