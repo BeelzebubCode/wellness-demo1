@@ -239,7 +239,11 @@ export async function reverseNoShowPenalty(tx: Tx, ctx: PenaltyCtx) {
 
 /**
  * Roll back penalty when HeadConsultant approves an exception request.
- * Restores: lock_until, count, points, and writes audit log.
+ *
+ * Business Rules:
+ *  - NO_SHOW (<6h cancel): full reset — count→0, restore 30 pts, unlock
+ *  - LATE_CANCEL (6-24h):  per-booking — count -1, restore 7 pts (20÷3),
+ *                          unlock only if new count < 3
  */
 export async function rollbackPenalty(tx: Tx, ctx: RollbackCtx) {
   const request = await tx.bookingExceptionRequest.findUnique({
@@ -256,6 +260,7 @@ export async function rollbackPenalty(tx: Tx, ctx: RollbackCtx) {
   let refundAmount = 0;
 
   if (isNoShow) {
+    // ── NO_SHOW (<6h): full reset ──
     await tx.studentTrustStatus.update({
       where: { university_id_student_id: { university_id: ctx.universityId, student_id: ctx.studentId } },
       data: {
@@ -264,26 +269,43 @@ export async function rollbackPenalty(tx: Tx, ctx: RollbackCtx) {
       },
     });
     refundAmount = 30;
+
+    await restorePoints(tx, ctx.studentId, ctx.universityId, refundAmount);
+    await writeDisciplineLog(tx, {
+      universityId: ctx.universityId,
+      studentId: ctx.studentId,
+      bookingId: request.booking_id,
+      eventType: "EXCEPTION_APPROVED_ROLLBACK",
+      deltaPoints: refundAmount,
+      lockUntil: null,
+      note: `อนุมัติยกเว้นโทษ (No-Show) — คืน ${refundAmount} แต้ม, ปลด lock`,
+      createdById: ctx.actorAccountId,
+    });
   } else {
+    // ── LATE_CANCEL (6-24h): decrement by 1, refund 7 pts ──
+    const REFUND_PER_BOOKING = 7; // 20 ÷ 3 ≈ 7 pts per booking
+    const newCount = Math.max(0, trust.student_trust_late_cancel_count - 1);
+    const shouldUnlock = newCount < 3;
+
     await tx.studentTrustStatus.update({
       where: { university_id_student_id: { university_id: ctx.universityId, student_id: ctx.studentId } },
       data: {
-        student_trust_late_cancel_count: 0,
-        student_trust_locked_until: null,
+        student_trust_late_cancel_count: newCount,
+        student_trust_locked_until: shouldUnlock ? null : undefined, // only clear lock if count < 3
       },
     });
-    refundAmount = 20;
-  }
+    refundAmount = REFUND_PER_BOOKING;
 
-  await restorePoints(tx, ctx.studentId, ctx.universityId, refundAmount);
-  await writeDisciplineLog(tx, {
-    universityId: ctx.universityId,
-    studentId: ctx.studentId,
-    bookingId: request.booking_id,
-    eventType: "EXCEPTION_APPROVED_ROLLBACK",
-    deltaPoints: refundAmount,
-    lockUntil: null,
-    note: `อนุมัติยกเว้นโทษ — คืน ${refundAmount} แต้ม, ปลด lock`,
-    createdById: ctx.actorAccountId,
-  });
+    await restorePoints(tx, ctx.studentId, ctx.universityId, refundAmount);
+    await writeDisciplineLog(tx, {
+      universityId: ctx.universityId,
+      studentId: ctx.studentId,
+      bookingId: request.booking_id,
+      eventType: "EXCEPTION_APPROVED_ROLLBACK",
+      deltaPoints: refundAmount,
+      lockUntil: shouldUnlock ? null : trust.student_trust_locked_until,
+      note: `อนุมัติยกเว้นโทษ (Late Cancel) — ลด count เป็น ${newCount}, คืน ${refundAmount} แต้ม${shouldUnlock ? ", ปลด lock" : ""}`,
+      createdById: ctx.actorAccountId,
+    });
+  }
 }

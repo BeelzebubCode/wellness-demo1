@@ -10,7 +10,7 @@ import {
 } from "@/shared/constants/booking-status";
 
 import { Card, Button } from "@/components/ui";
-import { Clock, XCircle, Star, ChevronDown, MessageSquarePlus, AlertTriangle, FileText } from "lucide-react";
+import { Clock, XCircle, Star, ChevronDown, MessageSquarePlus } from "lucide-react";
 import type { MyBookingDto } from "@/features/booking/types";
 import { OnlineSessionPanel } from "./OnlineSessionPanel";
 
@@ -70,8 +70,6 @@ export interface MyAppointmentCardProps {
   isExpanded?: boolean;
   onToggle?: () => void;
   onFeedback?: () => void;
-  onExceptionRequest?: () => void;
-  globalExceptionPending?: boolean;
 }
 
 export function MyAppointmentCard({
@@ -81,8 +79,6 @@ export function MyAppointmentCard({
   isExpanded = false,
   onToggle,
   onFeedback,
-  onExceptionRequest,
-  globalExceptionPending = false,
 }: MyAppointmentCardProps) {
   const view = getDisplayData(booking);
 
@@ -284,64 +280,7 @@ export function MyAppointmentCard({
                 </div>
               )}
 
-              {/* Exception Action */}
-              {normalized === "CANCELLED" && onExceptionRequest && (
-                <div className="col-span-1 sm:col-span-2 mt-2 border-t pt-3 flex flex-col gap-3">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="text-xs text-gray-500">
-                      <span className="font-semibold text-gray-700">สามารถยื่นคำขอยกเว้นโทษได้</span>
-                      <br />ภายใน 3 วันหลังจากการยกเลิกหรือขาดนัด
-                    </div>
-                    {view.hasExceptionRequest && booking.exceptionRequestStatus === "REJECTED" ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 text-xs border-primary-200 text-primary-700 hover:bg-primary-50 hover:border-primary-300 transition-colors shrink-0 whitespace-nowrap"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onExceptionRequest();
-                        }}
-                      >
-                        <FileText className="w-3.5 h-3.5 mr-1" />
-                        ยื่นคำขอใหม่
-                      </Button>
-                    ) : view.hasExceptionRequest ? (
-                      <span className="text-xs font-semibold text-gray-400 bg-gray-50 px-3 py-1.5 rounded-md border text-center whitespace-nowrap shrink-0">
-                        ยื่นคำขอแล้ว
-                      </span>
-                    ) : globalExceptionPending ? (
-                      <span className="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-md text-center whitespace-nowrap shrink-0">
-                        ท่านมีคำขอ<br className="sm:hidden" />รอดำเนินการอยู่
-                      </span>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 text-xs border-primary-200 text-primary-700 hover:bg-primary-50 hover:border-primary-300 transition-colors shrink-0 whitespace-nowrap"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onExceptionRequest();
-                        }}
-                      >
-                        <FileText className="w-3.5 h-3.5 mr-1" />
-                        ยื่นคำขอยกเว้นโทษ
-                      </Button>
-                    )}
-                  </div>
 
-                  {view.hasExceptionRequest && booking.exceptionRequestStatus === "REJECTED" && (
-                    <div className="bg-red-50 border border-red-100 rounded-lg p-3 w-full">
-                      <p className="text-xs font-medium text-red-600 mb-1 flex items-center gap-1.5">
-                        <XCircle className="w-3.5 h-3.5" />
-                        คำขอยกเว้นโทษถูกปฏิเสธ
-                      </p>
-                      <p className="text-sm text-red-800 leading-relaxed break-words whitespace-pre-wrap">
-                        {booking.exceptionRequestNote || "ไม่มีการระบุเหตุผล"}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
 
             <div className="text-center">

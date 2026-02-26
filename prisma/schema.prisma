@@ -83,7 +83,7 @@ model University {
 }
 
 model AccountUniversityPermission {
-  account_university_permission_id Int                  @id @default(autoincrement()) @map("account_university_access_id")
+  account_university_permission_id Int                  @id @default(autoincrement())
   account_id                       Int
   university_id                    Int
   access_role                      UniversityAccessRole @default(STUDENT)
@@ -99,7 +99,7 @@ model AccountUniversityPermission {
   @@index([university_id])
   @@index([access_role])
   @@index([access_granted_by_account_id])
-  @@map("account_university_access")
+  @@map("account_university_permission")
 }
 
 // ==========================================
@@ -266,14 +266,14 @@ model StudentAcademic {
 // ==========================================
 
 model SubjectGroupCategory {
-  subject_group_category_id Int    @id @default(autoincrement()) @map("education_field_group_id")
+  subject_group_category_id Int    @id @default(autoincrement())
   isced_broad_field_code    String @unique @db.VarChar(2) // "00".."10"
   field_group_name_th       String @db.VarChar(150)
   field_group_name_en       String @db.VarChar(150)
 
   faculties Faculty[]
 
-  @@map("education_field_group")
+  @@map("subject_group_category")
 }
 
 model Faculty {
@@ -285,7 +285,7 @@ model Faculty {
 
   dean_account_id Int? // [NEW] Link to Dean account
 
-  subject_group_category_id Int?                  @map("education_field_group_id")
+  subject_group_category_id Int?
   subjectGroupCategory      SubjectGroupCategory? @relation(fields: [subject_group_category_id], references: [subject_group_category_id])
 
   university University @relation(fields: [university_id], references: [university_id])
@@ -666,7 +666,7 @@ model BookingOutcome {
 }
 
 model BookingAgreementSignature {
-  booking_agreement_signature_id Int @id @default(autoincrement()) @map("booking_consent_signature_id")
+  booking_agreement_signature_id Int @id @default(autoincrement())
 
   university_id Int
   booking_id    Int
@@ -684,7 +684,7 @@ model BookingAgreementSignature {
   // ✅ บังคับ 1 booking ต่อ 1 signature
   @@unique([university_id, booking_id])
   @@index([university_id, student_id])
-  @@map("booking_consent_signature")
+  @@map("booking_agreement_signature")
 }
 
 model CancellationReason {

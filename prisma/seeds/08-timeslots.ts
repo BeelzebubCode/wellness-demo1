@@ -15,7 +15,7 @@ export async function seedTimeSlots(
 
   const timeSlotsByUniId = new Map<number, TimeSlot[]>();
 
-  const PAST_DAYS = 365; // ✅ 1 Year History
+  const PAST_DAYS = 2555; // ✅ 7 Years History
   const FUTURE_DAYS = 14;
   const TOTAL_DAYS = PAST_DAYS + FUTURE_DAYS;
 
@@ -57,14 +57,14 @@ export async function seedTimeSlots(
   // main loop
   // ------------------------------
   for (const uni of universities) {
-      // Pre-fetch day periods for this university
-      const periods = await prisma.dayPeriod.findMany({
-          where: { university_id: uni.university_id }
-      });
-      const dayPeriodMap = new Map<string, number>();
-      for (const p of periods) {
-          dayPeriodMap.set(p.day_period_code, p.day_period_id);
-      }
+    // Pre-fetch day periods for this university
+    const periods = await prisma.dayPeriod.findMany({
+      where: { university_id: uni.university_id }
+    });
+    const dayPeriodMap = new Map<string, number>();
+    for (const p of periods) {
+      dayPeriodMap.set(p.day_period_code, p.day_period_id);
+    }
 
     const createBuffer: Omit<TimeSlot, "time_slot_id">[] = [];
 
@@ -72,7 +72,7 @@ export async function seedTimeSlots(
 
     for (let i = 0; i <= TOTAL_DAYS; i++) {
       const distinctDate = addDays(startDate, i);
-      
+
       const d = new Date(Date.UTC(distinctDate.getFullYear(), distinctDate.getMonth(), distinctDate.getDate(), 12, 0, 0));
 
       const slots = buildSlotsForDate(d, dayPeriodMap);

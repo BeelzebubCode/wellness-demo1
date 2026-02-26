@@ -1,5 +1,5 @@
 // lib/constants/booking-nav.ts
-import { CalendarPlus, CalendarCheck, History, User, Bot } from "lucide-react";
+import { CalendarPlus, CalendarCheck, History, User, Bot, AlertTriangle } from "lucide-react";
 import type { NavItem } from "@/components/layout/sidebar/types";
 
 export const BOOKING_NAV: NavItem[] = [
@@ -20,6 +20,11 @@ export const BOOKING_NAV: NavItem[] = [
     icon: History,
   },
   {
+    href: "/booking/exception-requests",
+    label: "คำขอยกเว้นโทษ",
+    icon: AlertTriangle,
+  },
+  {
     href: "/help/ai",
     label: "AI ผู้ช่วย",
     icon: Bot,
@@ -30,3 +35,4 @@ export const BOOKING_NAV: NavItem[] = [
     icon: User,
   },
 ];
+

@@ -7,7 +7,7 @@ export async function clearDatabase(prisma: PrismaClient) {
   // 🚀 OPTIMIZED: ใช้ TRUNCATE แทน deleteMany (เร็วกว่า 100+ เท่า!)
   // TRUNCATE ลบข้อมูล + Reset ID sequences ในคำสั่งเดียว
   // CASCADE = ลบข้อมูลที่เกี่ยวข้องทั้งหมดอัตโนมัติ
-  
+
   try {
     await prisma.$executeRawUnsafe(`
       TRUNCATE TABLE 
@@ -39,7 +39,7 @@ export async function clearDatabase(prisma: PrismaClient) {
         advisor,
         department,
         faculty,
-        account_university_access,
+        account_university_permission,
         university,
         province,
         region,
@@ -49,11 +49,11 @@ export async function clearDatabase(prisma: PrismaClient) {
         account
       RESTART IDENTITY CASCADE;
     `);
-    
+
     console.log("✅ Database cleared and sequences reset!\n");
   } catch (error: any) {
     console.error("⚠️  TRUNCATE failed, falling back to deleteMany...");
-    
+
     // Fallback: ถ้า TRUNCATE ใช้ไม่ได้ (เช่น มี FK constraints ที่ซับซ้อน)
     // ใช้วิธีเก่า (ช้ากว่า)
     await prisma.notification.deleteMany();
@@ -140,7 +140,7 @@ export async function clearDatabase(prisma: PrismaClient) {
       "feedback_comment",
       "notification_template",
       "notification",
-      "account_university_access",
+      "account_university_permission",
       "borrow_request",
       "borrow_assignment",
     ];
