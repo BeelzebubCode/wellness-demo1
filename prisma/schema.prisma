@@ -1249,7 +1249,7 @@ model ConsultantBorrowPolicy {
   university University? @relation(fields: [university_id], references: [university_id])
 
   @@index([university_id, is_active])
-  @@map("borrow_window_policy")
+  @@map("consultant_borrow_policy")
 }
 
 // ==========================================
