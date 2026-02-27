@@ -1,28 +1,28 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useAnalytics } from "../../shared/useAnalytics";
-import { AnalyticsFilterBar } from "../../shared/AnalyticsFilterBar";
-import { SummaryKPICards } from "../../shared/SummaryKPICards";
+import { useAnalytics } from "../../widgets/hooks/useAnalytics";
+import { DashboardFilterBar } from "../../widgets/filters/DashboardFilterBar";
+import { SummaryKPICards } from "../../widgets/cards/SummaryKPICards";
 
 const ProblemCategoryChart = dynamic(
-  () => import("../../shared/ProblemCategoryChart").then((m) => ({ default: m.ProblemCategoryChart })),
+  () => import("../../widgets/charts/ProblemCategoryChart").then((m) => ({ default: m.ProblemCategoryChart })),
   { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
 );
 const AttendanceChart = dynamic(
-  () => import("../../shared/AttendanceChart").then((m) => ({ default: m.AttendanceChart })),
+  () => import("../../widgets/charts/AttendanceChart").then((m) => ({ default: m.AttendanceChart })),
   { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
 );
 const RiskDistributionChart = dynamic(
-  () => import("../../shared/RiskDistributionChart").then((m) => ({ default: m.RiskDistributionChart })),
+  () => import("../../widgets/charts/RiskDistributionChart").then((m) => ({ default: m.RiskDistributionChart })),
   { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
 );
 const TrendChart = dynamic(
-  () => import("../../shared/TrendChart").then((m) => ({ default: m.TrendChart })),
+  () => import("../../widgets/charts/TrendChart").then((m) => ({ default: m.TrendChart })),
   { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
 );
 const StudentRankTable = dynamic(
-  () => import("../../shared/StudentRankTable").then((m) => ({ default: m.StudentRankTable })),
+  () => import("../../widgets/charts/StudentRankTable").then((m) => ({ default: m.StudentRankTable })),
   { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
 );
 
@@ -43,7 +43,7 @@ export function AdvisorDashboard() {
 
       {/* ===== Advanced Filter ===== */}
       <section className="relative z-40">
-        <AnalyticsFilterBar params={params} onChange={setParams} hideFaculty />
+        <DashboardFilterBar role="advisor" params={params} onChange={setParams} />
       </section>
 
       {/* ===== Stats Cards ===== */}

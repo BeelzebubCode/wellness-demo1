@@ -3,8 +3,8 @@
 
 import React from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import type { LoadIndexItem } from "./analytics-types";
-import { ChartCard } from "./ChartCard";
+import type { LoadIndexItem } from "../types/analytics-types";
+import { ChartCard } from "../cards/ChartCard";
 
 const COLORS = [
     "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16",

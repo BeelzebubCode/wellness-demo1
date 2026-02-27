@@ -13,10 +13,19 @@ export const SCHEMA_HINTS = `
 -- ⛔ When filtering by name, ALWAYS use LIKE '%คำค้น%', NOT exact match '='!
 -- ⛔ Risk level is in booking_outcome.booking_outcome_risk_level (int 1-5), NOT in booking!
 -- ⛔ When searching by NAME, use LIKE '%คำค้น%'. But when user gives a specific ID number (e.g. student id 1000009), use WHERE student_id = 1000009 directly
+-- ⛔ When searching a person by ONE name keyword (e.g. "อุไร"), use OR between first_name and last_name:
+--   WHERE cp.consultant_first_name LIKE '%อุไร%' OR cp.consultant_last_name LIKE '%อุไร%'
+--   WRONG: ...first_name LIKE '%อุไร%' AND ...last_name LIKE '%อุไร%' — this will match NOTHING!
 -- ⛔ The student table has NO faculty_id — join through student_academic
 -- ⛔ "ที่ปรึกษา/อาจารย์ที่ปรึกษา/advisor" = advisor table (via student_academic.advisor_id), NOT consultant!
 -- ⛔ "ผู้ให้คำปรึกษา/consultant/นักจิตวิทยา" = consultant → consultant_profile (via booking.consultant_id)
 -- ⛔ "ปัญหาการเงิน" = filter on problem_category.problem_category_name_th LIKE '%การเงิน%', NOT university!
+
+-- ═══════ ⚠⚠⚠ CRITICAL: คณะ vs ภาควิชา — DIFFERENT TABLES! ⚠⚠⚠ ═══════
+-- "คณะ" = faculty table → sa.faculty_id → JOIN faculty f ON f.faculty_id = sa.faculty_id → f.faculty_name_th
+-- "ภาควิชา/สาขา/department" = department table → sa.department_id → JOIN department d ON d.department_id = sa.department_id → d.department_name_th
+-- ⛔ NEVER use department when user says "คณะ"! คณะ = FACULTY, always!
+-- ⛔ NEVER use faculty when user says "ภาควิชา"! ภาควิชา = DEPARTMENT!
 
 -- ═══════ ⚠⚠⚠ CRITICAL: FACULTY vs UNIVERSITY ARE SEPARATE TABLES! ⚠⚠⚠ ═══════
 -- faculty.faculty_name_th = ONLY the faculty name, e.g. 'คณะวิศวกรรมศาสตร์'
@@ -52,7 +61,8 @@ export const SCHEMA_HINTS = `
 -- When counting, always cast: COUNT(*)::bigint
 -- When averaging, cast: AVG(col)::numeric(10,2)
 -- Start answer directly with SELECT or WITH
--- Always LIMIT results to 20 rows max unless told otherwise
+-- ⚠️ LIMIT RULE: If user says "Top 5" → LIMIT 5, "Top 10" → LIMIT 10. ALWAYS match the user's requested N exactly!
+--   If user does NOT specify a number, default LIMIT 10. NEVER use LIMIT 20 unless user asks for "Top 20".
 -- Always include date filter on booking.booking_created_at when querying bookings
 -- "stress/เครียด" = high booking count; "risk/เสี่ยง" = high booking_outcome_risk_level
 -- booking_outcome stores risk: booking_outcome_risk_level (int 1-5, 5=highest)

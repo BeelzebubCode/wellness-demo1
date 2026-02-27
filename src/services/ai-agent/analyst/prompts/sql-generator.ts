@@ -15,7 +15,7 @@ Adhere to these rules:
 - Start your answer directly with SELECT or WITH
 - ⛔ Column aliases MUST be simple English (e.g. booking_count, student_name). NEVER use Thai aliases like "AS ชื่อนิสิต" — PostgreSQL will error!
 - ⛔ NEVER output markdown fences (\`\`\`sql). Output raw SQL only.
-- Always LIMIT results to 20 rows max unless told otherwise`;
+- ⚠️ LIMIT: If user says "Top 5" use LIMIT 5; "Top 10" use LIMIT 10. ALWAYS match user's requested N. Default LIMIT 10 if no N specified.`;
 
 const SQL_EXAMPLES = `
 ### Example Queries:
@@ -66,7 +66,7 @@ SELECT COUNT(CASE WHEN booking_status = 'CANCELLED' THEN 1 END)::bigint AS cance
 
 -- Q: คณะวิศวกรรมศาสตร์ จุฬาฯ มีนิสิตจองกี่คิว (CRITICAL: faculty and university are SEPARATE tables!)
 ### SQL:
-WITH faculty_bookings AS (SELECT sa.faculty_id, sa.university_id, COUNT(*)::bigint AS booking_count FROM booking b JOIN student_academic sa ON sa.student_id = b.student_id AND sa.university_id = b.university_id JOIN faculty f ON f.faculty_id = sa.faculty_id AND f.university_id = sa.university_id JOIN university u ON u.university_id = sa.university_id WHERE f.faculty_name_th LIKE '%วิศวกรรม%' AND u.university_name_th LIKE '%จุฬา%' AND b.booking_created_at >= '2025-02-26' AND b.booking_created_at < '2026-02-26' GROUP BY sa.faculty_id, sa.university_id ORDER BY booking_count DESC LIMIT 5) SELECT f.faculty_name_th, u.university_name_th, fb.booking_count FROM faculty_bookings fb JOIN faculty f ON f.faculty_id = fb.faculty_id AND f.university_id = fb.university_id JOIN university u ON u.university_id = fb.university_id ORDER BY fb.booking_count DESC
+WITH faculty_bookings AS (SELECT sa.faculty_id, sa.university_id, COUNT(*)::bigint AS booking_count FROM booking b JOIN student_academic sa ON sa.student_id = b.student_id AND sa.university_id = b.university_id JOIN faculty f ON f.faculty_id = sa.faculty_id AND f.university_id = sa.university_id JOIN university u ON u.university_id = sa.university_id WHERE f.faculty_name_th LIKE '%วิศวกรรม%' AND u.university_name_th LIKE '%จุฬา%' AND b.booking_created_at >= '2025-02-26' AND b.booking_created_at < '2026-02-26' GROUP BY sa.faculty_id, sa.university_id ORDER BY booking_count DESC) SELECT f.faculty_name_th, u.university_name_th, fb.booking_count FROM faculty_bookings fb JOIN faculty f ON f.faculty_id = fb.faculty_id AND f.university_id = fb.university_id JOIN university u ON u.university_id = fb.university_id ORDER BY fb.booking_count DESC
 
 -- Q: นิสิตคณะแพทย์ที่ยกเลิกคิวบ่อยสุด ชื่อ คณะ สาเหตุ (⚠️ CRITICAL: booking_cancellation.booking_id is from BOOKING, NOT student_id!)
 ### SQL:

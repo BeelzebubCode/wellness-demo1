@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { buildScopeClause, runAnalytics } from "./analyticsService";
-import type { AnalyticsParams, AnalyticsResult, FacultyOption } from "@/features/dashboard/shared/analytics-types";
+import type { AnalyticsParams, AnalyticsResult, FacultyOption } from "@/features/dashboard/widgets/types/analytics-types";
 
 export async function getRectorSummary(
     accountId: number,

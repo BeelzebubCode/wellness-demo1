@@ -5,8 +5,8 @@ import React from "react";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
-import type { RiskDistribution } from "./analytics-types";
-import { ChartCard } from "./ChartCard";
+import type { RiskDistribution } from "../types/analytics-types";
+import { ChartCard } from "../cards/ChartCard";
 import { AlertTriangle, TrendingUp, Shield } from "lucide-react";
 
 const RISK_COLORS: Record<number, string> = {

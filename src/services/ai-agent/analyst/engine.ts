@@ -16,6 +16,40 @@ import { lookupFromCache } from "./adapters/mongo-cache";
 import { formatDbResultToMarkdown, buildDataInjectionMessage } from "./presenter/formatter";
 import { sanitizeChinese, hasRealData, looksLikeHallucination } from "./presenter/sanitizer";
 
+/** Extract user's requested Top N from question (e.g. 'Top 5' → 5). Returns undefined if not found. */
+function extractTopN(question: string): number | undefined {
+    const m = question.match(/[Tt]op\s*(\d+)/i);
+    return m ? parseInt(m[1]) : undefined;
+}
+
+/** Trim markdown table rows to the user's requested Top N. Preserves headers and non-table content. */
+function trimMarkdownToTopN(output: string, topN: number | undefined): string {
+    if (!topN || topN >= 50) return output;
+    const lines = output.split('\n');
+    const result: string[] = [];
+    let tableRowCount = 0;
+    let inTable = false;
+    let headerDone = false;
+    for (const line of lines) {
+        const isTableRow = line.trimStart().startsWith('|');
+        const isSeparator = isTableRow && /^\|[\s-|:]+\|$/.test(line.trim());
+        if (isTableRow) {
+            if (!inTable) { inTable = true; headerDone = false; tableRowCount = 0; }
+            if (!headerDone) {
+                result.push(line); // header row or separator
+                if (isSeparator) headerDone = true;
+            } else {
+                tableRowCount++;
+                if (tableRowCount <= topN) result.push(line);
+            }
+        } else {
+            inTable = false;
+            result.push(line);
+        }
+    }
+    return result.join('\n');
+}
+
 // Detail keywords → force SQL pipeline (cache can't answer these)
 const DETAIL_WORDS = [
     "ชื่อ", "รายชื่อ", "ใคร", "คนไหน", "ชื่ออะไร", "รายละเอียด",
@@ -58,7 +92,7 @@ export async function runAnalytics(
         if (routerResult.matched && routerResult.lookupKey) {
             console.log(`[Engine] KeywordRouter matched: ${routerResult.lookupKey}`);
             const cached = await lookupFromCache(routerResult.lookupKey);
-            if (cached) return sanitizeChinese(cached);
+            if (cached) return trimMarkdownToTopN(sanitizeChinese(cached), extractTopN(question));
         }
     } else {
         console.log(`[Engine] Detail + multi-year → skipping cache, forcing SQL pipeline`);
@@ -104,7 +138,7 @@ export async function runAnalytics(
             actionData.intent = question;
         } else {
             const cached = await lookupFromCache(actionData.lookup_key);
-            if (cached) return sanitizeChinese(cached);
+            if (cached) return trimMarkdownToTopN(sanitizeChinese(cached), extractTopN(question));
             // Miss → fall through to SQL
             actionData.action = "NEED_DATA";
             actionData.intent = `Get data for: ${actionData.lookup_key}`;
@@ -117,13 +151,23 @@ export async function runAnalytics(
     const dateHint = `Date filter: WHERE booking.booking_created_at >= '${dateRange.dateFromStr}' AND booking.booking_created_at < '${dateRange.dateToStr}'`;
     const modelB = env.OLLAMA_MODEL_SQL_GENERATOR || modelA;
 
-    const bUserPrompt = `${scopeHint}\n${dateHint}\nIMPORTANT RULES:\n1. If your query uses the 'booking' table, you MUST include the date filter above.\n2. If the query does NOT need the booking table (e.g. looking up a student by ID, listing universities), do NOT add a date filter.\n3. When searching by name use LIKE '%...%'. When user gives a specific numeric ID (e.g. "id 1000009"), use WHERE student_id = 1000009 directly.\n4. For student lookup by ID: SELECT from student_profile JOIN student_academic JOIN faculty JOIN university — no booking table needed.\n\n### Question: ${actionData.intent}\n\n### SQL:\n`;
+    const bUserPrompt = `${scopeHint}\n${dateHint}\nIMPORTANT RULES:\n1. If your query uses the 'booking' table, you MUST include the date filter above.\n2. If the query does NOT need the booking table (e.g. looking up a student by ID, listing universities), do NOT add a date filter.\n3. When searching by name use LIKE '%...%'. When user gives a specific numeric ID (e.g. "id 1000009"), use WHERE student_id = 1000009 directly.\n4. For student lookup by ID: SELECT from student_profile JOIN student_academic JOIN faculty JOIN university — no booking table needed.\n5. ⚠️ LIMIT: If user says "Top 5" → LIMIT 5; "Top 3" → LIMIT 3; "Top 10" → LIMIT 10. ALWAYS match user's N. Default LIMIT 10 if no N.\n6. When searching a person name (e.g. "อุไร"), use OR: WHERE first_name LIKE '%อุไร%' OR last_name LIKE '%อุไร%'. NEVER AND.\n7. ⚠️ "คณะ" = faculty table (sa.faculty_id → faculty.faculty_name_th). "ภาควิชา/สาขา" = department table (sa.department_id → department.department_name_th). NEVER confuse them!\n\n### Question: ${actionData.intent}\n\n### SQL:\n`;
 
     const sqlPrompt = buildSqlPrompt();
     const messagesB: ChatMessage[] = [{ role: "user", content: sqlPrompt + "\n" + bUserPrompt }];
 
     console.log(`[Engine] Invoking Model B (${modelB}) for SQL...`);
     let rawSql = await chat(messagesB, { model: modelB, keep_alive: "10m", options: { temperature: 0, num_ctx: 8192, num_predict: 500 } });
+
+    // ═══ Programmatic fix: คณะ = faculty, NOT department ═══
+    // The LLM stubbornly maps "คณะ" to department. Detect and force retry with explicit instructions.
+    const wantsFaculty = /คณะ/.test(question) && !/ภาควิชา|สาขา|department/.test(question.toLowerCase());
+    if (wantsFaculty && /\bdepartment_id\b/i.test(rawSql) && !/\bfaculty_id\b/i.test(rawSql)) {
+        console.log(`[Engine] ⚠️ Rejecting SQL: user said "คณะ" but SQL uses department. Forcing retry with faculty.`);
+        messagesB.push({ role: "assistant", content: rawSql });
+        messagesB.push({ role: "user", content: `WRONG! User asked about "คณะ" which means FACULTY, not department!\nReplace ALL department references:\n- department_id → faculty_id\n- department_name_th → faculty_name_th  \n- JOIN department d → JOIN faculty f\nOutput ONLY the corrected SQL using faculty table.` });
+        rawSql = await chat(messagesB, { model: modelB, keep_alive: "10m", options: { temperature: 0, num_ctx: 8192, num_predict: 500 } });
+    }
 
     // ═══ 3-4. Validate → Execute → Retry ═══
     const dbResultStr = await executeWithRetries(
@@ -175,12 +219,12 @@ export async function runAnalytics(
     );
 
     if (hasRealData(story, dbResultStr)) {
-        return story;
+        return trimMarkdownToTopN(story, extractTopN(question));
     }
 
     // Fallback: LLM hallucinated — return table with deterministic summary
     console.warn(`[Engine] DataStory hallucinated — falling back to table-only`);
-    return `📅 ${dateRange.thaiText}\n\n${markdown}\n${buildDeterministicInsight(dbResultStr, rowCount)}`;
+    return trimMarkdownToTopN(`📅 ${dateRange.thaiText}\n\n${markdown}\n${buildDeterministicInsight(dbResultStr, rowCount)}`, extractTopN(question));
 
 }
 

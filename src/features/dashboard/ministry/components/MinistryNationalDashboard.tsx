@@ -5,21 +5,21 @@ import dynamic from "next/dynamic";
 import { TrendingUp } from "lucide-react";
 
 // Shared Analytics Components
-import { useAnalytics } from "../../shared/useAnalytics";
-import { AnalyticsFilterBar } from "../../shared/AnalyticsFilterBar";
-import { SummaryKPICards } from "../../shared/SummaryKPICards";
-import { CancellationSummary } from "../../shared/CancellationSummary";
+import { useAnalytics } from "../../widgets/hooks/useAnalytics";
+import { DashboardFilterBar } from "../../widgets/filters/DashboardFilterBar";
+import { SummaryKPICards } from "../../widgets/cards/SummaryKPICards";
+import { CancellationSummary } from "../../widgets/charts/CancellationSummary";
 
 const LoadIndexChart = dynamic(
     () => import("./MinistryLoadIndexChart").then((m) => ({ default: m.MinistryLoadIndexChart })),
     { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
 );
 const ProblemCategoryChart = dynamic(
-    () => import("../../shared/ProblemCategoryChart").then((m) => ({ default: m.ProblemCategoryChart })),
+    () => import("../../widgets/charts/ProblemCategoryChart").then((m) => ({ default: m.ProblemCategoryChart })),
     { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
 );
 const AttendanceChart = dynamic(
-    () => import("../../shared/AttendanceChart").then((m) => ({ default: m.AttendanceChart })),
+    () => import("../../widgets/charts/AttendanceChart").then((m) => ({ default: m.AttendanceChart })),
     { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
 );
 const RiskDistributionChart = dynamic(
@@ -63,11 +63,10 @@ export function MinistryNationalDashboard() {
 
             {/* 1. Filter Bar (National Mode Enabled) */}
             <section className="relative z-40">
-                <AnalyticsFilterBar
+                <DashboardFilterBar
+                    role="ministry"
                     params={params}
                     onChange={setParams}
-                    showNationalFilters={true} // 🌟 Enables Region/Province/University dropdowns
-                    hideFaculty={!params.university_id} // Hide faculty until a specific university is selected
                 />
             </section>
 

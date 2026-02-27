@@ -7,7 +7,7 @@ import type {
     AnalyticsParams,
     AnalyticsResult,
     StudentRankRow,
-} from "@/features/dashboard/shared/analytics-types";
+} from "@/features/dashboard/widgets/types/analytics-types";
 
 export async function getAdvisorSummary(
     accountId: number,

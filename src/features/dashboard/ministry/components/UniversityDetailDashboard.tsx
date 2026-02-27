@@ -11,29 +11,29 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 
 // Analytics & Sub-components
-import { useAnalytics } from "../../shared/useAnalytics";
-import { AnalyticsFilterBar } from "../../shared/AnalyticsFilterBar";
-import { SummaryKPICards } from "../../shared/SummaryKPICards";
-import { CancellationSummary } from "../../shared/CancellationSummary";
+import { useAnalytics } from "../../widgets/hooks/useAnalytics";
+import { DashboardFilterBar } from "../../widgets/filters/DashboardFilterBar";
+import { SummaryKPICards } from "../../widgets/cards/SummaryKPICards";
+import { CancellationSummary } from "../../widgets/charts/CancellationSummary";
 
 const LoadIndexChart = dynamic(
-    () => import("../../shared/LoadIndexChart").then((m) => ({ default: m.LoadIndexChart })),
+    () => import("../../widgets/charts/LoadIndexChart").then((m) => ({ default: m.LoadIndexChart })),
     { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
 );
 const ProblemCategoryChart = dynamic(
-    () => import("../../shared/ProblemCategoryChart").then((m) => ({ default: m.ProblemCategoryChart })),
+    () => import("../../widgets/charts/ProblemCategoryChart").then((m) => ({ default: m.ProblemCategoryChart })),
     { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
 );
 const AttendanceChart = dynamic(
-    () => import("../../shared/AttendanceChart").then((m) => ({ default: m.AttendanceChart })),
+    () => import("../../widgets/charts/AttendanceChart").then((m) => ({ default: m.AttendanceChart })),
     { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
 );
 const RiskDistributionChart = dynamic(
-    () => import("../../shared/RiskDistributionChart").then((m) => ({ default: m.RiskDistributionChart })),
+    () => import("../../widgets/charts/RiskDistributionChart").then((m) => ({ default: m.RiskDistributionChart })),
     { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
 );
 const TrendChart = dynamic(
-    () => import("../../shared/TrendChart").then((m) => ({ default: m.TrendChart })),
+    () => import("../../widgets/charts/TrendChart").then((m) => ({ default: m.TrendChart })),
     { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
 );
 
@@ -191,7 +191,7 @@ export function UniversityDetailDashboard({ universityCode }: UniversityDetailPr
                     <div className="space-y-8 animate-in fade-in duration-500">
                         {/* Filters */}
                         <section className="relative z-40">
-                            <AnalyticsFilterBar params={params} onChange={setParams} />
+                            <DashboardFilterBar role="ministry" params={params} onChange={setParams} />
                         </section>
 
                         {/* KPIs */}

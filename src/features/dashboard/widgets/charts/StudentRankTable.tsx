@@ -3,8 +3,8 @@
 
 import React from "react";
 import { AlertTriangle, User } from "lucide-react";
-import type { StudentRankRow } from "./analytics-types";
-import { ChartCard } from "./ChartCard";
+import type { StudentRankRow } from "../types/analytics-types";
+import { ChartCard } from "../cards/ChartCard";
 
 function riskBadge(avg: number | null) {
     if (avg == null) return <span className="text-xs text-slate-400">—</span>;

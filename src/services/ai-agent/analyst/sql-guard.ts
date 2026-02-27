@@ -100,6 +100,29 @@ export function validateSql(rawSql: string, isMinistry: boolean = false): SqlVal
 
     const upperQuery = cleanSql.toUpperCase();
 
+    // ═══ Programmatic SQL correctness checks ═══
+    // Catch known LLM failure patterns and reject with helpful error for retry
+
+    // Check 1: student_academic has NO name columns
+    if (/\bsa\.faculty_name_th\b/i.test(cleanSql) || /\bstudent_academic\.\s*faculty_name_th\b/i.test(cleanSql)) {
+        return { ok: false, reason: "student_academic has NO faculty_name_th column! JOIN faculty table: JOIN faculty f ON f.faculty_id = sa.faculty_id AND f.university_id = sa.university_id, then use f.faculty_name_th" };
+    }
+    if (/\bsa\.department_name_th\b/i.test(cleanSql) || /\bstudent_academic\.\s*department_name_th\b/i.test(cleanSql)) {
+        return { ok: false, reason: "student_academic has NO department_name_th column! JOIN department table: JOIN department d ON d.department_id = sa.department_id AND d.university_id = sa.university_id, then use d.department_name_th" };
+    }
+
+    // Check 2: booking_cancellation.booking_id must come from booking, not student_id
+    if (/bc\.booking_id\s*=\s*\w+\.student_id/i.test(cleanSql)) {
+        return { ok: false, reason: "booking_cancellation.booking_id is a BOOKING ID, not a student_id! Join: booking b JOIN booking_cancellation bc ON bc.booking_id = b.booking_id AND bc.university_id = b.university_id" };
+    }
+
+    // Check 3: Auto-fix OR operator precedence (LIKE '%x%' OR LIKE '%x%' AND date_filter)
+    // Without parentheses, the OR returns wrong results. Wrap the OR group.
+    cleanSql = cleanSql.replace(
+        /WHERE\s+([\w.]+\s+LIKE\s+'[^']+'\s+OR\s+[\w.]+\s+LIKE\s+'[^']+')\s+AND\b/gi,
+        'WHERE ($1) AND'
+    );
+
     // 3. Must start with SELECT or WITH
     if (!upperQuery.startsWith("SELECT") && !upperQuery.startsWith("WITH")) {
         return { ok: false, reason: "Only SELECT or WITH queries are allowed." };

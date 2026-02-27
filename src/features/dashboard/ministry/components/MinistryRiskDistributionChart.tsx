@@ -3,8 +3,8 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
-import { ChartCard } from "../../shared/ChartCard";
-import type { RiskDistribution } from "../../shared/analytics-types";
+import { ChartCard } from "../../widgets/cards/ChartCard";
+import type { RiskDistribution } from "../../widgets/types/analytics-types";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 

@@ -10,7 +10,7 @@
 
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
-import { LOAD_INDEX_WEIGHTS } from "@/features/dashboard/shared/analytics-types";
+import { LOAD_INDEX_WEIGHTS } from "@/features/dashboard/widgets/types/analytics-types";
 import type {
     AnalyticsParams,
     AnalyticsResult,
@@ -21,7 +21,7 @@ import type {
     CancellationGroupItem,
     RiskDistribution,
     TrendBucket,
-} from "@/features/dashboard/shared/analytics-types";
+} from "@/features/dashboard/widgets/types/analytics-types";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 export type ScopeInfo = {

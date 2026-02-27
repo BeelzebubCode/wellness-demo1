@@ -9,7 +9,7 @@ import {
     ResponsiveContainer,
     Legend,
 } from "recharts";
-import { ProblemCategoryItem } from "../../shared/analytics-types";
+import { ProblemCategoryItem } from "../../widgets/types/analytics-types";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 
 interface ProblemDNAChartProps {

@@ -3,8 +3,8 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
-import { ChartCard } from "../../shared/ChartCard";
-import type { LoadIndexItem } from "../../shared/analytics-types";
+import { ChartCard } from "../../widgets/cards/ChartCard";
+import type { LoadIndexItem } from "../../widgets/types/analytics-types";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, Filler);
 

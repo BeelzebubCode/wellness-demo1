@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { SummaryStats } from "../../shared/analytics-types";
+import { SummaryStats } from "../../widgets/types/analytics-types";
 import { TrendingUp, TrendingDown, AlertTriangle, Users, Calendar, MinusCircle } from "lucide-react";
 
 interface StrategicKPICardsProps {

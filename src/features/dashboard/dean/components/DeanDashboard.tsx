@@ -1,11 +1,11 @@
 "use client";
 
-import { useAnalytics } from "../../shared/useAnalytics";
-import { AnalyticsFilterBar } from "../../shared/AnalyticsFilterBar";
+import { useAnalytics } from "../../widgets/hooks/useAnalytics";
+import { DashboardFilterBar } from "../../widgets/filters/DashboardFilterBar";
 import dynamic from "next/dynamic";
 
 const ProblemLandscapeChart = dynamic(
-    () => import("../../shared/ProblemLandscapeChart").then((m) => ({ default: m.ProblemLandscapeChart })),
+    () => import("../../widgets/charts/ProblemLandscapeChart").then((m) => ({ default: m.ProblemLandscapeChart })),
     { loading: () => <div className="h-[600px] bg-slate-50 animate-pulse rounded-3xl" />, ssr: false }
 );
 
@@ -34,7 +34,7 @@ export function DeanDashboard({ facultyCode }: { facultyCode?: string } = {}) {
 
                 {/* Filter Bar — faculty hidden (pre-locked by API scope) */}
                 <section className="relative z-40">
-                    <AnalyticsFilterBar params={params} onChange={setParams} hideFaculty />
+                    <DashboardFilterBar role="dean" params={params} onChange={setParams} />
                 </section>
 
                 {/* Problem Landscape */}

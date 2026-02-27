@@ -12,7 +12,7 @@ import {
     Cell,
     LabelList,
 } from "recharts";
-import { LoadIndexItem } from "../../shared/analytics-types";
+import { LoadIndexItem } from "../../widgets/types/analytics-types";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 

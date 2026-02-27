@@ -2,8 +2,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import type { AnalyticsParams, AnalyticsResult } from "./analytics-types";
-import { fetchAnalytics } from "./analytics-api";
+import type { AnalyticsParams, AnalyticsResult } from "../types/analytics-types";
+import { fetchAnalytics } from "../api/analytics-api";
 
 function getDefaultDateRange(): { date_start: string; date_end: string } {
     const now = new Date();

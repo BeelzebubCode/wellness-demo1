@@ -3,8 +3,8 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import { ChartCard } from "../../shared/ChartCard";
-import type { TrendBucket } from "../../shared/analytics-types";
+import { ChartCard } from "../../widgets/cards/ChartCard";
+import type { TrendBucket } from "../../widgets/types/analytics-types";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 

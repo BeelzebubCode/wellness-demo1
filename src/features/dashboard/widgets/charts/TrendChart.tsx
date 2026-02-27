@@ -5,8 +5,8 @@ import React from "react";
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
-import type { TrendBucket } from "./analytics-types";
-import { ChartCard } from "./ChartCard";
+import type { TrendBucket } from "../types/analytics-types";
+import { ChartCard } from "../cards/ChartCard";
 
 function formatBucket(bucket: string): string {
     if (!bucket) return "";

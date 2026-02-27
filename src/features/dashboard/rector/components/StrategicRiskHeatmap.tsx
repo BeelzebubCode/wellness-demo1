@@ -12,7 +12,7 @@ import {
     Cell,
     ReferenceLine,
 } from "recharts";
-import { LoadIndexItem } from "../../shared/analytics-types";
+import { LoadIndexItem } from "../../widgets/types/analytics-types";
 
 interface StrategicRiskHeatmapProps {
     data: LoadIndexItem[];

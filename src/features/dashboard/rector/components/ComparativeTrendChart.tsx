@@ -10,7 +10,7 @@ import {
     Tooltip,
     ResponsiveContainer,
 } from "recharts";
-import { TrendBucket } from "../../shared/analytics-types";
+import { TrendBucket } from "../../widgets/types/analytics-types";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 

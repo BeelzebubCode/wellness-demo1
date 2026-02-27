@@ -5,8 +5,8 @@ import React from "react";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
-import type { ProblemCategoryItem } from "./analytics-types";
-import { ChartCard } from "./ChartCard";
+import type { ProblemCategoryItem } from "../types/analytics-types";
+import { ChartCard } from "../cards/ChartCard";
 
 const BAR_COLORS = [
     "#6366f1", "#8b5cf6", "#a855f7", "#d946ef", "#ec4899",

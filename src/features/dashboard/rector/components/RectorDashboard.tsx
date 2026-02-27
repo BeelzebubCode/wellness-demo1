@@ -2,8 +2,8 @@
 
 import dynamic from "next/dynamic";
 import { ArrowLeft } from "lucide-react";
-import { useAnalytics } from "../../shared/useAnalytics";
-import { AnalyticsFilterBar } from "../../shared/AnalyticsFilterBar";
+import { useAnalytics } from "../../widgets/hooks/useAnalytics";
+import { DashboardFilterBar } from "../../widgets/filters/DashboardFilterBar";
 
 // Strategic Components
 const StrategicKPICards = dynamic(
@@ -32,7 +32,7 @@ const ComparativeTrendChart = dynamic(
 );
 
 const ProblemLandscapeChart = dynamic(
-  () => import("../../shared/ProblemLandscapeChart").then((m) => ({ default: m.ProblemLandscapeChart })),
+  () => import("../../widgets/charts/ProblemLandscapeChart").then((m) => ({ default: m.ProblemLandscapeChart })),
   { loading: () => <div className="h-[600px] bg-slate-50 animate-pulse rounded-3xl" />, ssr: false }
 );
 
@@ -74,7 +74,7 @@ export function RectorDashboard() {
 
       {/* Filter Bar */}
       <section className="relative z-40 bg-white/50 backdrop-blur-sm p-1 rounded-[2.5rem] border border-white/50">
-        <AnalyticsFilterBar params={params} onChange={setParams} />
+        <DashboardFilterBar role="rector" params={params} onChange={setParams} />
       </section>
 
       {/* Drilldown breadcrumb */}

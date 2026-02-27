@@ -5,7 +5,7 @@ import { requireTenant, assertRole } from "@/lib/tenant/server";
 import { getRectorSummary } from "@/services/dashboards/handlers/rectorAnalytics";
 import { getDeanSummary } from "@/services/dashboards/handlers/deanAnalytics";
 import { getAdvisorSummary } from "@/services/dashboards/handlers/advisorAnalytics";
-import type { AnalyticsParams } from "@/features/dashboard/shared/analytics-types";
+import type { AnalyticsParams } from "@/features/dashboard/widgets/types/analytics-types";
 
 const ALLOWED_ROLES = ["RECTOR", "DEAN", "ADVISOR", "HEAD_CONSULTANT", "SUPER_ADMIN", "MINISTRY"] as const;
 

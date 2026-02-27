@@ -5,8 +5,8 @@ import React from "react";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
-import type { AttendanceGroupItem } from "./analytics-types";
-import { ChartCard } from "./ChartCard";
+import type { AttendanceGroupItem } from "../types/analytics-types";
+import { ChartCard } from "../cards/ChartCard";
 
 const COLORS = {
     checkedIn: "#22c55e",

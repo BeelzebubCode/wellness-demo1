@@ -6,8 +6,8 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
     PieChart, Pie,
 } from "recharts";
-import type { CancellationGroupItem } from "./analytics-types";
-import { ChartCard } from "./ChartCard";
+import type { CancellationGroupItem } from "../types/analytics-types";
+import { ChartCard } from "../cards/ChartCard";
 
 const BAR_COLORS = [
     "#ef4444", "#f97316", "#f59e0b", "#ec4899", "#a855f7",

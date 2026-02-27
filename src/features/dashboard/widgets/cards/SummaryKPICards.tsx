@@ -3,7 +3,7 @@
 
 import React from "react";
 import { CalendarCheck2, XCircle, CheckCircle2, Clock, AlertTriangle, TrendingUp } from "lucide-react";
-import type { SummaryStats } from "./analytics-types";
+import type { SummaryStats } from "../types/analytics-types";
 
 function KPICard({
     icon: Icon,
