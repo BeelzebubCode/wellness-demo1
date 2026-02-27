@@ -64,23 +64,55 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@local.com
       PGADMIN_DEFAULT_PASSWORD: adminpassword
-      # กัน pgadmin เก็บ session / cache บวม และลดภาระ
-      PGADMIN_CONFIG_MAX_LOGIN_ATTEMPTS: 10
-      PGADMIN_CONFIG_CONSOLE_LOG_LEVEL: 30
+
+      PGADMIN_CONFIG_MAX_LOGIN_ATTEMPTS: "10"
+      PGADMIN_CONFIG_CONSOLE_LOG_LEVEL: "30"
+
+      # ✅ ช่วยแก้ CSRF/session เพี้ยนแบบปลอดภัย
+      PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: "False"
+      # ถ้ามี reverse proxy 1 ชั้นค่อยเปิด 2 บรรทัดนี้
+      # PGADMIN_CONFIG_PROXY_X_FOR_COUNT: "1"
+      # PGADMIN_CONFIG_PROXY_X_PROTO_COUNT: "1"
+
     ports:
       - "8080:80"
     depends_on:
       - db
-    # ✅ ตัวสำคัญ: ล็อก RAM pgAdmin (แนะนำ 512MB–1GB)
     mem_limit: 1g
     memswap_limit: 1g
     cpus: 1.0
-    # เพิ่ม healthcheck กันค้าง
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/misc/ping"]
+      test: [ "CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost/misc/ping').read()" ]
       interval: 30s
       timeout: 5s
       retries: 5
+
+  # ── LiteLLM Proxy — AI Model Gateway with Logging ──
+  litellm:
+    container_name: wellness-litellm
+    image: ghcr.io/berriai/litellm:main-stable
+    restart: always
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./litellm-config.yaml:/app/config.yaml
+    command:
+      - "--config"
+      - "/app/config.yaml"
+      - "--port"
+      - "4000"
+      - "--detailed_debug"
+    environment:
+      LITELLM_MASTER_KEY: "sk-litellm-wellness-2026"
+      LITELLM_LOG_LEVEL: "DEBUG"
+      # Ollama host (accessible from Docker)
+      OLLAMA_API_BASE: "http://host.docker.internal:11434"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - db
+    mem_limit: 512m
+    cpus: 0.5
 
 volumes:
   db_data:

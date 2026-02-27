@@ -89,7 +89,7 @@ const AiChatMessages = forwardRef<HTMLDivElement, Props>(
                     <>
                       <li>จองพรุ่งนี้ช่วงบ่าย</li>
                       <li>อยากได้ 10:00 - 12:00</li>
-                      <li>ยกเลิกคิวยังไง</li>
+                      <li>ยกเลิกคิว</li>
                     </>
                   ) : (
                     <>

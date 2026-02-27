@@ -51,7 +51,9 @@ export class BookingPlanEngine {
     const { activeUniversityId, studentId, body } = input;
 
     const userMessages = this.collectMessages(body);
-    const question = this.lastUserText(userMessages).trim();
+    // Normalize dot-format times: "12.00" → "12:00", "12.30" → "12:30"
+    const rawQuestion = this.lastUserText(userMessages).trim();
+    const question = rawQuestion.replace(/(\d{1,2})\.(\d{2})(?!\d)/g, "$1:$2");
     if (!question) return { reply: "พิมพ์คำขอจองคิวสั้น ๆ ให้ผมหน่อยครับ 🙂" };
 
     // categories & channels
@@ -88,19 +90,65 @@ export class BookingPlanEngine {
       date: safePlan.date ?? prevPlan?.date ?? null,
       timeRange: safePlan.timeRange ?? prevPlan?.timeRange ?? null,
       problemCategoryCode: safePlan.problemCategoryCode ?? prevPlan?.problemCategoryCode ?? null,
-      detailText: safePlan.detailText ?? prevPlan?.detailText ?? null,
+      // ⛔ detailText: ALWAYS ignore LLM — user must type it themselves.
+      // If we were waiting for it (prevPlan has category but no detailText),
+      // use the raw user message directly.
+      detailText: prevPlan?.detailText
+        ? prevPlan.detailText
+        : (prevPlan?.problemCategoryCode && !prevPlan?.detailText && question.length >= 3)
+          ? question   // User's raw answer to the detailText question
+          : null,
       serviceMode: safePlan.serviceMode ?? prevPlan?.serviceMode ?? null,
       onlineChannelCode: safePlan.onlineChannelCode ?? prevPlan?.onlineChannelCode ?? null,
     };
 
 
-    // Reset triggers
-    if (/เปลี่ยนรูปแบบ|เปลี่ยนประเภท|เปลี่ยนการเข้าพบ/i.test(question)) {
+    // ═══════════════════════════════════════════════════════════════════
+    // 🔄 Smart Reset Triggers — detect user's intent to CHANGE a field
+    // If fuzzy-matched, reset the field so the engine re-asks with UI
+    // ═══════════════════════════════════════════════════════════════════
+    const qLow = question.toLowerCase().replace(/\s+/g, "");
+
+    // --- Service Mode change: ONLINE ↔ ONSITE ---
+    const wantsOnsite = /ออนไซ|on.?site|พบที่ศูนย์|ไปศูนย์|เจอตัว|พบตัว|เปลี่ยน.*(?:ออนไซ|on.?site|พบ)/i.test(question);
+    const wantsOnline = /ออนไลน์|on.?line|คุย.*ออนไลน์|เปลี่ยน.*(?:ออนไลน์|on.?line)/i.test(question);
+    const wantsChangeServiceMode = /เปลี่ยน.*(?:รูปแบบ|ประเภท.*เข้าพบ|การเข้าพบ|วิธี.*เข้าพบ|mode)/i.test(question);
+
+    if (wantsOnsite && plan.serviceMode !== "ONSITE") {
+      plan.serviceMode = "ONSITE";
+      plan.onlineChannelCode = null; // onsite doesn't need channel
+    } else if (wantsOnline && plan.serviceMode !== "ONLINE") {
+      plan.serviceMode = "ONLINE";
+      plan.onlineChannelCode = null; // need to pick channel
+    } else if (wantsChangeServiceMode) {
       plan.serviceMode = null;
       plan.onlineChannelCode = null;
     }
-    if (/เปลี่ยนช่องทาง/i.test(question)) {
+
+    // --- Online Channel change ---
+    if (/เปลี่ยน.*ช่องทาง|เปลี่ยน.*channel/i.test(question)) {
       plan.onlineChannelCode = null;
+    }
+
+    // --- Problem Category change ---
+    if (/เปลี่ยน.*(?:ประเภท.*ปัญหา|หมวด.*ปัญหา|ปัญหา.*ประเภท|category)/i.test(question)) {
+      plan.problemCategoryCode = null;
+      plan.detailText = null; // reset detail too since category changed
+    }
+
+    // --- Date/Time change ---
+    if (/เปลี่ยน.*(?:วัน|เวลา|ช่วง|date|time)/i.test(question)) {
+      if (/เปลี่ยน.*วัน|เปลี่ยน.*date/i.test(question)) plan.date = null;
+      if (/เปลี่ยน.*เวลา|เปลี่ยน.*ช่วง|เปลี่ยน.*time/i.test(question)) {
+        plan.timeRange = null;
+        // Re-apply LLM's new timeRange if it parsed one from the same question
+        if (safePlan.timeRange) plan.timeRange = safePlan.timeRange;
+      }
+    }
+
+    // --- DetailText change ---
+    if (/เปลี่ยน.*(?:ปัญหาโดยย่อ|รายละเอียด|detail)/i.test(question)) {
+      plan.detailText = null;
     }
 
     // --------------------------
@@ -206,7 +254,7 @@ export class BookingPlanEngine {
     let candidates = await listAvailableSlots({
       universityId: activeUniversityId,
       date: plan.date!,
-      limit: 8,
+      limit: 24,
       minStartMinBkk,
     });
 
@@ -260,7 +308,7 @@ export class BookingPlanEngine {
         candidates = await listAvailableSlots({
           universityId: activeUniversityId,
           date: plan.date!,
-          limit: 8,
+          limit: 24,
         });
       }
     }
@@ -428,8 +476,23 @@ export class BookingPlanEngine {
     // 🏢 Service Mode
     // --------------------------
     if (!plan.serviceMode) {
-      if (question === "คุยออนไลน์ (Online)" || question.toLowerCase() === "online") plan.serviceMode = "ONLINE";
-      else if (question === "พบที่ศูนย์ (On-site)" || question.toLowerCase() === "onsite") plan.serviceMode = "ONSITE";
+      const qCheck = question.toLowerCase();
+      if (
+        question === "คุยออนไลน์ (Online)" ||
+        qCheck === "online" ||
+        /ออนไลน์|on.?line|คุย.*ออนไลน์/.test(question)
+      ) {
+        plan.serviceMode = "ONLINE";
+      } else if (
+        question === "พบที่ศูนย์ (On-site)" ||
+        qCheck === "onsite" ||
+        /ออนไซ|on.?site|พบ.*ศูนย์|ไป.*ศูนย์|เจอตัว|พบตัว/.test(question)
+      ) {
+        plan.serviceMode = "ONSITE";
+      } else if (safePlan.serviceMode === "ONLINE" || safePlan.serviceMode === "ONSITE") {
+        // Fallback: let LLM decide if it understood
+        plan.serviceMode = safePlan.serviceMode;
+      }
     }
 
     if (!plan.serviceMode) {
@@ -543,7 +606,7 @@ export class BookingPlanEngine {
       onlineChannelCode: plan.onlineChannelCode,
     });
 
-    const others = topCandidatesText(candidates, 3);
+    const others = topCandidatesText(candidates);
 
     return {
       reply:

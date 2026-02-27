@@ -1,11 +1,22 @@
 // src/features/booking/components/shared/BookingExceptionRequestModal.tsx
 "use client";
 
-import { useState } from "react";
-import { AlertTriangle, Upload, CheckCircle2, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+    Upload, CheckCircle2, Loader2, X, FileText, AlertCircle,
+    Stethoscope, Siren, GraduationCap, HelpCircle,
+} from "lucide-react";
 import { Modal } from "@/components/ui";
 import { useToast } from "@/contexts/ToastContext";
 import { requestException, uploadExceptionEvidencesFiles, submitExceptionRequest } from "../../api/exceptionRequests";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+type ExceptionReasonOption = {
+    exception_reason_id: number;
+    exception_reason_code: string;
+    exception_reason_name_th: string;
+    exception_reason_name_en: string | null;
+};
 
 interface Props {
     isOpen: boolean;
@@ -14,37 +25,84 @@ interface Props {
     onSuccess: () => void;
 }
 
+// ─── Reason icons ────────────────────────────────────────────────────────────
+const REASON_ICONS: Record<string, typeof Stethoscope> = {
+    MEDICAL: Stethoscope,
+    EMERGENCY: Siren,
+    ACADEMIC: GraduationCap,
+    OTHER: HelpCircle,
+};
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function formatFileSize(bytes: number) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+}
+
+function getFileIcon(name: string) {
+    const ext = name.split(".").pop()?.toLowerCase();
+    if (ext === "pdf") return "📄";
+    if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext || "")) return "🖼";
+    return "📎";
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
 export function BookingExceptionRequestModal({ isOpen, bookingId, onClose, onSuccess }: Props) {
-    const [reasonCode, setReasonCode] = useState("");
+    const [reasonId, setReasonId] = useState<number | null>(null);
     const [reasonDetail, setReasonDetail] = useState("");
     const [files, setFiles] = useState<File[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const { success: toastSuccess, error: toastError } = useToast();
 
+    // Fetch reasons from API
+    const [reasons, setReasons] = useState<ExceptionReasonOption[]>([]);
+    const [reasonsLoading, setReasonsLoading] = useState(false);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        // Reset form on open
+        setReasonId(null);
+        setReasonDetail("");
+        setFiles([]);
+        setError(null);
+
+        setReasonsLoading(true);
+        fetch("/api/v2/exception-reasons")
+            .then(r => r.json())
+            .then(res => { if (res.success) setReasons(res.data); })
+            .catch(() => { })
+            .finally(() => setReasonsLoading(false));
+    }, [isOpen]);
+
     if (!isOpen || !bookingId) return null;
+
+    const removeFile = (idx: number) => {
+        setFiles(prev => prev.filter((_, i) => i !== idx));
+    };
+
+    const addFiles = (newFiles: FileList | null) => {
+        if (!newFiles) return;
+        setFiles(prev => [...prev, ...Array.from(newFiles)]);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!reasonCode.trim() || !reasonDetail.trim()) {
-            setError("กรุณากรอกข้อมูลให้ครบถ้วน");
-            return;
-        }
+        if (!reasonId) { setError("กรุณาเลือกเหตุผล"); return; }
+        if (!reasonDetail.trim()) { setError("กรุณากรอกรายละเอียด"); return; }
 
         setError(null);
         setLoading(true);
 
         try {
-            // 1. Create request
-            const reqRes = await requestException(bookingId, reasonCode, reasonDetail);
+            const reqRes = await requestException(bookingId, "", reasonDetail, reasonId);
             const reqId = reqRes.data.booking_exception_request_id;
 
-            // 2. Upload evidences if any
             if (files.length > 0) {
                 await uploadExceptionEvidencesFiles(reqId, files);
             }
 
-            // 3. Submit
             await submitExceptionRequest(reqId);
 
             toastSuccess("ยื่นคำขอยกเว้นโทษสำเร็จ");
@@ -58,88 +116,178 @@ export function BookingExceptionRequestModal({ isOpen, bookingId, onClose, onSuc
         }
     };
 
+    const selectedReason = reasons.find(r => r.exception_reason_id === reasonId);
+
     return (
-        <Modal
-            isOpen={isOpen}
-            onClose={onClose}
-            title="ยื่นคำขอยกเว้นโทษ (Exception)"
-            size="md"
-        >
-            <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+        <Modal isOpen={isOpen} onClose={onClose} title="ยื่นคำขอยกเว้นโทษ" size="md">
+            <form onSubmit={handleSubmit} className="space-y-5 pt-1">
                 {error && (
-                    <div className="bg-red-50 text-red-600 border border-red-200 p-3 rounded-lg text-sm text-center">
-                        {error}
+                    <div className="flex items-start gap-2 bg-red-50 text-red-600 border border-red-200 p-3 rounded-xl text-sm">
+                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                        <span>{error}</span>
                     </div>
                 )}
 
+                {/* ── Step 1: Reason selector ── */}
                 <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">เหตุผลหลัก</label>
-                    <select
-                        value={reasonCode}
-                        onChange={e => setReasonCode(e.target.value)}
-                        disabled={loading}
-                        className="w-full border-gray-300 rounded-lg p-2.5 text-sm focus:ring-primary focus:border-primary border"
-                        required
-                    >
-                        <option value="">-- เลือกเหตุผล --</option>
-                        <option value="MEDICAL">ป่วย/เหตุผลทางสุขภาพ (MEDICAL)</option>
-                        <option value="EMERGENCY">เหตุฉุกเฉินกะทันหัน (EMERGENCY)</option>
-                        <option value="ACADEMIC">เหตุผลทางวิชาการ/สอบ (ACADEMIC)</option>
-                        <option value="OTHER">อื่นๆ (OTHER)</option>
-                    </select>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        เหตุผลหลัก <span className="text-red-400">*</span>
+                    </label>
+                    {reasonsLoading ? (
+                        <div className="flex items-center gap-2 text-sm text-gray-400 p-3">
+                            <Loader2 className="w-4 h-4 animate-spin" /> กำลังโหลด...
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {reasons.map(r => {
+                                const Icon = REASON_ICONS[r.exception_reason_code] || HelpCircle;
+                                const selected = reasonId === r.exception_reason_id;
+                                return (
+                                    <button
+                                        key={r.exception_reason_id}
+                                        type="button"
+                                        onClick={() => setReasonId(r.exception_reason_id)}
+                                        disabled={loading}
+                                        className={`
+                                            flex items-center gap-2.5 p-3 rounded-xl border-2 text-left transition-all duration-150
+                                            ${selected
+                                                ? "border-primary bg-primary/5 shadow-sm shadow-primary/10"
+                                                : "border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50"
+                                            }
+                                        `}
+                                    >
+                                        <div className={`
+                                            w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors
+                                            ${selected ? "bg-primary/15 text-primary" : "bg-gray-100 text-gray-400"}
+                                        `}>
+                                            <Icon className="w-4 h-4" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className={`text-[13px] font-semibold leading-snug ${selected ? "text-primary" : "text-gray-700"}`}>
+                                                {r.exception_reason_name_th}
+                                            </div>
+                                            {r.exception_reason_name_en && (
+                                                <div className="text-[10px] text-gray-400 leading-tight">{r.exception_reason_name_en}</div>
+                                            )}
+                                        </div>
+                                        {selected && (
+                                            <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
 
+                {/* ── Step 2: Detail ── */}
                 <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">รายละเอียดเพิ่มเติม</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        รายละเอียดเพิ่มเติม <span className="text-red-400">*</span>
+                    </label>
                     <textarea
                         value={reasonDetail}
                         onChange={e => setReasonDetail(e.target.value)}
                         disabled={loading}
-                        className="w-full border-gray-300 rounded-lg p-2.5 text-sm focus:ring-primary focus:border-primary border min-h-[100px]"
+                        className="w-full border border-gray-200 rounded-xl p-3 text-sm bg-gray-50/50
+                                   focus:ring-2 focus:ring-primary/20 focus:border-primary/40 focus:bg-white
+                                   outline-none transition-all duration-150 min-h-[90px] resize-none
+                                   placeholder:text-gray-300"
                         placeholder="อธิบายเหตุผลความจำเป็นที่ต้องยกเลิก/ไม่มาตามนัด"
                         required
                     />
                 </div>
 
+                {/* ── Step 3: File upload ── */}
                 <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1 flex items-center gap-1.5">
-                        <Upload className="w-4 h-4" /> ลิงก์ไฟล์หลักฐาน (ถ้ามี)
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                        <Upload className="w-4 h-4" /> หลักฐานประกอบ
+                        <span className="text-xs font-normal text-gray-400">(ไม่บังคับ)</span>
                     </label>
+
+                    {/* File list with remove buttons */}
+                    {files.length > 0 && (
+                        <div className="space-y-1.5 mb-2">
+                            {files.map((file, idx) => (
+                                <div
+                                    key={`${file.name}-${idx}`}
+                                    className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 border border-gray-100"
+                                >
+                                    <span className="text-sm shrink-0">{getFileIcon(file.name)}</span>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="text-xs font-medium text-gray-700 truncate">{file.name}</div>
+                                        <div className="text-[10px] text-gray-400">{formatFileSize(file.size)}</div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => removeFile(idx)}
+                                        disabled={loading}
+                                        className="w-7 h-7 rounded-full flex items-center justify-center shrink-0
+                                                   text-gray-400 hover:text-red-500 hover:bg-red-50
+                                                   active:bg-red-100 transition-all duration-150"
+                                        title="ลบไฟล์นี้"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Native visible file input — works reliably in portals */}
                     <input
                         type="file"
                         multiple
-                        accept=".pdf, .png, .jpg, .jpeg"
+                        accept=".pdf,.png,.jpg,.jpeg"
                         onChange={e => {
-                            if (e.target.files) {
-                                setFiles(Array.from(e.target.files));
+                            const picked = Array.from(e.target.files || []);
+                            const ALLOWED = [".pdf", ".png", ".jpg", ".jpeg"];
+                            const valid: File[] = [];
+                            const rejected: string[] = [];
+                            for (const f of picked) {
+                                const ext = f.name.slice(f.name.lastIndexOf(".")).toLowerCase();
+                                if (ALLOWED.includes(ext)) {
+                                    valid.push(f);
+                                } else {
+                                    rejected.push(f.name);
+                                }
                             }
+                            if (rejected.length > 0) {
+                                toastError(`รับเฉพาะ PDF, PNG, JPG เท่านั้น`);
+                            }
+                            if (valid.length > 0) {
+                                setFiles(prev => [...prev, ...valid]);
+                                toastSuccess(`เพิ่มไฟล์สำเร็จ ${valid.length} ไฟล์`);
+                            }
+                            e.target.value = "";
                         }}
                         disabled={loading}
-                        className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 border border-gray-300 rounded-lg p-2 bg-gray-50"
+                        className="w-full text-sm text-gray-500
+                                   file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border file:border-gray-200
+                                   file:text-sm file:font-semibold file:bg-white file:text-primary
+                                   hover:file:bg-primary/5 file:cursor-pointer file:transition-colors
+                                   border border-gray-200 rounded-xl p-2 bg-gray-50/50"
                     />
-                    {files.length > 0 && (
-                        <ul className="mt-2 text-xs text-gray-600 list-disc list-inside">
-                            {files.map((file, i) => (
-                                <li key={i}>{file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)</li>
-                            ))}
-                        </ul>
-                    )}
-                    <p className="text-[10px] text-gray-500 mt-1">* หากแนบเอกสารจะช่วยให้การพิจารณาเร็วขึ้น</p>
+                    <p className="text-[10px] text-gray-400 mt-1">* หากแนบเอกสารจะช่วยให้การพิจารณาเร็วขึ้น</p>
                 </div>
 
-                <div className="pt-2 flex justify-end gap-3">
+                {/* ── Actions ── */}
+                <div className="pt-1 flex justify-end gap-2 border-t border-gray-100 pt-3">
                     <button
                         type="button"
                         onClick={onClose}
                         disabled={loading}
-                        className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"
+                        className="px-4 py-2 text-sm font-medium text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
                     >
                         ยกเลิก
                     </button>
                     <button
                         type="submit"
-                        disabled={loading || !reasonCode || !reasonDetail}
-                        className="flex items-center gap-2 px-5 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-50"
+                        disabled={loading || !reasonId || !reasonDetail.trim()}
+                        className="flex items-center gap-2 px-5 py-2 text-sm font-bold text-white
+                                   bg-primary hover:bg-primary/90 rounded-xl shadow-sm shadow-primary/20
+                                   disabled:opacity-40 disabled:cursor-not-allowed
+                                   transition-all duration-150 active:scale-[0.98]"
                     >
                         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                         ยื่นคำขอ

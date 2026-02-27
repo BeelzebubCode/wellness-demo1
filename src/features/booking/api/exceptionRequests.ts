@@ -9,13 +9,14 @@ async function safeJson(res: Response) {
   return data;
 }
 
-export async function requestException(bookingId: number, reasonCode: string, reasonDetail: string) {
+export async function requestException(bookingId: number, reasonCode: string, reasonDetail: string, exceptionReasonId?: number | null) {
   const res = await fetch(`/api/v2/bookings/${bookingId}/exception-request`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       reason_code: reasonCode,
       reason_detail: reasonDetail,
+      ...(exceptionReasonId ? { exception_reason_id: exceptionReasonId } : {}),
     }),
   });
   return safeJson(res);

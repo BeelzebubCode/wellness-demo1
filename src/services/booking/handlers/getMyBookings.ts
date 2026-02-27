@@ -90,7 +90,10 @@ export async function getMyBookings(params: GetMyBookingsParams) {
 
       const session = sess ? {
         mode: sess.booking_session_mode ?? b.booking_service_mode,
-        onlineChannel: sess.onlineChannel?.online_channel_code ?? b.onlineChannel?.online_channel_code ?? null,
+        onlineChannel: (() => {
+          const ch = sess.onlineChannel ?? b.onlineChannel;
+          return ch ? { id: ch.online_channel_category_id, code: ch.online_channel_code, nameTh: ch.online_channel_name_th, nameEn: ch.online_channel_name_en } : null;
+        })(),
         joinUrl: sess.booking_session_join_url ?? null,
         phoneNumber: sess.booking_session_phone_number ?? null,
         extraDetail: sess.booking_session_extra_detail ?? null,
@@ -103,7 +106,10 @@ export async function getMyBookings(params: GetMyBookingsParams) {
         universityId: b.university_id,
         status: b.booking_status,
         serviceMode: b.booking_service_mode ?? "IN_PERSON",
-        onlineChannel: sess?.onlineChannel?.online_channel_code ?? b.onlineChannel?.online_channel_code ?? null,
+        onlineChannel: (() => {
+          const ch = sess?.onlineChannel ?? b.onlineChannel;
+          return ch ? { id: ch.online_channel_category_id, code: ch.online_channel_code, nameTh: ch.online_channel_name_th, nameEn: ch.online_channel_name_en } : null;
+        })(),
         startAt: slot?.time_slot_start_datetime?.toISOString() ?? "",
         endAt: slot?.time_slot_end_datetime?.toISOString() ?? "",
         problemCategoryNameTh: b.problemCategory?.problem_category_name_th ?? null,
@@ -183,7 +189,10 @@ export async function getMyBookings(params: GetMyBookingsParams) {
 
     const session = sess ? {
       mode: sess.booking_session_mode ?? b.booking_service_mode,
-      onlineChannel: sess.onlineChannel?.online_channel_code ?? b.onlineChannel?.online_channel_code ?? null,
+      onlineChannel: (() => {
+        const ch = sess.onlineChannel ?? b.onlineChannel;
+        return ch ? { id: ch.online_channel_category_id, code: ch.online_channel_code, nameTh: ch.online_channel_name_th, nameEn: ch.online_channel_name_en } : null;
+      })(),
       joinUrl: sess.booking_session_join_url ?? null,
       phoneNumber: sess.booking_session_phone_number ?? null,
       extraDetail: sess.booking_session_extra_detail ?? null,
@@ -198,7 +207,10 @@ export async function getMyBookings(params: GetMyBookingsParams) {
       universityCode: b.university?.university_code ?? null,
       status: b.booking_status,
       serviceMode: b.booking_service_mode ?? "IN_PERSON",
-      onlineChannel: sess?.onlineChannel?.online_channel_code ?? b.onlineChannel?.online_channel_code ?? null,
+      onlineChannel: (() => {
+        const ch = sess?.onlineChannel ?? b.onlineChannel;
+        return ch ? { id: ch.online_channel_category_id, code: ch.online_channel_code, nameTh: ch.online_channel_name_th, nameEn: ch.online_channel_name_en } : null;
+      })(),
       startAt: slot?.time_slot_start_datetime?.toISOString() ?? "",
       endAt: slot?.time_slot_end_datetime?.toISOString() ?? "",
       problemCategoryNameTh: b.problemCategory?.problem_category_name_th ?? null,

@@ -1,4 +1,4 @@
-import { runAnalytics } from "../src/services/ai-agent/analyst/orchestrator";
+import { runAnalytics } from "../src/services/ai-agent/analyst/engine";
 
 const QUESTIONS = [
   "นิสิตคนไหนปรึกษามากสุด 10อันดับแรกพร้อมชื่อและมหาลัย คณะ สาขา ที่อยู่",

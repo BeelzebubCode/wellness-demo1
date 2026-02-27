@@ -7,7 +7,7 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 const OLLAMA_URL = process.env.AI_BASE_URL || "http://localhost:11434";
-const MODEL = process.env.AI_MODEL || "qwen3:8b";
+const MODEL = process.env.AI_MODEL_ANALYST || "qwen3:8b";
 
 const { keywordRoute } = require("../src/services/ai-agent/analyst/keyword-router");
 const { SQL_B_PROMPT } = require("../src/services/ai-agent/analyst/prompts/sql-generator");

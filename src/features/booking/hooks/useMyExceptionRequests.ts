@@ -26,6 +26,11 @@ export interface ExceptionRequestItem {
         timeSlot?: { time_slot_start_datetime: string; time_slot_end_datetime: string } | null;
     };
     evidences: { booking_exception_evidence_id: number; booking_exception_evidence_url: string }[];
+    exceptionReason?: {
+        exception_reason_id: number;
+        exception_reason_code: string;
+        exception_reason_name_th: string;
+    } | null;
 }
 
 export interface PenaltyBooking {

@@ -918,11 +918,27 @@ model BookingAttendance {
   @@map("booking_attendance")
 }
 
+model ExceptionReason {
+  exception_reason_id          Int     @id @default(autoincrement())
+  exception_reason_code        String  @unique @db.VarChar(30)
+  exception_reason_name_th     String  @db.VarChar(100)
+  exception_reason_name_en     String? @db.VarChar(100)
+  exception_reason_description String? @db.Text
+  exception_reason_is_active   Boolean @default(true)
+  exception_reason_sort_order  Int     @default(0)
+
+  exceptionRequests BookingExceptionRequest[]
+
+  @@index([exception_reason_is_active, exception_reason_sort_order])
+  @@map("exception_reason")
+}
+
 model BookingExceptionRequest {
   booking_exception_request_id     Int             @id @default(autoincrement())
   university_id                    Int
   booking_id                       Int
   student_id                       Int
+  exception_reason_id              Int?
   booking_exception_reason_code    String          @db.VarChar(50)
   booking_exception_reason_detail  String          @db.Text
   booking_exception_status         ExceptionStatus @default(DRAFT)
@@ -933,14 +949,16 @@ model BookingExceptionRequest {
   booking_exception_reviewed_at    DateTime?       @db.Timestamptz(3)
   booking_exception_decision_note  String?         @db.Text
 
-  booking    Booking                    @relation(fields: [university_id, booking_id], references: [university_id, booking_id])
-  student    Student                    @relation(fields: [university_id, student_id], references: [university_id, student_id])
-  reviewedBy Account?                   @relation("ExceptionReviewedBy", fields: [booking_exception_reviewed_by_id], references: [account_id])
-  evidences  BookingExceptionEvidence[]
+  booking         Booking                    @relation(fields: [university_id, booking_id], references: [university_id, booking_id])
+  student         Student                    @relation(fields: [university_id, student_id], references: [university_id, student_id])
+  reviewedBy      Account?                   @relation("ExceptionReviewedBy", fields: [booking_exception_reviewed_by_id], references: [account_id])
+  exceptionReason ExceptionReason?           @relation(fields: [exception_reason_id], references: [exception_reason_id])
+  evidences       BookingExceptionEvidence[]
 
   @@unique([university_id, booking_id])
   @@index([booking_exception_status, booking_exception_requested_at])
   @@index([booking_exception_reviewed_by_id, booking_exception_reviewed_at])
+  @@index([exception_reason_id])
   @@map("booking_exception_request")
 }
 

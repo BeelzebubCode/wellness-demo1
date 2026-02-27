@@ -101,6 +101,7 @@ export function JobItem({
   const isInProgress = job.status === "IN_PROGRESS";
 
   const isNoShow = job.attendanceStatus === "NO_SHOW";
+  const needsAttendance = isInProgress && !job.attendanceStatus;
   const actionLabel = isPending
     ? "รับเคส"
     : isInProgress
@@ -164,28 +165,35 @@ export function JobItem({
             <StatusBadge status={job.status} />
 
             {!isDisabled ? (
-              <ActionButton
-                variant={isPending ? "primary" : "default"}
-                disabled={isActing}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onAction();
-                }}
-              >
-                {isActing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                    กำลังอัปเดต
-                  </>
-                ) : isInProgress ? (
-                  <>
-                    <Send className="w-4 h-4 mr-1.5" />
-                    {actionLabel}
-                  </>
-                ) : (
-                  actionLabel
+              <div className="flex flex-col items-end gap-1">
+                <ActionButton
+                  variant={isPending ? "primary" : "default"}
+                  disabled={isActing || needsAttendance}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAction();
+                  }}
+                >
+                  {isActing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                      กำลังอัปเดต
+                    </>
+                  ) : isInProgress ? (
+                    <>
+                      <Send className="w-4 h-4 mr-1.5" />
+                      {actionLabel}
+                    </>
+                  ) : (
+                    actionLabel
+                  )}
+                </ActionButton>
+                {needsAttendance && (
+                  <span className="text-[10px] text-amber-600 font-semibold flex items-center gap-1 animate-pulse">
+                    <ChevronDown className="w-3 h-3" /> ระบุสถานะเข้าพบก่อน
+                  </span>
                 )}
-              </ActionButton>
+              </div>
             ) : null}
           </div>
         </div>

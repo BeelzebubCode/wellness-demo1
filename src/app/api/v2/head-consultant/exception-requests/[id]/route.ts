@@ -41,6 +41,14 @@ export async function GET(req: NextRequest, { params }: Params) {
         reviewedBy: {
           select: { account_id: true, account_username: true },
         },
+        exceptionReason: {
+          select: {
+            exception_reason_id: true,
+            exception_reason_code: true,
+            exception_reason_name_th: true,
+            exception_reason_name_en: true,
+          },
+        },
       },
     });
 

@@ -4,6 +4,11 @@ import { ExceptionStatus } from "@prisma/client";
 export type ExceptionRequestRow = {
   booking_exception_request_id: number;
   booking_exception_reason_code: string;
+  exceptionReason?: {
+    exception_reason_id: number;
+    exception_reason_code: string;
+    exception_reason_name_th: string;
+  } | null;
   booking_exception_status: ExceptionStatus;
   booking_exception_requested_at: string;
   student: {
@@ -31,6 +36,12 @@ export type ExceptionRequestDetail = {
   student_id: number;
   booking_exception_reason_code: string;
   booking_exception_reason_detail: string;
+  exceptionReason?: {
+    exception_reason_id: number;
+    exception_reason_code: string;
+    exception_reason_name_th: string;
+    exception_reason_name_en?: string | null;
+  } | null;
   booking_exception_status: ExceptionStatus;
   booking_exception_deadline_at: string | null;
   booking_exception_requested_at: string;

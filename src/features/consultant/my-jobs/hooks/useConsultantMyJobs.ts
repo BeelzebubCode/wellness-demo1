@@ -206,6 +206,10 @@ export function useConsultantMyJobs(filters: ConsultantMyJobsFilters) {
       return;
     }
     if (job.status === "IN_PROGRESS") {
+      if (!job.attendanceStatus) {
+        alert("กรุณาระบุสถานะการเข้าพบของนิสิตก่อนส่งงาน (เข้าพบตรงเวลา / มาสาย / ไม่มาตามนัด)");
+        return;
+      }
       if (job.attendanceStatus === "NO_SHOW") {
         setCancelNoShowModal({ open: true, job });
         return;

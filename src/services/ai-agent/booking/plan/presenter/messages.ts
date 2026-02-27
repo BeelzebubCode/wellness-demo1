@@ -20,7 +20,7 @@ export function fmtTimeRangeLabel(timeRange: string) {
   return tr;
 }
 
-export function topCandidatesText(candidates: any[], limit = 3) {
+export function topCandidatesText(candidates: any[], limit = 24) {
   const top = (candidates || []).slice(0, limit);
   if (!top.length) return "";
   return top
@@ -85,7 +85,7 @@ export function replyNeedField(args: {
       ? `\n\n**พิมพ์ตัวอย่างได้เลย**\n${examples.map((x) => `- ${x}`).join("\n")}`
       : "";
 
-  const candText = topCandidatesText(candidates, 3);
+  const candText = topCandidatesText(candidates);
   const cand = candText
     ? `\n\n**ช่วงเวลาว่างที่ใกล้เคียง (เลือกได้เลย)**\n${candText}`
     : "";

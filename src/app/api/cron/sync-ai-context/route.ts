@@ -298,11 +298,33 @@ export async function GET(req: NextRequest) {
 
             console.log(`[CRON]   Period: ${pLabel}`);
 
+            // ── 6.0 STATS_OVERVIEW ──
+            const qOverview = await prisma.$queryRawUnsafe<any[]>(`
+                SELECT
+                    COUNT(*)::bigint AS total_bookings,
+                    COUNT(DISTINCT b.university_id)::bigint AS total_universities,
+                    COUNT(DISTINCT b.student_id)::bigint AS total_students,
+                    COUNT(DISTINCT b.consultant_id)::bigint AS total_consultants,
+                    SUM(CASE WHEN b.booking_status = 'COMPLETED' THEN 1 ELSE 0 END)::bigint AS completed,
+                    SUM(CASE WHEN b.booking_status = 'CANCELLED' THEN 1 ELSE 0 END)::bigint AS cancelled
+                FROM booking b ${tsJoin}
+                WHERE ${tsFilter}
+            `);
+            if (qOverview.length > 0) {
+                const ov = qOverview[0];
+                const totalB = Number(ov.total_bookings);
+                const completedRate = totalB > 0 ? ((Number(ov.completed) / totalB) * 100).toFixed(1) : "0";
+                const cancelRate = totalB > 0 ? ((Number(ov.cancelled) / totalB) * 100).toFixed(1) : "0";
+                const sOverview = `${dateLabel}\n\n### 📊 ภาพรวมระบบ\n\n| รายการ | จำนวน |\n|---|---|\n| 📋 จำนวนคิวทั้งหมด | **${totalB.toLocaleString()}** |\n| 🏫 มหาวิทยาลัย | **${Number(ov.total_universities).toLocaleString()}** |\n| 🎓 นิสิต/นักศึกษา | **${Number(ov.total_students).toLocaleString()}** |\n| 👨‍⚕️ ที่ปรึกษา | **${Number(ov.total_consultants).toLocaleString()}** |\n| ✅ อัตราเสร็จสิ้น | **${completedRate}%** |\n| ❌ อัตรายกเลิก | **${cancelRate}%** |\n`;
+                pushLookup("STATS_OVERVIEW", sfx, "ภาพรวมระบบ", sOverview);
+            }
+
             // ── 6.1 TOP_UNIVERSITIES ──
             const q1 = await prisma.$queryRawUnsafe<any[]>(`WITH t AS (SELECT b.university_id, COUNT(*)::bigint AS c FROM booking b ${tsJoin} WHERE ${tsFilter} GROUP BY b.university_id ORDER BY c DESC LIMIT 20) SELECT u.university_name_th, t.c FROM t JOIN university u ON u.university_id = t.university_id ORDER BY t.c DESC`);
             let s1 = `${dateLabel}\n\n### 🏆 Top 20 มหาวิทยาลัยที่มีการจองปรึกษามากสุด\n\n| อันดับ | มหาวิทยาลัย | จำนวนคิว |\n|---|---|---|\n`;
             q1.forEach((r, i) => s1 += `| ${i + 1} | **${r.university_name_th}** | ${Number(r.c).toLocaleString()} |\n`);
             pushLookup("TOP_UNIVERSITIES", sfx, "Top 20 มหาวิทยาลัย", s1);
+
 
             // ── 6.2 TOP_PROBLEMS ──
             const q2 = await prisma.$queryRawUnsafe<any[]>(`SELECT pc.problem_category_name_th, COUNT(*)::bigint AS c FROM booking b ${tsJoin} JOIN problem_category pc ON pc.problem_category_id = b.problem_category_id WHERE ${tsFilter} GROUP BY pc.problem_category_name_th ORDER BY c DESC`);

@@ -33,7 +33,15 @@ export async function executeSql(query: string): Promise<string> {
     }
 
     try {
-        const results = await prisma.$queryRawUnsafe(query);
+        // ⚡ Safety guard: if SQL has no LIMIT, add LIMIT 50 to prevent oversized results
+        let safeQuery = query;
+        if (!/\bLIMIT\b/i.test(safeQuery)) {
+            safeQuery = safeQuery.replace(/;?\s*$/, '') + ' LIMIT 50';
+        }
+
+        // Set statement timeout (30s max) to prevent long-running queries
+        await prisma.$queryRawUnsafe('SET statement_timeout = 30000');
+        const results = await prisma.$queryRawUnsafe(safeQuery);
         // Format BigInts properly if any
         const jsonStr = JSON.stringify(results, (key, value) =>
             typeof value === "bigint" ? value.toString() : value

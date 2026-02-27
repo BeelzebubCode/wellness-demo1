@@ -31,6 +31,7 @@ export function DateCalendarPopover({
   align = "left",
   formatLabel,
   className,
+  variant = "default",
 }: {
   valueYMD?: string;
   onChangeYMD: (ymd: string) => void;
@@ -41,7 +42,8 @@ export function DateCalendarPopover({
   placeholder?: string;
   align?: "left" | "right";
   formatLabel?: (ymd: string) => string;
-  className?: string; // ✅ Allow custom styling
+  className?: string;
+  variant?: "default" | "compact";
 }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -101,37 +103,56 @@ export function DateCalendarPopover({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        disabled={disablePast && !!valueYMD && isPast(fromYMD(valueYMD))} // Just an example, maybe not needed here
+        disabled={disablePast && !!valueYMD && isPast(fromYMD(valueYMD))}
         className={cn(
-          "group flex items-center gap-3 h-11 px-4 rounded-2xl transition-all duration-300 w-full",
-          "focus:outline-none focus:ring-4 focus:ring-primary/10",
-          open
-            ? "bg-white border-primary/40 shadow-[0_0_0_1px_rgba(var(--primary-rgb),0.4)] shadow-lg shadow-primary/5"
-            : "bg-white border-slate-200 hover:border-primary/30 hover:bg-slate-50/50 shadow-sm",
-          "border",
+          "group flex items-center transition-all w-full border",
+          variant === "compact"
+            ? cn(
+              "gap-2 h-7 px-2.5 rounded-lg duration-150 text-[11px]",
+              "focus:outline-none focus:ring-2 focus:ring-amber-200",
+              open
+                ? "bg-white border-amber-300"
+                : "bg-white border-gray-200 hover:border-amber-300",
+            )
+            : cn(
+              "gap-3 h-11 px-4 rounded-2xl duration-300",
+              "focus:outline-none focus:ring-4 focus:ring-primary/10",
+              open
+                ? "bg-white border-primary/40 shadow-[0_0_0_1px_rgba(var(--primary-rgb),0.4)] shadow-lg shadow-primary/5"
+                : "bg-white border-slate-200 hover:border-primary/30 hover:bg-slate-50/50 shadow-sm",
+            ),
           hasValue ? "text-slate-900" : "text-slate-400"
         )}
       >
         <CalendarDays
           className={cn(
-            "w-4 h-4 transition-colors duration-300",
-            hasValue || open ? "text-primary" : "text-slate-400 group-hover:text-primary/70"
+            "transition-colors",
+            variant === "compact"
+              ? cn("w-3.5 h-3.5", hasValue || open ? "text-amber-500" : "text-gray-400")
+              : cn("w-4 h-4 duration-300", hasValue || open ? "text-primary" : "text-slate-400 group-hover:text-primary/70")
           )}
         />
-        <span className="text-sm font-bold tracking-tight tabular-nums">{label}</span>
+        <span className={cn(
+          "tracking-tight tabular-nums",
+          variant === "compact" ? "text-[11px] font-medium" : "text-sm font-bold"
+        )}>{label}</span>
       </button>
 
       {open && (
         <div
           className={cn(
-            "absolute top-full mt-3 z-[100]",
+            "absolute top-full mt-2 z-[100]",
             align === "right" ? "right-0" : "left-0",
-            "w-[340px] max-w-[95vw]",
-            "bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100",
-            "flex flex-col overflow-hidden transition-all animate-in fade-in zoom-in-95 duration-300 origin-top"
+            variant === "compact"
+              ? "w-[260px] max-w-[95vw] bg-white rounded-xl shadow-lg border border-gray-200 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top"
+              : cn(
+                "w-[340px] max-w-[95vw]",
+                "bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100",
+                "flex flex-col overflow-hidden transition-all animate-in fade-in zoom-in-95 duration-300 origin-top"
+              )
           )}
         >
-          <div className="p-6">
+          <div className={variant === "compact" ? "p-3" : "p-6"}>
             <MiniCalendar
               selectedDate={selectedDate}
               onSelectDate={(d) => {
@@ -145,25 +166,37 @@ export function DateCalendarPopover({
               onNextMonth={() =>
                 setCurrentMonth((p) => new Date(p.getFullYear(), p.getMonth() + 1, 1))
               }
+              onJumpToMonth={(d) => setCurrentMonth(d)}
               minDate={minDateSafe}
               maxDate={maxDateSafe}
               disablePast={disablePast}
+              compact={variant === "compact"}
             />
           </div>
 
-          <div className="px-6 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3">
+          <div className={cn(
+            "flex items-center justify-between gap-2 border-t",
+            variant === "compact"
+              ? "px-3 py-2 bg-gray-50 border-gray-100"
+              : "px-6 py-5 bg-slate-50 border-slate-100"
+          )}>
             <button
               type="button"
               onClick={() => {
                 onChangeYMD("");
                 if (closeOnSelect) setOpen(false);
               }}
-              className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all duration-300 uppercase tracking-wider"
+              className={cn(
+                "font-semibold hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-150",
+                variant === "compact"
+                  ? "px-2 py-1 text-[10px] text-gray-400"
+                  : "px-4 py-2 text-xs text-slate-400 rounded-xl uppercase tracking-wider font-bold"
+              )}
             >
               ล้าง
             </button>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -172,7 +205,12 @@ export function DateCalendarPopover({
                   setCurrentMonth(startOfMonth(t));
                   if (closeOnSelect) setOpen(false);
                 }}
-                className="px-4 py-2 text-xs font-bold text-primary hover:bg-primary/10 rounded-xl transition-all duration-300 uppercase tracking-wider"
+                className={cn(
+                  "font-semibold text-primary hover:bg-primary/10 rounded-lg transition-all duration-150",
+                  variant === "compact"
+                    ? "px-2 py-1 text-[10px]"
+                    : "px-4 py-2 text-xs rounded-xl uppercase tracking-wider font-bold"
+                )}
               >
                 วันนี้
               </button>
@@ -180,7 +218,12 @@ export function DateCalendarPopover({
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="px-6 py-2.5 bg-primary text-white text-xs font-black rounded-2xl shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 active:scale-95"
+                className={cn(
+                  "bg-primary text-white font-bold shadow-sm hover:shadow-md transition-all duration-150 active:scale-95",
+                  variant === "compact"
+                    ? "px-3 py-1 text-[10px] rounded-lg"
+                    : "px-6 py-2.5 text-xs rounded-2xl shadow-lg shadow-primary/20 font-black"
+                )}
               >
                 เสร็จสิ้น
               </button>
@@ -191,3 +234,4 @@ export function DateCalendarPopover({
     </div>
   );
 }
+

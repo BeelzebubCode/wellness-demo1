@@ -25,7 +25,17 @@ export async function GET(req: NextRequest, { params }: Params) {
 
     const request = await prisma.bookingExceptionRequest.findUnique({
       where: { university_id_booking_id: { university_id: activeUniversityId, booking_id: bookingId } },
-      include: { evidences: true },
+      include: {
+        evidences: true,
+        exceptionReason: {
+          select: {
+            exception_reason_id: true,
+            exception_reason_code: true,
+            exception_reason_name_th: true,
+            exception_reason_name_en: true,
+          },
+        },
+      },
     });
 
     if (!request) {
@@ -54,8 +64,20 @@ export async function POST(req: NextRequest, { params }: Params) {
     }
 
     const body = await req.json().catch(() => ({} as any));
-    const reasonCode = String(body.reason_code ?? "").trim();
+    const exceptionReasonId = body.exception_reason_id ? Number(body.exception_reason_id) : null;
+    let reasonCode = String(body.reason_code ?? "").trim();
     const reasonDetail = String(body.reason_detail ?? "").trim();
+
+    // Look up reason from DB if exception_reason_id provided
+    if (exceptionReasonId) {
+      const reason = await prisma.exceptionReason.findUnique({
+        where: { exception_reason_id: exceptionReasonId },
+      });
+      if (!reason || !reason.exception_reason_is_active) {
+        return NextResponse.json({ success: false, error: "เหตุผลที่เลือกไม่ถูกต้อง" }, { status: 400 });
+      }
+      reasonCode = reason.exception_reason_code;
+    }
 
     if (!reasonCode || !reasonDetail) {
       return NextResponse.json({ success: false, error: "กรุณากรอกเหตุผลและรายละเอียด" }, { status: 400 });
@@ -109,6 +131,7 @@ export async function POST(req: NextRequest, { params }: Params) {
         const updatedRequest = await prisma.bookingExceptionRequest.update({
           where: { booking_exception_request_id: existing.booking_exception_request_id },
           data: {
+            exception_reason_id: exceptionReasonId,
             booking_exception_reason_code: reasonCode,
             booking_exception_reason_detail: reasonDetail,
             booking_exception_status: "DRAFT",
@@ -133,6 +156,7 @@ export async function POST(req: NextRequest, { params }: Params) {
         university_id: activeUniversityId,
         booking_id: bookingId,
         student_id: booking.student!.student_id,
+        exception_reason_id: exceptionReasonId,
         booking_exception_reason_code: reasonCode,
         booking_exception_reason_detail: reasonDetail,
         booking_exception_status: "DRAFT",

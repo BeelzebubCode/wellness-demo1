@@ -1,10 +1,10 @@
 // src/services/aiAgent/help/index.ts
 import { HelpEngine } from "./engine";
-import type { ChatMsg } from "../core/types"; 
+import type { ChatMsg } from "../core/types";
 
 const engine = new HelpEngine({
   aiBaseURL: (process.env.AI_BASE_URL || "http://localhost:11434").replace(/\/+$/, ""),
-  aiModel: process.env.AI_MODEL || "qwen2.5:7b",
+  aiModel: process.env.AI_MODEL_CHAT || "qwen2.5:7b",
   timeoutMs: 20000,
 });
 

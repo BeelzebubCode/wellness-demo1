@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
-import { runAnalytics } from "@/services/ai-agent/analyst/orchestrator";
+import { runAnalytics } from "@/services/ai-agent/analyst/engine";
 
 export async function POST(req: NextRequest) {
   try {

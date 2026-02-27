@@ -52,6 +52,13 @@ export async function GET(req: NextRequest) {
             },
           },
           evidences: { select: { booking_exception_evidence_id: true } },
+          exceptionReason: {
+            select: {
+              exception_reason_id: true,
+              exception_reason_code: true,
+              exception_reason_name_th: true,
+            },
+          },
         },
       }),
     ]);

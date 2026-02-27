@@ -19,6 +19,7 @@ export interface BookingFormData {
   problemCategoryId: number;
   problemTypeOther?: string;
   problemDescription: string;
+  isOtherCategory?: boolean;
 }
 
 type FormErrors = {
@@ -192,6 +193,7 @@ export function BookingForm({
                         update({
                           problemCategoryId: c.id,
                           problemTypeOther: codeUpper === "OTHER" ? formData.problemTypeOther : "",
+                          isOtherCategory: codeUpper === "OTHER",
                         });
                         setErrors((prev) => ({ ...prev, problemCategoryId: undefined }));
                         setHasSubmitted(false);
@@ -227,7 +229,7 @@ export function BookingForm({
       {(mode === "both" || mode === "categories") && isOtherSelected && (
         <div className={cn(mode === "both" && "mt-5")}>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            กรุณาระบุประเภทปัญหา
+            กรุณาระบุประเภทปัญหา <span className="text-red-500">*</span>
           </label>
 
           <input

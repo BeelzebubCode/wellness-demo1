@@ -69,7 +69,7 @@ export default function AiChatInput({
 
   const availableModes = MODES.filter((m) => {
     if (m.id === "booking_agent") return isAuthenticated && user?.role === "STUDENT";
-    if (m.id === "analyst") return isAuthenticated && user?.role && !["CONSULTANT", "HEAD_CONSULTANT"].includes(user.role);
+    if (m.id === "analyst") return isAuthenticated && user?.role && !["STUDENT", "CONSULTANT", "HEAD_CONSULTANT"].includes(user.role);
     return true;
   });
 
@@ -368,90 +368,132 @@ export default function AiChatInput({
           chat.agent?.intent !== "CANCEL" &&
           chat.agent?.questions && chat.agent.questions.length > 0 && (
             <div className="mb-4 animate-in slide-in-from-bottom-5 fade-in zoom-in-95 flex flex-col gap-2">
-              {chat.agent.questions.map((q: any, idx: number) => (
-                q.options && q.options.length > 0 && (
-                  <div key={idx} className="relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-2 md:p-2.5 shadow-sm">
-                    <p className="mb-1 text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-                      {q.text || "เลือกตัวเลือก:"}
-                    </p>
+              {chat.agent.questions.map((q: any, idx: number) => {
+                // Questions WITH options → pill buttons
+                if (q.options && q.options.length > 0) {
+                  return (
+                    <div key={idx} className="relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-2 md:p-2.5 shadow-sm">
+                      <p className="mb-1 text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+                        {q.text || "เลือกตัวเลือก:"}
+                      </p>
 
-                    {qCustomMode[idx] ? (
-                      /* Custom text input when user picked "OTHER" */
-                      <div className="flex items-center gap-2 mt-1 animate-in fade-in slide-in-from-top-2 duration-200">
-                        <input
-                          type="text"
-                          autoFocus
-                          value={qCustomText[idx] ?? ""}
-                          onChange={(e) => setQCustomText((prev) => ({ ...prev, [idx]: e.target.value }))}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && (qCustomText[idx] ?? "").trim()) {
-                              chat.sendMessage((qCustomText[idx] ?? "").trim());
+                      {qCustomMode[idx] ? (
+                        /* Custom text input when user picked "OTHER" */
+                        <div className="flex items-center gap-2 mt-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                          <input
+                            type="text"
+                            autoFocus
+                            value={qCustomText[idx] ?? ""}
+                            onChange={(e) => setQCustomText((prev) => ({ ...prev, [idx]: e.target.value }))}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && (qCustomText[idx] ?? "").trim()) {
+                                chat.sendMessage((qCustomText[idx] ?? "").trim());
+                                setQCustomMode((prev) => ({ ...prev, [idx]: false }));
+                                setQCustomText((prev) => ({ ...prev, [idx]: "" }));
+                              }
+                              if (e.key === "Escape") {
+                                setQCustomMode((prev) => ({ ...prev, [idx]: false }));
+                              }
+                            }}
+                            placeholder="ระบุสั้น ๆ..."
+                            className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-[13px] text-slate-700 placeholder:text-slate-400 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 transition-all"
+                          />
+                          <button
+                            type="button"
+                            disabled={!(qCustomText[idx] ?? "").trim() || isLoading}
+                            onClick={() => {
+                              const val = (qCustomText[idx] ?? "").trim();
+                              if (!val) return;
+                              chat.sendMessage(val);
                               setQCustomMode((prev) => ({ ...prev, [idx]: false }));
                               setQCustomText((prev) => ({ ...prev, [idx]: "" }));
-                            }
-                            if (e.key === "Escape") {
-                              setQCustomMode((prev) => ({ ...prev, [idx]: false }));
-                            }
-                          }}
-                          placeholder="ระบุสั้น ๆ..."
-                          className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-[13px] text-slate-700 placeholder:text-slate-400 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 transition-all"
-                        />
-                        <button
-                          type="button"
-                          disabled={!(qCustomText[idx] ?? "").trim() || isLoading}
-                          onClick={() => {
-                            const val = (qCustomText[idx] ?? "").trim();
-                            if (!val) return;
-                            chat.sendMessage(val);
-                            setQCustomMode((prev) => ({ ...prev, [idx]: false }));
+                            }}
+                            className="shrink-0 inline-flex items-center rounded-xl bg-indigo-500 hover:bg-indigo-600 px-3 py-1.5 text-[12px] font-semibold text-white transition-colors disabled:opacity-40"
+                          >
+                            ส่ง
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setQCustomMode((prev) => ({ ...prev, [idx]: false }))}
+                            className="shrink-0 text-[12px] text-slate-400 hover:text-slate-600 px-1"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-1 md:gap-1.5">
+                          {q.options.map((opt: any) => {
+                            const valStr = String(opt.value ?? "").toUpperCase();
+                            const lblStr = String(opt.label ?? "").toLowerCase();
+                            const isOther =
+                              opt.code === "OTHER" ||
+                              valStr === "OTHER" ||
+                              lblStr.includes("other") ||
+                              lblStr.includes("อื่น");
+                            return (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                disabled={isLoading}
+                                onClick={() => {
+                                  if (isOther) {
+                                    setQCustomMode((prev) => ({ ...prev, [idx]: true }));
+                                  } else {
+                                    chat.sendMessage(opt.label || opt.value);
+                                  }
+                                }}
+                                className="inline-flex items-center rounded-full border border-indigo-50 bg-white px-2 py-0.5 md:px-3 md:py-1 text-[11px] md:text-[12px] text-indigo-600 font-medium shadow-sm hover:bg-indigo-50 hover:text-indigo-700 transition-all active:scale-95 disabled:opacity-50"
+                              >
+                                {opt.label}
+                                {isOther && <span className="ml-1 text-[10px] opacity-60">✏️</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                // Questions WITHOUT options → inline text input (e.g. "ปัญหาโดยย่อ")
+                return (
+                  <div key={idx} className="relative overflow-hidden rounded-2xl border border-indigo-100 bg-white p-3 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+                    <p className="mb-2 text-[10px] font-black text-indigo-400 uppercase tracking-widest">
+                      {q.text || "กรุณากรอกข้อมูล"}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        autoFocus
+                        value={qCustomText[idx] ?? ""}
+                        onChange={(e) => setQCustomText((prev) => ({ ...prev, [idx]: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && (qCustomText[idx] ?? "").trim()) {
+                            chat.sendMessage((qCustomText[idx] ?? "").trim());
                             setQCustomText((prev) => ({ ...prev, [idx]: "" }));
-                          }}
-                          className="shrink-0 inline-flex items-center rounded-xl bg-indigo-500 hover:bg-indigo-600 px-3 py-1.5 text-[12px] font-semibold text-white transition-colors disabled:opacity-40"
-                        >
-                          ส่ง
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setQCustomMode((prev) => ({ ...prev, [idx]: false }))}
-                          className="shrink-0 text-[12px] text-slate-400 hover:text-slate-600 px-1"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex flex-wrap gap-1 md:gap-1.5">
-                        {q.options.map((opt: any) => {
-                          const valStr = String(opt.value ?? "").toUpperCase();
-                          const lblStr = String(opt.label ?? "").toLowerCase();
-                          const isOther =
-                            opt.code === "OTHER" ||
-                            valStr === "OTHER" ||
-                            lblStr.includes("other") ||
-                            lblStr.includes("อื่น");
-                          return (
-                            <button
-                              key={opt.value}
-                              type="button"
-                              disabled={isLoading}
-                              onClick={() => {
-                                if (isOther) {
-                                  setQCustomMode((prev) => ({ ...prev, [idx]: true }));
-                                } else {
-                                  chat.sendMessage(opt.label || opt.value);
-                                }
-                              }}
-                              className="inline-flex items-center rounded-full border border-indigo-50 bg-white px-2 py-0.5 md:px-3 md:py-1 text-[11px] md:text-[12px] text-indigo-600 font-medium shadow-sm hover:bg-indigo-50 hover:text-indigo-700 transition-all active:scale-95 disabled:opacity-50"
-                            >
-                              {opt.label}
-                              {isOther && <span className="ml-1 text-[10px] opacity-60">✏️</span>}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
+                          }
+                        }}
+                        disabled={isLoading}
+                        placeholder="เช่น เครียดเรื่องเรียน นอนไม่หลับ..."
+                        className="flex-1 rounded-xl border border-indigo-100 bg-indigo-50/30 px-3 py-2 text-[13px] text-slate-700 placeholder:text-slate-400 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all disabled:opacity-50"
+                      />
+                      <button
+                        type="button"
+                        disabled={!(qCustomText[idx] ?? "").trim() || isLoading}
+                        onClick={() => {
+                          const val = (qCustomText[idx] ?? "").trim();
+                          if (!val) return;
+                          chat.sendMessage(val);
+                          setQCustomText((prev) => ({ ...prev, [idx]: "" }));
+                        }}
+                        className="shrink-0 inline-flex items-center rounded-xl bg-indigo-500 hover:bg-indigo-600 px-4 py-2 text-[12px] font-semibold text-white transition-colors disabled:opacity-40 shadow-sm"
+                      >
+                        ส่ง
+                      </button>
+                    </div>
                   </div>
-                )
-              ))}
+                );
+              })}
             </div>
           )}
 

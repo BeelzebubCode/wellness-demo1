@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from "react";
 import {
     AlertTriangle, Clock, CheckCircle2, XCircle, FileText, Plus,
     ShieldAlert, Timer, Ban, Paperclip, ChevronDown, AlertCircle, Calendar, X,
-    CalendarRange, ArrowRight,
+    CalendarRange, ArrowRight, CalendarDays,
 } from "lucide-react";
 import { Card, LoadingSpinner, Button } from "@/components/ui";
 import { BookingExceptionRequestModal } from "../shared/BookingExceptionRequestModal";
@@ -26,9 +26,10 @@ const STATUS_CONFIG: Record<string, { labelTh: string; icon: any; bgColor: strin
     REJECTED: { labelTh: "ถูกปฏิเสธ", icon: XCircle, bgColor: "bg-red-50", textColor: "text-red-600", borderColor: "border-red-200" },
 };
 
-const REASON_LABELS: Record<string, string> = {
-    MEDICAL: "ป่วย/สุขภาพ", EMERGENCY: "เหตุฉุกเฉิน", ACADEMIC: "เหตุผลทางวิชาการ/สอบ", OTHER: "อื่นๆ",
-};
+// Helper to get reason label — uses DB name if available, falls back to code
+function getReasonLabel(item: { booking_exception_reason_code: string; exceptionReason?: { exception_reason_name_th: string } | null }) {
+    return item.exceptionReason?.exception_reason_name_th ?? item.booking_exception_reason_code;
+}
 
 const PENALTY_LABELS: Record<string, { label: string; color: string }> = {
     LATE_CANCEL: { label: "ยกเลิก 6-24 ชม.", color: "text-amber-600 bg-amber-50 border-amber-200" },
@@ -263,15 +264,16 @@ function PenaltyBookingCard({ b, onSubmit }: { b: PenaltyBooking; onSubmit: (id:
                     {statusBadge}
                 </div>
                 <p className="text-sm font-medium text-gray-800 truncate mt-0.5">{problemName}</p>
-                <div className="flex items-center gap-3 mt-0.5 text-[11px] text-gray-400">
+                <div className="flex items-center gap-3 mt-1 flex-wrap">
                     {slotDate && (
-                        <span>
-                            📅 {new Date(slotDate).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })}{" "}
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100">
+                            <CalendarDays className="w-3.5 h-3.5 text-amber-500" />
+                            {new Date(slotDate).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })}{" "}
                             {formatTime(slotDate)}–{formatTime(b.timeSlot?.time_slot_end_datetime)} น.
                         </span>
                     )}
                     {b.cancellation?.cancellationReason && (
-                        <span>เหตุผล: {b.cancellation.cancellationReason.cancellation_reason_name_th ?? b.cancellation.cancellationReason.cancellation_reason_name_en}</span>
+                        <span className="text-[11px] text-gray-400">เหตุผล: {b.cancellation.cancellationReason.cancellation_reason_name_th ?? b.cancellation.cancellationReason.cancellation_reason_name_en}</span>
                     )}
                 </div>
             </div>
@@ -325,7 +327,7 @@ function ExceptionRequestCard({ item, onResubmit }: { item: ExceptionRequestItem
                         )}
                     </div>
                     <div className="font-medium text-sm text-gray-900 truncate pr-2">
-                        {REASON_LABELS[item.booking_exception_reason_code] ?? item.booking_exception_reason_code} — {problemName}
+                        {getReasonLabel(item)} — {problemName}
                     </div>
                 </div>
 
@@ -507,21 +509,22 @@ export function ExceptionRequestsPageClient() {
                     </div>
                 </div>
 
-                {/* ── Date Filter Bar: Chips + Inline Custom Range ── */}
+                {/* ── Date Filter Bar ── */}
                 {penaltyBookings.length > 0 && (
-                    <div className="px-5 py-3 border-b border-amber-100 bg-white">
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <CalendarRange className="w-4 h-4 text-amber-400 shrink-0" />
+                    <div className="px-5 py-3 border-b border-amber-100 bg-white space-y-0">
+                        {/* Row 1: Preset chips */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                            <CalendarRange className="w-4 h-4 text-amber-400 shrink-0 mr-0.5" />
                             {DATE_PRESETS.filter(p => p.key !== "custom").map((p) => (
                                 <button
                                     key={p.key}
                                     onClick={() => handlePresetClick(p.key)}
                                     className={`
-                                        px-3 py-1.5 rounded-full text-xs font-semibold
-                                        transition-all duration-200 ease-out border select-none
+                                        px-2.5 py-1 rounded-full text-[11px] font-semibold
+                                        transition-all duration-150 border select-none
                                         ${activePreset === p.key
-                                            ? "bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-200/50"
-                                            : "bg-white text-gray-500 border-gray-200 hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700"
+                                            ? "bg-amber-500 text-white border-amber-500 shadow-sm"
+                                            : "bg-gray-50 text-gray-500 border-gray-200 hover:border-amber-300 hover:text-amber-700"
                                         }
                                     `}
                                 >
@@ -529,18 +532,16 @@ export function ExceptionRequestsPageClient() {
                                 </button>
                             ))}
 
-                            {/* Divider */}
-                            <div className="w-px h-5 bg-gray-200 mx-0.5" />
+                            <div className="w-px h-4 bg-gray-200" />
 
-                            {/* Custom range toggle — different style: outline with icon */}
                             <button
                                 onClick={() => handlePresetClick("custom")}
                                 className={`
-                                    inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
-                                    transition-all duration-200 border select-none
+                                    inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold
+                                    transition-all duration-150 border select-none
                                     ${activePreset === "custom"
                                         ? "bg-amber-500 text-white border-amber-500 shadow-sm"
-                                        : "bg-white text-gray-500 border-gray-200 hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700"
+                                        : "bg-gray-50 text-gray-500 border-gray-200 hover:border-amber-300 hover:text-amber-700"
                                     }
                                 `}
                             >
@@ -548,71 +549,63 @@ export function ExceptionRequestsPageClient() {
                                 ช่วงวันที่
                             </button>
 
-                            {/* Active range display */}
+                            {/* Inline range badge for non-custom presets */}
                             {hasDateFilter && activePreset !== "custom" && rangeLabel && (
-                                <span className="text-[11px] text-amber-600 font-medium bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 ml-1">
+                                <span className="text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 ml-0.5">
                                     {rangeLabel}
                                 </span>
                             )}
 
-                            {/* Result count */}
-                            <span className="ml-auto text-[11px] text-gray-400 tabular-nums shrink-0">
+                            <span className="ml-auto text-[10px] text-gray-400 tabular-nums shrink-0">
                                 {filteredPenaltyBookings.length}/{penaltyBookings.length}
                             </span>
                         </div>
 
-                        {/* ── Custom range row — inline, no separate container ── */}
-                        <div
-                            className={`
-                                grid transition-all duration-300 ease-in-out
-                                ${activePreset === "custom" ? "grid-rows-[1fr] opacity-100 mt-3" : "grid-rows-[0fr] opacity-0 mt-0"}
-                            `}
-                        >
-                            <div className="overflow-hidden">
-                                <div className="flex items-center gap-3 flex-wrap">
-                                    {/* From */}
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[11px] text-gray-400 font-medium w-10">จาก</span>
-                                        <DateCalendarPopover
-                                            valueYMD={dateFrom}
-                                            onChangeYMD={(v) => { setDateFrom(v); setActivePreset("custom"); }}
-                                            placeholder="เลือกวันเริ่ม"
-                                            closeOnSelect
-                                            className="!w-auto"
-                                        />
-                                    </div>
-                                    <ArrowRight className="w-4 h-4 text-gray-300 shrink-0" />
-                                    {/* To */}
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[11px] text-gray-400 font-medium w-10">ถึง</span>
-                                        <DateCalendarPopover
-                                            valueYMD={dateTo}
-                                            onChangeYMD={(v) => { setDateTo(v); setActivePreset("custom"); }}
-                                            placeholder="เลือกวันสิ้นสุด"
-                                            closeOnSelect
-                                            className="!w-auto"
-                                        />
-                                    </div>
+                        {/* Row 2: Custom range pickers — slide down */}
+                        {activePreset === "custom" && (
+                            <div className="pt-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                                <div className="flex items-center gap-2 bg-gray-50/80 rounded-xl px-3 py-2 border border-gray-100">
+                                    {/* From date */}
+                                    <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">จาก</span>
+                                    <DateCalendarPopover
+                                        valueYMD={dateFrom}
+                                        onChangeYMD={(v) => { setDateFrom(v); setActivePreset("custom"); }}
+                                        placeholder="วันเริ่ม"
+                                        closeOnSelect
+                                        variant="compact"
+                                    />
 
-                                    {/* Range display badge */}
+                                    <span className="text-gray-300 text-xs">→</span>
+
+                                    {/* To date */}
+                                    <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">ถึง</span>
+                                    <DateCalendarPopover
+                                        valueYMD={dateTo}
+                                        onChangeYMD={(v) => { setDateTo(v); setActivePreset("custom"); }}
+                                        placeholder="วันสิ้นสุด"
+                                        closeOnSelect
+                                        variant="compact"
+                                    />
+
+                                    {/* Range summary */}
                                     {rangeLabel && (
-                                        <span className="text-[11px] text-amber-700 font-semibold bg-gradient-to-r from-amber-50 to-orange-50 px-3 py-1.5 rounded-full border border-amber-200 shadow-sm">
-                                            📅 {rangeLabel}
+                                        <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 ml-1">
+                                            <CalendarDays className="w-3 h-3" /> {rangeLabel}
                                         </span>
                                     )}
 
-                                    {/* Clear button */}
+                                    {/* Clear */}
                                     {hasDateFilter && (
                                         <button
                                             onClick={() => { setDateFrom(""); setDateTo(""); setActivePreset("all"); }}
-                                            className="inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-red-500 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-red-50 border border-transparent hover:border-red-200"
+                                            className="ml-auto inline-flex items-center gap-0.5 text-[10px] text-gray-400 hover:text-red-500 transition-colors px-2 py-1 rounded-md hover:bg-red-50"
                                         >
-                                            <X className="w-3 h-3" /> ล้างทั้งหมด
+                                            <X className="w-3 h-3" /> ล้าง
                                         </button>
                                     )}
                                 </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 )}
 

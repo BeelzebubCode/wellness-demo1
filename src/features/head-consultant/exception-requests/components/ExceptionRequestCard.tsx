@@ -51,7 +51,7 @@ export function ExceptionRequestCard({ request }: { request: ExceptionRequestRow
                             </div>
                             <div className="flex items-center gap-1.5 md:col-span-2">
                                 <FileText className="w-4 h-4 text-gray-400" />
-                                <span className="truncate">เหตุผล: {request.booking_exception_reason_code || "ไม่ระบุ"}</span>
+                                <span className="truncate">เหตุผล: {request.exceptionReason?.exception_reason_name_th || request.booking_exception_reason_code || "ไม่ระบุ"}</span>
                                 <span className="text-gray-400 ml-2">({request.evidences.length} หลักฐาน)</span>
                             </div>
                         </div>

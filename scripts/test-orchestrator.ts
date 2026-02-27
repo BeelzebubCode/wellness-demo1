@@ -4,7 +4,7 @@
  * Usage: npx tsx scripts/test-orchestrator.ts
  */
 
-import { runAnalytics } from "../src/services/ai-agent/analyst/orchestrator";
+import { runAnalytics } from "../src/services/ai-agent/analyst/engine";
 
 const QUESTIONS = [
     "ภาคไหนเครียดสุด (มีการจองปรึกษามากสุด)",

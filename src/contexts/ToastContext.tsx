@@ -35,17 +35,17 @@ const icons = {
 };
 
 const styles = {
-  success: 'bg-emerald-500 border-emerald-600 text-white shadow-emerald-200',
-  error: 'bg-red-500 border-red-600 text-white shadow-red-200',
-  info: 'bg-blue-500 border-blue-600 text-white shadow-blue-200',
-  warning: 'bg-amber-400 border-amber-500 text-amber-950 shadow-amber-200',
+  success: 'bg-white border-l-4 border-l-emerald-500 border border-emerald-200 text-gray-800 shadow-lg',
+  error: 'bg-white border-l-4 border-l-red-500 border border-red-200 text-gray-800 shadow-lg',
+  info: 'bg-white border-l-4 border-l-blue-500 border border-blue-200 text-gray-800 shadow-lg',
+  warning: 'bg-white border-l-4 border-l-amber-500 border border-amber-200 text-gray-800 shadow-lg',
 };
 
 const iconStyles = {
-  success: 'text-white',
-  error: 'text-white',
-  info: 'text-white',
-  warning: 'text-amber-900',
+  success: 'text-emerald-500',
+  error: 'text-red-500',
+  info: 'text-blue-500',
+  warning: 'text-amber-500',
 };
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
@@ -73,7 +73,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={{ toasts, showToast, hideToast, success, error, info, warning }}>
       {children}
 
-      {/* Toast container — rendered at end of provider so it sits on top in DOM order */}
+      {/* Toast container */}
       <div
         style={{
           position: 'fixed',
@@ -83,7 +83,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           display: 'flex',
           flexDirection: 'column',
           gap: '12px',
-          maxWidth: '384px',
+          maxWidth: '400px',
           width: '100%',
           pointerEvents: 'none',
         }}
@@ -94,16 +94,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             <div
               key={toast.id}
               className={cn(
-                'flex items-center gap-3 px-4 py-3.5 rounded-2xl border shadow-2xl',
+                'flex items-center gap-3 px-4 py-3 rounded-xl',
                 styles[toast.type]
               )}
               style={{ pointerEvents: 'auto', animation: 'slideInToast 0.3s ease-out' }}
             >
               <Icon className={cn('w-5 h-5 flex-shrink-0', iconStyles[toast.type])} />
-              <p className="flex-1 text-sm font-semibold">{toast.message}</p>
+              <p className="flex-1 text-sm font-medium whitespace-nowrap">{toast.message}</p>
               <button
                 onClick={() => hideToast(toast.id)}
-                className="flex-shrink-0 p-1 hover:bg-black/10 rounded-lg transition-colors"
+                className="flex-shrink-0 p-1 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
               >
                 <X className="w-4 h-4" />
               </button>

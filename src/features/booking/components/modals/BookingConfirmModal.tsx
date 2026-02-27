@@ -152,6 +152,7 @@ export function BookingConfirmModal({
                         checked={consentChecked}
                         onChange={setConsentChecked}
                         className="h-full"
+                        variant="full"
                       />
                     </div>
                     {!consentChecked && (
@@ -245,5 +246,5 @@ export function BookingConfirmModal({
 }
 
 function isOther(form: BookingFormData) {
-  return !!form.problemTypeOther?.trim();
+  return !!form.isOtherCategory;
 }

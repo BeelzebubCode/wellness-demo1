@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BookOpen, AlertCircle, FileText, ChevronRight } from "lucide-react";
 import { Metadata } from "next";
 import { getPublicDocs } from "@/services/document/handlers/publicDoc";
+import { BackButton } from "./BackButton";
 
 export const metadata: Metadata = {
     title: "เอกสารอ้างอิงและคู่มือ (Document) | NU Wellness",
@@ -29,7 +30,8 @@ export default async function DocsLayout({ children }: { children: ReactNode }) 
         <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
             {/* Sidebar */}
             <aside className="w-full md:w-64 bg-white border-r border-slate-200 md:min-h-screen shrink-0">
-                <div className="p-4 md:p-6 border-b border-slate-100 sticky top-0 bg-white z-10">
+                <div className="p-4 md:p-6 border-b border-slate-100 sticky top-0 bg-white z-10 space-y-3">
+                    <BackButton />
                     <Link href="/" className="flex items-center gap-2 text-primary-700 hover:text-primary-800 transition">
                         <BookOpen className="w-5 h-5" />
                         <span className="font-bold">คู่มือและการใช้งาน</span>

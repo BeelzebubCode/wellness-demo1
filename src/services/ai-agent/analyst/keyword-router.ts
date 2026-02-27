@@ -18,17 +18,17 @@ interface RouterResult {
 
 // ── Period Detection ──────────────────────────────────────────────
 function detectPeriod(q: string): { suffix: string; dateRange: string } {
-    // Match patterns like "1ปี", "1 ปี", "12เดือน", "6 เดือน", "3m", "1y"
+    // Match patterns like "1ปี", "7 ปี", "12เดือน", "6 เดือน", "3m", "1y"
     const yearMatch = q.match(/(\d+)\s*ปี/);
     if (yearMatch) {
         const years = parseInt(yearMatch[1]);
-        const months = Math.min(years * 12, 12);
-        return { suffix: `_${months}M`, dateRange: `${months}m` };
+        const months = Math.min(years * 12, 120); // up to 10 years
+        return { suffix: `_${months}M`, dateRange: `${years}y` };
     }
 
     const monthMatch = q.match(/(\d+)\s*เดือน/);
     if (monthMatch) {
-        const months = Math.min(parseInt(monthMatch[1]), 12);
+        const months = Math.min(parseInt(monthMatch[1]), 120);
         return { suffix: `_${months}M`, dateRange: `${months}m` };
     }
 
@@ -36,8 +36,8 @@ function detectPeriod(q: string): { suffix: string; dateRange: string } {
     const dayMatch = q.match(/(\d+)\s*วัน/);
     if (dayMatch) {
         const days = parseInt(dayMatch[1]);
-        const months = Math.max(1, Math.min(Math.round(days / 30), 12));
-        return { suffix: `_${months}M`, dateRange: `${months}m` };
+        const months = Math.max(1, Math.min(Math.round(days / 30), 120));
+        return { suffix: `_${months}M`, dateRange: `${days}d` };
     }
 
     // English shortcuts
@@ -146,6 +146,30 @@ const ROUTING_RULES: Array<{
             keywords: ["รายชื่อมหาวิทยาลัย", "มหาวิทยาลัยทั้งหมด", "university list"],
             lookupKey: "UNIVERSITY_LIST",
             description: "List of all universities"
+        },
+        {
+            keywords: ["ช่องทาง", "channel", "line call", "zoom", "google meet", "microsoft teams", "ช่องทางออนไลน์"],
+            excludeKeywords: ["ยกเลิก", "เสี่ยง"],
+            lookupKey: "ONLINE_CHANNEL_SUMMARY",
+            description: "Online channel breakdown"
+        },
+        {
+            keywords: ["ช่วงเวลา", "เวลาไหน", "ชั่วโมง", "peak", "เวลายอดนิยม", "ช่วงไหน"],
+            excludeKeywords: ["ยกเลิก", "เสี่ยง"],
+            lookupKey: "HOURLY_SUMMARY",
+            description: "Peak hours"
+        },
+        {
+            keywords: ["มหาลัยเสี่ยง", "มหาวิทยาลัยเสี่ยง", "เสี่ยงสูงสุด"],
+            excludeKeywords: ["นิสิต", "นักศึกษา", "student"],
+            lookupKey: "TOP_HIGH_RISK_UNIVERSITIES",
+            description: "Universities with highest risk"
+        },
+        {
+            keywords: ["นิสิตเสี่ยง", "นักศึกษาเสี่ยง", "เสี่ยงสูง"],
+            excludeKeywords: ["มหาวิทยาลัย", "มหาลัย"],
+            lookupKey: "TOP_HIGH_RISK_STUDENTS",
+            description: "High risk students"
         },
     ];
 

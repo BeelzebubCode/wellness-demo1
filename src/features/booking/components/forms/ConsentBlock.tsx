@@ -1,17 +1,23 @@
 "use client";
 
 import { useMemo } from "react";
-import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/cn";
 
+/**
+ * variant:
+ *   "compact" → chat AI booking (small box with scroll, max-h-[80px])
+ *   "full"    → manual booking modal (no height limit, shows everything)
+ */
 export function ConsentBlock({
   checked,
   onChange,
   className,
+  variant = "compact",
 }: {
   checked: boolean;
   onChange: (v: boolean) => void;
   className?: string;
+  variant?: "compact" | "full";
 }) {
   const docTitle = useMemo(() => "เงื่อนไขการให้บริการและความยินยอม", []);
 
@@ -19,7 +25,13 @@ export function ConsentBlock({
     <div className={cn("flex flex-col", className)}>
       <div className="text-sm font-semibold text-slate-800">{docTitle}</div>
       {!checked && (
-        <div className="text-[11px] text-slate-500 mt-2 leading-relaxed space-y-2 max-h-[80px] overflow-y-auto pr-2 custom-scroll border border-slate-100 rounded-lg p-2 bg-slate-50 animate-in slide-in-from-top-2 fade-in duration-300">
+        <div
+          className={cn(
+            "text-[11px] text-slate-500 mt-2 leading-relaxed space-y-2 pr-2 border border-slate-100 rounded-lg p-3 bg-slate-50 animate-in slide-in-from-top-2 fade-in duration-300",
+            variant === "compact" && "max-h-[80px] overflow-y-auto custom-scroll",
+            variant === "full" && "overflow-visible",
+          )}
+        >
           <span className="block italic font-medium text-slate-600 mb-1">
             เงื่อนไขและข้อตกลงการรับบริการ (Terms and Conditions)
           </span>

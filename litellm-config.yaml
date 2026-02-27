@@ -1,0 +1,36 @@
+model_list:
+  # ── Analyst Model (Intent + DataStory) ──
+  - model_name: "qwen3:8b"
+    litellm_params:
+      model: "ollama_chat/qwen3:8b"
+      api_base: "http://host.docker.internal:11434"
+      stream: false
+      merge_reasoning_content_in_choices: true
+
+  # ── SQL Generator Model ──
+  - model_name: "qwen3:8b-sql"
+    litellm_params:
+      model: "ollama_chat/qwen3:8b"
+      api_base: "http://host.docker.internal:11434"
+      stream: false
+      merge_reasoning_content_in_choices: true
+
+  # ── Fallback: any ollama model ──
+  - model_name: "ollama/*"
+    litellm_params:
+      model: "ollama_chat/*"
+      api_base: "http://host.docker.internal:11434"
+      stream: false
+
+# Logging & observability
+litellm_settings:
+  set_verbose: false
+  json_logs: true
+  turn_off_message_logging: false
+  cache: false
+
+general_settings:
+  master_key: "sk-litellm-wellness-2026"
+  database_url: "postgresql://postgres:postgrespassword@db:5432/litellm_db"
+  store_model_in_db: true
+  store_prompts_in_spend_logs: true
