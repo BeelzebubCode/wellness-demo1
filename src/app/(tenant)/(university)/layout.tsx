@@ -15,7 +15,7 @@ export default function UniversityLayout({
   // ✅ เช็ค "ล็อกอิน" อย่างเดียว ไม่สน role (role ไปเช็คใน layout ของแต่ละฝ่าย)
   const { isLoading, isAuthenticated } = useRoleAuth({
     redirectTo: "/login",
-    allowedRoles: ["STUDENT", "CONSULTANT", "HEAD_CONSULTANT", "RECTOR", "SUPER_ADMIN", "ADVISOR", "DEAN"] as const,
+    allowedRoles: ["STUDENT", "CONSULTANT", "HEAD_CONSULTANT", "RECTOR", "SUPER_ADMIN", "ADVISOR", "DEAN", "HEAD_DEPARTMENT"] as const,
     loginToastKey: "toast_login_required_university",
     guard: false, // ✅ Allow public access
   });

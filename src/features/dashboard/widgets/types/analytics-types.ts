@@ -20,6 +20,13 @@ export interface AnalyticsParams {
     service_mode?: string[];       // multi-value e.g. ["ONLINE","ONSITE"]
     attendance_status?: string[];  // multi-value e.g. ["CHECKED_IN","LATE","NO_SHOW"]
     online_channel_category_id?: number;
+
+    // Head-department specific filters
+    family_income_bracket?: string[];  // e.g. ["UNDER_100K", "BETWEEN_100K_200K"]
+    blood_group?: string[];            // e.g. ["A", "B"]
+    birth_order?: string[];            // e.g. ["ONLY_CHILD", "1", "2", "3", "4_PLUS"]
+    chronic_condition_ids?: number[];   // e.g. [1, 5, 10]
+    parental_status?: string[];        // e.g. ["TOGETHER", "DIVORCED"]
 }
 
 // ─── KPI Summary ────────────────────────────────────────────────────────────

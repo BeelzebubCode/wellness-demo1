@@ -160,6 +160,7 @@ export function DashboardFilterBar({
     const [universities, setUniversities] = useState<any[]>([]);
     const [faculties, setFaculties] = useState<FacultyOption[]>([]);
     const [categories, setCategories] = useState<ProblemCategoryOption[]>([]);
+    const [chronicConditions, setChronicConditions] = useState<{ id: number; code: string; nameTh: string }[]>([]);
 
     const hasField = useCallback(
         (id: FilterFieldId) => fields.some((f) => f.id === id),
@@ -178,6 +179,12 @@ export function DashboardFilterBar({
     useEffect(() => {
         if (hasField('faculty')) fetchFaculties().then(setFaculties).catch(() => { });
         if (hasField('problem_category')) fetchProblemCategories().then(setCategories).catch(() => { });
+        if (hasField('chronic_condition')) {
+            fetch('/api/v2/analytics/chronic-conditions', { credentials: 'include' })
+                .then(r => r.json())
+                .then(j => setChronicConditions(j.data ?? []))
+                .catch(() => { });
+        }
     }, [hasField]);
 
     // ── Computed options ───────────────────────────────────────────────────
@@ -203,7 +210,10 @@ export function DashboardFilterBar({
     const hasActiveFilters = !!(
         params.gender?.length || params.problem_category_ids?.length ||
         params.service_mode?.length || params.booking_status?.length ||
-        params.attendance_status?.length || params.faculty_id || params.faculty_ids?.length
+        params.attendance_status?.length || params.faculty_id || params.faculty_ids?.length ||
+        params.family_income_bracket?.length || params.blood_group?.length ||
+        params.birth_order?.length || params.chronic_condition_ids?.length ||
+        params.parental_status?.length
     );
 
     const clearAllFilters = useCallback(() => {
@@ -215,6 +225,11 @@ export function DashboardFilterBar({
             attendance_status: undefined,
             faculty_id: undefined,
             faculty_ids: undefined,
+            family_income_bracket: undefined,
+            blood_group: undefined,
+            birth_order: undefined,
+            chronic_condition_ids: undefined,
+            parental_status: undefined,
         });
     }, [onChange]);
 
@@ -384,6 +399,85 @@ export function DashboardFilterBar({
                             onClick={() => onChange({ attendance_status: toggleArray(params.attendance_status, "LATE") })} />
                         <ToggleChip label="ไม่มาตามนัด" active={!!params.attendance_status?.includes("NO_SHOW")}
                             onClick={() => onChange({ attendance_status: toggleArray(params.attendance_status, "NO_SHOW") })} />
+                    </FilterGroup>
+                )}
+
+                {/* Family Income */}
+                {hasField('family_income') && (
+                    <FilterGroup label="รายได้">
+                        <ToggleChip label="< 100K" active={!!params.family_income_bracket?.includes("UNDER_100K")}
+                            onClick={() => onChange({ family_income_bracket: toggleArray(params.family_income_bracket, "UNDER_100K") })} />
+                        <ToggleChip label="100-200K" active={!!params.family_income_bracket?.includes("BETWEEN_100K_200K")}
+                            onClick={() => onChange({ family_income_bracket: toggleArray(params.family_income_bracket, "BETWEEN_100K_200K") })} />
+                        <ToggleChip label="200-300K" active={!!params.family_income_bracket?.includes("BETWEEN_200K_300K")}
+                            onClick={() => onChange({ family_income_bracket: toggleArray(params.family_income_bracket, "BETWEEN_200K_300K") })} />
+                        <ToggleChip label="300-500K" active={!!params.family_income_bracket?.includes("BETWEEN_300K_500K")}
+                            onClick={() => onChange({ family_income_bracket: toggleArray(params.family_income_bracket, "BETWEEN_300K_500K") })} />
+                        <ToggleChip label="500-800K" active={!!params.family_income_bracket?.includes("BETWEEN_500K_800K")}
+                            onClick={() => onChange({ family_income_bracket: toggleArray(params.family_income_bracket, "BETWEEN_500K_800K") })} />
+                        <ToggleChip label="800K-1M" active={!!params.family_income_bracket?.includes("BETWEEN_800K_1M")}
+                            onClick={() => onChange({ family_income_bracket: toggleArray(params.family_income_bracket, "BETWEEN_800K_1M") })} />
+                        <ToggleChip label="> 1M" active={!!params.family_income_bracket?.includes("OVER_1M")}
+                            onClick={() => onChange({ family_income_bracket: toggleArray(params.family_income_bracket, "OVER_1M") })} />
+                    </FilterGroup>
+                )}
+
+                {/* Blood Group */}
+                {hasField('blood_group') && (
+                    <FilterGroup label="กรุ๊ปเลือด">
+                        <ToggleChip label="A" active={!!params.blood_group?.includes("A")}
+                            onClick={() => onChange({ blood_group: toggleArray(params.blood_group, "A") })} />
+                        <ToggleChip label="B" active={!!params.blood_group?.includes("B")}
+                            onClick={() => onChange({ blood_group: toggleArray(params.blood_group, "B") })} />
+                        <ToggleChip label="AB" active={!!params.blood_group?.includes("AB")}
+                            onClick={() => onChange({ blood_group: toggleArray(params.blood_group, "AB") })} />
+                        <ToggleChip label="O" active={!!params.blood_group?.includes("O")}
+                            onClick={() => onChange({ blood_group: toggleArray(params.blood_group, "O") })} />
+                    </FilterGroup>
+                )}
+
+                {/* Birth Order */}
+                {hasField('birth_order') && (
+                    <FilterGroup label="ลำดับบุตร">
+                        <ToggleChip label="ลูกคนเดียว" active={!!params.birth_order?.includes("ONLY_CHILD")}
+                            onClick={() => onChange({ birth_order: toggleArray(params.birth_order, "ONLY_CHILD") })} />
+                        <ToggleChip label="บุตรคนที่ 1" active={!!params.birth_order?.includes("1")}
+                            onClick={() => onChange({ birth_order: toggleArray(params.birth_order, "1") })} />
+                        <ToggleChip label="บุตรคนที่ 2" active={!!params.birth_order?.includes("2")}
+                            onClick={() => onChange({ birth_order: toggleArray(params.birth_order, "2") })} />
+                        <ToggleChip label="บุตรคนที่ 3" active={!!params.birth_order?.includes("3")}
+                            onClick={() => onChange({ birth_order: toggleArray(params.birth_order, "3") })} />
+                        <ToggleChip label="บุตรคนที่ 4+" active={!!params.birth_order?.includes("4_PLUS")}
+                            onClick={() => onChange({ birth_order: toggleArray(params.birth_order, "4_PLUS") })} />
+                    </FilterGroup>
+                )}
+
+                {/* Chronic Conditions */}
+                {hasField('chronic_condition') && chronicConditions.length > 0 && (
+                    <FilterGroup label="โรคประจำตัว">
+                        {chronicConditions.map(c => (
+                            <ToggleChip key={c.id} label={c.nameTh}
+                                active={!!params.chronic_condition_ids?.includes(c.id)}
+                                onClick={() => onChange({ chronic_condition_ids: toggleNumberArray(params.chronic_condition_ids, c.id) })} />
+                        ))}
+                    </FilterGroup>
+                )}
+
+                {/* Parental Status */}
+                {hasField('parental_status') && (
+                    <FilterGroup label="สถานะครอบครัว">
+                        <ToggleChip label="พ่อแม่อยู่ด้วยกัน" active={!!params.parental_status?.includes("TOGETHER")}
+                            onClick={() => onChange({ parental_status: toggleArray(params.parental_status, "TOGETHER") })} />
+                        <ToggleChip label="หย่าร้าง" active={!!params.parental_status?.includes("DIVORCED")}
+                            onClick={() => onChange({ parental_status: toggleArray(params.parental_status, "DIVORCED") })} />
+                        <ToggleChip label="บิดาเสียชีวิต" active={!!params.parental_status?.includes("FATHER_DECEASED")}
+                            onClick={() => onChange({ parental_status: toggleArray(params.parental_status, "FATHER_DECEASED") })} />
+                        <ToggleChip label="มารดาเสียชีวิต" active={!!params.parental_status?.includes("MOTHER_DECEASED")}
+                            onClick={() => onChange({ parental_status: toggleArray(params.parental_status, "MOTHER_DECEASED") })} />
+                        <ToggleChip label="เสียชีวิตทั้งคู่" active={!!params.parental_status?.includes("BOTH_DECEASED")}
+                            onClick={() => onChange({ parental_status: toggleArray(params.parental_status, "BOTH_DECEASED") })} />
+                        <ToggleChip label="เลี้ยงเดี่ยว" active={!!params.parental_status?.includes("SINGLE_PARENT")}
+                            onClick={() => onChange({ parental_status: toggleArray(params.parental_status, "SINGLE_PARENT") })} />
                     </FilterGroup>
                 )}
             </div>

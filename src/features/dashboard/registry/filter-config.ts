@@ -18,7 +18,12 @@ export type FilterFieldId =
     | 'service_mode'
     | 'booking_status'
     | 'attendance_status'
-    | 'online_channel';
+    | 'online_channel'
+    | 'family_income'
+    | 'blood_group'
+    | 'birth_order'
+    | 'chronic_condition'
+    | 'parental_status';
 
 export type FilterInputType =
     | 'searchable_select'
@@ -108,6 +113,31 @@ const ATTENDANCE_STATUS: FilterFieldConfig = {
     type: 'toggle_chips', group: 'advanced',
 };
 
+const FAMILY_INCOME: FilterFieldConfig = {
+    id: 'family_income', labelTh: 'รายได้ครอบครัว', labelEn: 'Family Income',
+    type: 'toggle_chips', group: 'advanced',
+};
+
+const BLOOD_GROUP: FilterFieldConfig = {
+    id: 'blood_group', labelTh: 'กรุ๊ปเลือด', labelEn: 'Blood Group',
+    type: 'toggle_chips', group: 'advanced',
+};
+
+const BIRTH_ORDER: FilterFieldConfig = {
+    id: 'birth_order', labelTh: 'ลำดับบุตร', labelEn: 'Birth Order',
+    type: 'toggle_chips', group: 'advanced',
+};
+
+const CHRONIC_CONDITION: FilterFieldConfig = {
+    id: 'chronic_condition', labelTh: 'โรคประจำตัว', labelEn: 'Chronic Condition',
+    type: 'toggle_chips', multi: true, group: 'advanced',
+};
+
+const PARENTAL_STATUS: FilterFieldConfig = {
+    id: 'parental_status', labelTh: 'สถานะครอบครัว', labelEn: 'Parental Status',
+    type: 'toggle_chips', group: 'advanced',
+};
+
 // ─── Per-role filter configs ────────────────────────────────────────────────
 
 export const FILTER_CONFIGS: Record<string, FilterFieldConfig[]> = {
@@ -131,6 +161,14 @@ export const FILTER_CONFIGS: Record<string, FilterFieldConfig[]> = {
         DEPARTMENT,
         GENDER, PROBLEM_CATEGORY, SERVICE_MODE,
         BOOKING_STATUS, ATTENDANCE_STATUS,
+    ],
+
+    'head-department': [
+        DATE_RANGE, ALL_TIME,
+        GENDER, PROBLEM_CATEGORY, SERVICE_MODE,
+        BOOKING_STATUS, ATTENDANCE_STATUS,
+        FAMILY_INCOME, BLOOD_GROUP, BIRTH_ORDER,
+        CHRONIC_CONDITION, PARENTAL_STATUS,
     ],
 
     'head-consultant': [

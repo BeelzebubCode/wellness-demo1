@@ -60,6 +60,12 @@ export default function LoginPage() {
     { group: "Dean", label: "Dean (KKU Agriculture)", username: "dean_kku_agr", password: "wellness@nu.ac.th_123456!" },
     { group: "Dean", label: "Dean (ABAC Business)", username: "dean_abac_bus", password: "wellness@nu.ac.th_123456!" },
 
+    // --- Head Department (Verified: hd_{dept}_{uni}) ---
+    { group: "Head Dept", label: "Head Dept (NU เกษตร-พืชไร่)", username: "hd_agr_agr_nu", password: "wellness@nu.ac.th_123456!" },
+    { group: "Head Dept", label: "Head Dept (NU ครุศาสตร์-จิตวิทยา)", username: "hd_edu_psy_nu", password: "wellness@nu.ac.th_123456!" },
+    { group: "Head Dept", label: "Head Dept (CU วิศวะ-ไฟฟ้า)", username: "hd_eng_ele_cu", password: "wellness@nu.ac.th_123456!" },
+    { group: "Head Dept", label: "Head Dept (CU อักษร-อังกฤษ)", username: "hd_art_eng_cu", password: "wellness@nu.ac.th_123456!" },
+
     // --- Advisors (Verified: advisor_{uni}_{dept}) ---
     { group: "Advisor", label: "Advisor (ABAC Elementary Edu)", username: "advisor_abac_edu_ele", password: "wellness@nu.ac.th_123456!" },
     { group: "Advisor", label: "Advisor (ABAC English)", username: "advisor_abac_art_eng", password: "wellness@nu.ac.th_123456!" },

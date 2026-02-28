@@ -36,6 +36,23 @@ function buildSearchParams(params: AnalyticsParams): URLSearchParams {
         sp.set("booking_status", params.booking_status.join(","));
     }
 
+    // Head-department specific filters
+    if (params.family_income_bracket && params.family_income_bracket.length > 0) {
+        sp.set("family_income_bracket", params.family_income_bracket.join(","));
+    }
+    if (params.blood_group && params.blood_group.length > 0) {
+        sp.set("blood_group", params.blood_group.join(","));
+    }
+    if (params.birth_order && params.birth_order.length > 0) {
+        sp.set("birth_order", params.birth_order.join(","));
+    }
+    if (params.chronic_condition_ids && params.chronic_condition_ids.length > 0) {
+        sp.set("chronic_condition_ids", params.chronic_condition_ids.join(","));
+    }
+    if (params.parental_status && params.parental_status.length > 0) {
+        sp.set("parental_status", params.parental_status.join(","));
+    }
+
     return sp;
 }
 

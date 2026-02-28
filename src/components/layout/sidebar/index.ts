@@ -8,4 +8,5 @@ export { RectorSidebar } from './RectorSidebar';
 export { AdvisorSidebar } from './AdvisorSidebar';
 export { MinistrySidebar } from './MinistrySidebar';
 export { DeanSidebar } from './DeanSidebar';
+export { HeadDepartmentSidebar } from './HeadDepartmentSidebar';
 export type { NavItem, SidebarConfig, BaseSidebarProps } from './types';

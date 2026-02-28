@@ -89,6 +89,23 @@ export const DASHBOARD_REGISTRY: Record<string, DashboardConfig> = {
         ],
     },
 
+    // ── Head Department (หัวหน้าภาควิชา) ──────────────────────────────────────
+    'head-department': {
+        role: 'HEAD_DEPARTMENT',
+        label: 'Department Intelligence',
+        labelTh: 'แผงควบคุมหัวหน้าภาควิชา',
+        basePath: '/head-department',
+        mode: 'default',
+        defaultDateRange: 'current_month',
+        groupLevel: 'department',
+        sections: [
+            { id: 'kpi-cards', defaultVisible: true, order: 1, span: 'full' },
+            { id: 'problem-landscape', defaultVisible: true, order: 2, span: 'full' },
+            { id: 'trend-chart', defaultVisible: true, order: 3, span: 'half' },
+            { id: 'risk-distribution', defaultVisible: true, order: 4, span: 'half' },
+        ],
+    },
+
     // ── Head Consultant (หัวหน้านักจิตวิทยา) ──────────────────────────────────
     'head-consultant': {
         role: 'HEAD_CONSULTANT',

@@ -130,6 +130,7 @@ model Account {
   student                Student?
   aiFeedbackEvents       AiFeedbackEvent[]
   facultiesDean          Faculty[]             @relation("FacultyDean") // [NEW] Faculties where this account is Dean
+  departmentsHead        Department[]          @relation("DepartmentHead") // [NEW] Departments where this account is Head
   rectorOfUniversities   University[]          @relation("UniversityRector")
 
   borrowRequestsRequested BorrowRequest[] @relation("BorrowRequestedBy")
@@ -323,12 +324,14 @@ model Department {
   department_id      Int     @id @default(autoincrement())
   university_id      Int
   faculty_id         Int
+  head_account_id    Int? // [NEW] Link to Head Department account
   department_code    String  @db.VarChar(10)
   department_name_th String  @db.VarChar(100)
   department_name_en String? @db.VarChar(100)
 
   university University @relation(fields: [university_id], references: [university_id])
   faculty    Faculty    @relation(fields: [university_id, faculty_id], references: [university_id, faculty_id])
+  head       Account?   @relation("DepartmentHead", fields: [head_account_id], references: [account_id])
 
   advisors         Advisor[]
   studentAcademics StudentAcademic[]
@@ -338,6 +341,7 @@ model Department {
   @@index([faculty_id])
   @@index([university_id, faculty_id])
   @@index([university_id])
+  @@index([head_account_id])
   @@map("department")
 }
 
@@ -1299,8 +1303,9 @@ enum AccountRole {
   STUDENT
   CONSULTANT
   HEAD_CONSULTANT
-  ADVISOR // [NEW]
-  DEAN // [NEW] Faculty Dean role
+  ADVISOR
+  DEAN
+  HEAD_DEPARTMENT // [NEW] Department Head role
   RECTOR
   SUPER_ADMIN
   MINISTRY
@@ -1310,8 +1315,9 @@ enum UniversityAccessRole {
   STUDENT
   CONSULTANT
   HEAD_CONSULTANT
-  ADVISOR // [NEW]
-  DEAN // [NEW] Faculty Dean role
+  ADVISOR
+  DEAN
+  HEAD_DEPARTMENT // [NEW] Department Head role
   RECTOR
   ADMIN
 }
