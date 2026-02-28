@@ -1,33 +1,7 @@
+// src/app/api/v2/auth/switch-tenant/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getAccountFromRequest } from "@/lib/auth/context";
 import { generateToken } from "@/lib/auth/jwt";
-
-function isLocalHostLike(domain: string) {
-  return (
-    domain === "localhost" ||
-    domain === "127.0.0.1" ||
-    domain.endsWith(".localhost")
-  );
-}
-
-function normalizeRootDomain(baseDomain: string) {
-  const d = String(baseDomain || "").toLowerCase().trim();
-  // remove any port if somehow included
-  return d.split(":")[0];
-}
-
-function cookieDomainFor(rootDomain: string) {
-  const d = normalizeRootDomain(rootDomain);
-  if (!d || isLocalHostLike(d)) return undefined;
-  return `.${d}`; // .wellness.local
-}
-
-function getBaseDomain(req: NextRequest) {
-  const hostHeader = req.headers.get("host") || "";
-  const host = hostHeader.split(":")[0].toLowerCase();
-  const parts = host.split(".");
-  return parts.length >= 3 ? parts.slice(1).join(".") : host;
-}
 
 export async function POST(req: NextRequest) {
   const ctx = await getAccountFromRequest(req);
@@ -53,11 +27,9 @@ export async function POST(req: NextRequest) {
     allowedUniversityIds: ctx.allowedUniversityIds,
   });
 
-  const baseDomain = getBaseDomain(req);
-  const rootDomain = normalizeRootDomain(process.env.ROOT_DOMAIN || baseDomain);
-  const cookieDomain = cookieDomainFor(rootDomain);
-
   const res = NextResponse.json({ success: true, activeUniversityId: universityId });
+
+  // ✅ host-only cookie (ไม่ต้อง domain)
   res.cookies.set({
     name: "auth_token",
     value: token,
@@ -66,7 +38,6 @@ export async function POST(req: NextRequest) {
     sameSite: "lax",
     maxAge: 60 * 60 * 24 * 7,
     path: "/",
-    ...(cookieDomain ? { domain: cookieDomain } : {}),
   });
 
   return res;

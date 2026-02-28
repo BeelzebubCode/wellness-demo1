@@ -6,7 +6,7 @@ import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useMyProfile } from "@/features/profile/hooks/useMyProfile";
 import { authApi } from "@/features/auth/api";
-import { buildTargetHostFromTenantCode } from "@/features/auth/login/login-utils";
+
 import { CONSULTANT_NAV } from "@/lib/constants/consultant-nav";
 import { BaseSidebar } from "./BaseSidebar";
 import type { SidebarConfig } from "./types";
@@ -53,11 +53,8 @@ export function ConsultantSidebar(props: ConsultantSidebarProps) {
         return;
       }
 
-      // Redirect to Home University Subdomain
-      const code = me.profile.universityCode || "";
-      const { protocol, targetHost } = buildTargetHostFromTenantCode(code);
-      // ไปหน้า Dashboard ของตัวเอง
-      window.location.assign(`${protocol}//${targetHost}/consultant`);
+      // ✅ Stay on same host — ไม่ต้อง redirect ไป subdomain
+      window.location.assign("/consultant/my-jobs");
     } catch (err) {
       console.error("Return home error:", err);
       alert("เกิดข้อผิดพลาดในการเปลี่ยน tenant");

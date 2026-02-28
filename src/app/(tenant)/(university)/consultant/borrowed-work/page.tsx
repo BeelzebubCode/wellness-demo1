@@ -26,7 +26,6 @@ function StatusBadge({ status }: { status: string }) {
     );
 }
 import { authApi } from "@/features/auth/api";
-import { buildTargetHostFromTenantCode } from "@/features/auth/login/login-utils";
 
 type BorrowedAssignment = {
     assignmentId: number;
@@ -64,12 +63,6 @@ export default function ConsultantBorrowedWorkPage() {
 
     useEffect(() => {
         fetchAssignments();
-        // ดึง subdomain จาก URL ปัจจุบัน เช่น cu.wellness.local → "CU"
-        const hostname = window.location.hostname;
-        const parts = hostname.split(".");
-        if (parts.length >= 3) {
-            setCurrentSubdomain(parts[0].toUpperCase());
-        }
     }, []);
 
     async function fetchAssignments() {
@@ -124,11 +117,8 @@ export default function ConsultantBorrowedWorkPage() {
                 return;
             }
 
-            // Build target URL using university code subdomain
-            const tenantCode = (universityCode || "").toUpperCase();
-            const { protocol, targetHost } = buildTargetHostFromTenantCode(tenantCode);
-            const targetPath = "/consultant/my-jobs";
-            window.location.assign(`${protocol}//${targetHost}${targetPath}`);
+            // ✅ Stay on same host — ไม่ต้อง redirect ไป subdomain
+            window.location.assign("/consultant/my-jobs");
         } catch (err) {
             console.error("Switch tenant error:", err);
             alert("เกิดข้อผิดพลาดในการเข้าสู่ระบบมหาวิทยาลัย");

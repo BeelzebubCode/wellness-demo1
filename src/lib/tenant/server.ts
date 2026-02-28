@@ -22,47 +22,6 @@ function err(message: string, status: number) {
   return e;
 }
 
-/* ============================================
-  Host/Subdomain helpers
-============================================ */
-function parseHost(req: NextRequest) {
-  const hostHeader = req.headers.get("host") || "";
-  const host = hostHeader.split(":")[0].toLowerCase();
-  const parts = host.split(".");
-  const hasSubdomain = parts.length >= 3;
-  const subdomain = hasSubdomain ? parts[0] : null;
-  return { hostHeader, host, subdomain };
-}
-
-function normalizeTenantCode(s: unknown): string | null {
-  const v = String(s ?? "").trim();
-  if (!v) return null;
-  return v.toUpperCase();
-}
-
-/**
- * resolve requested university by:
- * 1) subdomain (nu/kku/cu)
- * 2) tenant_code cookie
- */
-async function resolveRequestedUniversity(req: NextRequest) {
-  const { subdomain } = parseHost(req);
-  const fromSub = subdomain ? normalizeTenantCode(subdomain) : null;
-  const fromCookie = normalizeTenantCode(req.cookies.get("tenant_code")?.value);
-
-  const code = fromSub || fromCookie;
-  if (!code) return null;
-
-  const uni = await prisma.university.findUnique({
-    where: { university_code: code },
-    select: { university_id: true, university_code: true },
-  });
-
-  return uni
-    ? { universityId: uni.university_id, universityCode: uni.university_code }
-    : null;
-}
-
 /**
  * ✅ helper: เช็คว่า universityId มีจริงใน DB และ active
  * (กัน header / cookie ใส่มั่ว แล้ว prisma query อื่นพังทีหลัง)
@@ -73,6 +32,17 @@ async function assertUniversityExists(universityId: number) {
     select: { university_id: true },
   });
   if (!uni) throw err("UNIVERSITY_NOT_FOUND", 404);
+}
+
+/**
+ * ✅ resolve university code จาก university_id (สำหรับ theming/branding)
+ */
+async function resolveUniversityCode(universityId: number): Promise<string> {
+  const uni = await prisma.university.findUnique({
+    where: { university_id: universityId },
+    select: { university_code: true },
+  });
+  return uni?.university_code ?? "DEFAULT";
 }
 
 const LOCK_HOME_ONLY_ROLES = new Set([
@@ -95,33 +65,22 @@ export async function requireTenant(request: NextRequest): Promise<TenantContext
   const home =
     typeof account.homeUniversityId === "number" ? account.homeUniversityId : null;
 
-  // requested tenant from domain/cookie (optional)
-  const requested = await resolveRequestedUniversity(request);
-  const requestedUniversityId = requested?.universityId ?? null;
-  const tenantCode = requested?.universityCode ?? "DEFAULT";
-
   // =========================
   // 1) SUPER_ADMIN  (✅ platform scope)
   // =========================
   if (role === "SUPER_ADMIN") {
-    // ✅ SUPER_ADMIN ไม่ต้องมี allowed เลย
-    // (เก็บ allowed ไว้เฉย ๆ เผื่ออนาคตอยากใช้เป็น whitelist)
-
-    // priority:
-    // 1) x-university-id header
-    // 2) requestedUniversityId (subdomain/cookie)
-    // 3) account.activeUniversityId
-    // 4) home
-    // 5) allowed[0] (ถ้ามี)
-    // 6) fallback: first university in DB
     let active: number | null = null;
 
+    // priority:
+    // 1) x-university-id header (สำหรับ switch มหาลัย)
+    // 2) account.activeUniversityId (จาก JWT)
+    // 3) home
+    // 4) allowed[0] (ถ้ามี)
+    // 5) fallback: first university in DB
     const headerUni = request.headers.get("x-university-id");
     const headerUniId = headerUni ? Number(headerUni) : NaN;
     if (Number.isFinite(headerUniId) && headerUniId > 0) {
       active = headerUniId;
-    } else if (requestedUniversityId !== null) {
-      active = requestedUniversityId;
     } else if (typeof account.activeUniversityId === "number" && account.activeUniversityId > 0) {
       active = account.activeUniversityId;
     } else if (home) {
@@ -138,15 +97,13 @@ export async function requireTenant(request: NextRequest): Promise<TenantContext
 
     if (!active || !Number.isFinite(active)) throw err("NO_UNIVERSITY_CONTEXT", 400);
 
-    // ✅ validate ว่ามีจริง (และจะได้ไม่พังทีหลัง)
     await assertUniversityExists(active);
 
-    // ✅ ถ้าคุณ “ยังอยาก” บังคับ whitelist เฉพาะกรณีมี allowed
-    // - ถ้า allowed ว่าง => ALL
-    // - ถ้ามี allowed => ต้องอยู่ใน allowed
     if (allowed.length > 0 && !allowed.includes(active)) {
       throw err("UNIVERSITY_NOT_ALLOWED", 403);
     }
+
+    const tenantCode = await resolveUniversityCode(active);
 
     return {
       accountId,
@@ -159,11 +116,13 @@ export async function requireTenant(request: NextRequest): Promise<TenantContext
   }
 
   // =========================
-  // 2) LOCK HOME roles
+  // 2) LOCK HOME roles (RECTOR, HEAD_CONSULTANT, ADMIN)
   // =========================
   if (LOCK_HOME_ONLY_ROLES.has(role)) {
     if (!home) throw err("NO_HOME_UNIVERSITY", 403);
     if (allowed.length && !allowed.includes(home)) throw err("UNIVERSITY_NOT_ALLOWED", 403);
+
+    const tenantCode = await resolveUniversityCode(home);
 
     return {
       accountId,
@@ -180,10 +139,7 @@ export async function requireTenant(request: NextRequest): Promise<TenantContext
   // =========================
   const GLOBAL_ROLES = new Set(["MINISTRY", "DEAN"]);
   if (GLOBAL_ROLES.has(role)) {
-    // These roles can operate without a specific university_access record.
-    // Ministry = all universities; Dean = their home faculty/university.
     const active =
-      requestedUniversityId ??
       (account.activeUniversityId && Number.isFinite(account.activeUniversityId)
         ? account.activeUniversityId
         : null) ??
@@ -191,10 +147,11 @@ export async function requireTenant(request: NextRequest): Promise<TenantContext
       allowed[0] ??
       null;
 
-    // For MINISTRY, it's okay to have no specific university (null = all universities)
     if (active && Number.isFinite(active)) {
       await assertUniversityExists(active);
     }
+
+    const tenantCode = active ? await resolveUniversityCode(active) : "DEFAULT";
 
     return {
       accountId,
@@ -207,22 +164,20 @@ export async function requireTenant(request: NextRequest): Promise<TenantContext
   }
 
   // =========================
-  // 3) other roles
+  // 3) other roles (STUDENT, CONSULTANT, etc.)
   // =========================
   if (!allowed.length) throw err("NO_ALLOWED_UNIVERSITIES", 403);
 
-  let active =
+  const active =
     account.activeUniversityId ??
     home ??
     allowed[0] ??
     null;
 
-  if (requestedUniversityId !== null && allowed.includes(requestedUniversityId)) {
-    active = requestedUniversityId;
-  }
-
   if (!active || !Number.isFinite(active)) throw err("NO_UNIVERSITY_CONTEXT", 400);
   if (!allowed.includes(active)) throw err("UNIVERSITY_NOT_ALLOWED", 403);
+
+  const tenantCode = await resolveUniversityCode(active);
 
   return {
     accountId,

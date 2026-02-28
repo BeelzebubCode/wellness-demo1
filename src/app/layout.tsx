@@ -2,11 +2,9 @@
 
 import "./globals.css";
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { NotificationProvider } from "@/components/notification/NotificationProvider";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { tenantFromHost } from "@/config/tenant-domains";
-import AuthToastGate from "@/components/auth/AuthToastGate"; // ✅ เพิ่มบรรทัดนี้
+import AuthToastGate from "@/components/auth/AuthToastGate";
 
 export const metadata: Metadata = {
   title: { default: "NU Wellness Center", template: "%s | NU Wellness Center" },
@@ -15,13 +13,9 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const h = headers();
-
-  const host = h.get("x-forwarded-host") || h.get("host") || "";
-  const tenant = tenantFromHost(host); // "NU" | "CU" | "KKU" | "DEFAULT"
-
+  // ✅ ไม่ต้อง resolve tenant จาก domain อีกต่อไป — ThemeContext จะจัดการจาก cookie/localStorage
   return (
-    <html lang="th" data-tenant={tenant !== "DEFAULT" ? tenant : undefined}>
+    <html lang="th">
       <body>
         <ThemeProvider>
           <NotificationProvider>

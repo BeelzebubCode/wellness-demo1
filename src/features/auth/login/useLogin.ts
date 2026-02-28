@@ -5,19 +5,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "@/contexts/ThemeContext";
 import { authApi } from "@/features/auth/api";
 import {
-  buildTargetHostFromTenantCode,
   isAdminPath,
   isAdminRole,
   isSafeNextPath,
   roleDefaultPath,
-  withToastUrl,
 } from "./login-utils";
 
 type FormData = {
   username: string;
   password: string;
-
-  // optional (เผื่อทำ dropdown เลือกมหาลัยตอน root domain)
   preferredUniversityId?: number | null;
 };
 
@@ -48,7 +44,6 @@ export function useLogin() {
       setError(null);
 
       try {
-        // ✅ Use authApi client
         const data = await authApi.login({
           username: formData.username,
           password: formData.password,
@@ -60,11 +55,11 @@ export function useLogin() {
           return;
         }
 
-        // ✅ tenantCode จาก server (active tenant)
+        // ✅ tenantCode จาก server (based on account_home_university_id)
         const tenantCode = String(data.tenant?.universityCode || "DEFAULT").toUpperCase();
         setTenant(tenantCode || "DEFAULT");
 
-        // ✅ localStorage เก็บเพื่อ UX เท่านั้น (ไม่เอาไปใช้ตัดสิทธิ์จริง)
+        // localStorage เก็บเพื่อ UX เท่านั้น
         localStorage.setItem(
           "auth_user",
           JSON.stringify({
@@ -88,24 +83,8 @@ export function useLogin() {
         // 3) ไม่มี next -> ใช้ default ตาม role
         if (!nextPath) nextPath = roleDefaultPath(role);
 
-        // 4) ย้าย subdomain ถ้าจำเป็น
-        const { protocol, targetHost, currentHost } = buildTargetHostFromTenantCode(tenantCode);
-
-        const url = withToastUrl(
-          protocol,
-          targetHost,
-          nextPath,
-          "login",
-          data.account?.username || ""
-        );
-
-        if (targetHost !== currentHost) {
-          window.location.assign(url); // full reload to new subdomain
-          return;
-        }
-
-        // same host => SPA navigation
-        router.replace(url.replace(`${protocol}//${targetHost}`, ""));
+        // ✅ ไม่ต้อง redirect ไป subdomain อีกต่อไป — stay on same host
+        router.replace(nextPath);
       } catch (err) {
         console.error(err);
         setError("Connection Error");
@@ -128,3 +107,4 @@ export function useLogin() {
     clearError: () => setError(null),
   };
 }
+

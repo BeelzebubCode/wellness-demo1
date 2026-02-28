@@ -76,6 +76,8 @@ model University {
   targetBorrowAvailabilities ConsultantBorrowAvailability[] @relation("BorrowAvailabilityTargetUniversity")
   borrowAssignments          BorrowAssignment[]
   dayPeriods                 DayPeriod[]                    @relation("UniversityDayPeriods")
+  academicTerms              AcademicTerm[]
+  academicPeriods            AcademicPeriod[]
 
   @@index([province_id])
   @@index([university_is_active])
@@ -209,13 +211,23 @@ model StudentProfile {
   student_birthday     DateTime?      @db.Date
   student_nationality  String?        @db.VarChar(50)
   student_religion     String?        @db.VarChar(50)
-  student_blood_group  String?        @db.VarChar(10)
+  student_blood_group  BloodGroup?
   student_phone_number String?        @db.VarChar(20)
   student_email        String?        @db.VarChar(100)
+  country_id           Int?
 
-  student Student @relation(fields: [university_id, student_id], references: [university_id, student_id])
+  // Family info
+  sibling_count         Int?
+  birth_order           Int?
+  family_income_bracket FamilyIncomeBracket?
+  parental_status       ParentalStatus?
+
+  student           Student                   @relation(fields: [university_id, student_id], references: [university_id, student_id])
+  country           Country?                  @relation(fields: [country_id], references: [country_id])
+  chronicConditions StudentChronicCondition[]
 
   @@unique([university_id, student_id])
+  @@index([country_id])
   @@map("student_profile")
 }
 
@@ -244,10 +256,13 @@ model StudentAcademic {
   department_id Int
   advisor_id    Int?
 
-  student_program             String? @db.VarChar(50)
-  student_degree              String? @db.VarChar(50)
-  student_degree_name         String? @db.VarChar(100)
+  student_program             String?         @db.VarChar(50)
+  student_degree              String?         @db.VarChar(50)
+  student_degree_name         String?         @db.VarChar(100)
   student_admit_academic_year Int?
+  education_level             EducationLevel?
+  program_duration_years      Int?
+  expected_graduation_year    Int?
 
   student    Student    @relation(fields: [university_id, student_id], references: [university_id, student_id])
   faculty    Faculty    @relation(fields: [university_id, faculty_id], references: [university_id, faculty_id])
@@ -258,6 +273,7 @@ model StudentAcademic {
   @@index([university_id, faculty_id])
   @@index([university_id, department_id])
   @@index([advisor_id])
+  @@index([education_level])
   @@map("student_academic")
 }
 
@@ -536,6 +552,9 @@ model Booking {
   booking_service_mode       ServiceMode
   online_channel_category_id Int? // [NEW] Link to OnlineChannelCategory
 
+  season_id        Int?
+  academic_term_id Int?
+
   booking_detail_text String?       @db.Text
   booking_status      BookingStatus @default(PENDING_ASSIGNMENT)
   booking_created_at  DateTime      @default(now())
@@ -548,6 +567,8 @@ model Booking {
   timeSlot        TimeSlot               @relation(fields: [university_id, time_slot_id], references: [university_id, time_slot_id])
   problemCategory ProblemCategory        @relation(fields: [problem_category_id], references: [problem_category_id])
   onlineChannel   OnlineChannelCategory? @relation(fields: [online_channel_category_id], references: [online_channel_category_id])
+  season          Season?                @relation(fields: [season_id], references: [season_id])
+  academicTerm    AcademicTerm?          @relation(fields: [academic_term_id], references: [term_id])
 
   assignments        BookingAssignment[]
   cancellation       BookingCancellation?
@@ -563,16 +584,17 @@ model Booking {
   exceptionRequest BookingExceptionRequest?
 
   @@id([university_id, booking_id])
-  // @@unique([university_id, student_id, time_slot_id]) -- Removed to allow re-booking after cancellation
   @@index([university_id, time_slot_id])
   @@index([booking_status])
   @@index([student_id])
   @@index([consultant_id])
   @@index([problem_category_id])
-  @@index([university_id, problem_category_id]) // 🔥 Optimization for Dashboard Maps (Heatmap)
+  @@index([university_id, problem_category_id])
   @@index([student_id, booking_status])
   @@index([university_id, time_slot_id, booking_status])
-  @@index([booking_status, university_id, student_id]) // 🔥 Optimization for AI Text-to-SQL Analytics
+  @@index([booking_status, university_id, student_id])
+  @@index([season_id])
+  @@index([academic_term_id])
   @@map("booking")
 }
 
@@ -1477,4 +1499,183 @@ model GuidebookDocument {
   document_updated_at DateTime @updatedAt
 
   @@map("guidebook_document")
+}
+
+// ==========================================
+// 🌦️ SEASON (ฤดูกาล)
+// ==========================================
+
+model Season {
+  season_id      Int     @id @default(autoincrement())
+  season_code    String  @unique @db.VarChar(20)
+  season_name_th String  @db.VarChar(50)
+  season_name_en String? @db.VarChar(50)
+  month_start    Int
+  month_end      Int
+  sort_order     Int     @default(0)
+
+  bookings Booking[]
+
+  @@map("season")
+}
+
+// ==========================================
+// 🌍 COUNTRY (ประเทศ/เชื้อชาติ)
+// ==========================================
+
+model Country {
+  country_id          Int             @id @default(autoincrement())
+  country_code_alpha2 String          @unique @db.VarChar(2)
+  country_code_alpha3 String          @unique @db.VarChar(3)
+  country_name_th     String          @db.VarChar(100)
+  country_name_en     String          @db.VarChar(100)
+  nationality_type    NationalityType @default(INTERNATIONAL)
+  sort_order          Int             @default(0)
+  is_active           Boolean         @default(true)
+
+  studentProfiles StudentProfile[]
+
+  @@map("country")
+}
+
+// ==========================================
+// 📅 ACADEMIC TERM TYPE (ประเภทเทอม)
+// ==========================================
+
+model AcademicTermType {
+  academic_term_type_id      Int     @id @default(autoincrement())
+  academic_term_type_code    String  @unique @db.VarChar(20)
+  academic_term_type_name_th String  @db.VarChar(100)
+  academic_term_type_name_en String? @db.VarChar(100)
+  sort_order                 Int     @default(0)
+
+  academicTerms AcademicTerm[]
+
+  @@map("academic_term_type")
+}
+
+// ==========================================
+// 📅 ACADEMIC TERM (เทอมของแต่ละ ม.)
+// ==========================================
+
+model AcademicTerm {
+  term_id               Int      @id @default(autoincrement())
+  university_id         Int
+  academic_term_type_id Int
+  academic_year         Int
+  term_start_date       DateTime @db.Date
+  term_end_date         DateTime @db.Date
+  is_active             Boolean  @default(false)
+
+  university       University       @relation(fields: [university_id], references: [university_id])
+  academicTermType AcademicTermType @relation(fields: [academic_term_type_id], references: [academic_term_type_id])
+  periods          AcademicPeriod[]
+  bookings         Booking[]
+
+  @@unique([university_id, academic_term_type_id, academic_year])
+  @@index([university_id, is_active])
+  @@index([academic_term_type_id])
+  @@map("academic_term")
+}
+
+// ==========================================
+// 📅 ACADEMIC PERIOD (ช่วงย่อยในเทอม)
+// ==========================================
+
+model AcademicPeriod {
+  period_id         Int                @id @default(autoincrement())
+  term_id           Int
+  university_id     Int
+  period_type       AcademicPeriodType
+  period_name_th    String             @db.VarChar(100)
+  period_name_en    String?            @db.VarChar(100)
+  period_start_date DateTime           @db.Date
+  period_end_date   DateTime           @db.Date
+  sort_order        Int                @default(0)
+
+  term       AcademicTerm @relation(fields: [term_id], references: [term_id])
+  university University   @relation(fields: [university_id], references: [university_id])
+
+  @@index([university_id, period_start_date, period_end_date])
+  @@index([term_id])
+  @@map("academic_period")
+}
+
+// ==========================================
+// 🆕 NEW ENUMS
+// ==========================================
+
+enum EducationLevel {
+  BACHELOR
+  MASTER
+  DOCTORATE
+}
+
+enum NationalityType {
+  THAI
+  INTERNATIONAL
+}
+
+enum AcademicPeriodType {
+  MIDTERM_EXAM
+  FINAL_EXAM
+  SEMESTER_BREAK
+}
+
+enum FamilyIncomeBracket {
+  UNDER_100K // < 100,000 บาท/ปี
+  BETWEEN_100K_200K // 100,000–199,999
+  BETWEEN_200K_300K // 200,000–299,999
+  BETWEEN_300K_500K // 300,000–499,999
+  BETWEEN_500K_800K // 500,000–799,999
+  BETWEEN_800K_1M // 800,000–999,999
+  OVER_1M // ≥ 1,000,000
+}
+
+enum BloodGroup {
+  A
+  B
+  AB
+  O
+}
+
+enum ParentalStatus {
+  TOGETHER // พ่อแม่อยู่ด้วยกัน
+  DIVORCED // หย่าร้าง
+  FATHER_DECEASED // บิดาเสียชีวิต
+  MOTHER_DECEASED // มารดาเสียชีวิต
+  BOTH_DECEASED // เสียชีวิตทั้งคู่
+  SINGLE_PARENT // เลี้ยงเดี่ยว (อื่นๆ)
+}
+
+// ==========================================
+// 🏥 CHRONIC CONDITION (โรคประจำตัว)
+// ==========================================
+
+model ChronicConditionCategory {
+  condition_category_id Int     @id @default(autoincrement())
+  condition_code        String  @unique @db.VarChar(30)
+  condition_name_th     String  @db.VarChar(100)
+  condition_name_en     String  @db.VarChar(100)
+  sort_order            Int     @default(0)
+  is_active             Boolean @default(true)
+
+  studentConditions StudentChronicCondition[]
+
+  @@map("chronic_condition_category")
+}
+
+model StudentChronicCondition {
+  id                    Int     @id @default(autoincrement())
+  student_id            Int
+  university_id         Int
+  condition_category_id Int
+  condition_detail      String? @db.VarChar(200)
+
+  student   StudentProfile           @relation(fields: [university_id, student_id], references: [university_id, student_id])
+  condition ChronicConditionCategory @relation(fields: [condition_category_id], references: [condition_category_id])
+
+  @@unique([student_id, university_id, condition_category_id])
+  @@index([condition_category_id])
+  @@map("student_chronic_condition")
 }

@@ -9,7 +9,6 @@ export type LoginResponse = {
   tenant?: {
     universityId?: number | null;
     universityCode?: string;
-    suggestedSubdomain?: string | null;
   };
 
   tenants?: TenantItem[];
@@ -33,12 +32,11 @@ export function isSafeNextPath(next: string | null): next is string {
   try {
     const decoded = decodeURIComponent(next);
     if (decoded.startsWith("//")) return false;
-  } catch {}
+  } catch { }
   return true;
 }
 
 export function isAdminPath(path: string) {
-  // ของคุณมี /admin/... อยู่จริง
   return path.startsWith("/admin");
 }
 
@@ -67,90 +65,4 @@ export function isAdminRole(role?: string) {
 export function roleDefaultPath(role?: string) {
   if (!role) return "/";
   return ROLE_CONFIG[role]?.defaultPath ?? "/";
-}
-
-/** ✅ map tenantCode -> subdomain (เพิ่มมหาลัย เพิ่มแค่นี้) */
-/** ✅ map tenantCode -> subdomain (auto ตาม seed) */
-export const TENANT_SUBDOMAIN_MAP: Record<string, string> = {
-  // ===== CENTRAL / BANGKOK =====
-  CU: "cu",
-  TU: "tu",
-  MU: "mu",
-  KU: "ku",
-  SU: "su",
-  SWU: "swu",
-  RU: "ru",
-  NIDA: "nida",
-  KMUTT: "kmutt",
-  KMITL: "kmitl",
-  KMUTNB: "kmutnb",
-
-  // ===== NORTH =====
-  CMU: "cmu",
-  MFU: "mfu",
-  MJU: "mju",
-  UP: "up",
-  NU: "nu",
-
-  // ===== NORTHEAST =====
-  KKU: "kku",
-  MSU: "msu",
-  SURO: "suro",
-  UBU: "ubu",
-  NPU: "npu",
-  KSU: "ksu",
-
-  // ===== EAST =====
-  BUU: "buu",
-
-  // ===== SOUTH =====
-  PSU: "psu",
-  WU: "wu",
-  TSU: "tsu",
-
-  // ===== RAJABHAT =====
-  SRRU: "srru",
-  BRU: "bru",
-  CRRU: "crru",
-  CMRU: "cmru",
-  KPRU: "kpru",
-
-  // ===== PRIVATE =====
-  BU: "bu",
-  SPU: "spu",
-  UTCC: "utcc",
-  RSU: "rsu",
-  ABAC: "abac",
-};
-
-export function buildTargetHostFromTenantCode(tenantCode: string) {
-  const sub = TENANT_SUBDOMAIN_MAP[String(tenantCode || "").toUpperCase()];
-  const protocol = window.location.protocol;
-  const hostname = window.location.hostname.toLowerCase();
-  const port = window.location.port;
-
-  // nu.wellness.local -> wellness.local
-  const parts = hostname.split(".");
-  const baseDomain = parts.length >= 3 ? parts.slice(1).join(".") : hostname;
-  const baseHost = port ? `${baseDomain}:${port}` : baseDomain;
-
-  const targetHost = sub ? `${sub}.${baseHost}` : baseHost;
-  const currentHost = port ? `${hostname}:${port}` : hostname;
-
-  return { protocol, targetHost, currentHost };
-}
-
-/** URL helper: ใส่ toast params แบบเดิม */
-export function withToastUrl(
-  protocol: string,
-  targetHost: string,
-  path: string,
-  toastName: string,
-  username?: string
-) {
-  const url = new URL(`${protocol}//${targetHost}${path}`);
-  url.searchParams.set("toast", toastName);
-  url.searchParams.set("name", username || "");
-  url.searchParams.set("toastId", String(Date.now()));
-  return url.toString();
 }
