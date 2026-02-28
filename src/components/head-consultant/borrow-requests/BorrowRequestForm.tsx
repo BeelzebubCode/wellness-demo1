@@ -312,6 +312,9 @@ export function BorrowRequestForm({
               </div>
               <label className="text-sm font-semibold text-slate-700">
                 ช่วงเวลาที่ต้องการ <span className="text-red-400">*</span>
+                <span className="ml-2 text-xs font-normal text-slate-500">
+                  (กรุณาระบุล่วงหน้าอย่างน้อย 5 วัน)
+                </span>
               </label>
             </div>
 
@@ -352,7 +355,12 @@ export function BorrowRequestForm({
                   placeholder="วว/ดด/ปปปป"
                   formatLabel={prettyLocal}
                   className="w-full"
-                  minDate={new Date()}
+                  minDate={(() => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + 5);
+                    d.setHours(0, 0, 0, 0);
+                    return d;
+                  })()}
                 />
               </div>
 

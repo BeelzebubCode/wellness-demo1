@@ -144,6 +144,30 @@ export default function AdminSchedulePage() {
     [dateStr, updateSlot, fetchDailyData]
   );
 
+  const handleCloseAllDay = useCallback(async () => {
+    // Filter slots that are currently available
+    const slotsToClose = slots.filter((s) => s.isAvailable);
+    if (slotsToClose.length === 0) return;
+
+    // Call updateSlot for each to set isAvailable: false
+    await Promise.all(
+      slotsToClose.map((s) => updateSlot(s.id, { isAvailable: false }))
+    );
+    await fetchDailyData(dateStr);
+  }, [slots, updateSlot, fetchDailyData, dateStr]);
+
+  const handleOpenAllDay = useCallback(async () => {
+    // Filter slots that are currently unavailable
+    const slotsToOpen = slots.filter((s) => !s.isAvailable);
+    if (slotsToOpen.length === 0) return;
+
+    // Call updateSlot for each to set isAvailable: true
+    await Promise.all(
+      slotsToOpen.map((s) => updateSlot(s.id, { isAvailable: true }))
+    );
+    await fetchDailyData(dateStr);
+  }, [slots, updateSlot, fetchDailyData, dateStr]);
+
   return (
     <div className="max-w-[1400px] mx-auto px-4 py-6 space-y-6">
       {/* Page Header */}
@@ -180,6 +204,8 @@ export default function AdminSchedulePage() {
             onEditSlot={handleEditSlot}
             onDeleteSlot={handleDeleteSlot}
             onDeleteAllSlots={handleDeleteAllSlots}
+            onCloseAllDay={handleCloseAllDay}
+            onOpenAllDay={handleOpenAllDay}
             onToggleSlotAvailability={handleToggleSlotAvailability}
             maxTotalCapacity={maxTotalCapacity}
           />

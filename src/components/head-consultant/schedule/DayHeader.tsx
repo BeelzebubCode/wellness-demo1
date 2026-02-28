@@ -1,9 +1,8 @@
-// src/components/admin/schedule/DayHeader.tsx
 "use client";
 
 import { useMemo } from "react";
 import { cn } from "@/lib/cn";
-import { Clock, Users, TrendingUp, Plus, Trash2, Sparkles } from "lucide-react";
+import { Clock, Users, TrendingUp, Trash2, Sparkles, Lock, Unlock } from "lucide-react";
 import type { TimeSlot } from "@/features/schedule/types";
 
 interface DayHeaderProps {
@@ -12,7 +11,8 @@ interface DayHeaderProps {
   isLoading?: boolean;
   onAutoGenerate: () => void;
   onDeleteAll: () => void;
-  onAddSlot: () => void;
+  onCloseAllDay: () => void;
+  onOpenAllDay: () => void;
 }
 
 export function DayHeader({
@@ -21,7 +21,8 @@ export function DayHeader({
   isLoading = false,
   onAutoGenerate,
   onDeleteAll,
-  onAddSlot,
+  onCloseAllDay,
+  onOpenAllDay,
 }: DayHeaderProps) {
   const dayNumber = date.getDate();
   const dayName = date.toLocaleDateString("th-TH", { weekday: "short" });
@@ -44,6 +45,8 @@ export function DayHeader({
   }, [slots]);
 
   const hasBookings = stats.totalBooked > 0;
+  const hasAvailableSlots = slots.some(s => s.isAvailable);
+  const hasUnavailableSlots = slots.some(s => !s.isAvailable);
 
   // Dynamic utilization color
   const utilizationColor =
@@ -107,26 +110,39 @@ export function DayHeader({
               สร้างอัตโนมัติ
             </button>
           ) : (
-            !hasBookings && (
-              <button
-                onClick={onDeleteAll}
-                disabled={isLoading}
-                className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-red-600 bg-white border border-slate-200 rounded-xl hover:bg-red-50 hover:border-red-200 transition-all disabled:opacity-50"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">ลบทั้งหมด</span>
-              </button>
-            )
+            <>
+              {!hasBookings && (
+                <button
+                  onClick={onDeleteAll}
+                  disabled={isLoading}
+                  className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-red-600 bg-white border border-slate-200 rounded-xl hover:bg-red-50 hover:border-red-200 transition-all disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">ลบทั้งหมด</span>
+                </button>
+              )}
+              {hasUnavailableSlots && (
+                <button
+                  onClick={onOpenAllDay}
+                  disabled={isLoading}
+                  className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-primary-600 rounded-xl hover:bg-primary-700 shadow-sm shadow-primary-200/40 transition-all disabled:opacity-50"
+                >
+                  <Unlock className="w-3.5 h-3.5" />
+                  เปิดทั้งวัน
+                </button>
+              )}
+              {hasAvailableSlots && (
+                <button
+                  onClick={onCloseAllDay}
+                  disabled={isLoading}
+                  className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-primary-600 bg-primary-50 border border-primary-200 rounded-xl hover:bg-primary-100 transition-all disabled:opacity-50"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  ปิดทั้งวัน
+                </button>
+              )}
+            </>
           )}
-
-          <button
-            onClick={onAddSlot}
-            disabled={isLoading}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-primary-600 rounded-xl hover:bg-primary-700 shadow-sm shadow-primary-200/40 transition-all disabled:opacity-50"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            เพิ่มช่วงเวลา
-          </button>
         </div>
       </div>
     </div>

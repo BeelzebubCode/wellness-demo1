@@ -46,7 +46,7 @@ function getSpecMatchScore(bookingText: string, specializations: any[]): number 
 export async function GET() {
   try {
     const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000);
-    
+
     // Fetch pending bookings along with problem details and timeSlot for clashing checks
     const pendingBookings = await prisma.booking.findMany({
       where: {
@@ -83,13 +83,45 @@ export async function GET() {
       // Build target text for specialization matching
       const problemText = ((booking.problemCategory?.problem_category_name_th || "") + " " + (booking.booking_detail_text || "")).trim();
 
-      // Fetch consultants within the same university (including ratings, workload, specs, and schedule)
+      const targetDate = new Date(booking.timeSlot.time_slot_start_datetime).toISOString().split('T')[0];
+
+      // Fetch consultants within the same university OR borrowed to this university for this date
       const consultantsInUni = await prisma.consultant.findMany({
-        where: { university_id: universityId, account: { account_role: "CONSULTANT" } },
+        where: {
+          account: { account_role: "CONSULTANT" },
+          OR: [
+            { university_id: universityId },
+            {
+              borrowAssignments: {
+                some: {
+                  borrow_assign_start_at: { lte: new Date(`${targetDate}T23:59:59Z`) },
+                  borrow_assign_end_at: { gte: new Date(`${targetDate}T00:00:00Z`) },
+                  borrowRequest: {
+                    from_university_id: universityId,
+                    borrow_request_status: { in: ["APPROVED", "ASSIGNED"] },
+                  },
+                },
+              },
+            },
+          ],
+        },
         select: {
           consultant_id: true,
+          university_id: true,
           specializations: {
             select: { consultant_specialization_topic: true }
+          },
+          borrowAssignments: {
+            where: {
+              borrow_assign_start_at: { lte: new Date(`${targetDate}T23:59:59Z`) },
+              borrow_assign_end_at: { gte: new Date(`${targetDate}T00:00:00Z`) },
+              borrowRequest: {
+                from_university_id: universityId,
+                borrow_request_status: { in: ["APPROVED", "ASSIGNED"] },
+              },
+            },
+            select: { borrow_assignment_id: true },
+            take: 1,
           },
           _count: {
             select: {
@@ -107,8 +139,8 @@ export async function GET() {
             where: {
               timeSlot: {
                 time_slot_start_datetime: {
-                  gte: new Date(new Date(booking.timeSlot.time_slot_start_datetime).setHours(0,0,0,0)),
-                  lte: new Date(new Date(booking.timeSlot.time_slot_start_datetime).setHours(23,59,59,999)),
+                  gte: new Date(new Date(booking.timeSlot.time_slot_start_datetime).setHours(0, 0, 0, 0)),
+                  lte: new Date(new Date(booking.timeSlot.time_slot_start_datetime).setHours(23, 59, 59, 999)),
                 }
               },
               booking_status: { not: BookingStatus.CANCELLED } // Ignore canceled
@@ -144,6 +176,8 @@ export async function GET() {
 
           return {
             id: c.consultant_id,
+            homeUniversityId: c.university_id,
+            borrowAssignmentId: c.borrowAssignments?.[0]?.borrow_assignment_id ?? null,
             isClash: hasClash({
               start: booking.timeSlot!.time_slot_start_datetime,
               end: booking.timeSlot!.time_slot_end_datetime
@@ -165,7 +199,7 @@ export async function GET() {
 
       if (candidates.length === 0) continue; // All available are clashing or zero
 
-      const chosenConsultantId = candidates[0].id;
+      const chosenCandidate = candidates[0];
 
       // Execute transaction
       await prisma.$transaction(async (tx) => {
@@ -177,7 +211,7 @@ export async function GET() {
           },
           data: {
             booking_status: BookingStatus.ASSIGNED,
-            consultant_id: chosenConsultantId,
+            consultant_id: chosenCandidate.id,
           },
         });
 
@@ -186,8 +220,9 @@ export async function GET() {
             data: {
               university_id: universityId,
               booking_id: booking.booking_id,
-              consultant_id: chosenConsultantId,
-              consultant_university_id: universityId,
+              consultant_id: chosenCandidate.id,
+              consultant_university_id: chosenCandidate.homeUniversityId,
+              borrow_assignment_id: chosenCandidate.borrowAssignmentId,
               is_auto_assigned: true,
               is_active: true,
               assigned_note: "[System Auto-Assignment] ระบบแจกงานโดยพิจารณาจาก: เวลาว่าง, ความถนัด, ปริมาณงานในมือ และเรตติ้งคิว",

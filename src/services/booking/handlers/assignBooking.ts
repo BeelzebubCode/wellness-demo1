@@ -101,16 +101,17 @@ export async function handleAssignBooking(
 
   const consultantUniversityId = assignee.university_id;
   const hasAccess = (assignee.account?.accessPermissions?.length || 0) > 0;
-  const isSameUniversity = consultantUniversityId === activeUniversityId || hasAccess;
 
-  // ✅ ถ้าข้ามมหาลัย ต้องมี borrowAssignmentId + ตรวจว่า valid ในช่วงเวลา
   let borrowAssignmentId: number | null = null;
+  const baIdRaw = body?.borrowAssignmentId;
 
-  if (!isSameUniversity) {
-    const baId = Number(body?.borrowAssignmentId);
+  // ✅ 1. ถ้ามีส่ง borrowAssignmentId มาจากหน้าบ้าน ให้บังคับตรวจเงื่อนไขการยืมตัวเสมอ
+  // ✅ 2. ถ้ามาจากต่างมอ และไม่ส่ง baIdRaw มา ต้องมี hasAccess (Ghost Account ถาวร) จึงจะผ่านได้
+  if (baIdRaw || (!hasAccess && consultantUniversityId !== activeUniversityId)) {
+    const baId = Number(baIdRaw);
     if (!Number.isFinite(baId)) {
       return NextResponse.json(
-        { error: "แจกข้ามมหาลัยต้องระบุ borrowAssignmentId" },
+        { error: "แจกข้ามมหาลัยต้องระบุ borrowAssignmentId หรือยังไม่มีสิทธิ์เข้าถึง" },
         { status: 400 },
       );
     }
@@ -146,10 +147,35 @@ export async function handleAssignBooking(
       return NextResponse.json({ error: "borrowAssignment ไม่ได้ยืมเข้ามหาลัยนี้" }, { status: 400 });
     }
 
-    // ✅ window ต้องครอบคลุมปัจจุบัน — ป้องกัน assign งานให้คนที่หมดกำหนดยืมตัวแล้ว
-    const now = nowTs();
-    if (now > ba.borrow_assign_end_at) {
-      return NextResponse.json({ error: "ช่วงเวลายืมตัวหมดอายุแล้ว ไม่สามารถแจกงานได้" }, { status: 409 });
+    // ✅ Fetch the booking's time slot to check if it falls within the borrowed period
+    const bookingDetails = await prisma.booking.findUnique({
+      where: {
+        university_id_booking_id: {
+          university_id: activeUniversityId,
+          booking_id: bookingId,
+        },
+      },
+      select: {
+        timeSlot: {
+          select: {
+            time_slot_start_datetime: true,
+          },
+        },
+      },
+    });
+
+    if (!bookingDetails?.timeSlot?.time_slot_start_datetime) {
+      return NextResponse.json({ error: "ไม่พบข้อมูลเวลาของรายการจอง" }, { status: 400 });
+    }
+
+    const bookingTime = bookingDetails.timeSlot.time_slot_start_datetime;
+
+    // ✅ window ต้องครอบคลุมเวลาของ booking — ป้องกัน assignงานนอกช่วงเวลาที่ยืมตัวมา
+    if (bookingTime < ba.borrow_assign_start_at || bookingTime > ba.borrow_assign_end_at) {
+      return NextResponse.json(
+        { error: "ไม่สามารถแจกงานนอกช่วงเวลาที่ยืมตัวมาได้" },
+        { status: 400 }
+      );
     }
 
     // สถานะคำขอควรพร้อมใช้งาน (ปรับได้ตาม flow จริงของคุณ)

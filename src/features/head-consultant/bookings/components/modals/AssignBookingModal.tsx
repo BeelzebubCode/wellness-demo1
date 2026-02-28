@@ -65,6 +65,14 @@ function getSpecMatchScore(booking: AdminBookingRow, assignee: AssigneeOption): 
   return matches;
 }
 
+function isOutsideBorrowWindow(booking: AdminBookingRow | null, assignee: AssigneeOption): boolean {
+  if (!booking?.date || !assignee.borrowWindow) return false;
+  const bDayStr = booking.date;
+  const cStStr = new Date(assignee.borrowWindow.start).toISOString().split('T')[0];
+  const cEndStr = new Date(assignee.borrowWindow.end).toISOString().split('T')[0];
+  return bDayStr < cStStr || bDayStr > cEndStr;
+}
+
 /* ─── Workload Bar ─────────────────────────── */
 
 function WorkloadBar({ count, max = 15 }: { count: number; max?: number }) {
@@ -127,25 +135,29 @@ function ConsultantCard({
   onClick,
   isClash,
   isSpecMatch,
+  isOutsideBorrow,
 }: {
   a: AssigneeOption;
   selected: boolean;
   onClick: () => void;
   isClash: boolean;
   isSpecMatch: boolean;
+  isOutsideBorrow: boolean;
 }) {
+  const isDisabled = isClash || isOutsideBorrow;
+
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={isClash}
+      disabled={isDisabled}
       className={cn(
         "relative w-full text-left rounded-xl border p-3 transition-all duration-200",
         "hover:shadow-md group",
-        isClash ? "opacity-50 grayscale cursor-not-allowed bg-gray-50 border-gray-100" : "hover:border-primary-300",
+        isDisabled ? "opacity-50 grayscale cursor-not-allowed bg-gray-50 border-gray-100" : "hover:border-primary-300",
         selected
           ? "border-primary-400 bg-primary-50/80 ring-2 ring-primary-400/30 shadow-md"
-          : !isClash && "border-gray-200 bg-white hover:bg-gray-50/50",
+          : !isDisabled && "border-gray-200 bg-white hover:bg-gray-50/50",
       )}
     >
       <div className="flex items-start gap-3">
@@ -155,7 +167,7 @@ function ConsultantCard({
             "flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold shrink-0 transition-colors",
             selected
               ? "bg-primary-500 text-white"
-              : isClash
+              : isDisabled
                 ? "bg-gray-300 text-white"
                 : "bg-gradient-to-br from-violet-400 to-indigo-500 text-white",
           )}
@@ -178,6 +190,12 @@ function ConsultantCard({
                 <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-100 text-[10px] font-bold text-amber-600 animate-pulse">
                   <Sparkles className="h-2.5 w-2.5" />
                   เชี่ยวชาญตรงจุด
+                </div>
+              )}
+              {isOutsideBorrow && (
+                <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-stone-200 text-[10px] font-bold text-stone-600">
+                  <AlertCircle className="h-2.5 w-2.5" />
+                  นอกสัญญายืมตัว
                 </div>
               )}
               {isClash && (
@@ -271,6 +289,11 @@ export function AssignBookingModal({
     }
 
     return list.sort((a, b) => {
+      // 0. Borrow Constraint Detection (Hard Penalty)
+      const outA = isOutsideBorrowWindow(booking, a);
+      const outB = isOutsideBorrowWindow(booking, b);
+      if (outA !== outB) return outA ? 1 : -1;
+
       // 1. Clash Detection (Hard Penalty)
       const clashA = hasClash(booking, a);
       const clashB = hasClash(booking, b);
@@ -293,11 +316,17 @@ export function AssignBookingModal({
     });
   }, [assignees, search, booking]);
 
+  const selectedAssignee = useMemo(() => {
+    return assignees.find((a) => a.id === Number(consultantId));
+  }, [assignees, consultantId]);
+
   const canSubmit =
     !!booking &&
     Number.isFinite(Number(consultantId)) &&
     Number(consultantId) > 0 &&
-    !isSaving;
+    !isSaving &&
+    (!selectedAssignee || !isOutsideBorrowWindow(booking, selectedAssignee)) &&
+    (!selectedAssignee || !hasClash(booking, selectedAssignee));
 
   return (
     <Modal
@@ -368,6 +397,7 @@ export function AssignBookingModal({
                     onClick={() => setConsultantId(a.id)}
                     isClash={hasClash(booking, a)}
                     isSpecMatch={getSpecMatchScore(booking, a) > 0}
+                    isOutsideBorrow={isOutsideBorrowWindow(booking, a)}
                   />
                 ))}
               </div>

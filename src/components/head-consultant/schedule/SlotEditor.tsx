@@ -29,6 +29,8 @@ interface SlotEditorProps {
   ) => Promise<void>;
   onDeleteSlot: (slotId: number) => Promise<void>;
   onDeleteAllSlots: () => Promise<void>;
+  onCloseAllDay: () => Promise<void>;
+  onOpenAllDay: () => Promise<void>;
   onToggleSlotAvailability: (
     slotId: number,
     isAvailable: boolean
@@ -45,6 +47,8 @@ export function SlotEditor({
   onEditSlot,
   onDeleteSlot,
   onDeleteAllSlots,
+  onCloseAllDay,
+  onOpenAllDay,
   onToggleSlotAvailability,
   maxTotalCapacity,
 }: SlotEditorProps) {
@@ -169,7 +173,8 @@ export function SlotEditor({
         isLoading={isLoading}
         onAutoGenerate={() => setShowAutoGenerate(true)}
         onDeleteAll={() => setShowDeleteAllConfirm(true)}
-        onAddSlot={handleAddSlot}
+        onCloseAllDay={onCloseAllDay}
+        onOpenAllDay={onOpenAllDay}
       />
 
       {/* Slot Grid */}

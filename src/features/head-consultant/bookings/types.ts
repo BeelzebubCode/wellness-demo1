@@ -38,13 +38,14 @@ export type AdminBookingRow = BookingCore & {
   }>;
 };
 
-export type AssigneeOption = {
+export interface AssigneeOption {
   id: number;
   name: string;
   borrowAssignmentId?: number;
+  borrowWindow?: { start: string; end: string } | null;
   activeBookings?: number;
-  avgRating?: number | null;
   feedbackCount?: number;
+  avgRating?: number | null;
   accountRole?: string | null;
   specializations?: string[];
   busySlots?: { start: string; end: string }[];

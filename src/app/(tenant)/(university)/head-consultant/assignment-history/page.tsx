@@ -168,7 +168,7 @@ export default function AssignmentHistoryPage() {
                     assignees={assignees}
                     isLoadingAssignees={isLoadingAssignees}
                     onRefresh={refresh}
-                    onAssign={async (bookingId, consultantId) => {
+                    onAssign={async (bookingId, consultantId, borrowAssignmentId) => {
                         const row = rows.find((r) => r.id === bookingId);
                         if (!row) throw new Error("ไม่พบ booking ในรายการ");
 
@@ -176,6 +176,7 @@ export default function AssignmentHistoryPage() {
                             universityId: row.universityId,
                             bookingId,
                             consultantId,
+                            borrowAssignmentId,
                         });
                     }}
                     onReschedule={async (bookingId, isoDateTime) => {

@@ -43,8 +43,13 @@ export async function handleListConsultants(
           {
             borrowAssignments: {
               some: {
-                // borrow_assign_start_at: { lte: now },
-                // borrow_assign_end_at: { gte: now },
+                ...(targetDate
+                  ? {
+                    // ✅ If targetDate is provided, only include assignments where the target date falls within the start/end window
+                    borrow_assign_start_at: { lte: new Date(`${targetDate}T23:59:59Z`) },
+                    borrow_assign_end_at: { gte: new Date(`${targetDate}T00:00:00Z`) },
+                  }
+                  : {}),
                 borrowRequest: {
                   from_university_id: activeUniversityId,
                   // ✅ User request: Don't show if COMPLETED (Assignee disappears after work done)
@@ -123,6 +128,12 @@ export async function handleListConsultants(
       // ✅ Select borrow assignments to get the ID for cross-university booking assignment
       borrowAssignments: {
         where: {
+          ...(targetDate
+            ? {
+              borrow_assign_start_at: { lte: new Date(`${targetDate}T23:59:59Z`) },
+              borrow_assign_end_at: { gte: new Date(`${targetDate}T00:00:00Z`) },
+            }
+            : {}),
           borrowRequest: {
             from_university_id: activeUniversityId,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -131,6 +142,8 @@ export async function handleListConsultants(
         },
         select: {
           borrow_assignment_id: true,
+          borrow_assign_start_at: true,
+          borrow_assign_end_at: true,
         },
         take: 1,
       },
@@ -153,6 +166,12 @@ export async function handleListConsultants(
 
       // unique borrowAssignmentId for this context
       const borrowAssignmentId = c.borrowAssignments?.[0]?.borrow_assignment_id ?? null;
+      const borrowWindow = borrowAssignmentId
+        ? {
+          start: c.borrowAssignments[0].borrow_assign_start_at.toISOString(),
+          end: c.borrowAssignments[0].borrow_assign_end_at.toISOString(),
+        }
+        : null;
 
       // ✅ Compute avg rating from all feedback ratings
       const allScores = c.feedbacks.flatMap((f) => f.ratings.map((r) => r.feedback_rating_score));
@@ -172,6 +191,7 @@ export async function handleListConsultants(
         consultantId: c.consultant_id,
         universityId: c.university_id,
         borrowAssignmentId,
+        borrowWindow,
         name,
         accountRole: c.account?.account_role ?? null,
         activeBookings: c._count.bookings,

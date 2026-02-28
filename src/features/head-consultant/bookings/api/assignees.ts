@@ -39,6 +39,7 @@ export async function fetchAssignees(date?: string): Promise<AssigneeOption[]> {
         id: consultantId,
         name,
         borrowAssignmentId: Number.isFinite(borrowAssignmentId) ? borrowAssignmentId : undefined,
+        borrowWindow: c.borrowWindow ?? null,
         activeBookings: typeof c.activeBookings === "number" ? c.activeBookings : 0,
         avgRating: typeof c.avgRating === "number" ? c.avgRating : null,
         feedbackCount: typeof c.feedbackCount === "number" ? c.feedbackCount : 0,
