@@ -255,7 +255,7 @@ const ROLE_WIDGETS: Record<string, WidgetMeta> = {
         labelTh: 'แผนที่ความร้อนระดับประเทศ',
         category: 'map',
         component: dynamic(
-            () => import('../ministry/components/HeatMapDashboard').then(m => ({ default: m.default })),
+            () => import('../ministry/components/HeatMapDashboard').then(m => ({ default: m.HeatMapDashboard })),
             { loading: SkeletonTall, ssr: false },
         ),
         dataKeys: [],

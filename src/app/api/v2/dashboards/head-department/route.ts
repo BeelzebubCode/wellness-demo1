@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { verifyToken, extractToken } from "@/lib/auth/token";
-import { HeadDepartmentService, type HeadDeptFilters } from "@/services/dashboards/handlers/getHeadDepartmentDashboard";
+import { HeadDepartmentService, type HeadDeptFilters, type StoryType } from "@/services/dashboards/handlers/getHeadDepartmentDashboard";
 
 export async function GET(req: NextRequest) {
     try {
@@ -11,7 +11,6 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
         }
 
-        // 1. Validate HEAD_DEPARTMENT role
         const account = await prisma.account.findUnique({
             where: { account_id: token.accountId },
             include: {
@@ -40,8 +39,10 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        // 2. Parse all filter params
         const sp = req.nextUrl.searchParams;
+
+        // Story parameter — which card is requesting data
+        const story = (sp.get("story") ?? "all") as StoryType;
 
         const allTime = sp.get("all_time") === "true";
         let dateStart: Date | undefined;
@@ -80,12 +81,12 @@ export async function GET(req: NextRequest) {
             parentalStatus: parseCSV("parental_status"),
         };
 
-        // 3. Fetch department stats
         const data = await HeadDepartmentService.getDepartmentStats(
             dept.department_id,
             dept.faculty_id,
             dept.university_id,
             filters,
+            story,
         );
 
         return NextResponse.json({ success: true, data });

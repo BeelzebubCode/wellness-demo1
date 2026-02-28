@@ -1,6 +1,6 @@
 // src/features/dashboard/shared/analytics-api.ts
 
-import type { AnalyticsParams, AnalyticsResult, FacultyOption, DepartmentOption, ProblemCategoryOption } from "./analytics-types";
+import type { AnalyticsParams, AnalyticsResult, FacultyOption, DepartmentOption, ProblemCategoryOption } from "../types/analytics-types";
 
 function buildSearchParams(params: AnalyticsParams): URLSearchParams {
     const sp = new URLSearchParams();
