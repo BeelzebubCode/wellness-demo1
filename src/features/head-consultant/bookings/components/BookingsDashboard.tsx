@@ -1,7 +1,7 @@
 // src/features/head-consultant/bookings/components/BookingsDashboard.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { ChevronDown, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Spinner } from "@/components/ui/Spinner";
@@ -56,6 +56,26 @@ export function BookingsDashboard({
 
   const [isSavingAssign, setIsSavingAssign] = useState(false);
   const [isSavingReschedule, setIsSavingReschedule] = useState(false);
+
+  // ── Auto-assign trigger (เรียก API แล้ว refresh) ──
+  const autoAssignBusyRef = useRef(false);
+  const handleAutoAssignExpired = useCallback(async () => {
+    if (autoAssignBusyRef.current) return; // กัน fire ซ้ำ
+    autoAssignBusyRef.current = true;
+    try {
+      console.log("[AutoAssign] Countdown expired → calling /api/cron/auto-assign");
+      const res = await fetch("/api/cron/auto-assign", { cache: "no-store" });
+      const data = await res.json().catch(() => ({}));
+      console.log("[AutoAssign] Result:", data);
+      // refresh booking list ให้เห็นผลลัพธ์
+      onRefresh();
+    } catch (err) {
+      console.error("[AutoAssign] Error:", err);
+    } finally {
+      // ปล่อย lock หลังจาก 3 วินาที กัน spam
+      setTimeout(() => { autoAssignBusyRef.current = false; }, 3000);
+    }
+  }, [onRefresh]);
 
   // ── Pagination ──
   const [currentPage, setCurrentPage] = useState(1);
@@ -183,6 +203,7 @@ export function BookingsDashboard({
                       setActiveRow(r);
                       setOpenAssign(true);
                     }}
+                    onAutoAssignExpired={handleAutoAssignExpired}
                   />
                 </div>
               ))}

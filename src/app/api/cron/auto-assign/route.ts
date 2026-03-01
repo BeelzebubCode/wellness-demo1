@@ -45,14 +45,16 @@ function getSpecMatchScore(bookingText: string, specializations: any[]): number 
 
 export async function GET() {
   try {
-    const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000);
+    // const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000); // 5 นาที (สำหรับ Production)
+    const delaySec = Number(process.env.NEXT_PUBLIC_AUTO_ASSIGN_DELAY_SEC) || 30;
+    const thresholdAgo = new Date(Date.now() - delaySec * 1000);
 
     // Fetch pending bookings along with problem details and timeSlot for clashing checks
     const pendingBookings = await prisma.booking.findMany({
       where: {
         booking_status: BookingStatus.PENDING_ASSIGNMENT,
         booking_created_at: {
-          lt: fiveMinsAgo,
+          lt: thresholdAgo,
         },
       },
       select: {

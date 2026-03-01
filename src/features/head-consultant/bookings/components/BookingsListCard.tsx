@@ -2,7 +2,7 @@
 
 "use client";
 
-import React from "react";
+import React, { useCallback } from "react";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/cn";
 import {
@@ -157,14 +157,19 @@ export function BookingsListCard({
   row,
   onClickDetails,
   onClickAssign,
+  onAutoAssignExpired,
 }: {
   row: AdminBookingRow;
   onClickDetails: () => void;
   onClickAssign: () => void;
+  onAutoAssignExpired?: () => void;
 }) {
   const studentName = row.userName || row.student?.name || row.student?.username || "ไม่ทราบชื่อ";
   const assign = getAssignState(row);
-  const countdown = useAutoAssignCountdown(row.createdAt, row.status === "PENDING_ASSIGNMENT");
+  const stableOnExpire = useCallback(() => {
+    onAutoAssignExpired?.();
+  }, [onAutoAssignExpired]);
+  const countdown = useAutoAssignCountdown(row.createdAt, row.status === "PENDING_ASSIGNMENT", stableOnExpire);
 
   const latestAssignment = row.assignments?.[0];
   const isAutoAssigned = latestAssignment?.isAutoAssigned;

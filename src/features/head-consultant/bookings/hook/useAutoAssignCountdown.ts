@@ -1,9 +1,23 @@
 // src/features/head-consultant/bookings/hook/useAutoAssignCountdown.ts
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
-export function useAutoAssignCountdown(createdAtStr: string, isPending: boolean) {
+/** ระยะเวลารอก่อน auto-assign (ms) — ตั้งค่าจาก ENV: NEXT_PUBLIC_AUTO_ASSIGN_DELAY_SEC (default: 30) */
+const delaySec = Number(process.env.NEXT_PUBLIC_AUTO_ASSIGN_DELAY_SEC) || 30;
+export const AUTO_ASSIGN_DELAY_MS = delaySec * 1000;
+
+export function useAutoAssignCountdown(
+  createdAtStr: string,
+  isPending: boolean,
+  onExpire?: () => void,
+) {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const expiredRef = useRef(false);
+
+  useEffect(() => {
+    // Reset when a new booking comes in
+    expiredRef.current = false;
+  }, [createdAtStr]);
 
   useEffect(() => {
     if (!isPending) {
@@ -17,7 +31,7 @@ export function useAutoAssignCountdown(createdAtStr: string, isPending: boolean)
       return;
     }
 
-    const targetTime = createdTime + 5 * 60 * 1000;
+    const targetTime = createdTime + AUTO_ASSIGN_DELAY_MS;
 
     const intervalId = setInterval(() => {
       const now = Date.now();
@@ -26,15 +40,28 @@ export function useAutoAssignCountdown(createdAtStr: string, isPending: boolean)
 
       if (diff <= 0) {
         clearInterval(intervalId);
+        // ✅ เรียก onExpire ครั้งเดียวเมื่อหมดเวลา
+        if (!expiredRef.current && onExpire) {
+          expiredRef.current = true;
+          onExpire();
+        }
       }
     }, 1000);
 
     // Initial calculation so we don't wait 1 second
     const now = Date.now();
-    setTimeLeft(Math.max(0, targetTime - now));
+    const initDiff = Math.max(0, targetTime - now);
+    setTimeLeft(initDiff);
+
+    // ถ้าหมดเวลาแล้วตั้งแต่แรก → fire onExpire ทันที
+    if (initDiff <= 0 && !expiredRef.current && onExpire) {
+      expiredRef.current = true;
+      // delay เล็กน้อยเพื่อไม่ให้ fire ระหว่าง render
+      setTimeout(() => onExpire(), 0);
+    }
 
     return () => clearInterval(intervalId);
-  }, [createdAtStr, isPending]);
+  }, [createdAtStr, isPending, onExpire]);
 
   if (timeLeft === null || timeLeft <= 0) return null;
 
