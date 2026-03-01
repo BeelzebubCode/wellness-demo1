@@ -1,22 +1,22 @@
 // components/layout/sidebar/ConsultantSidebar.tsx
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useMyProfile } from "@/features/profile/hooks/useMyProfile";
 import { authApi } from "@/features/auth/api";
+import { useConsultantAssignedCount } from "@/features/consultant/my-jobs/hooks/useConsultantAssignedCount";
 
 import { CONSULTANT_NAV } from "@/lib/constants/consultant-nav";
 import { BaseSidebar } from "./BaseSidebar";
 import type { SidebarConfig } from "./types";
 
-const CONSULTANT_CONFIG: SidebarConfig = {
+const DEFAULT_CONSULTANT_CONFIG: SidebarConfig = {
   logo: {
     title: "NU Wellness",
     subtitle: "Consultant Portal",
     href: "/consultant",
-    // theme = dark → BaseSidebar auto ใช้ variant="white"
   },
   items: CONSULTANT_NAV,
   theme: "dark",
@@ -30,11 +30,12 @@ interface ConsultantSidebarProps {
 }
 
 export function ConsultantSidebar(props: ConsultantSidebarProps) {
-  // ✅ Fetch profile with university info to get Home University ID/Code
   const { me } = useMyProfile({ university: true });
   const [loading, setLoading] = useState(false);
 
-  // ตรวจสอบว่ากำลังถูกยืมตัวอยู่หรือไม่ (Active != Home)
+  // ✅ Fetch assigned count for badge
+  const { data: assignedCount } = useConsultantAssignedCount();
+
   const isBorrowed =
     me &&
     me.profile?.universityId &&
@@ -53,7 +54,6 @@ export function ConsultantSidebar(props: ConsultantSidebarProps) {
         return;
       }
 
-      // ✅ Stay on same host — ไม่ต้อง redirect ไป subdomain
       window.location.assign("/consultant/my-jobs");
     } catch (err) {
       console.error("Return home error:", err);
@@ -85,5 +85,19 @@ export function ConsultantSidebar(props: ConsultantSidebarProps) {
     </div>
   ) : null;
 
-  return <BaseSidebar config={CONSULTANT_CONFIG} footer={footer} {...props} />;
+  const configWithBadge = useMemo(() => {
+    if (!assignedCount || assignedCount <= 0) return DEFAULT_CONSULTANT_CONFIG;
+
+    const newItems = CONSULTANT_NAV.map((item) => {
+      // Add badge to "งานของฉัน" (My Jobs)
+      if (item.href === "/consultant/my-jobs") {
+        return { ...item, badge: assignedCount };
+      }
+      return item;
+    });
+
+    return { ...DEFAULT_CONSULTANT_CONFIG, items: newItems };
+  }, [assignedCount]);
+
+  return <BaseSidebar config={configWithBadge} footer={footer} {...props} />;
 }

@@ -66,6 +66,8 @@ export async function startBooking(bookingId: number) {
   const data = await safeJson(res);
   if (!res.ok) throw new Error(data?.error ?? "เริ่มงานไม่สำเร็จ");
 
+  window.dispatchEvent(new Event("refresh-consultant-assigned-count"));
+
   return data as {
     success: boolean;
     status: string;
@@ -92,6 +94,9 @@ export async function completeBooking(
 
   const data = await safeJson(res);
   if (!res.ok) throw new Error(data?.error ?? "ส่งงานไม่สำเร็จ");
+
+  window.dispatchEvent(new Event("refresh-consultant-assigned-count"));
+
   return data as { success: boolean; status: string };
 }
 
@@ -153,6 +158,8 @@ export async function cancelNoShowBooking(bookingId: number) {
 
   const data = await safeJson(res);
   if (!res.ok) throw new Error(data?.error ?? "ยกเลิกงานไม่สำเร็จ");
+
+  window.dispatchEvent(new Event("refresh-consultant-assigned-count"));
 
   return data as { success: boolean; status: string };
 }

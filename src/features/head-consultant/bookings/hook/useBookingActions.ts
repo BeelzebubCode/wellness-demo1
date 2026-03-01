@@ -23,6 +23,7 @@ export function useBookingActions(opts?: { onDone?: () => void }) {
       try {
         await assignBooking(input);
         success("แจกงานสำเร็จ");
+        window.dispatchEvent(new Event("refresh-pending-count"));
         opts?.onDone?.();
       } catch (e: any) {
         const msg = e?.message ?? "Assign ไม่สำเร็จ";
@@ -68,6 +69,7 @@ export function useBookingActions(opts?: { onDone?: () => void }) {
       try {
         await cancelBooking(input);
         success("ยกเลิกรายการสำเร็จ");
+        window.dispatchEvent(new Event("refresh-pending-count"));
         opts?.onDone?.();
       } catch (e: any) {
         const msg = e?.message ?? "Cancel ไม่สำเร็จ";

@@ -51,7 +51,7 @@ export function BookingSuccessModal({
         <p className="text-gray-500 mb-6">
           ระบบได้รับการจองของคุณแล้ว
           <br />
-          กรุณารอการแจ้งผลผ่าน LINE
+          สามารถดูรายละเอียดการนัดหมายได้ที่หน้าตารางนัดของฉัน
         </p>
 
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 text-left">
@@ -59,9 +59,8 @@ export function BookingSuccessModal({
             <span>💡</span> สิ่งที่ต้องทำ
           </h4>
           <ul className="text-sm text-blue-700 space-y-1">
-            <li>• ตรวจสอบ LINE เพื่อรับการแจ้งผล</li>
             <li>• มาถึงก่อนเวลานัด 10 นาที</li>
-            <li>• หากต้องการยกเลิก กรุณาแจ้งล่วงหน้า</li>
+            <li>• หากต้องการยกเลิก กรุณาแจ้งล่วงหน้าก่อน 24 ชั่วโมง</li>
           </ul>
         </div>
 
