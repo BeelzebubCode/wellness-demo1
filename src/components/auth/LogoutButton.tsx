@@ -15,22 +15,6 @@ type Props = {
   iconOnly?: boolean;
 };
 
-function getCentralOriginFromHost() {
-  const protocol = window.location.protocol;
-  const hostname = window.location.hostname.toLowerCase();
-  const port = window.location.port;
-
-  const isIp = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(hostname);
-  if (hostname === "localhost" || hostname === "127.0.0.1" || isIp) {
-    return window.location.origin;
-  }
-
-  const parts = hostname.split(".");
-  const baseDomain = parts.length >= 3 ? parts.slice(1).join(".") : hostname;
-
-  return `${protocol}//${baseDomain}${port ? `:${port}` : ""}`;
-}
-
 export default function LogoutButton({
   redirectTo = "/login",
   label = "ออก",
@@ -55,10 +39,9 @@ export default function LogoutButton({
       // ✅ กัน toast "กรุณาเข้าสู่ระบบ" ซ้อนตอน redirect ไปหน้า login
       try { sessionStorage.setItem("suppress_login_toast_once", "1"); } catch { }
 
-      // ✅ redirect ทันทีไม่ต้องรอ — กัน DEFAULT tenant flash
+      // ✅ redirect ทันทีไม่ต้องรอ — stay on same host
       setIsOpen(false);
-      const central = getCentralOriginFromHost();
-      window.location.href = `${central}${redirectTo}`;
+      window.location.href = `${window.location.origin}${redirectTo}`;
     } catch (err) {
       console.error(err);
       push({

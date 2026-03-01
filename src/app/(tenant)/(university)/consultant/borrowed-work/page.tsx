@@ -57,7 +57,6 @@ export default function ConsultantBorrowedWorkPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [switchingId, setSwitchingId] = useState<number | null>(null);
-    const [currentSubdomain, setCurrentSubdomain] = useState<string>("");
 
     const [homeUniversity, setHomeUniversity] = useState<{ id: number; code: string; name: string } | null>(null);
 
@@ -202,7 +201,7 @@ export default function ConsultantBorrowedWorkPage() {
                     <>
                         <div className="grid gap-4">
                             {assignments.map((assignment) => {
-                                const isReady = assignment.status === "ASSIGNED" && currentSubdomain !== (assignment.fromUniversityCode || "").toUpperCase();
+                                const isReady = assignment.status === "ASSIGNED" && (homeUniversity?.code || "").toUpperCase() !== (assignment.fromUniversityCode || "").toUpperCase();
 
                                 return (
                                     <Card
