@@ -1,92 +1,77 @@
+// src/features/dashboard/advisor/components/AdvisorDashboard.tsx
+// ─────────────────────────────────────────────────────────────────────────────
+// Story-based advisor dashboard — 4 story cards
+// Data scope: Advisor's own advisees only
+// ─────────────────────────────────────────────────────────────────────────────
 "use client";
 
-import dynamic from "next/dynamic";
-import { useAnalytics } from "../../widgets/hooks/useAnalytics";
-import { DashboardFilterBar } from "../../widgets/filters/DashboardFilterBar";
-import { SummaryKPICards } from "../../widgets/cards/SummaryKPICards";
+import React, { useState, useEffect } from "react";
+import { DataStoryGrid } from "../../widgets/story/DataStoryGrid";
+import GenericStudentStory from "../../shared/GenericStudentStory";
+import GenericBookingStory from "../../shared/GenericBookingStory";
+import GenericProblemStory from "../../shared/GenericProblemStory";
+import GenericRiskStory from "../../shared/GenericRiskStory";
 
-const ProblemCategoryChart = dynamic(
-  () => import("../../widgets/charts/ProblemCategoryChart").then((m) => ({ default: m.ProblemCategoryChart })),
-  { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
-);
-const AttendanceChart = dynamic(
-  () => import("../../widgets/charts/AttendanceChart").then((m) => ({ default: m.AttendanceChart })),
-  { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
-);
-const RiskDistributionChart = dynamic(
-  () => import("../../widgets/charts/RiskDistributionChart").then((m) => ({ default: m.RiskDistributionChart })),
-  { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
-);
-const TrendChart = dynamic(
-  () => import("../../widgets/charts/TrendChart").then((m) => ({ default: m.TrendChart })),
-  { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
-);
-const StudentRankTable = dynamic(
-  () => import("../../widgets/charts/StudentRankTable").then((m) => ({ default: m.StudentRankTable })),
-  { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
-);
+const API = "/api/v2/dashboards/advisor";
 
 export function AdvisorDashboard() {
-  const { data, loading, params, setParams } = useAnalytics();
+    const [advisor, setAdvisor] = useState<{
+        username: string;
+    } | null>(null);
 
-  return (
-    <div className="space-y-8 bg-slate-50 p-6 rounded-2xl">
-      {/* ===== Header ===== */}
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-slate-900">
-          แผงควบคุมอาจารย์ที่ปรึกษา
-        </h1>
-        <p className="text-slate-500">
-          ภาพรวมการดูแลนิสิตในที่ปรึกษาของคุณ
-        </p>
-      </div>
+    useEffect(() => {
+        (async () => {
+            try {
+                const res = await fetch(`${API}?story=students&all_time=true`, { credentials: "include" });
+                const json = await res.json();
+                if (json.data?.advisor) setAdvisor(json.data.advisor);
+            } catch { /* silent */ }
+        })();
+    }, []);
 
-      {/* ===== Advanced Filter ===== */}
-      <section className="relative z-40">
-        <DashboardFilterBar role="advisor" params={params} onChange={setParams} />
-      </section>
+    return (
+        <div className="min-h-screen">
+            <style>{`
+                @keyframes fadeUp {
+                    from { opacity: 0; transform: translateY(16px); }
+                    to   { opacity: 1; transform: translateY(0); }
+                }
+            `}</style>
 
-      {/* ===== Stats Cards ===== */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm">
-        <SummaryKPICards data={data?.summary ?? null} loading={loading} />
-      </div>
+            <div className="space-y-5">
+                {/* Header */}
+                <div className="animate-[fadeUp_0.5s_ease-out_both]">
+                    <div className="flex items-center gap-2.5 mb-1">
+                        <div className="w-2 h-9 rounded-full bg-gradient-to-b from-teal-500 to-emerald-600" />
+                        <h1 className="text-2xl font-black bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">
+                            แผงควบคุมอาจารย์ที่ปรึกษา
+                        </h1>
+                    </div>
+                    {advisor && (
+                        <p className="text-sm text-slate-400 ml-4">
+                            <span className="font-semibold text-teal-600">{advisor.username}</span>
+                            {" — "}นิสิตในที่ปรึกษา
+                        </p>
+                    )}
+                </div>
 
-      {/* ===== Student Risk Rank — featured ===== */}
-      <div className="bg-white rounded-2xl shadow-sm">
-        <StudentRankTable data={data?.studentRank ?? []} loading={loading} />
-      </div>
+                {/* Row 1: Overview + Bookings */}
+                <DataStoryGrid cols={2}>
+                    <GenericStudentStory apiPath={API} title="ภาพรวมนิสิตในที่ปรึกษา" delay={0} />
+                    <GenericBookingStory apiPath={API} title="การใช้บริการของนิสิต" delay={1} />
+                </DataStoryGrid>
 
-      {/* ===== Analytics Section ===== */}
-      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-4 shadow-sm">
-        <div className="mb-3">
-          <h2 className="text-lg font-semibold text-indigo-900">
-            ภาพรวมเชิงวิเคราะห์
-          </h2>
-          <p className="text-sm text-indigo-600">
-            แนวโน้มและสถิติด้านสุขภาวะของนิสิต
-          </p>
+                {/* Row 2: Problems + Profile */}
+                <GenericProblemStory apiPath={API} title="ประเด็นปัญหา + โปรไฟล์นิสิต" delay={2} />
+
+                {/* Row 3: Risk */}
+                <GenericRiskStory apiPath={API} title="ระดับความเสี่ยงนิสิตในที่ปรึกษา" delay={3} />
+
+                {/* Footer */}
+                <div className="text-center text-xs text-slate-300 py-3 animate-[fadeUp_0.5s_ease-out_both]" style={{ animationDelay: "400ms" }}>
+                    อัปเดตล่าสุด: {new Date().toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })}
+                </div>
+            </div>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ProblemCategoryChart data={data?.problemCategories ?? []} loading={loading} />
-          <RiskDistributionChart data={data?.riskDistribution ?? null} loading={loading} />
-        </div>
-      </div>
-
-      {/* ===== Main Content ===== */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <AttendanceChart data={data?.attendanceByGroup ?? []} loading={loading} />
-        <div className="bg-gradient-to-br from-rose-50 to-orange-50 rounded-2xl p-4 shadow-sm">
-          <div className="mb-3">
-            <h2 className="text-lg font-semibold text-rose-900">
-              แนวโน้มตามเวลา
-            </h2>
-            <p className="text-sm text-rose-600">
-              การเปลี่ยนแปลงจำนวนการจอง/ยกเลิก
-            </p>
-          </div>
-          <TrendChart data={data?.trend ?? []} loading={loading} />
-        </div>
-      </div>
-    </div>
-  );
+    );
 }

@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
           university_name_en: true,
           university_latitude: true,
           university_longitude: true,
-          university_type: true,
+          universityType: true,
           province: {
             select: {
               province_name_th: true,
@@ -203,7 +203,7 @@ export async function GET(req: NextRequest) {
         province: uni.province.province_name_th || "",
         // priority: hardcoded CSV data > DB count
         students: universityStudentCounts[uni.university_code] ?? uni._count.students,
-        type: uni.university_type || "PUBLIC",
+        type: uni.universityType?.code || "PUBLIC",
         logo: `/images/logo/${uni.university_code}_logo.png`,
         // ✨ Problem statistics
         dominantProblem: topIssue ? topIssue.name : null,

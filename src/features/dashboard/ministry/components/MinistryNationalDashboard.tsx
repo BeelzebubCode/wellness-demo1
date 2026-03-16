@@ -1,121 +1,78 @@
+// src/features/dashboard/ministry/components/MinistryNationalDashboard.tsx
+// ─────────────────────────────────────────────────────────────────────────────
+// Story-based ministry dashboard — 4 story cards with per-card filters
+// Each card owns its own: state, API call, date filter, chip filters
+// Data scope: National (all universities)
+// ─────────────────────────────────────────────────────────────────────────────
 "use client";
 
-import React from "react";
-import dynamic from "next/dynamic";
-import { TrendingUp } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { DataStoryGrid } from "../../widgets/story/DataStoryGrid";
+import GenericStudentStory from "../../shared/GenericStudentStory";
+import GenericBookingStory from "../../shared/GenericBookingStory";
+import GenericProblemStory from "../../shared/GenericProblemStory";
+import GenericRiskStory from "../../shared/GenericRiskStory";
 
-// Shared Analytics Components
-import { useAnalytics } from "../../widgets/hooks/useAnalytics";
-import { DashboardFilterBar } from "../../widgets/filters/DashboardFilterBar";
-import { SummaryKPICards } from "../../widgets/cards/SummaryKPICards";
-import { CancellationSummary } from "../../widgets/charts/CancellationSummary";
-
-const LoadIndexChart = dynamic(
-    () => import("./MinistryLoadIndexChart").then((m) => ({ default: m.MinistryLoadIndexChart })),
-    { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
-);
-const ProblemCategoryChart = dynamic(
-    () => import("../../widgets/charts/ProblemCategoryChart").then((m) => ({ default: m.ProblemCategoryChart })),
-    { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
-);
-const AttendanceChart = dynamic(
-    () => import("../../widgets/charts/AttendanceChart").then((m) => ({ default: m.AttendanceChart })),
-    { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
-);
-const RiskDistributionChart = dynamic(
-    () => import("./MinistryRiskDistributionChart").then((m) => ({ default: m.MinistryRiskDistributionChart })),
-    { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
-);
-const TrendChart = dynamic(
-    () => import("./MinistryTrendChart").then((m) => ({ default: m.MinistryTrendChart })),
-    { loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />, ssr: false },
-);
+const API = "/api/v2/dashboards/ministry/story";
 
 export function MinistryNationalDashboard() {
-    // 🌍 useAnalytics without any hardcoded university_code implies National Scope (tenant overrides skipped by Backend logic)
-    // Default to all_time so national data across all periods is visible
-    const { data, loading, params, setParams } = useAnalytics({ all_time: true });
+    const [scope, setScope] = useState<{
+        label: string; totalUniversities: number;
+    } | null>(null);
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const res = await fetch(`${API}?story=students&all_time=true`, { credentials: "include" });
+                const json = await res.json();
+                if (json.data?.scope) setScope(json.data.scope);
+            } catch { /* silent */ }
+        })();
+    }, []);
 
     return (
-        <div className="space-y-6 max-w-[1600px] mx-auto pb-12">
-            {/* Header Section */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 rounded-3xl p-8 lg:p-10 shadow-xl border border-white/10">
-                {/* Decorative background elements */}
-                <div className="absolute top-0 right-0 -mt-20 -mr-20 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
-                <div className="absolute bottom-0 left-20 -mb-20 w-60 h-60 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="min-h-screen">
+            <style>{`
+                @keyframes fadeUp {
+                    from { opacity: 0; transform: translateY(16px); }
+                    to   { opacity: 1; transform: translateY(0); }
+                }
+            `}</style>
 
-                <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
-                    <div>
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 backdrop-blur-md mb-4">
-                            <TrendingUp className="w-4 h-4 text-emerald-400" />
-                            <span className="text-xs font-medium text-emerald-50 tracking-wide uppercase">Live Analytics Data</span>
-                        </div>
-                        <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight leading-tight">
-                            แดชบอร์ดส่วนกลาง
-                            <span className="block text-lg md:text-xl mt-1.5 font-medium text-slate-300">National Healthcare Analytics</span>
+            <div className="space-y-5">
+                {/* Header */}
+                <div className="animate-[fadeUp_0.5s_ease-out_both]">
+                    <div className="flex items-center gap-2.5 mb-1">
+                        <div className="w-2 h-9 rounded-full bg-gradient-to-b from-rose-500 to-red-600" />
+                        <h1 className="text-2xl font-black bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">
+                            แผงควบคุมกระทรวง
                         </h1>
-                        <p className="text-slate-400 mt-3 max-w-2xl text-sm md:text-base leading-relaxed">
-                            ระบบวิเคราะห์ข้อมูลและนโยบายด้านสุขภาพจิตนิสิตครอบคลุมเครือข่ายมหาวิทยาลัยทั่วประเทศแบบเรียลไทม์
-                        </p>
                     </div>
+                    {scope && (
+                        <p className="text-sm text-slate-400 ml-4">
+                            <span className="font-semibold text-rose-600">{scope.label}</span>
+                            {" — "}{scope.totalUniversities} มหาวิทยาลัย
+                        </p>
+                    )}
+                </div>
+
+                {/* Row 1: Overview + Bookings (2 cols) */}
+                <DataStoryGrid cols={2}>
+                    <GenericStudentStory apiPath={API} title="ภาพรวมนิสิตระดับชาติ" delay={0} />
+                    <GenericBookingStory apiPath={API} title="การใช้บริการระดับชาติ" delay={1} />
+                </DataStoryGrid>
+
+                {/* Row 2: Problems + Profile (full width) */}
+                <GenericProblemStory apiPath={API} title="ประเด็นปัญหา + โปรไฟล์นิสิตระดับชาติ" delay={2} />
+
+                {/* Row 3: Risk (full width) */}
+                <GenericRiskStory apiPath={API} title="ระดับความเสี่ยงระดับชาติ" delay={3} />
+
+                {/* Footer */}
+                <div className="text-center text-xs text-slate-300 py-3 animate-[fadeUp_0.5s_ease-out_both]" style={{ animationDelay: "400ms" }}>
+                    อัปเดตล่าสุด: {new Date().toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })}
                 </div>
             </div>
-
-            {/* 1. Filter Bar (National Mode Enabled) */}
-            <section className="relative z-40">
-                <DashboardFilterBar
-                    role="ministry"
-                    params={params}
-                    onChange={setParams}
-                />
-            </section>
-
-            {/* 2. Top-level KPIs */}
-            <section>
-                <SummaryKPICards data={data?.summary ?? null} loading={loading} />
-            </section>
-
-            {/* 3. Primary Charts Row */}
-            <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <LoadIndexChart
-                    data={data?.loadIndex ?? []}
-                    loading={loading}
-                    title="Load Index / ภาระงาน"
-                    subtitle="ภาพรวมการขอรับคำปรึกษาเทียบกับความเสี่ยง"
-                />
-                <RiskDistributionChart
-                    data={data?.riskDistribution ?? null}
-                    loading={loading}
-                />
-            </section>
-
-            {/* 4. Problem Category Breakdown */}
-            <section>
-                <ProblemCategoryChart
-                    data={data?.problemCategories ?? []}
-                    loading={loading}
-                />
-            </section>
-
-            {/* 5. Detailed Breakdown Row */}
-            <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <AttendanceChart
-                    data={data?.attendanceByGroup ?? []}
-                    loading={loading}
-                />
-                <CancellationSummary
-                    data={data?.cancellationByGroup ?? []}
-                    loading={loading}
-                />
-            </section>
-
-            {/* 6. Time Series Trend */}
-            <section>
-                <TrendChart
-                    data={data?.trend ?? []}
-                    loading={loading}
-                />
-            </section>
         </div>
     );
 }

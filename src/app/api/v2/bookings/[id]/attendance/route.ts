@@ -73,17 +73,17 @@ export async function POST(req: NextRequest, { params }: Params) {
       return NextResponse.json({ success: false, error: "ท่านไม่ได้รับมอบหมายการจองนี้" }, { status: 403 });
     }
 
-    // Grace period check for NO_SHOW(Temporarily disabled for testing)
-    if (status === "NO_SHOW" && timeSlot?.time_slot_start_datetime) {
-      const slotStart = new Date(timeSlot.time_slot_start_datetime);
-      const minAllowed = new Date(slotStart.getTime() + GRACE_MINUTES * 60 * 1000);
-      if (new Date() < minAllowed) {
-        return NextResponse.json(
-          { success: false, error: `ต้องรอ ${GRACE_MINUTES} นาทีหลังเวลานัดเริ่มจึงจะกด NO_SHOW ได้` },
-          { status: 422 },
-        );
-      }
-    }
+    // Grace period check for NO_SHOW (Temporarily disabled for testing)
+    // if (status === "NO_SHOW" && timeSlot?.time_slot_start_datetime) {
+    //   const slotStart = new Date(timeSlot.time_slot_start_datetime);
+    //   const minAllowed = new Date(slotStart.getTime() + GRACE_MINUTES * 60 * 1000);
+    //   if (new Date() < minAllowed) {
+    //     return NextResponse.json(
+    //       { success: false, error: `ต้องรอ ${GRACE_MINUTES} นาทีหลังเวลานัดเริ่มจึงจะกด NO_SHOW ได้` },
+    //       { status: 422 },
+    //     );
+    //   }
+    // }
 
     const lateMinutes = status === "LATE" ? Number(body.late_minutes ?? 0) : null;
     const note = String(body.note ?? "").trim() || null;

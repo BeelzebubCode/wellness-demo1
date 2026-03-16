@@ -46,7 +46,7 @@ export async function handleSetOnlineChannel(
   const denied = requireUniversity(ctx as any, activeUniversityId);
   if (denied) return denied;
 
-  if ((ctx.role as AccountRole) !== "CONSULTANT") {
+  if ((ctx.role as AccountRole) !== "CONSULTANT" && (ctx.role as string) !== "HEAD_CONSULTANT") {
     return NextResponse.json({ error: "Permission denied" }, { status: 403 });
   }
 
@@ -126,7 +126,7 @@ export async function handleSetOnlineChannel(
       university_id: activeUniversityId,
       booking_id: bookingId,
 
-      booking_session_mode: "ONLINE", // keep as text for backward compat
+
       service_mode_id: booking.service_mode_id,
       online_channel_category_id: categoryId,
 

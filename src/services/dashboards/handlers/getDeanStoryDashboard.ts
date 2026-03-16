@@ -1,6 +1,6 @@
-// src/services/dashboards/handlers/getHeadDepartmentDashboard.ts
+// src/services/dashboards/handlers/getDeanStoryDashboard.ts
 // ─────────────────────────────────────────────────────────────────────────────
-// Department-scoped analytics — powered by Materialized Views
+// Faculty-scoped analytics — powered by Materialized Views
 // ─────────────────────────────────────────────────────────────────────────────
 
 import prisma from "@/lib/prisma";
@@ -8,10 +8,11 @@ import { queryAllStories, type StoryType } from "./queryDashboardMVs";
 
 export type { StoryType };
 
-export interface HeadDeptFilters {
+export interface DeanFilters {
     dateStart?: Date;
     dateEnd?: Date;
     allTime?: boolean;
+    departmentIds?: number[];
     gender?: string[];
     problemCategoryIds?: number[];
     serviceMode?: string[];
@@ -24,17 +25,14 @@ export interface HeadDeptFilters {
     parentalStatus?: string[];
 }
 
-function buildScopeWhere(
-    departmentId: number,
-    universityId: number,
-    facultyId: number,
-    filters: HeadDeptFilters,
-) {
+function buildScopeWhere(universityId: number, facultyId: number, filters: DeanFilters) {
     const clauses: string[] = [
         `university_id = ${universityId}`,
         `faculty_id = ${facultyId}`,
-        `department_id = ${departmentId}`,
     ];
+    if (filters.departmentIds?.length) {
+        clauses.push(`department_id IN (${filters.departmentIds.join(",")})`);
+    }
     if (filters.gender?.length) {
         clauses.push(`gender_code IN (${filters.gender.map(g => `'${g}'`).join(",")})`);
     }
@@ -48,64 +46,51 @@ function buildScopeWhere(
         clauses.push(`parental_status_code IN (${filters.parentalStatus.map(v => `'${v}'`).join(",")})`);
     }
     const w = `WHERE ${clauses.join(" AND ")}`;
-    const bookClauses: string[] = [
-        `university_id = ${universityId}`,
-        `faculty_id = ${facultyId}`,
-        `department_id = ${departmentId}`,
-    ];
+    const bookClauses: string[] = [`university_id = ${universityId}`, `faculty_id = ${facultyId}`];
+    if (filters.departmentIds?.length) bookClauses.push(`department_id IN (${filters.departmentIds.join(",")})`);
     const bw = `WHERE ${bookClauses.join(" AND ")}`;
     return { studentWhere: w, bookingWhere: bw, riskWhere: bw };
 }
 
-export const HeadDepartmentService = {
-    async getDepartmentStoryStats(
-        departmentId: number,
-        universityId: number,
+export const DeanStoryService = {
+    async getFacultyStoryStats(
         facultyId: number,
-        filters: HeadDeptFilters = {},
+        universityId: number,
+        filters: DeanFilters = {},
         story: StoryType = "all",
     ) {
         const startTime = Date.now();
 
-        const [deptInfo, advisors] = await Promise.all([
-            prisma.department.findFirst({
-                where: { department_id: departmentId, university_id: universityId },
+        const [facultyInfo, departments] = await Promise.all([
+            prisma.faculty.findFirst({
+                where: { faculty_id: facultyId, university_id: universityId },
                 select: {
-                    department_name_th: true, department_name_en: true, department_code: true,
-                    faculty: {
-                        select: {
-                            faculty_name_th: true,
-                            university: { select: { university_name_th: true } },
-                        },
-                    },
+                    faculty_name_th: true, faculty_name_en: true, faculty_code: true,
+                    university: { select: { university_name_th: true } },
                 },
             }),
-            prisma.advisor.findMany({
-                where: { department_id: departmentId, university_id: universityId },
-                select: {
-                    advisor_id: true,
-                    account: { select: { account_username: true } },
-                },
+            prisma.department.findMany({
+                where: { faculty_id: facultyId, university_id: universityId },
+                select: { department_id: true, department_name_th: true, department_code: true },
+                orderBy: { department_name_th: "asc" },
             }),
         ]);
 
-        const scope = buildScopeWhere(departmentId, universityId, facultyId, filters);
+        const scope = buildScopeWhere(universityId, facultyId, filters);
         const stories = await queryAllStories(scope, story);
 
         const elapsed = Date.now() - startTime;
-        console.log(`[HEAD_DEPT_MV] story=${story} took ${elapsed}ms`);
+        console.log(`[DEAN_MV] story=${story} took ${elapsed}ms`);
 
         return {
-            department: {
-                nameTh: deptInfo?.department_name_th ?? "",
-                nameEn: deptInfo?.department_name_en ?? "",
-                code: deptInfo?.department_code ?? "",
-                facultyNameTh: deptInfo?.faculty?.faculty_name_th ?? "",
-                universityNameTh: deptInfo?.faculty?.university?.university_name_th ?? "",
+            faculty: {
+                nameTh: facultyInfo?.faculty_name_th ?? "",
+                nameEn: facultyInfo?.faculty_name_en ?? "",
+                code: facultyInfo?.faculty_code ?? "",
+                universityNameTh: facultyInfo?.university?.university_name_th ?? "",
             },
-            advisors: advisors.map(a => ({
-                id: a.advisor_id,
-                username: a.account?.account_username ?? "",
+            departments: departments.map(d => ({
+                id: d.department_id, nameTh: d.department_name_th, code: d.department_code,
             })),
             ...stories,
         };
