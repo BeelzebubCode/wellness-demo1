@@ -8,10 +8,10 @@ datasource db {
 }
 
 model Region {
-  region_id      Int        @id @default(autoincrement())
-  region_code    RegionCode @unique
-  region_name_th String     @db.VarChar(50)
-  region_name_en String?    @db.VarChar(50)
+  region_id      Int     @id @default(autoincrement())
+  region_code    String  @unique @db.VarChar(30)
+  region_name_th String  @db.VarChar(50)
+  region_name_en String? @db.VarChar(50)
   provinces      Province[]
 
   @@map("region")
@@ -33,21 +33,22 @@ model Province {
 }
 
 model University {
-  university_id         Int             @id @default(autoincrement())
-  university_code       String          @unique @db.VarChar(20)
-  university_name_th    String          @db.VarChar(200)
-  university_name_en    String?         @db.VarChar(200)
-  province_id           Int
-  university_is_active  Boolean         @default(true)
-  university_created_at DateTime        @default(now())
-  university_type       UniversityType? @default(PUBLIC)
+  university_id            Int      @id @default(autoincrement())
+  university_code          String   @unique @db.VarChar(20)
+  university_name_th       String   @db.VarChar(200)
+  university_name_en       String?  @db.VarChar(200)
+  province_id              Int
+  university_is_active     Boolean  @default(true)
+  university_created_at    DateTime @default(now())
+  university_type_id       Int?
 
   rector_account_id Int?
   rector            Account? @relation("UniversityRector", fields: [rector_account_id], references: [account_id])
 
-  province             Province @relation(fields: [province_id], references: [province_id])
-  university_latitude  Decimal? @db.Decimal(9, 6)
-  university_longitude Decimal? @db.Decimal(9, 6)
+  province             Province              @relation(fields: [province_id], references: [province_id])
+  universityType       UniversityTypeCategory? @relation(fields: [university_type_id], references: [university_type_id])
+  university_latitude  Decimal?              @db.Decimal(9, 6)
+  university_longitude Decimal?              @db.Decimal(9, 6)
 
   accountsHome      Account[]                     @relation("AccountHomeUniversity")
   accessPermissions AccountUniversityPermission[]
@@ -81,6 +82,7 @@ model University {
 
   @@index([province_id])
   @@index([university_is_active])
+  @@index([university_type_id])
   @@map("university")
 }
 
@@ -208,27 +210,35 @@ model StudentProfile {
   student_last_name_en  String? @db.VarChar(100)
   student_nickname_en   String? @db.VarChar(20)
 
-  student_gender       StudentGender?
-  student_birthday     DateTime?      @db.Date
-  student_nationality  String?        @db.VarChar(50)
-  student_religion     String?        @db.VarChar(50)
-  student_blood_group  BloodGroup?
-  student_phone_number String?        @db.VarChar(20)
-  student_email        String?        @db.VarChar(100)
+  gender_category_id   Int?
+  student_birthday     DateTime? @db.Date
+  student_nationality  String?   @db.VarChar(50)
+  student_religion     String?   @db.VarChar(50)
+  blood_group_id       Int?
+  student_phone_number String?   @db.VarChar(20)
+  student_email        String?   @db.VarChar(100)
   country_id           Int?
 
   // Family info
-  sibling_count         Int?
-  birth_order           Int?
-  family_income_bracket FamilyIncomeBracket?
-  parental_status       ParentalStatus?
+  sibling_count      Int?
+  birth_order        Int?
+  income_bracket_id  Int?
+  parental_status_id Int?
 
-  student           Student                   @relation(fields: [university_id, student_id], references: [university_id, student_id])
-  country           Country?                  @relation(fields: [country_id], references: [country_id])
+  student           Student                    @relation(fields: [university_id, student_id], references: [university_id, student_id])
+  country           Country?                   @relation(fields: [country_id], references: [country_id])
+  genderCategory    GenderCategory?            @relation(fields: [gender_category_id], references: [gender_category_id])
+  bloodGroup        BloodGroupCategory?        @relation(fields: [blood_group_id], references: [blood_group_id])
+  incomeBracket     IncomeBracketCategory?     @relation(fields: [income_bracket_id], references: [income_bracket_id])
+  parentalStatus    ParentalStatusCategory?    @relation(fields: [parental_status_id], references: [parental_status_id])
   chronicConditions StudentChronicCondition[]
 
   @@unique([university_id, student_id])
   @@index([country_id])
+  @@index([gender_category_id])
+  @@index([blood_group_id])
+  @@index([income_bracket_id])
+  @@index([parental_status_id])
   @@map("student_profile")
 }
 
@@ -237,15 +247,16 @@ model StudentAddress {
   student_id                   Int
   university_id                Int
   province_id                  Int
-  student_address_type         StudentAddressType
-  student_address_detail       String?            @db.VarChar(200)
-  student_address_sub_district String?            @db.VarChar(100)
-  student_address_district     String?            @db.VarChar(100)
-  student_address_postal_code  String             @db.VarChar(10)
-  province                     Province           @relation(fields: [province_id], references: [province_id])
-  student                      Student            @relation(fields: [university_id, student_id], references: [university_id, student_id])
+  address_type_id               Int
+  student_address_detail       String?              @db.VarChar(200)
+  student_address_sub_district String?              @db.VarChar(100)
+  student_address_district     String?              @db.VarChar(100)
+  student_address_postal_code  String               @db.VarChar(10)
+  province                     Province             @relation(fields: [province_id], references: [province_id])
+  student                      Student              @relation(fields: [university_id, student_id], references: [university_id, student_id])
+  addressType                  AddressTypeCategory  @relation(fields: [address_type_id], references: [address_type_id])
 
-  @@unique([university_id, student_id, student_address_type])
+  @@unique([university_id, student_id, address_type_id])
   @@index([university_id, student_id])
   @@map("student_address")
 }
@@ -261,20 +272,21 @@ model StudentAcademic {
   student_degree              String?         @db.VarChar(50)
   student_degree_name         String?         @db.VarChar(100)
   student_admit_academic_year Int?
-  education_level             EducationLevel?
+  education_level_id          Int?
   program_duration_years      Int?
   expected_graduation_year    Int?
 
   student    Student    @relation(fields: [university_id, student_id], references: [university_id, student_id])
   faculty    Faculty    @relation(fields: [university_id, faculty_id], references: [university_id, faculty_id])
   department Department @relation(fields: [university_id, department_id], references: [university_id, department_id])
-  advisor    Advisor?   @relation(fields: [advisor_id], references: [advisor_id])
+  advisor         Advisor?                @relation(fields: [advisor_id], references: [advisor_id])
+  educationLevel  EducationLevelCategory? @relation(fields: [education_level_id], references: [education_level_id])
 
   @@unique([university_id, student_id])
   @@index([university_id, faculty_id])
   @@index([university_id, department_id])
   @@index([advisor_id])
-  @@index([education_level])
+  @@index([education_level_id])
   @@map("student_academic")
 }
 
@@ -553,7 +565,7 @@ model Booking {
   time_slot_id        Int
   problem_category_id Int
 
-  booking_service_mode       ServiceMode
+  service_mode_id            Int
   online_channel_category_id Int? // [NEW] Link to OnlineChannelCategory
 
   season_id        Int?
@@ -573,6 +585,7 @@ model Booking {
   onlineChannel   OnlineChannelCategory? @relation(fields: [online_channel_category_id], references: [online_channel_category_id])
   season          Season?                @relation(fields: [season_id], references: [season_id])
   academicTerm    AcademicTerm?          @relation(fields: [academic_term_id], references: [term_id])
+  serviceMode     ServiceModeCategory    @relation(fields: [service_mode_id], references: [service_mode_id])
 
   assignments        BookingAssignment[]
   cancellation       BookingCancellation?
@@ -599,6 +612,7 @@ model Booking {
   @@index([booking_status, university_id, student_id])
   @@index([season_id])
   @@index([academic_term_id])
+  @@index([service_mode_id])
   @@map("booking")
 }
 
@@ -609,7 +623,7 @@ model BookingSession {
   booking_id    Int
 
   // ✅ ยืนยันตามที่รับเคสจริง (ส่วนใหญ่จะ = booking_service_mode แต่เผื่อเปลี่ยนได้)
-  booking_session_mode       ServiceMode
+  service_mode_id            Int
   online_channel_category_id Int?
 
   // ✅ สิ่งที่ consultant ส่งจริง
@@ -628,6 +642,7 @@ model BookingSession {
   booking       Booking                @relation(fields: [university_id, booking_id], references: [university_id, booking_id], onDelete: Cascade)
   providedBy    Account?               @relation(fields: [provided_by_account_id], references: [account_id])
   onlineChannel OnlineChannelCategory? @relation(fields: [online_channel_category_id], references: [online_channel_category_id])
+  serviceMode   ServiceModeCategory    @relation(fields: [service_mode_id], references: [service_mode_id])
 
   @@unique([university_id, booking_id]) // 1 booking มี session เดียวพอ (ถ้าจะให้แก้หลายครั้งก็ update แทน)
   @@index([provided_by_account_id, provided_at])
@@ -1322,29 +1337,7 @@ enum UniversityAccessRole {
   ADMIN
 }
 
-enum RegionCode {
-  UPPER_NORTH // ภาคเหนือตอนบน
-  LOWER_NORTH // ภาคเหนือตอนล่าง
-  UPPER_NORTHEAST // ภาคตะวันออกเฉียงเหนือตอนบน
-  LOWER_NORTHEAST // ภาคตะวันออกเฉียงเหนือตอนล่าง
-  UPPER_CENTRAL // ภาคกลางตอนบน
-  LOWER_CENTRAL // ภาคกลางตอนล่าง
-  EAST // ภาคตะวันออก
-  UPPER_SOUTH // ภาคใต้ตอนบน
-  LOWER_SOUTH // ภาคใต้ตอนล่าง
-}
-
-enum StudentGender {
-  MALE
-  FEMALE
-  LGBTQ_PLUS
-}
-
-enum StudentAddressType {
-  PERMANENT
-  CURRENT
-  DORMITORY
-}
+// (RegionCode, StudentGender, StudentAddressType — ย้ายไปเป็น reference table แล้ว)
 
 enum TimeSlotStatus {
   OPEN
@@ -1406,10 +1399,7 @@ enum ShiftStatus {
   CANCELLED // ยกเลิกเวร
 }
 
-enum ServiceMode {
-  ONSITE
-  ONLINE
-}
+// (ServiceMode — ย้ายไปเป็น reference table แล้ว)
 
 enum BorrowRequestStatus {
   DRAFT
@@ -1461,11 +1451,7 @@ model UniversityConnection {
   @@map("university_connection")
 }
 
-enum UniversityType {
-  SUPERVISED //มหาวิทยาลัยในกำกับ (26 แห่ง)
-  PUBLIC // มหาวิทยาลัยรัฐ (57 แห่ง)
-  PRIVATE // มหาวิทยาลัยเอกชน (72 แห่ง)
-}
+// (UniversityType — ย้ายไปเป็น reference table แล้ว)
 
 enum AttendanceStatus {
   PENDING
@@ -1535,10 +1521,11 @@ model Country {
   country_code_alpha3 String          @unique @db.VarChar(3)
   country_name_th     String          @db.VarChar(100)
   country_name_en     String          @db.VarChar(100)
-  nationality_type    NationalityType @default(INTERNATIONAL)
+  nationality_type_id Int?
   sort_order          Int             @default(0)
   is_active           Boolean         @default(true)
 
+  nationalityType NationalityTypeCategory? @relation(fields: [nationality_type_id], references: [nationality_type_id])
   studentProfiles StudentProfile[]
 
   @@map("country")
@@ -1589,18 +1576,19 @@ model AcademicTerm {
 // ==========================================
 
 model AcademicPeriod {
-  period_id         Int                @id @default(autoincrement())
-  term_id           Int
-  university_id     Int
-  period_type       AcademicPeriodType
-  period_name_th    String             @db.VarChar(100)
-  period_name_en    String?            @db.VarChar(100)
-  period_start_date DateTime           @db.Date
-  period_end_date   DateTime           @db.Date
-  sort_order        Int                @default(0)
+  period_id                  Int      @id @default(autoincrement())
+  term_id                    Int
+  university_id              Int
+  academic_period_type_id    Int
+  period_name_th             String   @db.VarChar(100)
+  period_name_en             String?  @db.VarChar(100)
+  period_start_date          DateTime @db.Date
+  period_end_date            DateTime @db.Date
+  sort_order                 Int      @default(0)
 
-  term       AcademicTerm @relation(fields: [term_id], references: [term_id])
-  university University   @relation(fields: [university_id], references: [university_id])
+  term               AcademicTerm              @relation(fields: [term_id], references: [term_id])
+  university         University                @relation(fields: [university_id], references: [university_id])
+  academicPeriodType AcademicPeriodTypeCategory @relation(fields: [academic_period_type_id], references: [academic_period_type_id])
 
   @@index([university_id, period_start_date, period_end_date])
   @@index([term_id])
@@ -1608,51 +1596,141 @@ model AcademicPeriod {
 }
 
 // ==========================================
-// 🆕 NEW ENUMS
+// 📋 REFERENCE TABLES (แทน Enum เดิม)
 // ==========================================
 
-enum EducationLevel {
-  BACHELOR
-  MASTER
-  DOCTORATE
+model GenderCategory {
+  gender_category_id Int     @id @default(autoincrement())
+  code               String  @unique @db.VarChar(30)
+  name_th            String  @db.VarChar(100)
+  name_en            String? @db.VarChar(100)
+  sort_order         Int     @default(0)
+  is_active          Boolean @default(true)
+
+  studentProfiles StudentProfile[]
+
+  @@map("gender_category")
 }
 
-enum NationalityType {
-  THAI
-  INTERNATIONAL
+model BloodGroupCategory {
+  blood_group_id Int     @id @default(autoincrement())
+  code           String  @unique @db.VarChar(30)
+  name_th        String  @db.VarChar(100)
+  name_en        String? @db.VarChar(100)
+  sort_order     Int     @default(0)
+  is_active      Boolean @default(true)
+
+  studentProfiles StudentProfile[]
+
+  @@map("blood_group_category")
 }
 
-enum AcademicPeriodType {
-  MIDTERM_EXAM
-  FINAL_EXAM
-  SEMESTER_BREAK
+model IncomeBracketCategory {
+  income_bracket_id Int     @id @default(autoincrement())
+  code              String  @unique @db.VarChar(30)
+  name_th           String  @db.VarChar(100)
+  name_en           String? @db.VarChar(100)
+  sort_order        Int     @default(0)
+  is_active         Boolean @default(true)
+
+  studentProfiles StudentProfile[]
+
+  @@map("income_bracket_category")
 }
 
-enum FamilyIncomeBracket {
-  UNDER_100K // < 100,000 บาท/ปี
-  BETWEEN_100K_200K // 100,000–199,999
-  BETWEEN_200K_300K // 200,000–299,999
-  BETWEEN_300K_500K // 300,000–499,999
-  BETWEEN_500K_800K // 500,000–799,999
-  BETWEEN_800K_1M // 800,000–999,999
-  OVER_1M // ≥ 1,000,000
+model ParentalStatusCategory {
+  parental_status_id Int     @id @default(autoincrement())
+  code               String  @unique @db.VarChar(30)
+  name_th            String  @db.VarChar(100)
+  name_en            String? @db.VarChar(100)
+  sort_order         Int     @default(0)
+  is_active          Boolean @default(true)
+
+  studentProfiles StudentProfile[]
+
+  @@map("parental_status_category")
 }
 
-enum BloodGroup {
-  A
-  B
-  AB
-  O
+model EducationLevelCategory {
+  education_level_id Int     @id @default(autoincrement())
+  code               String  @unique @db.VarChar(30)
+  name_th            String  @db.VarChar(100)
+  name_en            String? @db.VarChar(100)
+  sort_order         Int     @default(0)
+  is_active          Boolean @default(true)
+
+  studentAcademics StudentAcademic[]
+
+  @@map("education_level_category")
 }
 
-enum ParentalStatus {
-  TOGETHER // พ่อแม่อยู่ด้วยกัน
-  DIVORCED // หย่าร้าง
-  FATHER_DECEASED // บิดาเสียชีวิต
-  MOTHER_DECEASED // มารดาเสียชีวิต
-  BOTH_DECEASED // เสียชีวิตทั้งคู่
-  SINGLE_PARENT // เลี้ยงเดี่ยว (อื่นๆ)
+model AddressTypeCategory {
+  address_type_id Int     @id @default(autoincrement())
+  code            String  @unique @db.VarChar(30)
+  name_th         String  @db.VarChar(100)
+  name_en         String? @db.VarChar(100)
+  sort_order      Int     @default(0)
+  is_active       Boolean @default(true)
+
+  studentAddresses StudentAddress[]
+
+  @@map("address_type_category")
 }
+
+model NationalityTypeCategory {
+  nationality_type_id Int     @id @default(autoincrement())
+  code                String  @unique @db.VarChar(30)
+  name_th             String  @db.VarChar(100)
+  name_en             String? @db.VarChar(100)
+  sort_order          Int     @default(0)
+  is_active           Boolean @default(true)
+
+  countries Country[]
+
+  @@map("nationality_type_category")
+}
+
+model AcademicPeriodTypeCategory {
+  academic_period_type_id Int     @id @default(autoincrement())
+  code                    String  @unique @db.VarChar(30)
+  name_th                 String  @db.VarChar(100)
+  name_en                 String? @db.VarChar(100)
+  sort_order              Int     @default(0)
+  is_active               Boolean @default(true)
+
+  academicPeriods AcademicPeriod[]
+
+  @@map("academic_period_type_category")
+}
+
+model ServiceModeCategory {
+  service_mode_id Int     @id @default(autoincrement())
+  code            String  @unique @db.VarChar(30)
+  name_th         String  @db.VarChar(100)
+  name_en         String? @db.VarChar(100)
+  sort_order      Int     @default(0)
+  is_active       Boolean @default(true)
+
+  bookings        Booking[]
+  bookingSessions BookingSession[]
+
+  @@map("service_mode_category")
+}
+
+model UniversityTypeCategory {
+  university_type_id Int     @id @default(autoincrement())
+  code               String  @unique @db.VarChar(30)
+  name_th            String  @db.VarChar(100)
+  name_en            String? @db.VarChar(100)
+  sort_order         Int     @default(0)
+  is_active          Boolean @default(true)
+
+  universities University[]
+
+  @@map("university_type_category")
+}
+
+// (EducationLevel, NationalityType, AcademicPeriodType, FamilyIncomeBracket, BloodGroup, ParentalStatus — ย้ายไปเป็น reference table ด้านบนแล้ว)
 
 // ==========================================
 // 🏥 CHRONIC CONDITION (โรคประจำตัว)

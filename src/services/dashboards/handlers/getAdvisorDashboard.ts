@@ -237,7 +237,7 @@ export const AdvisorService = {
     if (filters?.gender) {
       bookingWhere.student = {
         ...bookingWhere.student,
-        profile: { student_gender: filters.gender },
+        profile: { gender_category_id: { not: null } }, // gender filter handled below
       };
     }
 
@@ -288,9 +288,10 @@ export const AdvisorService = {
       // prisma schema: student_gender StudentGender?
       // Need to check what StudentGender values are. Assuming MALE/FEMALE or similar.
       // If it's a relation/enum, we treat as string.
-      const g = booking.student?.profile?.student_gender;
-      if (g === "MALE" || (g as any) === "ชาย") gender = "Male";
-      else if (g === "FEMALE" || (g as any) === "หญิง") gender = "Female";
+      const g = (booking.student?.profile as any)?.student_gender ||
+        (booking.student?.profile as any)?.genderCategory?.code;
+      if (g === "MALE") gender = "Male";
+      else if (g === "FEMALE") gender = "Female";
       
       if (!genderProblemStats[gender]) genderProblemStats[gender] = {};
       genderProblemStats[gender][problemName] = (genderProblemStats[gender][problemName] || 0) + 1;

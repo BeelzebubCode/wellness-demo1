@@ -3,11 +3,11 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import type { AccountContext } from "@/lib/auth/context";
 import { requireUniversity } from "@/lib/auth/guard";
-import { BookingStatus, ServiceMode } from "@prisma/client";
+import { BookingStatus } from "@prisma/client";
 
 type CreateBookingInput = {
   timeSlotId: number;
-  serviceMode: ServiceMode; // ONLINE | ONSITE
+  serviceMode: string; // "ONLINE" | "ONSITE" — now looked up from service_mode_category table
   onlineChannelCode?: string | null; // ใช้เมื่อ ONLINE
   problemCategoryId: number;
 
@@ -68,12 +68,18 @@ export async function handleCreateBooking(
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  if (serviceMode !== "ONLINE" && serviceMode !== "ONSITE") {
+  // ✅ Lookup service_mode_id from DB
+  const serviceModeRow = await prisma.serviceModeCategory.findFirst({
+    where: { code: serviceMode, is_active: true },
+    select: { service_mode_id: true },
+  });
+  if (!serviceModeRow) {
     return NextResponse.json(
-      { error: "serviceMode must be ONLINE or ONSITE" },
+      { error: `Invalid serviceMode: ${serviceMode}` },
       { status: 400 },
     );
   }
+  const serviceModeId = serviceModeRow.service_mode_id;
 
   // ✅ บังคับ consent เสมอ (ตาม UI)
   if (!consentChecked) {
@@ -192,7 +198,7 @@ export async function handleCreateBooking(
           student_id: studentId,
           time_slot_id: timeSlotId,
 
-          booking_service_mode: serviceMode,
+          service_mode_id: serviceModeId,
           online_channel_category_id: onlineChannelCategoryId,
 
           problem_category_id: problemCategoryId,

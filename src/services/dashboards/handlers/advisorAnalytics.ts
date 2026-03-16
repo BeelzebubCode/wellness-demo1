@@ -43,7 +43,7 @@ export async function getStudentRank(
       s.student_code,
       sp.student_first_name_th AS first_name,
       sp.student_last_name_th AS last_name,
-      sp.student_gender AS gender,
+      gc.code AS gender,
       f.faculty_name_th AS faculty_name,
       d.department_name_th AS department_name,
       COUNT(b.booking_id)::int AS total_bookings,
@@ -60,6 +60,7 @@ export async function getStudentRank(
     FROM student_academic sa
     JOIN student s ON s.university_id = sa.university_id AND s.student_id = sa.student_id
     LEFT JOIN student_profile sp ON sp.university_id = sa.university_id AND sp.student_id = sa.student_id
+    LEFT JOIN gender_category gc ON gc.gender_category_id = sp.gender_category_id
     LEFT JOIN faculty f ON f.university_id = sa.university_id AND f.faculty_id = sa.faculty_id
     LEFT JOIN department d ON d.university_id = sa.university_id AND d.department_id = sa.department_id
     LEFT JOIN booking b ON b.university_id = sa.university_id AND b.student_id = sa.student_id
@@ -71,7 +72,7 @@ export async function getStudentRank(
       AND sa.university_id = ${universityId}
       ${filterSQL}
     GROUP BY s.student_id, s.student_code, sp.student_first_name_th, sp.student_last_name_th,
-             sp.student_gender, f.faculty_name_th, d.department_name_th
+             gc.code, f.faculty_name_th, d.department_name_th
     ORDER BY risk_score DESC
     LIMIT 50
     `,

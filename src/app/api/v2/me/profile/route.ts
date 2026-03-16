@@ -244,7 +244,7 @@ export async function GET(req: NextRequest) {
 
           addresses: {
             include: { province: true },
-            orderBy: { student_address_type: "asc" },
+            orderBy: { address_type_id: "asc" },
           },
         },
       });
@@ -284,9 +284,9 @@ export async function GET(req: NextRequest) {
             : undefined,
 
           // student extras
-          gender: p.student_gender ? String(p.student_gender) : null,
+          gender: (p as any).gender_category_id ? String((p as any).gender_category_id) : null,
           birthday: p.student_birthday ? p.student_birthday.toISOString() : null,
-          bloodGroup: p.student_blood_group ?? null,
+          bloodGroup: (p as any).blood_group_id ? String((p as any).blood_group_id) : null,
           nationality: p.student_nationality ?? null,
           religion: p.student_religion ?? null,
 
@@ -321,7 +321,7 @@ export async function GET(req: NextRequest) {
           // addresses
           addresses: inc.addresses
             ? (student.addresses ?? []).map((x) => ({
-              type: x.student_address_type as "CURRENT" | "PERMANENT",
+              type: (x as any).addressType?.code as "CURRENT" | "PERMANENT" ?? "CURRENT",
               detail: x.student_address_detail ?? null,
               subDistrict: x.student_address_sub_district ?? null,
               district: x.student_address_district ?? null,

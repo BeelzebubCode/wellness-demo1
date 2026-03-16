@@ -134,7 +134,7 @@ export function buildFilterClause(params: AnalyticsParams): Prisma.Sql {
 
     // Gender (multi-value, enum cast to text)
     if (params.gender && params.gender.length > 0) {
-        parts.push(Prisma.sql`AND sp.student_gender::text = ANY(${params.gender}::text[])`);
+        parts.push(Prisma.sql`AND gc.code = ANY(${params.gender}::text[])`);
     }
 
     // Problem categories (multi-value)
@@ -155,10 +155,10 @@ export function buildFilterClause(params: AnalyticsParams): Prisma.Sql {
     // Service mode (multi-value)
     if (params.online_channel_category_id) {
         parts.push(
-            Prisma.sql`AND b.booking_service_mode = 'ONLINE' AND b.online_channel_category_id = ${params.online_channel_category_id}`,
+            Prisma.sql`AND smc.code = 'ONLINE' AND b.online_channel_category_id = ${params.online_channel_category_id}`,
         );
     } else if (params.service_mode && params.service_mode.length > 0) {
-        parts.push(Prisma.sql`AND b.booking_service_mode::text = ANY(${params.service_mode}::text[])`);
+        parts.push(Prisma.sql`AND smc.code = ANY(${params.service_mode}::text[])`);
     }
 
     if (parts.length === 0) return Prisma.sql``;
@@ -354,14 +354,15 @@ export async function runAnalytics(
               pc.problem_category_name_th AS category_name_th,
               pc.problem_category_name_en AS category_name_en,
               COUNT(*)::int AS cnt,
-              COUNT(CASE WHEN sp.student_gender::text = 'MALE' THEN 1 END)::int AS male,
-              COUNT(CASE WHEN sp.student_gender::text = 'FEMALE' THEN 1 END)::int AS female,
-              COUNT(CASE WHEN sp.student_gender::text NOT IN ('MALE','FEMALE') AND sp.student_gender IS NOT NULL THEN 1 END)::int AS lgbtq,
-              COUNT(CASE WHEN sp.student_gender IS NULL THEN 1 END)::int AS unknown_g,
+              COUNT(CASE WHEN gc.code = 'MALE' THEN 1 END)::int AS male,
+              COUNT(CASE WHEN gc.code = 'FEMALE' THEN 1 END)::int AS female,
+              COUNT(CASE WHEN gc.code NOT IN ('MALE','FEMALE') AND gc.code IS NOT NULL THEN 1 END)::int AS lgbtq,
+              COUNT(CASE WHEN gc.code IS NULL THEN 1 END)::int AS unknown_g,
               ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC)::int AS rn
             FROM booking b
             JOIN student_academic sa ON sa.university_id = b.university_id AND sa.student_id = b.student_id
             LEFT JOIN student_profile sp ON sp.university_id = b.university_id AND sp.student_id = b.student_id
+            LEFT JOIN gender_category gc ON gc.gender_category_id = sp.gender_category_id
             LEFT JOIN booking_outcome bo ON bo.university_id = b.university_id AND bo.booking_id = b.booking_id
             LEFT JOIN booking_attendance ba ON ba.university_id = b.university_id AND ba.booking_id = b.booking_id
             LEFT JOIN booking_cancellation bc ON bc.university_id = b.university_id AND bc.booking_id = b.booking_id

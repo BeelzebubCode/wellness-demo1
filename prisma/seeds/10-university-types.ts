@@ -6,7 +6,9 @@
  * - PRIVATE: มหาวิทยาลัยเอกชน (72 แห่ง)
  */
 
-import { PrismaClient, UniversityType } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
+
+type UniversityTypeCode = "SUPERVISED" | "PUBLIC" | "PRIVATE";
 
 // SUPERVISED Universities (26 institutions)
 const SUPERVISED_UNIVERSITIES = [
@@ -43,7 +45,7 @@ const PRIVATE_UNIVERSITIES = [
 ];
 
 // Map university codes to their types
-const universityTypeMap: Record<string, UniversityType> = {};
+const universityTypeMap: Record<string, UniversityTypeCode> = {};
 
 // Initialize mapping
 SUPERVISED_UNIVERSITIES.forEach(code => universityTypeMap[code] = "SUPERVISED");
@@ -51,7 +53,7 @@ PUBLIC_UNIVERSITIES.forEach(code => universityTypeMap[code] = "PUBLIC");
 PRIVATE_UNIVERSITIES.forEach(code => universityTypeMap[code] = "PRIVATE");
 
 // Classification function
-function classifyUniversityByName(name: string, code: string): UniversityType {
+function classifyUniversityByName(name: string, code: string): UniversityTypeCode {
   // Direct match by code
   if (universityTypeMap[code]) {
     return universityTypeMap[code];
@@ -74,6 +76,14 @@ function classifyUniversityByName(name: string, code: string): UniversityType {
 
 export async function seedUniversityTypes(prisma: PrismaClient) {
   console.log("🏛️  Assigning university types...");
+
+  // ✅ Pre-fetch FK IDs from reference table
+  const typeCategories = await prisma.universityTypeCategory.findMany();
+  const typeIdMap = new Map(typeCategories.map(t => [t.code, t.university_type_id]));
+
+  if (typeIdMap.size === 0) {
+    throw new Error("UniversityTypeCategory not seeded! Run seed-reference-tables.ts first.");
+  }
   
   const universities = await prisma.university.findMany({
     select: {
@@ -94,9 +104,15 @@ export async function seedUniversityTypes(prisma: PrismaClient) {
       uni.university_code
     );
 
+    const typeId = typeIdMap.get(type);
+    if (!typeId) {
+      console.warn(`⚠️  Unknown type '${type}' for ${uni.university_code}, skipping`);
+      continue;
+    }
+
     await prisma.university.update({
       where: { university_id: uni.university_id },
-      data: { university_type: type },
+      data: { university_type_id: typeId },
     });
 
     if (type === "SUPERVISED") supervisedCount++;

@@ -2,26 +2,34 @@
  * Seed: HEAD_DEPARTMENT accounts
  * สร้าง account 1 คนต่อ 1 ภาควิชา → อัปเดต department.head_account_id
  *
- * Usage:
- *   npx tsx prisma/seeds/seed-head-department.ts
+ * เรียกจาก seed.ts (importable) หรือรันเดี่ยว: npx tsx prisma/seeds/seed-head-department.ts
  */
 
 import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
 
-async function main() {
-    console.log("🏗️  Seeding HEAD_DEPARTMENT accounts...");
+interface SeedHeadDeptOpts {
+  universities: any[];
+  passwordHash: string;
+}
 
-    // 1. ดึงภาควิชาทั้งหมดที่ยังไม่มี head
-    const departments = await prisma.$queryRaw<
-        {
-            department_id: number;
-            university_id: number;
-            faculty_id: number;
-            department_code: string;
-            university_code: string;
-        }[]
-    >`
+export async function seedHeadDepartments(
+  prisma: PrismaClient,
+  opts: SeedHeadDeptOpts
+) {
+  console.log("\n🏗️  Seeding HEAD_DEPARTMENT accounts...");
+
+  const { universities, passwordHash } = opts;
+
+  // 1. ดึงภาควิชาทั้งหมดที่ยังไม่มี head
+  const departments = await prisma.$queryRaw<
+    {
+      department_id: number;
+      university_id: number;
+      faculty_id: number;
+      department_code: string;
+      university_code: string;
+    }[]
+  >`
     SELECT
       d.department_id,
       d.university_id,
@@ -34,102 +42,131 @@ async function main() {
     ORDER BY d.university_id, d.department_id
   `;
 
-    console.log(`📋 Found ${departments.length} departments without head`);
+  console.log(`   📋 Found ${departments.length} departments without head`);
 
-    if (departments.length === 0) {
-        console.log("✅ All departments already have heads!");
-        return;
-    }
+  if (departments.length === 0) {
+    console.log("   ✅ All departments already have heads!");
+    return [];
+  }
 
-    // 2. Batch insert — ใช้ raw SQL เพื่อความเร็ว
-    const BATCH_SIZE = 500;
-    let created = 0;
+  // 2. Batch insert
+  const BATCH_SIZE = 500;
+  let created = 0;
+  const allUsernames: string[] = [];
 
-    for (let i = 0; i < departments.length; i += BATCH_SIZE) {
-        const batch = departments.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < departments.length; i += BATCH_SIZE) {
+    const batch = departments.slice(i, i + BATCH_SIZE);
 
-        // 2a. Insert accounts
-        const accountValues = batch
-            .map((d) => {
-                const username = `hd_${d.department_code}_${d.university_code}`.toLowerCase().replace(/\s+/g, "_").substring(0, 50);
-                // Password: hashed "password123" (bcrypt)
-                const passwordHash = "$2b$10$EIXe0eK7S5z5z5z5z5z5z.HASH_PLACEHOLDER_FOR_SEED";
-                return `('${username}', '${passwordHash}', 'HEAD_DEPARTMENT', ${d.university_id}, NOW())`;
-            })
-            .join(",\n    ");
+    // 2a. Insert accounts (use the REAL password hash from opts)
+    const accountValues = batch
+      .map((d) => {
+        const username = `hd_${d.department_code}_${d.university_code}`
+          .toLowerCase()
+          .replace(/\s+/g, "_")
+          .substring(0, 50);
+        return `('${username}', '${passwordHash}', 'HEAD_DEPARTMENT', ${d.university_id}, NOW())`;
+      })
+      .join(",\n    ");
 
-        await prisma.$executeRawUnsafe(`
+    await prisma.$executeRawUnsafe(`
       INSERT INTO account (account_username, account_password, account_role, account_home_university_id, account_created_at)
       VALUES
         ${accountValues}
       ON CONFLICT (account_username) DO NOTHING
     `);
 
-        // 2b. Fetch newly created account_ids
-        const usernames = batch.map(
-            (d) => `hd_${d.department_code}_${d.university_code}`.toLowerCase().replace(/\s+/g, "_").substring(0, 50)
-        );
+    // 2b. Fetch newly created account_ids
+    const usernames = batch.map(
+      (d) =>
+        `hd_${d.department_code}_${d.university_code}`
+          .toLowerCase()
+          .replace(/\s+/g, "_")
+          .substring(0, 50)
+    );
+    allUsernames.push(...usernames);
 
-        const accounts = await prisma.$queryRaw<
-            { account_id: number; account_username: string }[]
-        >`
+    const accounts = await prisma.$queryRaw<
+      { account_id: number; account_username: string }[]
+    >`
       SELECT account_id, account_username
       FROM account
       WHERE account_username = ANY(${usernames})
     `;
 
-        const usernameToId = new Map(accounts.map((a) => [a.account_username, a.account_id]));
+    const usernameToId = new Map(
+      accounts.map((a) => [a.account_username, a.account_id])
+    );
 
-        // 2c. Update department.head_account_id
-        for (const d of batch) {
-            const username = `hd_${d.department_code}_${d.university_code}`.toLowerCase().replace(/\s+/g, "_").substring(0, 50);
-            const accountId = usernameToId.get(username);
-            if (accountId) {
-                await prisma.$executeRaw`
+    // 2c. Update department.head_account_id
+    for (const d of batch) {
+      const username = `hd_${d.department_code}_${d.university_code}`
+        .toLowerCase()
+        .replace(/\s+/g, "_")
+        .substring(0, 50);
+      const accountId = usernameToId.get(username);
+      if (accountId) {
+        await prisma.$executeRaw`
           UPDATE department
           SET head_account_id = ${accountId}
           WHERE department_id = ${d.department_id}
         `;
-            }
-        }
+      }
+    }
 
-        // 2d. Create account_university_permission
-        for (const d of batch) {
-            const username = `hd_${d.department_code}_${d.university_code}`.toLowerCase().replace(/\s+/g, "_").substring(0, 50);
-            const accountId = usernameToId.get(username);
-            if (accountId) {
-                await prisma.$executeRawUnsafe(`
+    // 2d. Create account_university_permission
+    for (const d of batch) {
+      const username = `hd_${d.department_code}_${d.university_code}`
+        .toLowerCase()
+        .replace(/\s+/g, "_")
+        .substring(0, 50);
+      const accountId = usernameToId.get(username);
+      if (accountId) {
+        await prisma.$executeRawUnsafe(`
           INSERT INTO account_university_permission
             (account_id, university_id, access_role, access_granted_at)
           VALUES
             (${accountId}, ${d.university_id}, 'HEAD_DEPARTMENT', NOW())
           ON CONFLICT (account_id, university_id) DO NOTHING
         `);
-            }
-        }
-
-        created += batch.length;
-        console.log(`  ✅ Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${created}/${departments.length}`);
+      }
     }
 
-    // 3. Verify
-    const headCount = await prisma.$queryRaw<{ count: bigint }[]>`
+    created += batch.length;
+    console.log(
+      `   ✅ Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${created}/${departments.length}`
+    );
+  }
+
+  // 3. Verify
+  const headCount = await prisma.$queryRaw<{ count: number }[]>`
     SELECT COUNT(*)::int as count FROM account WHERE account_role = 'HEAD_DEPARTMENT'
   `;
-    const deptWithHead = await prisma.$queryRaw<{ count: bigint }[]>`
+  const deptWithHead = await prisma.$queryRaw<{ count: number }[]>`
     SELECT COUNT(*)::int as count FROM department WHERE head_account_id IS NOT NULL
   `;
 
-    console.log("");
-    console.log("📊 Results:");
-    console.log(`   HEAD_DEPARTMENT accounts: ${Number(headCount[0]?.count || 0)}`);
-    console.log(`   Departments with head:    ${Number(deptWithHead[0]?.count || 0)}`);
-    console.log("🎉 Done!");
+  console.log(`   📊 HEAD_DEPARTMENT accounts: ${headCount[0]?.count || 0}`);
+  console.log(
+    `   📊 Departments with head: ${deptWithHead[0]?.count || 0}`
+  );
+
+  return allUsernames;
 }
 
-main()
-    .catch((e) => {
+// Standalone runner
+if (require.main === module || process.argv[1]?.includes("seed-head-department")) {
+  import("bcryptjs").then(async (bcrypt) => {
+    const prisma = new PrismaClient();
+    const plainPassword = "wellness@nu.ac.th_123456!";
+    const hash = await bcrypt.default.hash(plainPassword, 10);
+    seedHeadDepartments(prisma, {
+      universities: [],
+      passwordHash: hash,
+    })
+      .catch((e: any) => {
         console.error("❌ Seed failed:", e);
         process.exit(1);
-    })
-    .finally(() => prisma.$disconnect());
+      })
+      .finally(() => prisma.$disconnect());
+  });
+}

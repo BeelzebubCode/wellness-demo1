@@ -352,9 +352,9 @@ export async function GET(req: NextRequest) {
             pushLookup("BOOKING_STATUS_SUMMARY", sfx, "สรุปสถานะ", s5);
 
             // ── 6.6 GENDER_SUMMARY ──
-            const q6 = await prisma.$queryRawUnsafe<any[]>(`SELECT sp.student_gender, COUNT(*)::bigint AS c FROM booking b ${tsJoin} JOIN student_profile sp ON sp.student_id = b.student_id AND sp.university_id = b.university_id WHERE ${tsFilter} GROUP BY sp.student_gender ORDER BY c DESC`);
+            const q6 = await prisma.$queryRawUnsafe<any[]>(`SELECT gc.code AS gender_code, COUNT(*)::bigint AS c FROM booking b ${tsJoin} JOIN student_profile sp ON sp.student_id = b.student_id AND sp.university_id = b.university_id LEFT JOIN gender_category gc ON gc.gender_category_id = sp.gender_category_id WHERE ${tsFilter} GROUP BY gc.code ORDER BY c DESC`);
             let s6 = `${dateLabel}\n\n### 📊 สถิติตามเพศ\n\n| เพศ | จำนวนคิว |\n|---|---|\n`;
-            q6.forEach(r => s6 += `| ${genderMap[r.student_gender] || r.student_gender} | ${Number(r.c).toLocaleString()} |\n`);
+            q6.forEach(r => s6 += `| ${genderMap[r.gender_code] || r.gender_code || 'ไม่ระบุ'} | ${Number(r.c).toLocaleString()} |\n`);
             pushLookup("GENDER_SUMMARY", sfx, "สถิติตามเพศ", s6);
 
             // ── 6.7 TOP_FACULTIES ──
@@ -376,9 +376,9 @@ export async function GET(req: NextRequest) {
             pushLookup("TOP_CONSULTANTS", sfx, "Top 20 ที่ปรึกษา", s9);
 
             // ── 6.10 SERVICE_MODE_SUMMARY ──
-            const q10 = await prisma.$queryRawUnsafe<any[]>(`SELECT b.booking_service_mode, COUNT(*)::bigint AS c FROM booking b ${tsJoin} WHERE ${tsFilter} AND b.booking_service_mode IS NOT NULL GROUP BY b.booking_service_mode ORDER BY c DESC`);
+            const q10 = await prisma.$queryRawUnsafe<any[]>(`SELECT smc.code AS mode_code, COUNT(*)::bigint AS c FROM booking b ${tsJoin} LEFT JOIN service_mode_category smc ON smc.service_mode_id = b.service_mode_id WHERE ${tsFilter} AND b.service_mode_id IS NOT NULL GROUP BY smc.code ORDER BY c DESC`);
             let s10 = `${dateLabel}\n\n### 🖥️ สถิติรูปแบบบริการ\n\n| รูปแบบ | จำนวนคิว |\n|---|---|\n`;
-            q10.forEach(r => s10 += `| ${modeLabels[r.booking_service_mode] || r.booking_service_mode} | ${Number(r.c).toLocaleString()} |\n`);
+            q10.forEach(r => s10 += `| ${modeLabels[r.mode_code] || r.mode_code} | ${Number(r.c).toLocaleString()} |\n`);
             pushLookup("SERVICE_MODE_SUMMARY", sfx, "รูปแบบบริการ", s10);
 
             // ── 6.11 CANCELLATION_SUMMARY ──

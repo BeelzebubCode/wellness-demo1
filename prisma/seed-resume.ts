@@ -16,12 +16,12 @@ async function seedSessions() {
   const t = Date.now();
   await exec(`
     INSERT INTO booking_session (
-      university_id, booking_id, booking_session_mode,
+      university_id, booking_id, service_mode_id,
       online_channel_category_id, booking_session_join_url,
       booking_session_location_text, booking_session_is_link_visible,
       provided_by_account_id, provided_at
     )
-    SELECT b.university_id, b.booking_id, b.booking_service_mode, b.online_channel_category_id,
+    SELECT b.university_id, b.booking_id, b.service_mode_id, b.online_channel_category_id,
       CASE
         WHEN oc.online_channel_code = 'GOOGLE_MEET' THEN 'https://meet.google.com/abc-' || (b.booking_id % 9999)::text || '-xyz'
         WHEN oc.online_channel_code = 'ZOOM' THEN 'https://zoom.us/j/' || (1000000000 + b.booking_id)::text
@@ -29,7 +29,7 @@ async function seedSessions() {
         WHEN oc.online_channel_code = 'MICROSOFT_TEAMS' THEN 'https://teams.microsoft.com/l/meetup-join/' || b.booking_id::text
         ELSE NULL
       END,
-      CASE WHEN b.booking_service_mode = 'ONSITE'::"ServiceMode" THEN
+      CASE WHEN smc.code = 'ONSITE' THEN
         CASE (b.booking_id % 4)
           WHEN 0 THEN 'ห้องให้คำปรึกษา ชั้น 2 อาคารบริการนิสิต'
           WHEN 1 THEN 'ศูนย์สุขภาวะ ห้อง 301 อาคารกิจการนิสิต'
@@ -41,6 +41,7 @@ async function seedSessions() {
     FROM booking b
     JOIN consultant c ON b.consultant_id = c.consultant_id
     LEFT JOIN online_channel_category oc ON b.online_channel_category_id = oc.online_channel_category_id
+    LEFT JOIN service_mode_category smc ON b.service_mode_id = smc.service_mode_id
     WHERE b.booking_status IN ('ASSIGNED', 'IN_PROGRESS', 'COMPLETED')
     ON CONFLICT DO NOTHING
   `);
@@ -298,8 +299,8 @@ async function printSummary() {
   pc.forEach(p => console.log(`      ${p.problem_category_code.padEnd(10)} ${p.problem_category_name_th.padEnd(25)} ${Number(p.n).toLocaleString().padStart(10)}`));
 
   console.log("\n   🌈 Gender Distribution:");
-  const gd: {g: string; n: number}[] = await prisma.$queryRawUnsafe(`SELECT student_gender::text AS g, COUNT(*)::int AS n FROM student_profile GROUP BY 1 ORDER BY 2 DESC`);
-  gd.forEach(g => console.log(`      ${g.g.padEnd(15)} ${Number(g.n).toLocaleString().padStart(10)}`));
+  const gd: {g: string; n: number}[] = await prisma.$queryRawUnsafe(`SELECT gc.code AS g, COUNT(*)::int AS n FROM student_profile sp LEFT JOIN gender_category gc ON sp.gender_category_id = gc.gender_category_id GROUP BY 1 ORDER BY 2 DESC`);
+  gd.forEach(g => console.log(`      ${(g.g || 'NULL').padEnd(15)} ${Number(g.n).toLocaleString().padStart(10)}`));
 }
 
 async function main() {

@@ -104,7 +104,7 @@ export async function GET(req: NextRequest) {
                 s.student_code,
                 sp.student_first_name_th AS first_name,
                 sp.student_last_name_th  AS last_name,
-                sp.student_gender::TEXT   AS gender,
+                gc.code                  AS gender,
                 sp.student_phone_number  AS phone,
                 sa.student_admit_academic_year AS admit_year,
                 f.faculty_name_th        AS faculty_name,
@@ -123,6 +123,7 @@ export async function GET(req: NextRequest) {
             JOIN student s          ON s.university_id = b.university_id AND s.student_id = b.student_id
             JOIN student_academic sa ON sa.university_id = s.university_id AND sa.student_id = s.student_id
             JOIN student_profile sp  ON sp.university_id = s.university_id AND sp.student_id = s.student_id
+            LEFT JOIN gender_category gc ON gc.gender_category_id = sp.gender_category_id
             JOIN faculty f           ON f.university_id = sa.university_id AND f.faculty_id = sa.faculty_id
             JOIN department d        ON d.university_id = sa.university_id AND d.department_id = sa.department_id
             ${filterJoin}
@@ -130,7 +131,7 @@ export async function GET(req: NextRequest) {
             LEFT JOIN student_address addr
                 ON addr.university_id = s.university_id
                 AND addr.student_id = s.student_id
-                AND addr.student_address_type = 'CURRENT'
+                AND addr.address_type_id IN (SELECT address_type_id FROM address_type_category WHERE code = 'CURRENT')
             LEFT JOIN province pv    ON pv.province_id = addr.province_id
             WHERE sa.department_id = ${dept.department_id}
                 AND sa.university_id = ${dept.university_id}
@@ -140,7 +141,7 @@ export async function GET(req: NextRequest) {
             GROUP BY
                 s.student_id, s.student_code,
                 sp.student_first_name_th, sp.student_last_name_th,
-                sp.student_gender, sp.student_phone_number,
+                gc.code, sp.student_phone_number,
                 sa.student_admit_academic_year,
                 f.faculty_name_th, d.department_name_th,
                 pv.province_name_th,
@@ -194,8 +195,9 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ success: true, data: { students, categoryName: label } });
     } catch (error) {
         console.error("[HEAD_DEPT_DRILL_DOWN_ERROR]", error);
+        const msg = error instanceof Error ? error.message : "Internal server error";
         return NextResponse.json(
-            { success: false, error: "Internal server error" },
+            { success: false, error: msg },
             { status: 500 },
         );
     }

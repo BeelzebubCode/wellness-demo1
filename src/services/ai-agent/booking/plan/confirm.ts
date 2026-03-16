@@ -91,9 +91,9 @@ export async function confirmBookingPlan(args: {
           problem_category_id: problemCategoryId,
           booking_detail_text: detailText,
           booking_status: BookingStatus.PENDING_ASSIGNMENT,
-          booking_service_mode: payload.serviceMode || "ONSITE",
+          service_mode_id: payload.serviceMode === "ONLINE" ? 2 : 1,
           online_channel_category_id: onlineChannelCategoryId,
-        },
+        } as any,
         select: { booking_id: true, university_id: true },
       });
 

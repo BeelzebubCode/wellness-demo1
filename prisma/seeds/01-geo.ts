@@ -1,9 +1,23 @@
 // prisma/seeds/01-geo.ts
 
-import { PrismaClient, Prisma, RegionCode } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { provincesData } from "../seed-data/provinces";
 import { universitiesData } from "../seed-data/universities";
 import { universityGpsByCode } from "../seed-data/university-gps";
+
+// RegionCode enum ถูกลบจาก Prisma schema — ใช้ string constants แทน
+const RegionCode = {
+  UPPER_NORTH: "UPPER_NORTH",
+  LOWER_NORTH: "LOWER_NORTH",
+  UPPER_NORTHEAST: "UPPER_NORTHEAST",
+  LOWER_NORTHEAST: "LOWER_NORTHEAST",
+  UPPER_CENTRAL: "UPPER_CENTRAL",
+  LOWER_CENTRAL: "LOWER_CENTRAL",
+  EAST: "EAST",
+  UPPER_SOUTH: "UPPER_SOUTH",
+  LOWER_SOUTH: "LOWER_SOUTH",
+} as const;
+type RegionCodeValue = (typeof RegionCode)[keyof typeof RegionCode];
 
 export async function seedGeo(prisma: PrismaClient) {
   console.log("📍 Creating regions and provinces...");
@@ -11,7 +25,7 @@ export async function seedGeo(prisma: PrismaClient) {
   // =========================
   // Regions (rerun-safe)
   // =========================
-  const regionsMap = new Map<RegionCode, number>();
+  const regionsMap = new Map<string, number>();
 
   for (const r of [
     { code: RegionCode.UPPER_NORTH, th: "ภาคเหนือตอนบน", en: "Upper North" },

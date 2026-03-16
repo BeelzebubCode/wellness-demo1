@@ -141,7 +141,7 @@ export async function agentBookForStudent(
         booking_detail_text: detailText,
         booking_status: "PENDING_ASSIGNMENT",
         consultant_id: null,
-        booking_service_mode: "ONSITE", // ✅ Fix: Default to ONSITE for AI bookings
+        service_mode_id: 1, // ✅ FK to service_mode_category: 1=ONSITE, 2=ONLINE
       },
       select: { booking_id: true },
     });

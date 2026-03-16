@@ -184,7 +184,7 @@ export const DeanService = {
       : Prisma.empty;
 
     const whereGender = filters?.gender && filters.gender !== 'ALL'
-      ? Prisma.sql`AND sp.student_gender::text = ${filters.gender}`
+      ? Prisma.sql`AND sp.gender_category_id IN (SELECT gender_category_id FROM gender_category WHERE code = ${filters.gender})`
       : Prisma.empty;
 
     const whereSearch = filters?.search
@@ -383,16 +383,17 @@ export const DeanService = {
     const problemGenderStats = await prisma.$queryRaw<{ name: string, gender: string, count: bigint }[]>`
         SELECT 
             COALESCE(pc.problem_category_name_th, 'อื่นๆ') as name,
-            sp.student_gender as gender,
+            COALESCE(gc.code, 'OTHER') as gender,
             COUNT(*)::int as count
         FROM "booking" b
         LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
         JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
         JOIN "student_profile" sp ON b.student_id = sp.student_id AND b.university_id = sp.university_id
+        LEFT JOIN "gender_category" gc ON gc.gender_category_id = sp.gender_category_id
         LEFT JOIN "department" d ON sa.department_id = d.department_id AND sa.university_id = d.university_id
         LEFT JOIN "booking_outcome" bo ON b.university_id = bo.university_id AND b.booking_id = bo.booking_id
         ${commonWhereBooking}
-        GROUP BY pc.problem_category_name_th, sp.student_gender
+        GROUP BY pc.problem_category_name_th, gc.code
     `;
 
     const problemStats: Record<string, number> = {};
@@ -485,16 +486,17 @@ export const DeanService = {
         SELECT 
             sa.department_id,
             COALESCE(pc.problem_category_name_th, 'อื่นๆ') as name,
-            sp.student_gender as gender,
+            COALESCE(gc.code, 'OTHER') as gender,
             COUNT(*)::int as count
         FROM "booking" b
         LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
         JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
         JOIN "student_profile" sp ON b.student_id = sp.student_id AND b.university_id = sp.university_id
+        LEFT JOIN "gender_category" gc ON gc.gender_category_id = sp.gender_category_id
         LEFT JOIN "department" d ON sa.department_id = d.department_id AND sa.university_id = d.university_id
         LEFT JOIN "booking_outcome" bo ON b.university_id = bo.university_id AND b.booking_id = bo.booking_id
         ${commonWhereBooking}
-        GROUP BY sa.department_id, pc.problem_category_name_th, sp.student_gender
+        GROUP BY sa.department_id, pc.problem_category_name_th, gc.code
     `;
 
     // 8.3. Fetch Visits by month for each department
@@ -711,19 +713,21 @@ export const DeanService = {
         b.student_id,
         b.booking_created_at as "createdAt",
         b.booking_status as status,
-        b.booking_service_mode as "serviceMode",
+        smc.code as "serviceMode",
         sa.student_admit_academic_year as "admitYear",
         d.department_name_th as "departmentName",
         d.department_code as "departmentCode",
         pc.problem_category_name_th as "problemName",
         bo.booking_outcome_risk_level as "riskLevel",
-        sp.student_gender as gender
+        gc.code as gender
       FROM "booking" b
       JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
       LEFT JOIN "department" d ON sa.department_id = d.department_id AND sa.university_id = d.university_id
       LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
       LEFT JOIN "booking_outcome" bo ON b.university_id = bo.university_id AND b.booking_id = bo.booking_id
       LEFT JOIN "student_profile" sp ON b.student_id = sp.student_id AND b.university_id = sp.university_id
+      LEFT JOIN "gender_category" gc ON gc.gender_category_id = sp.gender_category_id
+      LEFT JOIN "service_mode_category" smc ON smc.service_mode_id = b.service_mode_id
       WHERE b.university_id = ${universityId}
       AND sa.faculty_id = ${facultyId}
       AND b.booking_created_at >= ${ayStart}

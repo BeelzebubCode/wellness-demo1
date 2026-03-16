@@ -86,7 +86,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     const [genderStats, problemStats, facultyStats, problemCategories, faculties] = await Promise.all([
       // 1. Gender Distribution
       prisma.studentProfile.groupBy({
-        by: ["student_gender"],
+        by: ["gender_category_id"],
         where: { university_id: university.university_id },
         _count: { student_id: true },
       }),
@@ -138,7 +138,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       // ✅ Added Stats for Charts
       stats: {
         gender: genderStats.map((s) => ({
-          label: s.student_gender || "ไม่ระบุ",
+          label: String((s as any).gender_category_id || "ไม่ระบุ"),
           count: s._count.student_id,
         })),
         problems: problemStats.map((s) => ({

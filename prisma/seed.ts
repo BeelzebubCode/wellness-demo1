@@ -2,6 +2,7 @@
 import { PrismaClient, BookingStatus } from "@prisma/client";
 
 import { clearDatabase } from "./seeds/00-clear";
+import { seedReferenceTables } from "./seeds/00-reference-tables";
 import { seedGeo } from "./seeds/01-geo";
 import { seedStatic } from "./seeds/02-static";
 import { seedFacultiesDepartments } from "./seeds/03-faculty";
@@ -16,6 +17,7 @@ import { seedUniversityConnections } from "./seeds/11-university-connections";
 import { seedManualConnections } from "./seeds/12-manual-connections";
 import { seedDeans } from "./seeds/13-deans";
 import { seedDayPeriods } from "./seeds/18-day-periods";
+import { seedHeadDepartments } from "./seeds/seed-head-department";
 
 
 const prisma = new PrismaClient();
@@ -32,6 +34,9 @@ async function main() {
 
   await clearDatabase(prisma);
 
+  // Must seed reference tables FIRST — student/address seeds depend on FK lookups
+  await seedReferenceTables(prisma);
+
   const geo = await seedGeo(prisma); // regions, provinces, universities
   const st = await seedStatic(prisma); // status, org, categories, criteria, templates, pointRule, passwordHash, plainPassword
 
@@ -47,6 +52,11 @@ async function main() {
   const deans = await seedDeans(prisma, {
     universities: geo.universities,
     
+    passwordHash: st.passwordHash,
+  });
+
+  const headDepts = await seedHeadDepartments(prisma, {
+    universities: geo.universities,
     passwordHash: st.passwordHash,
   });
 

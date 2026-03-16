@@ -55,7 +55,7 @@ async function cleanAll() {
     "feedback_comment", "feedback_rating", "feedback",
     "booking_exception_evidence", "booking_exception_request",
     "booking_punishment_log", "booking_attendance",
-    "booking_consent_signature", "booking_session",
+    "booking_agreement_signature", "booking_session",
     "booking_assignment", "booking_outcome", "booking_cancellation",
     "notification", "booking",
   ];
@@ -68,21 +68,29 @@ async function updateGenders() {
   console.log("🌈 Phase 0: Updating student genders (add LGBTQ_PLUS ~10%)...");
   const t = Date.now();
 
-  // Set ~10% of students to LGBTQ_PLUS, keeping M/F ratio ~45%/45%
-  // Use student_id modulo for deterministic but varied assignment
+  // Get LGBTQ_PLUS category ID
+  const lgbtq = await prisma.$queryRawUnsafe<{gender_category_id: number}[]>(`
+    SELECT gender_category_id FROM gender_category WHERE code = 'LGBTQ_PLUS' LIMIT 1
+  `);
+  if (!lgbtq.length) { console.log("   ⚠️ No LGBTQ_PLUS category found, skipping."); return; }
+  const lgbtqId = lgbtq[0].gender_category_id;
+
+  // Set ~10% of students to LGBTQ_PLUS
   await exec(`
-    UPDATE student_profile SET student_gender = 'LGBTQ_PLUS'::"StudentGender"
+    UPDATE student_profile SET gender_category_id = ${lgbtqId}
     WHERE student_id IN (
       SELECT student_id FROM student_profile
-      WHERE student_gender IN ('MALE', 'FEMALE')
+      WHERE gender_category_id IS NOT NULL
       ORDER BY random()
       LIMIT (SELECT (COUNT(*) * 0.10)::int FROM student_profile)
     )
   `);
 
   const dist: any[] = await prisma.$queryRawUnsafe(`
-    SELECT student_gender::text AS g, COUNT(*)::int AS n
-    FROM student_profile GROUP BY 1 ORDER BY 2 DESC
+    SELECT gc.code AS g, COUNT(*)::int AS n
+    FROM student_profile sp
+    LEFT JOIN gender_category gc ON sp.gender_category_id = gc.gender_category_id
+    GROUP BY 1 ORDER BY 2 DESC
   `);
   console.log("   Gender distribution:");
   dist.forEach((r: any) => console.log(`     ${r.g}: ${Number(r.n).toLocaleString()}`));
@@ -123,6 +131,14 @@ async function seedBookings() {
   `);
   console.log("   ✅ Category weight pool created (1000 slots)\n");
 
+  // Pre-fetch service mode IDs (avoid flaky subqueries in bulk INSERT)
+  const smOnline = await prisma.$queryRaw<{service_mode_id: number}[]>`SELECT service_mode_id FROM service_mode_category WHERE code = 'ONLINE' LIMIT 1`;
+  const smOnsite = await prisma.$queryRaw<{service_mode_id: number}[]>`SELECT service_mode_id FROM service_mode_category WHERE code = 'ONSITE' LIMIT 1`;
+  const SM_ONLINE = smOnline[0]?.service_mode_id;
+  const SM_ONSITE = smOnsite[0]?.service_mode_id;
+  if (!SM_ONLINE || !SM_ONSITE) throw new Error(`service_mode_category not seeded! ONLINE=${SM_ONLINE}, ONSITE=${SM_ONSITE}`);
+  console.log(`   ✅ ServiceMode IDs: ONLINE=${SM_ONLINE}, ONSITE=${SM_ONSITE}\n`);
+
   // Status distribution: 85% COMPLETED, 10% CANCELLED, 2.5% PENDING, 1.5% ASSIGNED, 1% IN_PROGRESS
   // We'll create COMPLETED first (largest batch), then others
 
@@ -142,7 +158,7 @@ async function seedBookings() {
       INSERT INTO booking (
         university_id, student_id, consultant_id, time_slot_id,
         problem_category_id, online_channel_category_id,
-        booking_detail_text, booking_service_mode, booking_status,
+        booking_detail_text, service_mode_id, booking_status,
         booking_created_at, booking_updated_at
       )
       SELECT
@@ -159,7 +175,7 @@ async function seedBookings() {
           WHEN 6 THEN 'ปัญหาการปรับตัวในมหาวิทยาลัย'
           ELSE 'ต้องการคำปรึกษาเรื่องสุขภาพจิต'
         END,
-        CASE WHEN random() > 0.35 THEN 'ONLINE'::"ServiceMode" ELSE 'ONSITE'::"ServiceMode" END,
+        CASE WHEN random() > 0.35 THEN ${SM_ONLINE} ELSE ${SM_ONSITE} END,
         'COMPLETED'::"BookingStatus",
         '${m.start}'::timestamp + (random() * ('${m.end}'::timestamp - '${m.start}'::timestamp)),
         '${m.start}'::timestamp + (random() * ('${m.end}'::timestamp - '${m.start}'::timestamp)) + interval '2 hours'
@@ -195,7 +211,7 @@ async function seedBookings() {
       INSERT INTO booking (
         university_id, student_id, time_slot_id,
         problem_category_id, online_channel_category_id,
-        booking_detail_text, booking_service_mode, booking_status,
+        booking_detail_text, service_mode_id, booking_status,
         booking_created_at, booking_updated_at
       )
       SELECT
@@ -208,7 +224,7 @@ async function seedBookings() {
           WHEN 2 THEN 'เปลี่ยนเป็นนัดวันอื่นแทน'
           ELSE 'ต้องการยกเลิกการจอง'
         END,
-        CASE WHEN random() > 0.3 THEN 'ONLINE'::"ServiceMode" ELSE 'ONSITE'::"ServiceMode" END,
+        CASE WHEN random() > 0.3 THEN ${SM_ONLINE} ELSE ${SM_ONSITE} END,
         'CANCELLED'::"BookingStatus",
         '${m.start}'::timestamp + (random() * ('${m.end}'::timestamp - '${m.start}'::timestamp)),
         '${m.start}'::timestamp + (random() * ('${m.end}'::timestamp - '${m.start}'::timestamp))
@@ -229,13 +245,13 @@ async function seedBookings() {
     await exec(`
       INSERT INTO booking (
         university_id, student_id, consultant_id, time_slot_id,
-        problem_category_id, booking_detail_text, booking_service_mode, booking_status,
+        problem_category_id, booking_detail_text, service_mode_id, booking_status,
         booking_created_at, booking_updated_at
       )
       SELECT
         s.university_id, s.student_id, c.consultant_id, ts.time_slot_id,
         cp.problem_category_id, 'รอพบผู้ให้คำปรึกษาตามนัด',
-        CASE WHEN random() > 0.3 THEN 'ONLINE'::"ServiceMode" ELSE 'ONSITE'::"ServiceMode" END,
+        CASE WHEN random() > 0.3 THEN ${SM_ONLINE} ELSE ${SM_ONSITE} END,
         'ASSIGNED'::"BookingStatus",
         '${m.start}'::timestamp + (random() * ('${m.end}'::timestamp - '${m.start}'::timestamp)),
         '${m.start}'::timestamp + (random() * ('${m.end}'::timestamp - '${m.start}'::timestamp))
@@ -252,13 +268,13 @@ async function seedBookings() {
     await exec(`
       INSERT INTO booking (
         university_id, student_id, consultant_id, time_slot_id,
-        problem_category_id, booking_detail_text, booking_service_mode, booking_status,
+        problem_category_id, booking_detail_text, service_mode_id, booking_status,
         booking_created_at, booking_updated_at
       )
       SELECT
         s.university_id, s.student_id, c.consultant_id, ts.time_slot_id,
         cp.problem_category_id, 'กำลังรับคำปรึกษาอยู่',
-        CASE WHEN random() > 0.3 THEN 'ONLINE'::"ServiceMode" ELSE 'ONSITE'::"ServiceMode" END,
+        CASE WHEN random() > 0.3 THEN ${SM_ONLINE} ELSE ${SM_ONSITE} END,
         'IN_PROGRESS'::"BookingStatus",
         '${m.start}'::timestamp + (random() * ('${m.end}'::timestamp - '${m.start}'::timestamp)),
         '${m.start}'::timestamp + (random() * ('${m.end}'::timestamp - '${m.start}'::timestamp))
@@ -275,13 +291,13 @@ async function seedBookings() {
     await exec(`
       INSERT INTO booking (
         university_id, student_id, time_slot_id,
-        problem_category_id, booking_detail_text, booking_service_mode, booking_status,
+        problem_category_id, booking_detail_text, service_mode_id, booking_status,
         booking_created_at, booking_updated_at
       )
       SELECT
         s.university_id, s.student_id, ts.time_slot_id,
         cp.problem_category_id, 'รอระบบจัดเจ้าหน้าที่ให้',
-        CASE WHEN random() > 0.3 THEN 'ONLINE'::"ServiceMode" ELSE 'ONSITE'::"ServiceMode" END,
+        CASE WHEN random() > 0.3 THEN ${SM_ONLINE} ELSE ${SM_ONSITE} END,
         'PENDING_ASSIGNMENT'::"BookingStatus",
         '${m.start}'::timestamp + (random() * ('${m.end}'::timestamp - '${m.start}'::timestamp)),
         '${m.start}'::timestamp + (random() * ('${m.end}'::timestamp - '${m.start}'::timestamp))
@@ -336,12 +352,12 @@ async function seedSessions() {
   const t = Date.now();
   await exec(`
     INSERT INTO booking_session (
-      university_id, booking_id, booking_session_mode,
+      university_id, booking_id, service_mode_id,
       online_channel_category_id, booking_session_join_url,
       booking_session_location_text, booking_session_is_link_visible,
       provided_by_account_id, provided_at
     )
-    SELECT b.university_id, b.booking_id, b.booking_service_mode, b.online_channel_category_id,
+    SELECT b.university_id, b.booking_id, b.service_mode_id, b.online_channel_category_id,
       CASE
         WHEN oc.online_channel_code = 'GOOGLE_MEET' THEN 'https://meet.google.com/abc-' || (b.booking_id % 9999)::text || '-xyz'
         WHEN oc.online_channel_code = 'ZOOM' THEN 'https://zoom.us/j/' || (1000000000 + b.booking_id)::text
@@ -349,7 +365,7 @@ async function seedSessions() {
         WHEN oc.online_channel_code = 'MICROSOFT_TEAMS' THEN 'https://teams.microsoft.com/l/meetup-join/' || b.booking_id::text
         ELSE NULL
       END,
-      CASE WHEN b.booking_service_mode = 'ONSITE'::"ServiceMode" THEN
+      CASE WHEN smc.code = 'ONSITE' THEN
         CASE (b.booking_id % 4)
           WHEN 0 THEN 'ห้องให้คำปรึกษา ชั้น 2 อาคารบริการนิสิต'
           WHEN 1 THEN 'ศูนย์สุขภาวะ ห้อง 301 อาคารกิจการนิสิต'
@@ -361,6 +377,7 @@ async function seedSessions() {
     FROM booking b
     JOIN consultant c ON b.consultant_id = c.consultant_id
     LEFT JOIN online_channel_category oc ON b.online_channel_category_id = oc.online_channel_category_id
+    LEFT JOIN service_mode_category smc ON b.service_mode_id = smc.service_mode_id
     WHERE b.booking_status IN ('ASSIGNED', 'IN_PROGRESS', 'COMPLETED')
     ON CONFLICT DO NOTHING
   `);
@@ -479,10 +496,10 @@ async function seedAttendance() {
     )
     SELECT b.university_id, b.booking_id,
       CASE
-        WHEN rnd.r < 0.70 THEN 'CHECKED_IN':"AttendanceStatus"
-        WHEN rnd.r < 0.85 THEN 'LATE':"AttendanceStatus"
-        WHEN rnd.r < 0.95 THEN 'NO_SHOW':"AttendanceStatus"
-        ELSE 'CANCELLED_BY_CONSULTANT':"AttendanceStatus"
+        WHEN rnd.r < 0.70 THEN 'CHECKED_IN'::"AttendanceStatus"
+        WHEN rnd.r < 0.85 THEN 'LATE'::"AttendanceStatus"
+        WHEN rnd.r < 0.95 THEN 'NO_SHOW'::"AttendanceStatus"
+        ELSE 'CANCELLED_BY_CONSULTANT'::"AttendanceStatus"
       END,
       CASE WHEN rnd.r < 0.85 THEN ts.time_slot_start_datetime + (random() * interval '15 minutes') ELSE NULL END,
       CASE WHEN rnd.r >= 0.70 AND rnd.r < 0.85 THEN (5 + floor(random() * 25))::int ELSE NULL END,
@@ -626,8 +643,8 @@ async function printSummary() {
   pc.forEach((p: any) => console.log(`      ${p.problem_category_code.padEnd(10)} ${p.problem_category_name_th.padEnd(25)} ${Number(p.n).toLocaleString().padStart(10)}`));
 
   console.log("\n   🌈 Gender Distribution (student_profile):");
-  const gd: any[] = await prisma.$queryRawUnsafe(`SELECT student_gender::text AS g, COUNT(*)::int AS n FROM student_profile GROUP BY 1 ORDER BY 2 DESC`);
-  gd.forEach((g: any) => console.log(`      ${g.g.padEnd(15)} ${Number(g.n).toLocaleString().padStart(10)}`));
+  const gd: any[] = await prisma.$queryRawUnsafe(`SELECT gc.code AS g, COUNT(*)::int AS n FROM student_profile sp LEFT JOIN gender_category gc ON sp.gender_category_id = gc.gender_category_id GROUP BY 1 ORDER BY 2 DESC`);
+  gd.forEach((g: any) => console.log(`      ${(g.g || 'NULL').padEnd(15)} ${Number(g.n).toLocaleString().padStart(10)}`));
 
   console.log("\n   🎯 Risk Level Distribution:");
   const rl: any[] = await prisma.$queryRawUnsafe(`SELECT booking_outcome_risk_level AS lv, COUNT(*)::bigint as count FROM booking_outcome WHERE booking_outcome_risk_level IS NOT NULL GROUP BY 1 ORDER BY 1`);

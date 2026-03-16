@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import type { AccountContext } from "@/lib/auth/context";
 import { requireUniversity } from "@/lib/auth/guard";
-import { AccountRole, BookingStatus, ServiceMode } from "@prisma/client";
+import { AccountRole, BookingStatus } from "@prisma/client";
 import { OnlineChannelCode } from "@/lib/constants/booking-service";
 
 type Body = { url?: string; note?: string };
@@ -72,7 +72,8 @@ export async function handleSetOnlineChannel(
       booking_id: true,
       consultant_id: true,
       booking_status: true,
-      booking_service_mode: true,
+      service_mode_id: true,
+      serviceMode: { select: { code: true } },
     },
   });
 
@@ -93,7 +94,7 @@ export async function handleSetOnlineChannel(
     return NextResponse.json({ error: "Permission denied" }, { status: 403 });
   }
 
-  if (booking.booking_service_mode !== ServiceMode.ONLINE) {
+  if (booking.serviceMode?.code !== "ONLINE") {
     return NextResponse.json({ error: "เคสนี้ไม่ใช่ ONLINE" }, { status: 409 });
   }
 
@@ -125,7 +126,8 @@ export async function handleSetOnlineChannel(
       university_id: activeUniversityId,
       booking_id: bookingId,
 
-      booking_session_mode: ServiceMode.ONLINE,
+      booking_session_mode: "ONLINE", // keep as text for backward compat
+      service_mode_id: booking.service_mode_id,
       online_channel_category_id: categoryId,
 
       booking_session_join_url: isPhone ? null : url,
@@ -136,7 +138,7 @@ export async function handleSetOnlineChannel(
       provided_at: new Date(),
     },
     update: {
-      booking_session_mode: ServiceMode.ONLINE,
+      service_mode_id: booking.service_mode_id,
       online_channel_category_id: categoryId,
 
       booking_session_join_url: isPhone ? null : url,

@@ -48,19 +48,23 @@ function buildStudentCte(
 
     if (filters.gender?.length) {
         needsProfile = true;
-        profileClauses.push(`sp.student_gender IN (${filters.gender.map(g => `'${g}'`).join(",")})`);
+        joins.push(`JOIN gender_category gc ON gc.gender_category_id = sp.gender_category_id`);
+        profileClauses.push(`gc.code IN (${filters.gender.map(g => `'${g}'`).join(",")})`);
     }
     if (filters.familyIncomeBracket?.length) {
         needsProfile = true;
-        profileClauses.push(`sp.family_income_bracket IN (${filters.familyIncomeBracket.map(v => `'${v}'`).join(",")})`);
+        joins.push(`JOIN income_bracket_category ibc ON ibc.income_bracket_id = sp.income_bracket_id`);
+        profileClauses.push(`ibc.code IN (${filters.familyIncomeBracket.map(v => `'${v}'`).join(",")})`);
     }
     if (filters.bloodGroup?.length) {
         needsProfile = true;
-        profileClauses.push(`sp.student_blood_group IN (${filters.bloodGroup.map(v => `'${v}'`).join(",")})`);
+        joins.push(`JOIN blood_group_category bgc ON bgc.blood_group_id = sp.blood_group_id`);
+        profileClauses.push(`bgc.code IN (${filters.bloodGroup.map(v => `'${v}'`).join(",")})`);
     }
     if (filters.parentalStatus?.length) {
         needsProfile = true;
-        profileClauses.push(`sp.parental_status IN (${filters.parentalStatus.map(v => `'${v}'`).join(",")})`);
+        joins.push(`JOIN parental_status_category psc ON psc.parental_status_id = sp.parental_status_id`);
+        profileClauses.push(`psc.code IN (${filters.parentalStatus.map(v => `'${v}'`).join(",")})`);
     }
     if (filters.birthOrder?.length) {
         needsProfile = true;
@@ -126,7 +130,7 @@ export const HeadDepartmentService = {
         }
         let serviceModeWhere = "";
         if (filters.serviceMode?.length) {
-            serviceModeWhere = `AND b.booking_service_mode IN (${filters.serviceMode.map(s => `'${s}'`).join(",")})`;
+            serviceModeWhere = `AND b.service_mode_id IN (SELECT service_mode_id FROM service_mode_category WHERE code IN (${filters.serviceMode.map(s => `'${s}'`).join(",")}))`;
         }
         let attendanceWhere = "";
         if (filters.attendanceStatus?.length) {
@@ -170,12 +174,13 @@ export const HeadDepartmentService = {
             const bloodDist = await prisma.$queryRawUnsafe<{ group: string; count: number }[]>(`
                 WITH filtered AS (${studentCte})
                 SELECT
-                    COALESCE(sp.student_blood_group::text, 'UNKNOWN') as "group",
+                    COALESCE(bgc.code, 'UNKNOWN') as "group",
                     COUNT(*)::int as count
                 FROM filtered f
                 JOIN student_profile sp ON sp.university_id = f.university_id AND sp.student_id = f.student_id
-                WHERE sp.student_blood_group IS NOT NULL
-                GROUP BY sp.student_blood_group
+                LEFT JOIN blood_group_category bgc ON bgc.blood_group_id = sp.blood_group_id
+                WHERE sp.blood_group_id IS NOT NULL
+                GROUP BY bgc.code
                 ORDER BY count DESC
             `);
 
@@ -262,11 +267,12 @@ export const HeadDepartmentService = {
             const incomeDist = await prisma.$queryRawUnsafe<{ bracket: string; count: number }[]>(`
                 WITH filtered AS (${studentCte})
                 SELECT
-                    COALESCE(sp.family_income_bracket::text, 'UNKNOWN') as bracket,
+                    COALESCE(ibc.code, 'UNKNOWN') as bracket,
                     COUNT(*)::int as count
                 FROM filtered f
                 JOIN student_profile sp ON sp.university_id = f.university_id AND sp.student_id = f.student_id
-                GROUP BY sp.family_income_bracket
+                LEFT JOIN income_bracket_category ibc ON ibc.income_bracket_id = sp.income_bracket_id
+                GROUP BY ibc.code
                 ORDER BY count DESC
             `);
 
@@ -289,12 +295,13 @@ export const HeadDepartmentService = {
             const parentalDist = await prisma.$queryRawUnsafe<{ status: string; count: number }[]>(`
                 WITH filtered AS (${studentCte})
                 SELECT
-                    COALESCE(sp.parental_status::text, 'UNKNOWN') as status,
+                    COALESCE(psc.code, 'UNKNOWN') as status,
                     COUNT(*)::int as count
                 FROM filtered f
                 JOIN student_profile sp ON sp.university_id = f.university_id AND sp.student_id = f.student_id
-                WHERE sp.parental_status IS NOT NULL
-                GROUP BY sp.parental_status
+                LEFT JOIN parental_status_category psc ON psc.parental_status_id = sp.parental_status_id
+                WHERE sp.parental_status_id IS NOT NULL
+                GROUP BY psc.code
                 ORDER BY count DESC
             `);
 
@@ -302,12 +309,13 @@ export const HeadDepartmentService = {
             const bloodDist = await prisma.$queryRawUnsafe<{ group: string; count: number }[]>(`
                 WITH filtered AS (${studentCte})
                 SELECT
-                    COALESCE(sp.student_blood_group::text, 'UNKNOWN') as "group",
+                    COALESCE(bgc.code, 'UNKNOWN') as "group",
                     COUNT(*)::int as count
                 FROM filtered f
                 JOIN student_profile sp ON sp.university_id = f.university_id AND sp.student_id = f.student_id
-                WHERE sp.student_blood_group IS NOT NULL
-                GROUP BY sp.student_blood_group
+                LEFT JOIN blood_group_category bgc ON bgc.blood_group_id = sp.blood_group_id
+                WHERE sp.blood_group_id IS NOT NULL
+                GROUP BY bgc.code
                 ORDER BY count DESC
             `);
 

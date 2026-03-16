@@ -1,4 +1,4 @@
-import { Prisma, StudentGender } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import type { RectorDashboardFilters } from "@/features/dashboard/rector/types";
 
@@ -22,7 +22,7 @@ export const RectorService = {
         // Build student filter
         const studentWhere: Prisma.StudentWhereInput = {};
         if (gender) {
-            studentWhere.profile = { student_gender: gender as StudentGender };
+            studentWhere.profile = { genderCategory: { code: gender } };
         }
         if (facultyId || departmentId) {
             studentWhere.academic = {
@@ -154,7 +154,7 @@ export const RectorService = {
                 }
             };
             if (gender) {
-                studentWhere.profile = { student_gender: gender as StudentGender };
+                studentWhere.profile = { genderCategory: { code: gender } };
             }
 
             // Build booking date filter for this faculty
@@ -244,7 +244,7 @@ export const RectorService = {
             sqlFilters.push(Prisma.sql`AND sa.department_id = ${departmentId}`);
         }
         if (gender) {
-            sqlFilters.push(Prisma.sql`AND sp.student_gender::text = ${gender}`);
+            sqlFilters.push(Prisma.sql`AND gc.code = ${gender}`);
         }
         if (problemCategoryId) {
             sqlFilters.push(Prisma.sql`AND b.problem_category_id = ${problemCategoryId}`);
@@ -265,13 +265,14 @@ export const RectorService = {
         const populationFilters: Prisma.Sql[] = [];
         if (facultyId) populationFilters.push(Prisma.sql`AND sa.faculty_id = ${facultyId}`);
         if (departmentId) populationFilters.push(Prisma.sql`AND sa.department_id = ${departmentId}`);
-        if (gender) populationFilters.push(Prisma.sql`AND sp.student_gender::text = ${gender}`);
+        if (gender) populationFilters.push(Prisma.sql`AND gc.code = ${gender}`);
 
         const totalStudentsQuery = await prisma.$queryRaw<{ count: bigint }[]>`
              SELECT COUNT(DISTINCT s.student_id)::int as count 
              FROM "student" s
              LEFT JOIN "student_academic" sa ON s.student_id = sa.student_id
              LEFT JOIN "student_profile" sp ON s.student_id = sp.student_id
+             LEFT JOIN "gender_category" gc ON sp.gender_category_id = gc.gender_category_id
              WHERE s."university_id" = ${universityId}
              ${populationFilters.length > 0 ? Prisma.join(populationFilters, " ") : Prisma.empty}
          `;
@@ -340,7 +341,7 @@ export const RectorService = {
         const problemGenderStats = await prisma.$queryRaw<{ name: string, gender: string, count: bigint }[]>`
              SELECT 
                  COALESCE(pc.problem_category_name_th, 'อื่นๆ') as name,
-                 sp.student_gender as gender,
+                 gc.code as gender,
                  COUNT(*)::int as count
              FROM "booking" b
              LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
@@ -350,7 +351,7 @@ export const RectorService = {
              AND b.booking_created_at >= ${start}
              AND b.booking_created_at <= ${end}
              ${sqlFilters.length > 0 ? Prisma.join(sqlFilters, " ") : Prisma.empty}
-             GROUP BY pc.problem_category_name_th, sp.student_gender
+             GROUP BY pc.problem_category_name_th, gc.code
          `;
 
         const problemStats: Record<string, number> = {};
@@ -432,6 +433,7 @@ export const RectorService = {
                  FROM "booking" b
                  LEFT JOIN "student_academic" sa ON b.student_id = sa.student_id AND sa.university_id = ${universityId}
                  LEFT JOIN "student_profile" sp ON b.student_id = sp.student_id
+              LEFT JOIN "gender_category" gc ON sp.gender_category_id = gc.gender_category_id
                  WHERE b.university_id = ${universityId}
                  AND b.booking_created_at >= ${start}
                  AND b.booking_created_at <= ${end}
@@ -475,7 +477,7 @@ export const RectorService = {
                      ${
                         // Note: If gender filter is on, we should filter student count too?
                         // Yes, "Total Students (Female) in Engineering"
-                        gender ? Prisma.sql`AND sp2.student_gender::text = ${gender}` : Prisma.empty
+                        gender ? Prisma.sql`AND gc2.code = ${gender}` : Prisma.empty
                      }
                      ${
                         // If department filter is on, filter population
@@ -491,7 +493,7 @@ export const RectorService = {
              LEFT JOIN "student_academic" sa ON f.faculty_id = sa.faculty_id
                 ${departmentId ? Prisma.sql`AND sa.department_id = ${departmentId}` : Prisma.empty}
              LEFT JOIN "student_profile" sp ON sa.student_id = sp.student_id
-                ${gender ? Prisma.sql`AND sp.student_gender::text = ${gender}` : Prisma.empty}
+                ${gender ? Prisma.sql`AND EXISTS (SELECT 1 FROM gender_category gc WHERE gc.gender_category_id = sp.gender_category_id AND gc.code = ${gender})` : Prisma.empty}
              LEFT JOIN "booking" b ON sa.student_id = b.student_id AND b.university_id = ${universityId} 
                 AND b.booking_created_at >= ${start} AND b.booking_created_at <= ${end}
                 ${problemCategoryId ? Prisma.sql`AND b.problem_category_id = ${problemCategoryId}` : Prisma.empty}

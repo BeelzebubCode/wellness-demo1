@@ -4,7 +4,6 @@ import {
   BookingStatus,
   TimeSlotStatus,
   PointTxnType,
-  ServiceMode,
 } from "@prisma/client";
 
 import {
@@ -136,7 +135,7 @@ export async function seedBookings(
   console.log("   🔗 Generating Booking Sessions (SQL)...");
   await prisma.$executeRawUnsafe(`
     INSERT INTO booking_session (
-      university_id, booking_id, booking_session_mode, 
+      university_id, booking_id, service_mode_id, 
       online_channel_category_id, booking_session_join_url,
       booking_session_location_text, booking_session_is_link_visible,
       provided_by_account_id, provided_at
@@ -144,7 +143,7 @@ export async function seedBookings(
     SELECT
       b.university_id,
       b.booking_id,
-      b.booking_service_mode,
+      b.service_mode_id,
       b.online_channel_category_id,
       CASE 
         WHEN oc.online_channel_code = 'GOOGLE_MEET' THEN 'https://meet.google.com/abc-' || round(random()*1000)::text || '-xyz'
@@ -154,7 +153,7 @@ export async function seedBookings(
         ELSE NULL
       END as join_url,
       CASE 
-        WHEN b.booking_service_mode = 'ONSITE' THEN 'ห้องให้คำปรึกษา ชั้น 2 อาคารบริการ (System Seed)'
+        WHEN smc.code = 'ONSITE' THEN 'ห้องให้คำปรึกษา ชั้น 2 อาคารบริการ (System Seed)'
         ELSE NULL
       END as location_text,
       true,
@@ -163,6 +162,7 @@ export async function seedBookings(
     FROM booking b
     JOIN consultant c ON b.consultant_id = c.consultant_id
     LEFT JOIN online_channel_category oc ON b.online_channel_category_id = oc.online_channel_category_id
+    LEFT JOIN service_mode_category smc ON b.service_mode_id = smc.service_mode_id
     WHERE b.booking_status IN ('ASSIGNED', 'IN_PROGRESS', 'COMPLETED')
     ON CONFLICT DO NOTHING;
   `);

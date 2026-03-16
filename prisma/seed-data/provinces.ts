@@ -1,5 +1,15 @@
-import { RegionCode } from "@prisma/client";
-
+// RegionCode enum ถูกลบจาก Prisma schema แล้ว — ใช้ string constants แทน
+const RegionCode = {
+  UPPER_NORTH: "UPPER_NORTH",
+  LOWER_NORTH: "LOWER_NORTH",
+  UPPER_NORTHEAST: "UPPER_NORTHEAST",
+  LOWER_NORTHEAST: "LOWER_NORTHEAST",
+  UPPER_CENTRAL: "UPPER_CENTRAL",
+  LOWER_CENTRAL: "LOWER_CENTRAL",
+  EAST: "EAST",
+  UPPER_SOUTH: "UPPER_SOUTH",
+  LOWER_SOUTH: "LOWER_SOUTH",
+} as const;
 export const provincesData = [
   // ===== UPPER_CENTRAL (ภาคกลางตอนบน) =====
   // กรุงเทพฯและปริมณฑล + จังหวัดใกล้เคียง

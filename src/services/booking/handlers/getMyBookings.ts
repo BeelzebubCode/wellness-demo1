@@ -56,8 +56,9 @@ export async function getMyBookings(params: GetMyBookingsParams) {
         include: {
           problemCategory: true,
           timeSlot: true,
-          BookingSession: { include: { onlineChannel: true } },
+          BookingSession: { include: { onlineChannel: true, serviceMode: true } },
           onlineChannel: true,
+          serviceMode: { select: { code: true } },
           feedback: { select: { feedback_id: true } },
           exceptionRequest: { select: { booking_exception_request_id: true, booking_exception_status: true, booking_exception_decision_note: true } },
           attendance: true,
@@ -89,7 +90,7 @@ export async function getMyBookings(params: GetMyBookingsParams) {
       const sess = b.BookingSession;
 
       const session = sess ? {
-        mode: sess.booking_session_mode ?? b.booking_service_mode,
+        mode: (sess as any).serviceMode?.code ?? (b as any).serviceMode?.code,
         onlineChannel: (() => {
           const ch = sess.onlineChannel ?? b.onlineChannel;
           return ch ? { id: ch.online_channel_category_id, code: ch.online_channel_code, nameTh: ch.online_channel_name_th, nameEn: ch.online_channel_name_en } : null;
@@ -105,7 +106,7 @@ export async function getMyBookings(params: GetMyBookingsParams) {
         bookingId: b.booking_id,
         universityId: b.university_id,
         status: b.booking_status,
-        serviceMode: b.booking_service_mode ?? "IN_PERSON",
+        serviceMode: (b as any).serviceMode?.code ?? "IN_PERSON",
         onlineChannel: (() => {
           const ch = sess?.onlineChannel ?? b.onlineChannel;
           return ch ? { id: ch.online_channel_category_id, code: ch.online_channel_code, nameTh: ch.online_channel_name_th, nameEn: ch.online_channel_name_en } : null;
@@ -171,8 +172,9 @@ export async function getMyBookings(params: GetMyBookingsParams) {
         problemCategory: true,
         timeSlot: true,
         student: { include: { profile: true } },
-        BookingSession: { include: { onlineChannel: true } },
+        BookingSession: { include: { onlineChannel: true, serviceMode: true } },
         onlineChannel: true,
+        serviceMode: { select: { code: true } },
         university: { select: { university_name_th: true, university_code: true } },
         attendance: true,
       },
@@ -188,7 +190,7 @@ export async function getMyBookings(params: GetMyBookingsParams) {
     const sess = b.BookingSession;
 
     const session = sess ? {
-      mode: sess.booking_session_mode ?? b.booking_service_mode,
+      mode: (sess as any).serviceMode?.code ?? (b as any).serviceMode?.code,
       onlineChannel: (() => {
         const ch = sess.onlineChannel ?? b.onlineChannel;
         return ch ? { id: ch.online_channel_category_id, code: ch.online_channel_code, nameTh: ch.online_channel_name_th, nameEn: ch.online_channel_name_en } : null;
@@ -206,7 +208,7 @@ export async function getMyBookings(params: GetMyBookingsParams) {
       universityName: b.university?.university_name_th ?? null,
       universityCode: b.university?.university_code ?? null,
       status: b.booking_status,
-      serviceMode: b.booking_service_mode ?? "IN_PERSON",
+      serviceMode: (b as any).serviceMode?.code ?? "IN_PERSON",
       onlineChannel: (() => {
         const ch = sess?.onlineChannel ?? b.onlineChannel;
         return ch ? { id: ch.online_channel_category_id, code: ch.online_channel_code, nameTh: ch.online_channel_name_th, nameEn: ch.online_channel_name_en } : null;

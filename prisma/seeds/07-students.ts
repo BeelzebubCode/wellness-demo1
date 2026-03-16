@@ -5,8 +5,6 @@
 import {
   PrismaClient,
   AccountRole,
-  StudentGender,
-  StudentAddressType,
 } from "@prisma/client";
 
 import { randomBool, randomInt, randomItem } from "../seed-utils/rand";
@@ -59,6 +57,16 @@ export async function seedStudents(
     statusInactive,
     passwordHash,
   } = args;
+
+  // ✅ Pre-fetch FK IDs from reference tables
+  const genderMale = await prisma.genderCategory.findFirst({ where: { code: "MALE" } });
+  const genderFemale = await prisma.genderCategory.findFirst({ where: { code: "FEMALE" } });
+  const addressTypeCurrent = await prisma.addressTypeCategory.findFirst({ where: { code: "CURRENT" } });
+  const addressTypePermanent = await prisma.addressTypeCategory.findFirst({ where: { code: "PERMANENT" } });
+
+  if (!genderMale || !genderFemale || !addressTypeCurrent || !addressTypePermanent) {
+    throw new Error("Reference tables not seeded yet! Run seed-reference-tables.ts first.");
+  }
 
   console.log(`🎓 Seeding students with BATCH mode (fast!)...`);
   console.log(`   Default count: ${DEFAULT_STUDENT_COUNT} students`);
@@ -176,9 +184,9 @@ export async function seedStudents(
       // If person.gender is "FEMALE" -> StudentGender.FEMALE
       const genderStr = (person as any).gender || (Math.random() < 0.5 ? "MALE" : "FEMALE");
       
-      // Map to Prisma Enum
-      const gender: StudentGender = genderStr === "FEMALE" ? StudentGender.FEMALE : StudentGender.MALE;
-      const prefix = gender === StudentGender.FEMALE ? "นางสาว" : "นาย";
+      // Map to FK ID
+      const genderCategoryId = genderStr === "FEMALE" ? genderFemale.gender_category_id : genderMale.gender_category_id;
+      const prefix = genderStr === "FEMALE" ? "นางสาว" : "นาย";
 
       // User complaint was "Male with Mrs". 
       // So if Gender=Male, MUST vary prefix only if valid.
@@ -257,7 +265,7 @@ export async function seedStudents(
         student_first_name_en: fnameEn,
         student_last_name_en: lnameEn,
         student_nickname_en: nickEn,
-        student_gender: gender,
+        gender_category_id: genderCategoryId,
         student_birthday: new Date(`200${randomInt(2, 6)}-${randomInt(1, 12)}-${randomInt(1, 28)}`),
         student_phone_number: `08${randomInt(10000000, 99999999)}`,
         student_email: `${username}@${uniCodeLower}.ac.th`,
@@ -280,7 +288,7 @@ export async function seedStudents(
       addressesCurrentData.push({
         username, // temp key
         university_id: uni.university_id,
-        student_address_type: StudentAddressType.CURRENT,
+        address_type_id: addressTypeCurrent.address_type_id,
         province_id: provCurrent.province_id,
         student_address_detail: addressDetail,
         student_address_district: "เมือง",
@@ -292,7 +300,7 @@ export async function seedStudents(
       addressesPermanentData.push({
         username, // temp key
         university_id: uni.university_id,
-        student_address_type: StudentAddressType.PERMANENT,
+        address_type_id: addressTypePermanent.address_type_id,
         province_id: provHome.province_id,
         student_address_detail: `บ้าน ${addressDetail}`,
         student_address_district: "อำเภอ",
