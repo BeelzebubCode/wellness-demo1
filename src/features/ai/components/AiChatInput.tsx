@@ -498,6 +498,11 @@ export default function AiChatInput({
           )}
 
 
+        {/* ✅ Hide main input during questions/cancel, but show during confirm step */}
+        {!(mode === "booking_agent" && !chat.agent?.confirmToken && (
+          (chat.agent?.intent === "CANCEL" && (chat.agent?.cancelReasons?.length ?? 0) > 0) ||
+          (chat.agent?.intent !== "CANCEL" && (chat.agent?.questions?.length ?? 0) > 0)
+        )) && (
         <div className="flex flex-col gap-3">
           {/* Input Box */}
           <div className="relative flex items-end gap-2 rounded-2xl bg-transparent border-2 border-slate-200 px-3 py-2 shadow-sm focus-within:border-indigo-400 focus-within:shadow-md transition-all">
@@ -605,6 +610,7 @@ export default function AiChatInput({
             </div>
           </div>
         </div>
+        )}
 
       </div>
     </div>

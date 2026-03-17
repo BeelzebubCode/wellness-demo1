@@ -169,8 +169,8 @@ export function extractDateISOFromThai(text: string): string | null {
     }
   }
 
-  // "จอง 29" / "วันที่ 29" / "วัน 29"
-  const m2 = t.match(/(?:จอง|วันที่|วัน)\s*(\d{1,2})\b/);
+  // "จอง 29" / "จองคิว 22" / "วันที่ 29" / "วัน 29"
+  const m2 = t.match(/(?:\u0e08\u0e2d\u0e07|\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48|\u0e27\u0e31\u0e19)\s*(?:\S+\s+)*(\d{1,2})\b/);
   if (m2?.[1]) {
     const dd = Number(m2[1]);
     const { y, m, day } = bkkNowParts();

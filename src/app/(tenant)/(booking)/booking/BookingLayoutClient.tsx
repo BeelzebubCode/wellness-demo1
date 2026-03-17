@@ -5,21 +5,14 @@ import dynamic from "next/dynamic";
 import { BookingSidebar } from "@/components/layout/sidebar";
 import { BookingHeader } from "@/components/layout/header";
 
-// ✅ Dynamic imports - load only when needed (reduces initial bundle by ~50kB)
+// ✅ Dynamic imports - load only when needed
 const AiChatModal = dynamic(
     () => import("@/features/ai").then(mod => ({ default: mod.AiChatModal })),
-    {
-        ssr: false,
-        loading: () => null // No loading state needed, renders when ready
-    }
+    { ssr: false, loading: () => null }
 );
-
 const FloatingAiButton = dynamic(
     () => import("@/features/ai").then(mod => ({ default: mod.FloatingAiButton })),
-    {
-        ssr: false,
-        loading: () => null
-    }
+    { ssr: false, loading: () => null }
 );
 
 interface User {
@@ -73,7 +66,7 @@ export function BookingLayoutClient({
                 </div>
             </div>
 
-            {/* Floating components */}
+            {/* ✅ AI Chat — slime always available in this layout */}
             <AiChatModal />
             <FloatingAiButton />
         </>

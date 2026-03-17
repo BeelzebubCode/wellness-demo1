@@ -131,19 +131,28 @@ function IconAction({
 /* -------------------- rules -------------------- */
 
 function getAssignState(b: AdminBookingRow) {
-  if (b.status === "CANCELLED") return { can: false, reason: "รายการนี้ถูกยกเลิกแล้ว" };
-  if (b.status === "COMPLETED") return { can: false, reason: "รายการนี้เสร็จสิ้นแล้ว" };
+  if (b.status === "CANCELLED") return { can: false, isAutoAssigned: false, reason: "รายการนี้ถูกยกเลิกแล้ว" };
+  if (b.status === "COMPLETED") return { can: false, isAutoAssigned: false, reason: "รายการนี้เสร็จสิ้นแล้ว" };
+
+  // Check if auto-assigned → block re-assign from this page
+  const latestAssignment = b.assignments?.[0];
+  const isAuto = latestAssignment?.isAutoAssigned === true;
+
   if (b.status === "ASSIGNED" || b.status === "IN_PROGRESS") {
-    return { can: true, isEdit: true, reason: null as string | null };
+    if (isAuto) {
+      return { can: false, isAutoAssigned: true, isEdit: true, reason: "แจกงานอัตโนมัติแล้ว แก้ไขได้ที่หน้าประวัติการแจก" };
+    }
+    return { can: true, isAutoAssigned: false, isEdit: true, reason: null as string | null };
   }
   if (b.status === "PENDING_ASSIGNMENT") {
-    return { can: true, isEdit: false, reason: null as string | null };
+    return { can: true, isAutoAssigned: false, isEdit: false, reason: null as string | null };
   }
 
-  return { can: false, reason: "สถานะไม่อนุญาตให้แจกงาน" };
+  return { can: false, isAutoAssigned: false, reason: "สถานะไม่อนุญาตให้แจกงาน" };
 }
 
-function assignLabel(assign: { can: boolean; isEdit?: boolean }, status?: string) {
+function assignLabel(assign: { can: boolean; isEdit?: boolean; isAutoAssigned?: boolean }, status?: string) {
+  if (assign.isAutoAssigned) return "🤖 แจกงานอัตโนมัติแล้ว";
   if (assign.can) return assign.isEdit ? "แก้ไขผู้ดูแล" : "แจกงาน";
 
   switch (status) {

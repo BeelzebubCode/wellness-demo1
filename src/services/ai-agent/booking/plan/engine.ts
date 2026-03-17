@@ -179,8 +179,7 @@ export class BookingPlanEngine {
         return {
           reply:
             `⛔ **ผมยังไม่เข้าใจเวลาที่พิมพ์มาครับ**\n\n` +
-            `✍️ กรุณาพิมพ์เวลาในรูปแบบที่ชัดเจน เช่น:\n` +
-            `• 10:00\n• 10:00-11:00\n• พรุ่งนี้ 09:00`,
+            `เลือกจากช่วงเวลาด้านล่างได้เลยครับ`,
           state: plan,
           candidates: [],
           missingFields: ["timeRange"],
@@ -193,19 +192,9 @@ export class BookingPlanEngine {
       }
     }
 
-    // ✅ Match check check service hours
+    // ✅ If outside service hours → reset to AUTO so the slot-picker flow handles it with pill buttons
     if (plan.timeRange && plan.timeRange !== "AUTO" && isOutOfServiceTime(plan.timeRange, hours)) {
-      return {
-        reply:
-          `⛔ **เวลา ${plan.timeRange} อยู่นอกช่วงให้บริการครับ**\n\n` +
-          `🕗 ระบบเปิดให้จองเฉพาะ:\n` +
-          `${serviceHoursText(hours)}\n\n` +
-          `✍️ กรุณาพิมพ์เวลาใหม่ที่ต้องการ`,
-        state: plan,
-        candidates: [],
-        missingFields: ["timeRange"],
-        questions: [{ field: "timeRange", text: "ต้องการจองช่วงเวลาไหนครับ?" }],
-      };
+      plan.timeRange = "AUTO"; // Let slot selection pick the nearest valid time and show pills
     }
 
     // --------------------------
@@ -347,13 +336,21 @@ export class BookingPlanEngine {
       return {
         reply:
           `😕 **ช่วงเวลา ${plan.timeRange} ไม่มีคิวให้บริการครับ**\n\n` +
-          `เวลาที่เปิดให้จองวันนี้คือ:\n` +
-          topCandidatesText(candidates, 5) +
-          `\n\n✍️ พิมพ์เวลาใหม่ที่ต้องการได้เลยครับ`,
+          `เลือกจากเวลาที่ว่างด้านล่างได้เลยครับ`,
         state: plan,
         candidates,
         missingFields: ["timeRange"],
-        questions: [{ field: "timeRange", text: "อยากเปลี่ยนเป็นช่วงเวลาไหนครับ?" }],
+        questions: [{
+          field: "timeRange",
+          text: "เลือกช่วงเวลาที่ว่าง:",
+          options: [
+            ...candidates.slice(0, 10).map(s => ({
+              value: `${fmtBkkHHMM(s.start)}-${fmtBkkHHMM(s.end)}`,
+              label: `${fmtBkkHHMM(s.start)}-${fmtBkkHHMM(s.end)} (เหลือ ${s.remaining})`
+            })),
+            { value: "เปลี่ยนวัน", label: "📅 เปลี่ยนวัน" },
+          ],
+        }],
       };
     }
 
@@ -372,15 +369,22 @@ export class BookingPlanEngine {
 
       const q: AgentQuestion = {
         field: "timeRange",
-        text: "อยากจองช่วงเวลาไหนครับ? (เลือก 1 ชั่วโมง) เช่น 08:00-09:00 หรือพิมพ์ 09:00",
+        text: "อยากจองช่วงเวลาไหนครับ?",
+        options: [
+          ...candidates.slice(0, 10).map(s => ({
+            value: `${fmtBkkHHMM(s.start)}-${fmtBkkHHMM(s.end)}`,
+            label: `${fmtBkkHHMM(s.start)}-${fmtBkkHHMM(s.end)} (เหลือ ${s.remaining})`
+          })),
+          { value: "เปลี่ยนวัน", label: "📅 เปลี่ยนวัน" },
+        ],
       };
 
       return {
         reply: replyNeedField({
-          header: "⏰ **ขอเวลาที่ต้องการอีกนิดครับ**",
+          header: `⏰ **เลือกช่วงเวลาจองวันที่ ${plan.date}**`,
           progress,
-          ask: "ช่วงเวลา (เช่น 08:00-09:00 หรือพิมพ์ 09:00)",
-          examples: ["พรุ่งนี้ 09:00 ความเครียด", "10:00-11:00 นอนไม่หลับ"],
+          ask: "เลือกช่วงเวลาจากด้านล่างหรือพิมพ์เวลาที่ต้องการ",
+          examples: [],
           candidates,
         }),
         state: plan,
@@ -442,6 +446,8 @@ export class BookingPlanEngine {
     // detail
     const brief = String(plan.detailText || "").trim();
     if (brief.length < 5) {
+      const tooShort = brief.length > 0;
+      if (tooShort) plan.detailText = null;
       const progress = buildProgressCard({
         dateISO: plan.date!,
         timeRange: plan.timeRange!,
@@ -451,16 +457,23 @@ export class BookingPlanEngine {
         onlineChannelCode: plan.onlineChannelCode,
       });
 
+      const qText = tooShort
+        ? `"${brief}" (${brief.length}/5) สั้นเกินไป กรุณาพิมพ์อย่างน้อย 5 ตัวอักษร`
+        : 'ขอปัญหาโดยย่อ (อย่างน้อย 5 ตัวอักษร) เพื่อส่งให้ผู้ให้คำปรึกษาครับ';
       const q: AgentQuestion = {
         field: "detailText",
-        text: "ขอปัญหาโดยย่อ (สั้น ๆ) เพื่อส่งให้ผู้ให้คำปรึกษาครับ เช่น “เครียดเรื่องเรียน/นอนไม่หลับ”",
+        text: qText,
       };
+
+      const headerText = tooShort
+        ? `"${brief}" (${brief.length}/5) สั้นเกินไปครับ ช่วยพิมพ์เพิ่มอีกนิดนะครับ`
+        : 'ขอรายละเอียดสั้น ๆ อีกนิดครับ';
 
       return {
         reply: replyNeedField({
-          header: "📝 **ขอรายละเอียดสั้น ๆ อีกนิดครับ**",
+          header: headerText,
           progress,
-          ask: "ปัญหาโดยย่อ (อย่างน้อย 1 ประโยค)",
+          ask: "ปัญหาโดยย่อ (อย่างน้อย 5 ตัวอักษร)",
           examples: ["เครียดเรื่องเรียน นอนไม่หลับ", "มีปัญหากับเพื่อนในห้อง"],
           candidates,
         }),

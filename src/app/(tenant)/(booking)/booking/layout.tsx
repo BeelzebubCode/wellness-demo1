@@ -3,19 +3,18 @@
 
 import { useState, useCallback } from "react";
 import { usePathname } from "next/navigation";
-import dynamic from "next/dynamic";
 import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
 import { BookingSidebar } from "@/components/layout/sidebar";
 import { BookingHeader } from "@/components/layout/header";
 import { LoadingSpinner } from "@/components/ui";
 import { ToastProvider } from "@/contexts/ToastContext";
+import dynamic from "next/dynamic";
 
-// ✅ Dynamic imports - load AI components only when needed
+// ✅ AI components — loaded on-demand
 const AiChatModal = dynamic(
   () => import("@/features/ai").then(mod => ({ default: mod.AiChatModal })),
   { ssr: false, loading: () => null }
 );
-
 const FloatingAiButton = dynamic(
   () => import("@/features/ai").then(mod => ({ default: mod.FloatingAiButton })),
   { ssr: false, loading: () => null }
@@ -74,7 +73,7 @@ export default function BookingLayout({ children }: { children: React.ReactNode 
         </div>
       </div>
 
-      {/* ✅ AI components loaded on-demand */}
+      {/* ✅ AI Chat — slime button hidden on /booking page to avoid input conflict */}
       <AiChatModal />
       <FloatingAiButton />
     </ToastProvider>
