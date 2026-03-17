@@ -148,31 +148,47 @@ export const HeadConsultantService = {
       },
       include: {
         profile: true,
-        feedbacks: {
-          where: feedbackFilter,
-          include: {
-            ratings: true,
-          },
-        },
+        _count: { select: { feedbacks: feedbackFilter.feedback_created_at ? { where: feedbackFilter } : true } },
       },
     });
 
-    return consultants.map((c) => {
-      const allScores = c.feedbacks.flatMap((f) =>
-        f.ratings.map((r) => r.feedback_rating_score)
-      );
-      const avgRating =
-        allScores.length > 0
-          ? allScores.reduce((a, b) => a + b, 0) / allScores.length
-          : 0;
+    // Batch avg rating via raw SQL
+    const cIds = consultants.map(c => c.consultant_id);
+    const avgMap = cIds.length > 0
+      ? await (async () => {
+          // Build date filter for raw SQL
+          let dateClause = '';
+          const params: any[] = [cIds];
+          if (options?.startDate) {
+            dateClause += ` AND f.feedback_created_at >= $2`;
+            params.push(options.startDate);
+          }
+          if (options?.endDate) {
+            const idx = params.length + 1;
+            dateClause += ` AND f.feedback_created_at <= $${idx}`;
+            params.push(options.endDate);
+          }
+          const results = await prisma.$queryRawUnsafe<Array<{ consultant_id: number; avg_rating: number; cnt: number }>>(
+            `SELECT f.consultant_id, AVG(fr.feedback_rating_score)::float AS avg_rating, COUNT(DISTINCT f.feedback_id)::int AS cnt
+             FROM feedback_rating fr
+             JOIN feedback f ON f.feedback_id = fr.feedback_id
+             WHERE f.consultant_id = ANY($1) ${dateClause}
+             GROUP BY f.consultant_id`,
+            ...params
+          );
+          return new Map(results.map(r => [r.consultant_id, { avg: Math.round(r.avg_rating * 100) / 100, count: r.cnt }]));
+        })()
+      : new Map<number, { avg: number; count: number }>();
 
+    return consultants.map((c) => {
+      const info = avgMap.get(c.consultant_id);
       return {
         consultantId: c.consultant_id,
         firstName: c.profile?.consultant_first_name ?? "-",
         lastName: c.profile?.consultant_last_name ?? "-",
         prefix: c.profile?.consultant_prefix ?? "",
-        feedbackCount: c.feedbacks.length,
-        avgRating: Math.round(avgRating * 100) / 100, // 2 decimal places
+        feedbackCount: info?.count ?? 0,
+        avgRating: info?.avg ?? 0,
       };
     });
   },
@@ -214,22 +230,27 @@ export const HeadConsultantService = {
           select: { booking_id: true, booking_created_at: true },
         },
         specializations: true,
-        feedbacks: {
-          where: feedbackFilter,
-          include: { ratings: true }
-        }
+        _count: { select: { feedbacks: feedbackFilter.feedback_created_at ? { where: feedbackFilter } : true } },
       },
     });
 
+    // Batch avg rating via raw SQL
+    const cIds = consultants.map(c => c.consultant_id);
+    const avgMap = cIds.length > 0
+      ? await (async () => {
+          const results = await prisma.$queryRaw<Array<{ consultant_id: number; avg_rating: number }>>`
+            SELECT f.consultant_id, AVG(fr.feedback_rating_score)::float AS avg_rating
+            FROM feedback_rating fr
+            JOIN feedback f ON f.feedback_id = fr.feedback_id
+            WHERE f.consultant_id = ANY(${cIds})
+            GROUP BY f.consultant_id
+          `;
+          return new Map(results.map(r => [r.consultant_id, Math.round(r.avg_rating * 10) / 10]));
+        })()
+      : new Map<number, number>();
+
     return consultants.map((c) => {
-      const allScores = c.feedbacks?.flatMap((f) =>
-        f.ratings?.map((r) => r.feedback_rating_score)
-      ) ?? [];
-      
-      const avgRating =
-        allScores.length > 0
-          ? allScores.reduce((a: number, b: number) => a + b, 0) / allScores.length
-          : 0;
+      const avgRating = avgMap.get(c.consultant_id) ?? 0;
 
       return {
         consultantId: c.consultant_id,
@@ -237,8 +258,8 @@ export const HeadConsultantService = {
         firstName: c.profile?.consultant_first_name ?? "-",
         lastName: c.profile?.consultant_last_name ?? "-",
         activeBookings: (c.bookings ?? []).length,
-        avgRating: Math.round(avgRating * 10) / 10,
-        feedbackCount: (c.feedbacks ?? []).length,
+        avgRating,
+        feedbackCount: c._count.feedbacks,
         specializations: (c.specializations ?? []).map(
           (s) => s.consultant_specialization_topic
         ),

@@ -85,7 +85,7 @@ export async function handleListConsultants(
           consultant_specialization_topic: true,
         },
       },
-      // ✅ Count active bookings for workload display
+      // ✅ Count active bookings + feedbacks (no rating rows loaded)
       _count: {
         select: {
           bookings: {
@@ -94,9 +94,9 @@ export async function handleListConsultants(
               booking_status: { in: [BookingStatus.PENDING_ASSIGNMENT, BookingStatus.ASSIGNED, BookingStatus.IN_PROGRESS] },
             },
           },
+          feedbacks: true,
         },
       },
-      // ✅ Fetch bookings on the target date to check for clashes
       bookings: targetDate ? {
         where: {
           timeSlot: {
@@ -116,14 +116,6 @@ export async function handleListConsultants(
           }
         }
       } : false,
-      // ✅ Fetch feedback ratings for avg rating calc
-      feedbacks: {
-        select: {
-          ratings: {
-            select: { feedback_rating_score: true },
-          },
-        },
-      },
 
       // ✅ Select borrow assignments to get the ID for cross-university booking assignment
       borrowAssignments: {
@@ -151,6 +143,21 @@ export async function handleListConsultants(
     orderBy: { consultant_created_at: "desc" },
   });
 
+  // ✅ Batch fetch avg ratings per consultant (single SQL instead of 24k+ IN clause)
+  const consultantIds = consultants.map(c => c.consultant_id);
+  const avgRatings = consultantIds.length > 0
+    ? await (async () => {
+        const results = await prisma.$queryRaw<Array<{ consultant_id: number; avg_rating: number }>>`
+          SELECT f.consultant_id, AVG(fr.feedback_rating_score)::float AS avg_rating
+          FROM feedback_rating fr
+          JOIN feedback f ON f.feedback_id = fr.feedback_id
+          WHERE f.consultant_id = ANY(${consultantIds})
+          GROUP BY f.consultant_id
+        `;
+        return new Map(results.map(r => [r.consultant_id, Math.round(r.avg_rating * 10) / 10]));
+      })()
+    : new Map<number, number>();
+
   const formatted = consultants
     .map((c) => {
       const nameRaw = c.profile
@@ -173,11 +180,8 @@ export async function handleListConsultants(
         }
         : null;
 
-      // ✅ Compute avg rating from all feedback ratings
-      const allScores = c.feedbacks.flatMap((f) => f.ratings.map((r) => r.feedback_rating_score));
-      const avgRating = allScores.length > 0
-        ? Math.round((allScores.reduce((a, b) => a + b, 0) / allScores.length) * 10) / 10
-        : null;
+      // ✅ Avg rating from batch aggregate (no N+1)
+      const avgRating = avgRatings.get(c.consultant_id) ?? null;
 
       // ✅ Parse busy slots
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -196,7 +200,7 @@ export async function handleListConsultants(
         accountRole: c.account?.account_role ?? null,
         activeBookings: c._count.bookings,
         avgRating,
-        feedbackCount: c.feedbacks.length,
+        feedbackCount: c._count.feedbacks,
         specializations: c.specializations.map(s => s.consultant_specialization_topic),
         busySlots,
       };
