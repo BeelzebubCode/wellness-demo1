@@ -2,12 +2,40 @@
 "use client";
 
 import React, { useState } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { AlertTriangle } from "lucide-react";
 import { DataStoryCard } from "../widgets/story/DataStoryCard";
 import { StoryChipGroup, StoryFilterStack } from "../widgets/story/StoryFilterChips";
 import { DatePresetBar, UnitToggle } from "./StoryUI";
 import { useStoryData, Tip, PIE_COLORS, INCOME_LABEL, type DatePreset, type DateRange, type UnitMode } from "./story-utils";
+
+// ─── Colors for each problem category (14 distinct colors) ───────────────────
+const BAR_COLORS = [
+    "#ef4444", // 1  red
+    "#f59e0b", // 2  amber
+    "#f97316", // 3  orange
+    "#10b981", // 4  emerald
+    "#06b6d4", // 5  cyan
+    "#3b82f6", // 6  blue
+    "#8b5cf6", // 7  violet
+    "#ec4899", // 8  pink
+    "#14b8a6", // 9  teal
+    "#eab308", // 10 yellow
+    "#d946ef", // 11 fuchsia
+    "#6366f1", // 12 indigo
+    "#64748b", // 13 slate
+    "#a3a3a3", // 14 neutral
+];
+
+// ─── Parental status label mapping ───────────────────────────────────────────
+const PARENTAL_LABEL: Record<string, string> = {
+    TOGETHER: "อยู่ด้วยกัน",
+    DIVORCED: "หย่าร้าง",
+    FATHER_DECEASED: "บิดาเสียชีวิต",
+    MOTHER_DECEASED: "มารดาเสียชีวิต",
+    BOTH_DECEASED: "เสียชีวิตทั้งคู่",
+    SINGLE_PARENT: "เลี้ยงเดี่ยว",
+};
 
 interface Props { apiPath: string; title: string; delay?: number; }
 
@@ -28,11 +56,18 @@ export default function GenericProblemStory({ apiPath, title, delay = 0 }: Props
     const categories = data?.categories ?? [];
     const totalProblems = categories.reduce((s: number, c: any) => s + c.count, 0);
 
-    const barData = categories.slice(0, 8).map((c: any) => ({
-        name: c.label?.length > 15 ? c.label.substring(0, 15) + "..." : c.label,
-        fullName: c.label,
-        count: c.count,
-    }));
+    // ✅ Show ALL categories (no slice), sorted by count desc
+    const barData = [...categories]
+        .sort((a: any, b: any) => b.count - a.count)
+        .map((c: any) => ({
+            name: c.label,
+            fullName: c.label,
+            count: c.count,
+            pct: totalProblems > 0 ? parseFloat((c.count / totalProblems * 100).toFixed(1)) : 0,
+        }));
+
+    // Dynamic height: 36px per bar, min 200px
+    const chartHeight = Math.max(200, barData.length * 36 + 40);
 
     return (
         <DataStoryCard
@@ -41,7 +76,7 @@ export default function GenericProblemStory({ apiPath, title, delay = 0 }: Props
             title={title}
             narration={
                 data
-                    ? `พบปัญหา ${totalProblems} กรณี จาก ${categories.length} ประเภท — ปัญหาอันดับ 1: ${categories[0]?.label ?? "ไม่มีข้อมูล"}`
+                    ? `พบปัญหา ${totalProblems.toLocaleString()} กรณี จาก ${categories.length} ประเภท — ปัญหาอันดับ 1: ${categories[0]?.label ?? "ไม่มีข้อมูล"}`
                     : "กำลังโหลด..."
             }
             kpis={data ? [
@@ -59,6 +94,8 @@ export default function GenericProblemStory({ apiPath, title, delay = 0 }: Props
                         { value: "BETWEEN_100K_200K", label: "100-200K" },
                         { value: "BETWEEN_200K_300K", label: "200-300K" },
                         { value: "BETWEEN_300K_500K", label: "300-500K" },
+                        { value: "BETWEEN_500K_800K", label: "500-800K" },
+                        { value: "BETWEEN_800K_1M", label: "800K-1M" },
                         { value: "OVER_1M", label: "> 1M" },
                     ]} selected={income} onChange={setIncome} />
                     <StoryChipGroup label="กรุ๊ปเลือด" options={[
@@ -67,9 +104,11 @@ export default function GenericProblemStory({ apiPath, title, delay = 0 }: Props
                     ]} selected={blood} onChange={setBlood} />
                     <StoryChipGroup label="สถานะบิดามารดา" options={[
                         { value: "TOGETHER", label: "อยู่ด้วยกัน" },
-                        { value: "SEPARATED", label: "แยกกัน" },
                         { value: "DIVORCED", label: "หย่าร้าง" },
-                        { value: "DECEASED", label: "เสียชีวิต" },
+                        { value: "SINGLE_PARENT", label: "เลี้ยงเดี่ยว" },
+                        { value: "FATHER_DECEASED", label: "บิดาเสียชีวิต" },
+                        { value: "MOTHER_DECEASED", label: "มารดาเสียชีวิต" },
+                        { value: "BOTH_DECEASED", label: "เสียชีวิตทั้งคู่" },
                     ]} selected={parental} onChange={setParental} />
                 </StoryFilterStack>
             }
@@ -82,15 +121,19 @@ export default function GenericProblemStory({ apiPath, title, delay = 0 }: Props
                     {barData.length > 0 && (
                         <div>
                             <p className="text-[10px] text-slate-400 font-bold mb-2 uppercase tracking-wider">ประเภทปัญหา</p>
-                            <ResponsiveContainer width="100%" height={220}>
-                                <BarChart data={barData} layout="vertical" margin={{ left: 10, right: 20 }}>
+                            <ResponsiveContainer width="100%" height={chartHeight}>
+                                <BarChart data={barData} layout="vertical" margin={{ left: 10, right: 30 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                                    <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }} />
-                                    <YAxis type="category" dataKey="name" width={120}
-                                        tick={{ fontSize: 10, fill: "#64748b" }} />
-                                    <Tooltip content={<Tip />} />
-                                    <Bar dataKey="count" name="จำนวน" radius={[0, 6, 6, 0]}
-                                        fill="#f59e0b" barSize={18} />
+                                    <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }}
+                                        tickFormatter={(v: number) => unit === "percent" ? `${v}%` : v.toLocaleString()} />
+                                    <YAxis type="category" dataKey="name" width={140}
+                                        tick={{ fontSize: 11, fill: "#334155", fontWeight: 500 }} />
+                                    <Tooltip content={<ProblemTip unit={unit} />} />
+                                    <Bar dataKey={unit === "percent" ? "pct" : "count"} name="จำนวน" radius={[0, 6, 6, 0]} barSize={20}>
+                                        {barData.map((_: any, idx: number) => (
+                                            <Cell key={idx} fill={BAR_COLORS[idx % BAR_COLORS.length]} />
+                                        ))}
+                                    </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -108,7 +151,7 @@ export default function GenericProblemStory({ apiPath, title, delay = 0 }: Props
                                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
                                             <span className="text-[11px] text-slate-600 flex-1">{INCOME_LABEL[d.label] ?? d.label}</span>
                                             <span className="text-[11px] font-bold text-slate-700 tabular-nums">
-                                                {unit === "count" ? d.count : `${pct}%`}
+                                                {unit === "count" ? d.count.toLocaleString() : `${pct}%`}
                                             </span>
                                         </div>
                                     );
@@ -123,9 +166,9 @@ export default function GenericProblemStory({ apiPath, title, delay = 0 }: Props
                                     return (
                                         <div key={i} className="flex items-center gap-2 mb-1.5">
                                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
-                                            <span className="text-[11px] text-slate-600 flex-1">{d.label}</span>
+                                            <span className="text-[11px] text-slate-600 flex-1">{PARENTAL_LABEL[d.label] ?? d.label}</span>
                                             <span className="text-[11px] font-bold text-slate-700 tabular-nums">
-                                                {unit === "count" ? d.count : `${pct}%`}
+                                                {unit === "count" ? d.count.toLocaleString() : `${pct}%`}
                                             </span>
                                         </div>
                                     );
@@ -136,5 +179,28 @@ export default function GenericProblemStory({ apiPath, title, delay = 0 }: Props
                 </div>
             )}
         </DataStoryCard>
+    );
+}
+
+// ─── Enhanced Tooltip for problem bars ────────────────────────────────────────
+function ProblemTip({ active, payload, label, unit }: any) {
+    if (!active || !payload?.length) return null;
+    const d = payload[0]?.payload;
+    return (
+        <div className="bg-slate-900/95 backdrop-blur rounded-xl shadow-2xl px-4 py-2.5 text-xs border border-white/10">
+            <p className="font-bold text-white/90 mb-1">{d?.fullName ?? label}</p>
+            <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0]?.color }} />
+                <span className="text-white/50">จำนวน:</span>
+                <span className="font-bold text-white">{d?.count?.toLocaleString()}</span>
+            </div>
+            {d?.pct != null && (
+                <div className="flex items-center gap-2 mt-0.5">
+                    <div className="w-2 h-2 rounded-full opacity-0" />
+                    <span className="text-white/50">สัดส่วน:</span>
+                    <span className="font-bold text-white">{d.pct}%</span>
+                </div>
+            )}
+        </div>
     );
 }
