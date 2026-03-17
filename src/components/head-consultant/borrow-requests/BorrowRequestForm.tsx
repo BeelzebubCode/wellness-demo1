@@ -217,7 +217,7 @@ export function BorrowRequestForm({
           </div>
           <div>
             <h2 className="text-lg font-bold tracking-tight">
-              {isEdit ? "แก้ไขคำขอยืมผู้ให้คำปรึกษา" : "สร้างคำขอยืมผู้ให้คำปรึกษา"}
+              {isEdit ? "แก้ไขคำขอยืมนักจิตบำบัด" : "สร้างคำขอยืมนักจิตบำบัด"}
             </h2>
             <p className="text-sm text-white/75 mt-0.5">
               เลือกประเภทปัญหา + ระบุเหตุผล และช่วงเวลาที่ต้องการ
