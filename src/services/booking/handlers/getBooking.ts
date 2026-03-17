@@ -3,9 +3,9 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import type { AccountContext } from "@/lib/auth/context";
 import { requireUniversity } from "@/lib/auth/guard";
-import { AccountRole } from "@prisma/client";
 
-function isAdminRole(role: AccountRole) {
+
+function isAdminRole(role: string) {
   return (
     role === "HEAD_CONSULTANT" || role === "SUPER_ADMIN" || role === "RECTOR"
   );
@@ -73,7 +73,7 @@ export async function handleGetBooking(
   }
 
   // ✅ role-based view guard
-  const role = ctx.role as AccountRole;
+  const role = ctx.role as string;
 
   if (role === "STUDENT") {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

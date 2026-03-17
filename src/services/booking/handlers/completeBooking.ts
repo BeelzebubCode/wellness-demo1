@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import type { AccountContext } from "@/lib/auth/context";
 import { requireUniversity } from "@/lib/auth/guard";
-import { BookingStatus, AccountRole } from "@prisma/client";
+import { BookingStatus } from "@prisma/client";
 
 type CompleteBody = {
   consultantNote?: string;
@@ -40,7 +40,7 @@ export async function handleCompleteBooking(
   const denied = requireUniversity(ctx, activeUniversityId);
   if (denied) return denied;
 
-  const role = ctx.role as AccountRole;
+  const role = ctx.role as string;
   if (role !== "CONSULTANT") {
     return NextResponse.json({ error: "Permission denied" }, { status: 403 });
   }

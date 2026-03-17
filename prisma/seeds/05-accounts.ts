@@ -1,5 +1,5 @@
 // prisma/seeds/05-accounts.ts
-import { PrismaClient, AccountRole } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { randomInt, randomItem } from "../seed-utils/rand";
 
 export async function seedAccounts(
@@ -28,12 +28,12 @@ export async function seedAccounts(
       create: {
         account_username: username,
         account_password: passwordHash,
-        account_role: AccountRole.HEAD_CONSULTANT,
+        account_role: "HEAD_CONSULTANT",
         account_home_university_id: uni.university_id,
       },
       update: {
         account_password: passwordHash,
-        account_role: AccountRole.HEAD_CONSULTANT,
+        account_role: "HEAD_CONSULTANT",
         account_home_university_id: uni.university_id,
       },
     });
@@ -127,12 +127,12 @@ export async function seedAccounts(
       create: {
         account_username: username,
         account_password: passwordHash,
-        account_role: AccountRole.RECTOR,
+        account_role: "RECTOR",
         account_home_university_id: uni.university_id,
       },
       update: {
         account_password: passwordHash,
-        account_role: AccountRole.RECTOR,
+        account_role: "RECTOR",
         account_home_university_id: uni.university_id,
       },
     });
@@ -147,12 +147,12 @@ export async function seedAccounts(
     create: {
       account_username: "ministry_admin",
       account_password: passwordHash,
-      account_role: AccountRole.MINISTRY,
+      account_role: "MINISTRY",
       account_home_university_id: null,
     },
     update: {
       account_password: passwordHash,
-      account_role: AccountRole.MINISTRY,
+      account_role: "MINISTRY",
       account_home_university_id: null,
     },
   });
@@ -164,12 +164,12 @@ export async function seedAccounts(
     create: {
       account_username: "superAdmin",
       account_password: passwordHash,
-      account_role: AccountRole.SUPER_ADMIN,
+      account_role: "SUPER_ADMIN",
       account_home_university_id: null,
     },
     update: {
       account_password: passwordHash,
-      account_role: AccountRole.SUPER_ADMIN,
+      account_role: "SUPER_ADMIN",
       account_home_university_id: null,
     },
   });

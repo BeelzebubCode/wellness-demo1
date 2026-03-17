@@ -81,10 +81,10 @@ export async function GET(req: NextRequest) {
             parentalStatus: parseCSV("parental_status"),
         };
 
-        const data = await HeadDepartmentService.getDepartmentStats(
+        const data = await HeadDepartmentService.getDepartmentStoryStats(
             dept.department_id,
-            dept.faculty_id,
             dept.university_id,
+            dept.faculty_id,
             filters,
             story,
         );

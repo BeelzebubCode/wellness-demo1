@@ -3,7 +3,6 @@ import {
   PrismaClient,
   BookingStatus,
   TimeSlotStatus,
-  PointTxnType,
 } from "@prisma/client";
 
 import {

@@ -2,10 +2,10 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import type { AccountContext } from "@/lib/auth/context";
-import { AccountRole, type BookingStatus, Prisma } from "@prisma/client";
+import { type BookingStatus, Prisma } from "@prisma/client";
 import { requireUniversity } from "@/lib/auth/guard";
 
-function isStaff(role: AccountRole) {
+function isStaff(role: string) {
   return role === "HEAD_CONSULTANT" || role === "SUPER_ADMIN" || role === "RECTOR";
 }
 
@@ -81,7 +81,7 @@ export async function handleListBookings(
 ) {
   const startTime = Date.now();
 
-  const role = ctx.role as AccountRole;
+  const role = ctx.role as string;
   const activeUniversityId = ctx.activeUniversityId;
 
   if (typeof activeUniversityId !== "number") {

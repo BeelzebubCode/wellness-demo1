@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import type { AccountContext } from "@/lib/auth/context";
 import { requireUniversity } from "@/lib/auth/guard";
-import { AccountRole, BookingStatus, BorrowRequestStatus, Prisma } from "@prisma/client";
+import { BookingStatus, BorrowRequestStatus, Prisma } from "@prisma/client";
 
 
-function isStaff(role: AccountRole) {
+function isStaff(role: string) {
   return role === "HEAD_CONSULTANT" || role === "RECTOR" || role === "SUPER_ADMIN";
 }
 
@@ -13,7 +13,7 @@ export async function handleListConsultants(
   ctx: AccountContext & { activeUniversityId?: number },
   input?: { organizationId?: number | null; includeBorrowed?: boolean; date?: string },
 ) {
-  const role = ctx.role as AccountRole;
+  const role = ctx.role as string;
   if (!isStaff(role)) {
     return NextResponse.json({ error: "Permission denied" }, { status: 403 });
   }

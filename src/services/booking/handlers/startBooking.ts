@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import type { AccountContext } from "@/lib/auth/context";
 import { requireUniversity } from "@/lib/auth/guard";
-import { BookingStatus, AccountRole } from "@prisma/client";
+import { BookingStatus } from "@prisma/client";
 
 function upper(v: unknown) {
   return String(v ?? "").toUpperCase();
@@ -27,7 +27,7 @@ export async function handleStartBooking(
   const denied = requireUniversity(ctx, activeUniversityId);
   if (denied) return denied;
 
-  const role = ctx.role as AccountRole;
+  const role = ctx.role as string;
 
   // ✅ รับเคสควรเป็น CONSULTANT เท่านั้น (ชัด ๆ)
   if (role !== "CONSULTANT") {

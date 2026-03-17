@@ -1,5 +1,4 @@
 // src/features/auth/types.ts
-import type { AccountRole } from "@prisma/client";
 
 export interface LoginCredentials {
   username: string;
@@ -11,7 +10,7 @@ export interface AuthUser {
   id: number;
   username: string;
   name: string;
-  role: string | AccountRole; // Loose type for forward compat
+  role: string;
   consultantId?: number | null;
   studentId?: number | null;
 

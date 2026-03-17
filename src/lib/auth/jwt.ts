@@ -1,7 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import type { NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
-import type { AccountRole } from "@prisma/client";
+// AccountRole is now a string (VARCHAR) in the database, not an enum
 
 // ✅ Re-export token logic
 export * from "./token";

@@ -1,5 +1,5 @@
 // prisma/seeds/04-advisor.ts
-import { PrismaClient, AccountRole } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { firstNames, lastNames } from "../seed-data/people";
 
 // Helper functions (same as before)
@@ -79,7 +79,7 @@ export async function seedAdvisors(
           accountsToCreate.push({
             account_username: username,
             account_password: passwordHash,
-            account_role: AccountRole.ADVISOR,
+            account_role: "ADVISOR",
             account_home_university_id: uni.university_id,
           });
 

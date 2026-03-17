@@ -9,7 +9,7 @@
  *  NO_SHOW ×1:  count >= 1 → lock +7 days, deduct 30 points
  *  NO_SHOW ×2+: count >= 2 → lock +14 days, deduct 30 points
  */
-import { Prisma, DisciplineEventType } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 type Tx = Omit<
   Prisma.TransactionClient,
@@ -103,7 +103,7 @@ async function writeDisciplineLog(
     universityId: number;
     studentId: number;
     bookingId?: number;
-    eventType: DisciplineEventType;
+    eventType: string;
     deltaScore?: number;
     deltaPoints?: number;
     lockUntil?: Date | null;

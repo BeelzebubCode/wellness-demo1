@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import type { AccountContext } from "@/lib/auth/context";
 import { requireUniversity } from "@/lib/auth/guard";
-import { AccountRole, BookingStatus } from "@prisma/client";
+import { BookingStatus } from "@prisma/client";
 import { OnlineChannelCode } from "@/lib/constants/booking-service";
 
 type Body = { url?: string; note?: string };
@@ -46,7 +46,7 @@ export async function handleSetOnlineChannel(
   const denied = requireUniversity(ctx as any, activeUniversityId);
   if (denied) return denied;
 
-  if ((ctx.role as AccountRole) !== "CONSULTANT" && (ctx.role as string) !== "HEAD_CONSULTANT") {
+  if (ctx.role !== "CONSULTANT" && ctx.role !== "HEAD_CONSULTANT") {
     return NextResponse.json({ error: "Permission denied" }, { status: 403 });
   }
 

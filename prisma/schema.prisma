@@ -87,12 +87,12 @@ model University {
 }
 
 model AccountUniversityPermission {
-  account_university_permission_id Int                  @id @default(autoincrement())
+  account_university_permission_id Int      @id @default(autoincrement())
   account_id                       Int
   university_id                    Int
-  access_role                      UniversityAccessRole @default(STUDENT)
+  access_role                      String   @default("STUDENT") @db.VarChar(30)
   access_granted_by_account_id     Int?
-  access_granted_at                DateTime             @default(now())
+  access_granted_at                DateTime @default(now())
   access_revoked_at                DateTime?
 
   account          Account    @relation(fields: [account_id], references: [account_id])
@@ -111,10 +111,10 @@ model AccountUniversityPermission {
 // ==========================================
 
 model Account {
-  account_id                 Int         @id @default(autoincrement())
-  account_username           String      @unique @db.VarChar(50)
-  account_password           String      @db.VarChar(255)
-  account_role               AccountRole
+  account_id                 Int    @id @default(autoincrement())
+  account_username           String @unique @db.VarChar(50)
+  account_password           String @db.VarChar(255)
+  account_role               String @db.VarChar(30)
   account_home_university_id Int?
   account_line_id            String?     @unique @db.VarChar(100)
   account_created_at         DateTime    @default(now())
@@ -885,6 +885,67 @@ model PointRule {
   @@map("point_rule")
 }
 
+// ==========================================
+// 📋 REFERENCE TABLES (แทน Enum ที่เป็น Category)
+// ==========================================
+
+model AccountRoleCategory {
+  account_role_id Int     @id @default(autoincrement())
+  code            String  @unique @db.VarChar(30)
+  name_th         String  @db.VarChar(100)
+  name_en         String? @db.VarChar(100)
+  description     String? @db.Text
+  sort_order      Int     @default(0)
+  is_active       Boolean @default(true)
+
+  @@map("account_role_category")
+}
+
+model PointTxnTypeCategory {
+  point_txn_type_id Int     @id @default(autoincrement())
+  code              String  @unique @db.VarChar(30)
+  name_th           String  @db.VarChar(100)
+  name_en           String? @db.VarChar(100)
+  sort_order        Int     @default(0)
+  is_active         Boolean @default(true)
+
+  @@map("point_txn_type_category")
+}
+
+model DisciplineEventTypeCategory {
+  discipline_event_type_id Int     @id @default(autoincrement())
+  code                     String  @unique @db.VarChar(30)
+  name_th                  String  @db.VarChar(100)
+  name_en                  String? @db.VarChar(100)
+  description              String? @db.Text
+  sort_order               Int     @default(0)
+  is_active                Boolean @default(true)
+
+  @@map("discipline_event_type_category")
+}
+
+model AiFeedbackTypeCategory {
+  ai_feedback_type_id Int     @id @default(autoincrement())
+  code                String  @unique @db.VarChar(30)
+  name_th             String  @db.VarChar(100)
+  name_en             String? @db.VarChar(100)
+  sort_order          Int     @default(0)
+  is_active           Boolean @default(true)
+
+  @@map("ai_feedback_type_category")
+}
+
+model KbContentTypeCategory {
+  kb_content_type_id Int     @id @default(autoincrement())
+  code               String  @unique @db.VarChar(30)
+  name_th            String  @db.VarChar(100)
+  name_en            String? @db.VarChar(100)
+  sort_order         Int     @default(0)
+  is_active          Boolean @default(true)
+
+  @@map("kb_content_type_category")
+}
+
 model StudentPointWallet {
   student_id            Int
   university_id         Int
@@ -904,7 +965,7 @@ model StudentPointTransaction {
   booking_university_id Int?
   booking_id            Int?
 
-  student_point_txn_type   PointTxnType
+  student_point_txn_type   String       @db.VarChar(30)
   student_point_amount     Int
   student_point_note       String?      @db.Text
   student_point_created_at DateTime     @default(now())
@@ -1023,7 +1084,7 @@ model BookingPunishmentLog {
   university_id                    Int
   student_id                       Int
   booking_id                       Int?
-  booking_discipline_event_type    DisciplineEventType
+  booking_discipline_event_type    String              @db.VarChar(30)
   booking_discipline_delta_score   Int?
   booking_discipline_delta_points  Int?
   booking_discipline_lock_until    DateTime?           @db.Timestamptz(3)
@@ -1090,7 +1151,7 @@ model AiKbDocumentVersion {
   ai_kb_document_id         Int
 
   ai_kb_version_no     Int
-  ai_kb_content_type   KbContentType
+  ai_kb_content_type   String        @db.VarChar(30)
   ai_kb_version_status KbVersionStatus @default(DRAFT)
 
   /// แนะนำเก็บเป็น path เพื่ออัปโหลด/แก้ไขง่าย
@@ -1154,7 +1215,7 @@ model AiFeedbackEvent {
   account_id    Int?
   ai_user_role  String? @db.VarChar(30)
 
-  ai_feedback_type      AiFeedbackType
+  ai_feedback_type      String         @db.VarChar(30)
   ai_user_question_text String         @db.Text
 
   ai_assistant_reply_excerpt String?          @db.VarChar(500)
@@ -1314,28 +1375,7 @@ model ConsultantBorrowPolicy {
 // ==========================================
 // ENUMS
 // ==========================================
-enum AccountRole {
-  STUDENT
-  CONSULTANT
-  HEAD_CONSULTANT
-  ADVISOR
-  DEAN
-  HEAD_DEPARTMENT // [NEW] Department Head role
-  RECTOR
-  SUPER_ADMIN
-  MINISTRY
-}
-
-enum UniversityAccessRole {
-  STUDENT
-  CONSULTANT
-  HEAD_CONSULTANT
-  ADVISOR
-  DEAN
-  HEAD_DEPARTMENT // [NEW] Department Head role
-  RECTOR
-  ADMIN
-}
+// AccountRole & UniversityAccessRole — moved to account_role_category table
 
 // (RegionCode, StudentGender, StudentAddressType — ย้ายไปเป็น reference table แล้ว)
 
@@ -1354,17 +1394,9 @@ enum BookingStatus {
   CANCELLED
 }
 
-enum PointTxnType {
-  EARN
-  REDEEM
-  ADJUST
-  EXPIRE
-}
+// PointTxnType — moved to point_txn_type_category table
 
-enum KbContentType {
-  MARKDOWN
-  JSON
-}
+// KbContentType — moved to kb_content_type_category table
 
 enum KbVersionStatus {
   DRAFT
@@ -1378,13 +1410,7 @@ enum KbIndexStatus {
   FAILED
 }
 
-enum AiFeedbackType {
-  CANT_ANSWER
-  LOW_CONFIDENCE
-  POLICY_BLOCK
-  PROVIDER_ERROR
-  USER_NEGATIVE
-}
+// AiFeedbackType — moved to ai_feedback_type_category table
 
 enum AiFeedbackStatus {
   OPEN
@@ -1468,12 +1494,7 @@ enum ExceptionStatus {
   REJECTED
 }
 
-enum DisciplineEventType {
-  LATE_CANCEL_PENALTY
-  NO_SHOW_PENALTY
-  EXCEPTION_APPROVED_ROLLBACK
-  MANUAL_UNLOCK
-}
+// DisciplineEventType — moved to discipline_event_type_category table
 
 // ==========================================
 // 📄 GUIDEBOOK DOCUMENT

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { AccountRole } from "@prisma/client";
+
 import { getStudentDetail } from "../actions";
 import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
 import { FiPhone, FiMail, FiMapPin } from "react-icons/fi";
@@ -34,7 +34,7 @@ interface Props {
 export function StudentDetailView({ studentId }: Props) {
   /* ================= Auth ================= */
   const { user } = useRoleAuth({
-    allowedRoles: ["ADVISOR" as AccountRole],
+    allowedRoles: ["ADVISOR"],
     loginToastKey: "advisor-student-detail",
   });
 

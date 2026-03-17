@@ -1,10 +1,8 @@
 import { SignJWT, jwtVerify } from "jose";
 import type { NextRequest } from "next/server";
-import type { AccountRole } from "@prisma/client";
-
-// ✅ Re-declare or import this depending on preference.
-// Since we want to avoid prisma runtime in edge, type import is fine.
-export type Role = AccountRole;
+// AccountRole is now a string (VARCHAR) — no longer a Prisma enum
+// Keep Role as string type for backward compat
+export type Role = string;
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "change-this-secret"

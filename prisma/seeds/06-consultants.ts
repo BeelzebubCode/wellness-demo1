@@ -1,5 +1,5 @@
 // prisma/seeds/06-consultants.ts
-import { PrismaClient, AccountRole } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { firstNames, lastNames, nicknames } from "../seed-data/people";
 import { languagePool, specializationPool } from "../seed-data/consultant-pools";
 
@@ -96,12 +96,12 @@ export async function seedConsultants(
         create: {
           account_username: username,
           account_password: passwordHash,
-          account_role: AccountRole.CONSULTANT,
+          account_role: "CONSULTANT",
           account_home_university_id: uni.university_id,
         },
         update: {
           account_password: passwordHash,
-          account_role: AccountRole.CONSULTANT,
+          account_role: "CONSULTANT",
           account_home_university_id: uni.university_id,
         },
       });

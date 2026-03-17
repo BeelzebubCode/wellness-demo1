@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { getAccountFromRequest } from "@/lib/auth/context";
-import { AiFeedbackType, AiFeedbackStatus } from "@prisma/client";
+import { AiFeedbackStatus } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
     try {
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
         const feedback = await prisma.aiFeedbackEvent.create({
             data: {
-                ai_feedback_type: AiFeedbackType.USER_NEGATIVE,
+                ai_feedback_type: "USER_NEGATIVE",
                 ai_user_question_text: String(question).slice(0, 2000),
                 ai_assistant_reply_excerpt: answer ? String(answer).slice(0, 500) : null,
                 ai_feedback_status: AiFeedbackStatus.OPEN,

@@ -4,7 +4,6 @@
 
 import {
   PrismaClient,
-  AccountRole,
 } from "@prisma/client";
 
 import { randomBool, randomInt, randomItem } from "../seed-utils/rand";
@@ -241,7 +240,7 @@ export async function seedStudents(
       accountsData.push({
         account_username: username,
         account_password: passwordHash,
-        account_role: AccountRole.STUDENT,
+        account_role: "STUDENT",
         account_line_id: lineId,
         account_home_university_id: uni.university_id,
       });

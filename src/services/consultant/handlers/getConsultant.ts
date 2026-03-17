@@ -4,9 +4,9 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import type { AccountContext } from "@/lib/auth/context";
 import { requireUniversity } from "@/lib/auth/guard";
-import { AccountRole, BookingStatus } from "@prisma/client";
+import { BookingStatus } from "@prisma/client";
 
-function isStaff(role: AccountRole) {
+function isStaff(role: string) {
   return role === "HEAD_CONSULTANT" || role === "RECTOR" || role === "SUPER_ADMIN";
 }
 
@@ -14,7 +14,7 @@ export async function handleGetConsultant(
   ctx: AccountContext & { activeUniversityId?: number },
   consultantIdRaw: string,
 ) {
-  const role = ctx.role as AccountRole;
+  const role = ctx.role as string;
   if (!isStaff(role)) {
     return NextResponse.json({ error: "Permission denied" }, { status: 403 });
   }
