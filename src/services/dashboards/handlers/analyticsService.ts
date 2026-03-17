@@ -38,8 +38,15 @@ export async function buildScopeClause(
     universityId: number,
 ): Promise<ScopeInfo> {
     if (role === "MINISTRY" || role === "SUPER_ADMIN") {
+        // When a specific university is selected, scope to it for performance
+        if (universityId && universityId > 0) {
+            return {
+                scopeSQL: Prisma.sql`AND b.university_id = ${universityId}`,
+                universityId,
+            };
+        }
         return {
-            scopeSQL: Prisma.sql`AND 1=1`, // Open scope for national filters
+            scopeSQL: Prisma.sql`AND 1=1`, // Open scope for national-level queries
             universityId,
         };
     }

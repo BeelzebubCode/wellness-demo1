@@ -56,22 +56,15 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
               select: {
                 university_code: true,
                 university_name_th: true,
-                university_name_en: true,
                 university_latitude: true,
                 university_longitude: true,
-                _count: {
-                  select: {
-                    students: true,
-                    connectionsFrom: true, // ✅ Connection count
-                  },
-                },
               },
             },
           },
           orderBy: {
             connection_rank: "asc",
           },
-          take: 50, // ✅ Fetch more for ranking
+          take: 10,
         },
       },
     });
@@ -83,35 +76,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Parallel Fetch for Statistics
-    const [genderStats, problemStats, facultyStats, problemCategories, faculties] = await Promise.all([
-      // 1. Gender Distribution
-      prisma.studentProfile.groupBy({
-        by: ["gender_category_id"],
-        where: { university_id: university.university_id },
-        _count: { student_id: true },
-      }),
-      // 2. Problem Category Distribution (from Bookings)
-      prisma.booking.groupBy({
-        by: ["problem_category_id"],
-        where: { university_id: university.university_id },
-        _count: { booking_id: true },
-      }),
-      // 3. Faculty Distribution
-      prisma.studentAcademic.groupBy({
-        by: ["faculty_id"],
-        where: { university_id: university.university_id },
-        _count: { student_id: true },
-      }),
-      // Fetch details for mapping names
-      prisma.problemCategory.findMany(),
-      prisma.faculty.findMany({
-        where: { university_id: university.university_id },
-        select: { faculty_id: true, faculty_name_th: true },
-      }),
-    ]);
-
-    // Transform data
+    // Transform data (stats removed — analytics API handles this)
     const result = {
       id: university.university_code,
       code: university.university_code,
@@ -121,7 +86,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       lng: Number(university.university_longitude),
       region: university.province.region.region_name_en || "Central",
       regionCode: university.province.region.region_code,
-      regionNameTh: university.province.region.region_name_th, // ✅ Added Thai Region Name
+      regionNameTh: university.province.region.region_name_th,
       province: university.province.province_name_th,
       students: university._count.students,
       type: university.universityType?.code || "PUBLIC",
@@ -133,30 +98,17 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         rank: conn.connection_rank,
         lat: Number(conn.targetUniversity.university_latitude),
         lng: Number(conn.targetUniversity.university_longitude),
-        students: conn.targetUniversity._count.students, 
-        connectionCount: conn.targetUniversity._count.connectionsFrom,
       })),
-      // ✅ Added Stats for Charts
-      stats: {
-        gender: genderStats.map((s) => ({
-          label: String((s as any).gender_category_id || "ไม่ระบุ"),
-          count: s._count.student_id,
-        })),
-        problems: problemStats.map((s) => ({
-          label: problemCategories.find(c => c.problem_category_id === s.problem_category_id)?.problem_category_name_th || "อื่นๆ",
-          count: s._count.booking_id,
-        })).sort((a,b) => b.count - a.count),
-        faculties: facultyStats.map((s) => ({
-          label: faculties.find(f => f.faculty_id === s.faculty_id)?.faculty_name_th || "ไม่ระบุคณะ",
-          count: s._count.student_id,
-        })).sort((a,b) => b.count - a.count).slice(0, 10), // Limit to top 10
-      }
     };
 
-    return NextResponse.json({
-      success: true,
-      university: result,
-    });
+    return NextResponse.json(
+      { success: true, university: result },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error fetching university details:", error);
     return NextResponse.json(

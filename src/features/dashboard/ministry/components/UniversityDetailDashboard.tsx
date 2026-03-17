@@ -12,7 +12,7 @@ import { AnimatePresence, motion } from "framer-motion";
 
 // Analytics & Sub-components
 import { useAnalytics } from "../../widgets/hooks/useAnalytics";
-import { DashboardFilterBar } from "../../widgets/filters/DashboardFilterBar";
+import { FacultyDateRangePicker } from "../../dean/components/FacultyDateRangePicker";
 import { SummaryKPICards } from "../../widgets/cards/SummaryKPICards";
 import { CancellationSummary } from "../../widgets/charts/CancellationSummary";
 
@@ -52,8 +52,22 @@ export function UniversityDetailDashboard({ universityCode }: UniversityDetailPr
     const [activeTab, setActiveTab] = useState("dashboard");
     const [showRankings, setShowRankings] = useState(false);
 
-    const { data: analyticsData, loading: analyticsLoading, params, setParams } = useAnalytics({
-        university_code: universityCode
+    const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>(() => {
+        const to = new Date();
+        to.setHours(23, 59, 59, 999);
+        const from = new Date(to);
+        from.setDate(from.getDate() - 30);
+        from.setHours(0, 0, 0, 0);
+        return { from, to };
+    });
+
+    // Convert dateRange to string params for useAnalytics
+    const toYMD = (d?: Date) => d ? d.toISOString().split('T')[0] : undefined;
+
+    const { data: analyticsData, loading: analyticsLoading } = useAnalytics({
+        university_code: universityCode,
+        date_start: toYMD(dateRange.from),
+        date_end: toYMD(dateRange.to),
     });
 
     useEffect(() => {
@@ -205,9 +219,19 @@ export function UniversityDetailDashboard({ universityCode }: UniversityDetailPr
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {activeTab === "dashboard" && (
                     <div className="space-y-6">
-                        {/* Filters */}
-                        <section className="relative z-40">
-                            <DashboardFilterBar role="ministry" params={params} onChange={setParams} />
+                        {/* Date Range Filter (Dean-style) */}
+                        <section className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-end justify-between gap-4">
+                            <div />
+                            <div className="flex flex-col items-end gap-2">
+                                <FacultyDateRangePicker
+                                    startDate={dateRange.from}
+                                    endDate={dateRange.to}
+                                    onChange={(range: { from?: Date; to?: Date }) => setDateRange({ from: range.from, to: range.to })}
+                                />
+                                <p className="text-[9px] text-slate-400 font-black uppercase text-right">
+                                    อัปเดตล่าสุด: {new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                </p>
+                            </div>
                         </section>
 
                         {/* KPIs */}

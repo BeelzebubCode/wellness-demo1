@@ -18,11 +18,12 @@ model Region {
 }
 
 model Province {
-  province_id      Int     @id @default(autoincrement())
-  region_id        Int
-  province_code    String  @unique @db.VarChar(10)
-  province_name_th String  @db.VarChar(100)
-  province_name_en String? @db.VarChar(100)
+  province_id            Int      @id @default(autoincrement())
+  region_id              Int
+  province_code          String   @unique @db.VarChar(10)
+  province_name_th       String   @db.VarChar(100)
+  province_name_en       String?  @db.VarChar(100)
+  is_special_zone        Boolean  @default(false)
 
   region           Region           @relation(fields: [region_id], references: [region_id])
   studentAddresses StudentAddress[]
