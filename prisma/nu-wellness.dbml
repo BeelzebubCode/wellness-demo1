@@ -1,1613 +1,1262 @@
 // =====================================================
-// NU Wellness — DBML (Enums + Tables + Inline Refs)
-// ✅ Uses Note: to show on dbdiagram.io
-// ✅ Index purpose described inside each Table Note
-// ✅ Inline ref: on every FK column for visible relationship lines
-// ✅ Column order: PK → FK → Other columns
+// NU Wellness — DBML (Auto-generated from schema.prisma)
+// ✅ Synced 2026-03-17
+// ✅ 79 Tables · 13 Enums · 17 Reference Tables
 // =====================================================
 
 
 // =====================
-// ENUMS
+// ENUMS (Workflow States — ยังคงเป็น Enum)
 // =====================
 
-// AccountRole: บทบาทหลักของบัญชี (RBAC ระดับระบบ)
-Enum AccountRole {
-  STUDENT          // นิสิต
-  CONSULTANT       // ที่ปรึกษา
-  HEAD_CONSULTANT  // หัวหน้าที่ปรึกษา
-  ADVISOR          // อาจารย์ที่ปรึกษา
-  DEAN             // คณบดี
-  RECTOR           // อธิการบดี
-  SUPER_ADMIN      // ผู้ดูแลระบบ
-  MINISTRY         // กระทรวง
-}
-
-// UniversityAccessRole: บทบาทต่อ 1 มหาลัย (RBAC ระดับมหาลัย)
-Enum UniversityAccessRole {
-  STUDENT          // นิสิต
-  CONSULTANT       // ที่ปรึกษา
-  HEAD_CONSULTANT  // หัวหน้าที่ปรึกษา
-  ADVISOR          // อาจารย์ที่ปรึกษา
-  DEAN             // คณบดี
-  RECTOR           // อธิการบดี
-  ADMIN            // แอดมินมหาลัย
-}
-
-// RegionCode: ภูมิภาคไทยสำหรับจัดกลุ่มจังหวัด/มหาลัย
-Enum RegionCode {
-  UPPER_NORTH      // ภาคเหนือตอนบน
-  LOWER_NORTH      // ภาคเหนือตอนล่าง
-  UPPER_NORTHEAST  // ภาคอีสานตอนบน
-  LOWER_NORTHEAST  // ภาคอีสานตอนล่าง
-  UPPER_CENTRAL    // ภาคกลางตอนบน
-  LOWER_CENTRAL    // ภาคกลางตอนล่าง
-  EAST             // ภาคตะวันออก
-  UPPER_SOUTH      // ภาคใต้ตอนบน
-  LOWER_SOUTH      // ภาคใต้ตอนล่าง
-}
-
-// StudentGender: เพศนิสิต
-Enum StudentGender {
-  MALE       // ชาย
-  FEMALE     // หญิง
-  LGBTQ_PLUS // LGBTQ+
-}
-
-// StudentAddressType: ประเภทที่อยู่
-Enum StudentAddressType {
-  PERMANENT  // ที่อยู่ถาวร
-  CURRENT    // ที่อยู่ปัจจุบัน
-  DORMITORY  // หอพัก
-}
-
-// TimeSlotStatus: สถานะช่องเวลา
 Enum TimeSlotStatus {
-  OPEN       // เปิดรับจอง
-  CLOSED     // ปิดแล้ว
-  CANCELLED  // ยกเลิก
-  FULL       // เต็ม
+  OPEN
+  CLOSED
+  CANCELLED
+  FULL
 }
 
-// BookingStatus: สถานะ workflow การจอง
 Enum BookingStatus {
-  PENDING_ASSIGNMENT  // รอมอบหมาย
-  ASSIGNED            // มอบหมายแล้ว
-  IN_PROGRESS         // กำลังดำเนินการ
-  COMPLETED           // เสร็จสิ้น
-  CANCELLED           // ยกเลิก
+  PENDING_ASSIGNMENT
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
 }
 
-// PointTxnType: ประเภทธุรกรรมแต้ม
-Enum PointTxnType {
-  EARN    // ได้แต้ม
-  REDEEM  // แลกแต้ม
-  ADJUST  // ปรับยอด
-  EXPIRE  // หมดอายุ
-}
-
-// KbContentType: ประเภทเนื้อหา KB
-Enum KbContentType {
-  MARKDOWN  // Markdown
-  JSON      // JSON
-}
-
-// KbVersionStatus: สถานะเวอร์ชัน KB
 Enum KbVersionStatus {
-  DRAFT      // ฉบับร่าง
-  PUBLISHED  // เผยแพร่แล้ว
-  ARCHIVED   // เก็บถาวร
+  DRAFT
+  PUBLISHED
+  ARCHIVED
 }
 
-// KbIndexStatus: สถานะทำ index/chunk (RAG)
 Enum KbIndexStatus {
-  PENDING  // รอดำเนินการ
-  READY    // พร้อมใช้งาน
-  FAILED   // ล้มเหลว
+  PENDING
+  READY
+  FAILED
 }
 
-// AiFeedbackType: ประเภท feedback ต่อ AI
-Enum AiFeedbackType {
-  CANT_ANSWER     // ตอบไม่ได้
-  LOW_CONFIDENCE  // ความมั่นใจต่ำ
-  POLICY_BLOCK    // ถูกบล็อกโดย policy
-  PROVIDER_ERROR  // error จาก provider
-  USER_NEGATIVE   // ผู้ใช้ให้ feedback เชิงลบ
-}
-
-// AiFeedbackStatus: สถานะเคส feedback AI
 Enum AiFeedbackStatus {
-  OPEN      // เปิดอยู่
-  RESOLVED  // แก้ไขแล้ว
-  IGNORED   // ข้ามไป
+  OPEN
+  RESOLVED
+  IGNORED
 }
 
-// ShiftStatus: สถานะเวร
 Enum ShiftStatus {
-  SCHEDULED  // วางตารางแล้ว
-  ON_DUTY    // เข้าเวรแล้ว
-  OFF_DUTY   // ออกเวรแล้ว
-  CANCELLED  // ยกเลิกเวร
+  SCHEDULED
+  ON_DUTY
+  OFF_DUTY
+  CANCELLED
 }
 
-// ServiceMode: รูปแบบบริการ
-Enum ServiceMode {
-  ONSITE  // พบตัว
-  ONLINE  // ออนไลน์
-}
-
-// BorrowRequestStatus: สถานะ workflow ยืมที่ปรึกษา
 Enum BorrowRequestStatus {
-  DRAFT      // ร่างคำขอ
-  SUBMITTED  // ส่งแล้ว
-  APPROVED   // อนุมัติ
-  REJECTED   // ปฏิเสธ
-  ASSIGNED   // มอบหมายแล้ว
-  COMPLETED  // เสร็จสิ้น
-  CANCELLED  // ยกเลิก
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  ASSIGNED
+  COMPLETED
+  CANCELLED
 }
 
-// BorrowOnCallStatus: สถานะเวรยืม
 Enum BorrowOnCallStatus {
-  SCHEDULED  // กำหนดไว้แล้ว
-  ACTIVE     // กำลังดำเนินการ
-  CANCELLED  // ยกเลิก
+  SCHEDULED
+  ACTIVE
+  CANCELLED
 }
 
-// BorrowAvailabilityStatus: สถานะแผนยืม
 Enum BorrowAvailabilityStatus {
-  ACTIVE     // ดำเนินการอยู่
-  COMPLETED  // เสร็จสิ้น
-  CANCELLED  // ยกเลิก
+  ACTIVE
+  COMPLETED
+  CANCELLED
 }
 
-// ConsentSignStatus: สถานะการเซ็น
 Enum ConsentSignStatus {
-  SIGNED   // เซ็นแล้ว
-  REVOKED  // เพิกถอน
+  SIGNED
+  REVOKED
 }
 
-// ConsentSignatureMethod: วิธีเซ็น
 Enum ConsentSignatureMethod {
-  DRAW  // วาดลายเซ็น
+  DRAW
 }
 
-// UniversityType: ประเภทมหาวิทยาลัย
-Enum UniversityType {
-  SUPERVISED  // มหาวิทยาลัยในกำกับ (26 แห่ง)
-  PUBLIC      // มหาวิทยาลัยรัฐ (57 แห่ง)
-  PRIVATE     // มหาวิทยาลัยเอกชน (72 แห่ง)
-}
-
-// AttendanceStatus: สถานะ attendance
 Enum AttendanceStatus {
-  PENDING                  // รอเช็คอิน
-  CHECKED_IN               // เช็คอินแล้ว
-  LATE                     // มาสาย
-  NO_SHOW                  // ไม่มา
-  CANCELLED_BY_CONSULTANT  // ที่ปรึกษายกเลิก
+  PENDING
+  CHECKED_IN
+  LATE
+  NO_SHOW
+  CANCELLED_BY_CONSULTANT
 }
 
-// ExceptionStatus: สถานะคำร้อง exception
 Enum ExceptionStatus {
-  DRAFT           // ร่างคำร้อง
-  PENDING_REVIEW  // รอพิจารณา
-  APPROVED        // อนุมัติ
-  REJECTED        // ปฏิเสธ
-}
-
-// DisciplineEventType: ประเภทเหตุวินัย
-Enum DisciplineEventType {
-  LATE_CANCEL_PENALTY           // โทษยกเลิกสาย
-  NO_SHOW_PENALTY               // โทษไม่มา
-  EXCEPTION_APPROVED_ROLLBACK   // ยกเว้นอนุมัติ-คืนค่า
-  MANUAL_UNLOCK                 // ปลดล็อคด้วยมือ
-}
-
-// EducationLevel: ระดับการศึกษา
-Enum EducationLevel {
-  BACHELOR   // ปริญญาตรี
-  MASTER     // ปริญญาโท
-  DOCTORATE  // ปริญญาเอก
-}
-
-// NationalityType: ประเภทสัญชาติ
-Enum NationalityType {
-  THAI           // ไทย
-  INTERNATIONAL  // ต่างชาติ
-}
-
-// AcademicPeriodType: ประเภทช่วงย่อยในเทอม
-Enum AcademicPeriodType {
-  MIDTERM_EXAM    // สอบกลางภาค
-  FINAL_EXAM      // สอบปลายภาค
-  SEMESTER_BREAK  // ปิดภาคเรียน
-}
-
-// FamilyIncomeBracket: ช่วงรายได้ครอบครัว (บาท/ปี)
-Enum FamilyIncomeBracket {
-  UNDER_100K         // < 100,000
-  BETWEEN_100K_200K  // 100,000–199,999
-  BETWEEN_200K_300K  // 200,000–299,999
-  BETWEEN_300K_500K  // 300,000–499,999
-  BETWEEN_500K_800K  // 500,000–799,999
-  BETWEEN_800K_1M    // 800,000–999,999
-  OVER_1M            // ≥ 1,000,000
-}
-
-// BloodGroup: หมู่เลือด
-Enum BloodGroup {
-  A   // กรุ๊ป A
-  B   // กรุ๊ป B
-  AB  // กรุ๊ป AB
-  O   // กรุ๊ป O
-}
-
-// ParentalStatus: สถานะผู้ปกครอง
-Enum ParentalStatus {
-  TOGETHER          // พ่อแม่อยู่ด้วยกัน
-  DIVORCED          // หย่าร้าง
-  FATHER_DECEASED   // บิดาเสียชีวิต
-  MOTHER_DECEASED   // มารดาเสียชีวิต
-  BOTH_DECEASED     // เสียชีวิตทั้งคู่
-  SINGLE_PARENT     // เลี้ยงเดี่ยว (อื่นๆ)
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
 }
 
 
 // =====================
-// TABLES
+// REFERENCE TABLES (แทน Enum เดิม — เพิ่มค่าได้โดยไม่ต้อง migrate)
 // =====================
 
-// ---------- GEO ----------
+Table account_role_category {
+  account_role_id int [pk, increment]
+  code varchar(30) [unique, not null]
+  name_th varchar(100) [not null]
+  name_en varchar(100)
+  description text
+  sort_order int [default: 0]
+  is_active boolean [default: true]
+
+  Note: 'บทบาทของบัญชี (แทน AccountRole enum) — STUDENT, CONSULTANT, HEAD_CONSULTANT, ADVISOR, DEAN, RECTOR, SUPER_ADMIN, MINISTRY'
+}
+
+Table point_txn_type_category {
+  point_txn_type_id int [pk, increment]
+  code varchar(30) [unique, not null]
+  name_th varchar(100) [not null]
+  name_en varchar(100)
+  sort_order int [default: 0]
+  is_active boolean [default: true]
+
+  Note: 'ประเภทธุรกรรมแต้ม (แทน PointTxnType enum) — EARN, REDEEM, ADJUST, EXPIRE'
+}
+
+Table discipline_event_type_category {
+  discipline_event_type_id int [pk, increment]
+  code varchar(30) [unique, not null]
+  name_th varchar(100) [not null]
+  name_en varchar(100)
+  description text
+  sort_order int [default: 0]
+  is_active boolean [default: true]
+
+  Note: 'ประเภทเหตุวินัย (แทน DisciplineEventType enum)'
+}
+
+Table ai_feedback_type_category {
+  ai_feedback_type_id int [pk, increment]
+  code varchar(30) [unique, not null]
+  name_th varchar(100) [not null]
+  name_en varchar(100)
+  sort_order int [default: 0]
+  is_active boolean [default: true]
+
+  Note: 'ประเภท feedback ต่อ AI (แทน AiFeedbackType enum)'
+}
+
+Table kb_content_type_category {
+  kb_content_type_id int [pk, increment]
+  code varchar(30) [unique, not null]
+  name_th varchar(100) [not null]
+  name_en varchar(100)
+  sort_order int [default: 0]
+  is_active boolean [default: true]
+
+  Note: 'ประเภทเนื้อหา KB (แทน KbContentType enum) — MARKDOWN, JSON'
+}
+
+Table gender_category {
+  gender_category_id int [pk, increment]
+  code varchar(30) [unique, not null]
+  name_th varchar(100) [not null]
+  name_en varchar(100)
+  sort_order int [default: 0]
+  is_active boolean [default: true]
+
+  Note: 'เพศนิสิต (แทน StudentGender enum)'
+}
+
+Table blood_group_category {
+  blood_group_id int [pk, increment]
+  code varchar(30) [unique, not null]
+  name_th varchar(100) [not null]
+  name_en varchar(100)
+  sort_order int [default: 0]
+  is_active boolean [default: true]
+
+  Note: 'หมู่เลือด (แทน BloodGroup enum)'
+}
+
+Table income_bracket_category {
+  income_bracket_id int [pk, increment]
+  code varchar(30) [unique, not null]
+  name_th varchar(100) [not null]
+  name_en varchar(100)
+  sort_order int [default: 0]
+  is_active boolean [default: true]
+
+  Note: 'ช่วงรายได้ครอบครัว (แทน FamilyIncomeBracket enum)'
+}
+
+Table parental_status_category {
+  parental_status_id int [pk, increment]
+  code varchar(30) [unique, not null]
+  name_th varchar(100) [not null]
+  name_en varchar(100)
+  sort_order int [default: 0]
+  is_active boolean [default: true]
+
+  Note: 'สถานะผู้ปกครอง (แทน ParentalStatus enum)'
+}
+
+Table education_level_category {
+  education_level_id int [pk, increment]
+  code varchar(30) [unique, not null]
+  name_th varchar(100) [not null]
+  name_en varchar(100)
+  sort_order int [default: 0]
+  is_active boolean [default: true]
+
+  Note: 'ระดับการศึกษา (แทน EducationLevel enum)'
+}
+
+Table address_type_category {
+  address_type_id int [pk, increment]
+  code varchar(30) [unique, not null]
+  name_th varchar(100) [not null]
+  name_en varchar(100)
+  sort_order int [default: 0]
+  is_active boolean [default: true]
+
+  Note: 'ประเภทที่อยู่ (แทน StudentAddressType enum)'
+}
+
+Table nationality_type_category {
+  nationality_type_id int [pk, increment]
+  code varchar(30) [unique, not null]
+  name_th varchar(100) [not null]
+  name_en varchar(100)
+  sort_order int [default: 0]
+  is_active boolean [default: true]
+
+  Note: 'ประเภทสัญชาติ (แทน NationalityType enum)'
+}
+
+Table academic_period_type_category {
+  academic_period_type_id int [pk, increment]
+  code varchar(30) [unique, not null]
+  name_th varchar(100) [not null]
+  name_en varchar(100)
+  sort_order int [default: 0]
+  is_active boolean [default: true]
+
+  Note: 'ประเภทช่วงย่อยในเทอม (แทน AcademicPeriodType enum)'
+}
+
+Table service_mode_category {
+  service_mode_id int [pk, increment]
+  code varchar(30) [unique, not null]
+  name_th varchar(100) [not null]
+  name_en varchar(100)
+  sort_order int [default: 0]
+  is_active boolean [default: true]
+
+  Note: 'รูปแบบบริการ (แทน ServiceMode enum) — ONSITE, ONLINE'
+}
+
+Table university_type_category {
+  university_type_id int [pk, increment]
+  code varchar(30) [unique, not null]
+  name_th varchar(100) [not null]
+  name_en varchar(100)
+  sort_order int [default: 0]
+  is_active boolean [default: true]
+
+  Note: 'ประเภทมหาวิทยาลัย — SUPERVISED, PUBLIC, PRIVATE'
+}
+
+Table chronic_condition_category {
+  condition_category_id int [pk, increment]
+  condition_code varchar(30) [unique, not null]
+  condition_name_th varchar(100) [not null]
+  condition_name_en varchar(100) [not null]
+  sort_order int [default: 0]
+  is_active boolean [default: true]
+
+  Note: 'หมวดโรคประจำตัว'
+}
+
+
+// =====================
+// GEO
+// =====================
 
 Table region {
-  region_id int [pk, increment, note: 'PK: รหัสภูมิภาค']
+  region_id int [pk, increment]
+  region_code varchar(30) [unique, not null]
+  region_name_th varchar(50) [not null]
+  region_name_en varchar(50)
 
-  region_code RegionCode [not null, unique, note: 'โค้ดภูมิภาค (Enum)']
-  region_name_th varchar(50) [not null, note: 'ชื่อภูมิภาคภาษาไทย']
-  region_name_en varchar(50) [note: 'ชื่อภูมิภาคภาษาอังกฤษ (optional)']
-
-  Note: 'เก็บข้อมูล "ภูมิภาค" ของไทย เพื่อจัดกลุ่มจังหวัดและมหาวิทยาลัย'
+  Note: 'ภูมิภาคของไทย (ใช้จัดกลุ่มจังหวัด/มหาลัย)'
 }
 
 Table province {
-  province_id int [pk, increment, note: 'PK: รหัสจังหวัด']
+  province_id int [pk, increment]
+  region_id int [not null, ref: > region.region_id]
+  province_code varchar(10) [unique, not null]
+  province_name_th varchar(100) [not null]
+  province_name_en varchar(100)
 
-  region_id int [not null, ref: > region.region_id, note: 'FK -> region']
-
-  province_code varchar(10) [not null, unique, note: 'โค้ดจังหวัด (unique)']
-  province_name_th varchar(100) [not null, note: 'ชื่อจังหวัดภาษาไทย']
-  province_name_en varchar(100) [note: 'ชื่อจังหวัดภาษาอังกฤษ (optional)']
-
-  Indexes {
-    (region_id)
-  }
-
-  Note: 'เก็บจังหวัดของไทย (ผูก region)'
+  Note: 'จังหวัดของไทย (ผูก region)'
 }
 
+Table country {
+  country_id int [pk, increment]
+  country_code_alpha2 varchar(2) [unique, not null]
+  country_code_alpha3 varchar(3) [unique, not null]
+  country_name_th varchar(100) [not null]
+  country_name_en varchar(100) [not null]
+  nationality_type_id int [ref: > nationality_type_category.nationality_type_id]
+  sort_order int [default: 0]
+  is_active boolean [default: true]
+
+  Note: 'ประเทศ/เชื้อชาติ'
+}
+
+
+// =====================
+// UNIVERSITY (Tenant)
+// =====================
+
 Table university {
-  university_id int [pk, increment, note: 'PK: รหัสมหาวิทยาลัย (tenant id)']
+  university_id int [pk, increment]
+  university_code varchar(20) [unique, not null]
+  university_name_th varchar(200) [not null]
+  university_name_en varchar(200)
+  province_id int [not null, ref: > province.province_id]
+  university_is_active boolean [default: true]
+  university_created_at timestamp [default: `now()`]
+  university_type_id int [ref: > university_type_category.university_type_id]
+  rector_account_id int [ref: > account.account_id]
+  university_latitude decimal(9,6)
+  university_longitude decimal(9,6)
 
-  province_id int [not null, ref: > province.province_id, note: 'FK -> province']
-  rector_account_id int [ref: > account.account_id, note: 'FK -> account (optional): อธิการ']
-
-  university_code varchar(20) [not null, unique, note: 'โค้ดมหาวิทยาลัย (unique)']
-  university_name_th varchar(200) [not null, note: 'ชื่อมหาวิทยาลัยภาษาไทย']
-  university_name_en varchar(200) [note: 'ชื่อมหาวิทยาลัยภาษาอังกฤษ (optional)']
-  university_is_active boolean [not null, default: true, note: 'สถานะเปิดใช้งาน']
-  university_created_at timestamp [not null, default: `now()`, note: 'เวลาสร้าง']
-  university_type UniversityType [default: 'PUBLIC', note: 'ประเภทมหาวิทยาลัย (Enum)']
-  university_latitude decimal(9,6) [note: 'ละติจูด (optional)']
-  university_longitude decimal(9,6) [note: 'ลองจิจูด (optional)']
-
-  Indexes {
-    (province_id)
-    (university_is_active)
-  }
-
-  Note: 'Tenant หลักของระบบ (มหาวิทยาลัย)\n- ผูกจังหวัด/พิกัด\n- ใช้แยกข้อมูลแบบ multi-tenant'
+  Note: 'Tenant หลัก (มหาวิทยาลัย) — ใช้แยกข้อมูลแบบ multi-tenant'
 }
 
 Table university_connection {
-  connection_id int [pk, increment, note: 'PK: รหัสความเชื่อมโยง']
+  connection_id int [pk, increment]
+  source_university_id int [not null, ref: > university.university_id]
+  target_university_id int [not null, ref: > university.university_id]
+  distance_km decimal(8,2) [not null]
+  connection_rank int [not null]
+  connection_created_at timestamp [default: `now()`]
 
-  source_university_id int [not null, ref: > university.university_id, note: 'FK -> university (ต้นทาง)']
-  target_university_id int [not null, ref: > university.university_id, note: 'FK -> university (ปลายทาง)']
 
-  distance_km decimal(8,2) [not null, note: 'ระยะทาง km']
-  connection_rank int [not null, note: 'อันดับความใกล้ (1=ใกล้สุด)']
-  connection_created_at timestamp [not null, default: `now()`, note: 'เวลาสร้าง']
-
-  Indexes {
-    (source_university_id, target_university_id) [unique]
-    (source_university_id)
-    (target_university_id)
-  }
-
-  Note: 'กราฟ "ความใกล้" ระหว่างมหาวิทยาลัย (ใช้แนะนำ/วิเคราะห์/ระบบยืมคน)'
+  Note: 'กราฟความใกล้ระหว่างมหาวิทยาลัย (ใช้ระบบยืมคน)'
 }
 
 
-// ---------- ACCESS ----------
+// =====================
+// ACCESS
+// =====================
 
 Table account {
-  account_id int [pk, increment, note: 'PK: รหัสบัญชีผู้ใช้']
+  account_id int [pk, increment]
+  account_username varchar(50) [unique, not null]
+  account_password varchar(255) [not null]
+  account_role varchar(30) [not null, ref: > account_role_category.code, note: 'บทบาทหลัก (FK -> account_role_category)']
+  account_home_university_id int [ref: > university.university_id]
+  account_line_id varchar(100) [unique]
+  account_created_at timestamp [default: `now()`]
+  account_last_login_at timestamp
 
-  account_home_university_id int [ref: > university.university_id, note: 'FK -> university (optional): มหาลัยหลัก']
-
-  account_username varchar(50) [not null, unique, note: 'Username สำหรับ login']
-  account_password varchar(255) [not null, note: 'Password hash']
-  account_role AccountRole [not null, note: 'บทบาทหลัก (Enum)']
-  account_line_id varchar(100) [unique, note: 'LINE ID (optional, unique)']
-  account_created_at timestamp [not null, default: `now()`, note: 'เวลาสร้างบัญชี']
-  account_last_login_at timestamp [note: 'เวลา login ล่าสุด (optional)']
-
-  Indexes {
-    (account_role)
-    (account_home_university_id)
-  }
-
-  Note: 'บัญชีผู้ใช้ทุกบทบาทในระบบ (นิสิต/ที่ปรึกษา/แอดมิน/กระทรวง)'
+  Note: 'บัญชีผู้ใช้ทุกบทบาท (นิสิต/ที่ปรึกษา/แอดมิน/กระทรวง)'
 }
 
 Table account_university_permission {
-  account_university_permission_id int [pk, increment, note: 'PK: สิทธิ์รายการหนึ่ง']
+  account_university_permission_id int [pk, increment]
+  account_id int [not null, ref: > account.account_id]
+  university_id int [not null, ref: > university.university_id]
+  access_role varchar(30) [default: 'STUDENT', ref: > account_role_category.code, note: 'บทบาทต่อมหาลัย (FK -> account_role_category)']
+  access_granted_by_account_id int [ref: > account.account_id]
+  access_granted_at timestamp [default: `now()`]
+  access_revoked_at timestamp
 
-  account_id int [not null, ref: > account.account_id, note: 'FK -> account']
-  university_id int [not null, ref: > university.university_id, note: 'FK -> university']
-  access_granted_by_account_id int [ref: > account.account_id, note: 'FK -> account (optional): ผู้ให้สิทธิ์']
 
-  access_role UniversityAccessRole [not null, default: 'STUDENT', note: 'บทบาทต่อมหาลัย (Enum)']
-  access_granted_at timestamp [not null, default: `now()`, note: 'เวลาให้สิทธิ์']
-  access_revoked_at timestamp [note: 'เวลา revoke (optional)']
-
-  Indexes {
-    (account_id, university_id) [unique]
-    (university_id)
-    (access_role)
-    (access_granted_by_account_id)
-  }
-
-  Note: 'สิทธิ์การเข้าถึง "ข้ามมหาวิทยาลัย" (role ต่อมหาลัย) + audit'
+  Note: 'สิทธิ์ข้ามมหาวิทยาลัย (role ต่อมหาลัย)'
 }
 
 
-// ---------- STUDENT ----------
+// =====================
+// STUDENT
+// =====================
 
 Table student_status {
-  student_status_id int [pk, increment, note: 'PK: รหัสสถานะนิสิต']
+  student_status_id int [pk, increment]
+  student_status_code varchar(20) [unique, not null]
+  student_status_detail text
 
-  student_status_code varchar(20) [not null, unique, note: 'โค้ดสถานะ (เช่น ACTIVE/GRADUATED)']
-  student_status_detail text [note: 'รายละเอียด (optional)']
-
-  Note: 'Master สถานะของนิสิต'
+  Note: 'Master สถานะนิสิต'
 }
 
 Table student {
-  student_id int [pk, increment, note: 'PK: รหัสนิสิต (ระบบ)']
+  student_id int [pk, increment]
+  account_id int [unique, not null, ref: > account.account_id]
+  university_id int [not null, ref: > university.university_id]
+  student_status_id int [not null, ref: > student_status.student_status_id]
+  student_code varchar(20)
 
-  account_id int [not null, unique, ref: > account.account_id, note: 'FK -> account (unique): 1 account = 1 นิสิต']
-  university_id int [not null, ref: > university.university_id, note: 'FK -> university (tenant)']
-  student_status_id int [not null, ref: > student_status.student_status_id, note: 'FK -> student_status']
 
-  student_code varchar(20) [note: 'รหัสนิสิตของมหาลัย (optional)']
-
-  Indexes {
-    (university_id, student_id) [unique]
-    (university_id, student_code) [unique]
-    (student_status_id)
-    (university_id)
-  }
-
-  Note: 'ข้อมูลนิสิตแบบ tenant-aware'
+  Note: 'นิสิต (tenant-aware)'
 }
 
 Table student_profile {
-  student_id int [pk, note: 'PK: 1:1 กับ student']
+  student_id int [pk, ref: - student.student_id]
+  university_id int [not null]
+  student_prefix varchar(10)
+  student_first_name_th varchar(100) [not null]
+  student_last_name_th varchar(100) [not null]
+  student_nickname_th varchar(20)
+  student_first_name_en varchar(100)
+  student_last_name_en varchar(100)
+  student_nickname_en varchar(20)
+  gender_category_id int [ref: > gender_category.gender_category_id]
+  student_birthday date
+  student_nationality varchar(50)
+  student_religion varchar(50)
+  blood_group_id int [ref: > blood_group_category.blood_group_id]
+  student_phone_number varchar(20)
+  student_email varchar(100)
+  country_id int [ref: > country.country_id]
+  sibling_count int
+  birth_order int
+  income_bracket_id int [ref: > income_bracket_category.income_bracket_id]
+  parental_status_id int [ref: > parental_status_category.parental_status_id]
 
-  university_id int [not null, note: 'tenant key (composite FK -> student)']
-  country_id int [ref: > country.country_id, note: 'FK -> country (optional): ประเทศ/สัญชาติ']
-
-  student_prefix varchar(10) [note: 'คำนำหน้า']
-  student_first_name_th varchar(100) [not null, note: 'ชื่อภาษาไทย']
-  student_last_name_th varchar(100) [not null, note: 'นามสกุลภาษาไทย']
-  student_nickname_th varchar(20) [note: 'ชื่อเล่น (ไทย)']
-  student_first_name_en varchar(100) [note: 'ชื่อ (อังกฤษ)']
-  student_last_name_en varchar(100) [note: 'นามสกุล (อังกฤษ)']
-  student_nickname_en varchar(20) [note: 'ชื่อเล่น (อังกฤษ)']
-  student_gender StudentGender [note: 'เพศ (Enum)']
-  student_birthday date [note: 'วันเกิด']
-  student_nationality varchar(50) [note: 'สัญชาติ']
-  student_religion varchar(50) [note: 'ศาสนา']
-  student_blood_group BloodGroup [note: 'หมู่เลือด (Enum)']
-  student_phone_number varchar(20) [note: 'เบอร์โทร']
-  student_email varchar(100) [note: 'อีเมล']
-  sibling_count int [note: 'จำนวนพี่น้อง']
-  birth_order int [note: 'ลำดับที่เกิด']
-  family_income_bracket FamilyIncomeBracket [note: 'ช่วงรายได้ครอบครัว (Enum)']
-  parental_status ParentalStatus [note: 'สถานะผู้ปกครอง (Enum)']
-
-  Indexes {
-    (university_id, student_id) [unique]
-    (country_id)
-  }
-
-  Note: 'ข้อมูลส่วนตัวนิสิต (แยกจาก student เพื่อ normalize, 1:1)'
+  Note: 'โปรไฟล์นิสิต (1:1 กับ student)'
 }
 
 Table student_address {
-  student_address_id int [pk, increment, note: 'PK: รหัสที่อยู่นิสิต']
+  student_address_id int [pk, increment]
+  student_id int [not null]
+  university_id int [not null]
+  province_id int [not null, ref: > province.province_id]
+  address_type_id int [not null, ref: > address_type_category.address_type_id]
+  student_address_detail varchar(200)
+  student_address_sub_district varchar(100)
+  student_address_district varchar(100)
+  student_address_postal_code varchar(10) [not null]
 
-  student_id int [not null, note: 'FK อ้างนิสิต (composite)']
-  university_id int [not null, note: 'tenant key (composite FK -> student)']
-  province_id int [not null, ref: > province.province_id, note: 'FK -> province']
 
-  student_address_type StudentAddressType [not null, note: 'ประเภทที่อยู่ (Enum)']
-  student_address_detail varchar(200) [note: 'รายละเอียดที่อยู่']
-  student_address_sub_district varchar(100) [note: 'ตำบล/แขวง']
-  student_address_district varchar(100) [note: 'อำเภอ/เขต']
-  student_address_postal_code varchar(10) [not null, note: 'รหัสไปรษณีย์']
-
-  Indexes {
-    (university_id, student_id, student_address_type) [unique]
-    (university_id, student_id)
-  }
-
-  Note: 'ที่อยู่นิสิต (รองรับหลายประเภท: ถาวร/ปัจจุบัน/หอ)'
+  Note: 'ที่อยู่นิสิต (ถาวร/ปัจจุบัน/หอ)'
 }
 
 Table student_academic {
-  student_id int [pk, note: 'PK: 1:1 กับ student']
+  student_id int [pk]
+  university_id int [not null]
+  faculty_id int [not null]
+  department_id int [not null]
+  advisor_id int [ref: > advisor.advisor_id]
+  student_program varchar(50)
+  student_degree varchar(50)
+  student_degree_name varchar(100)
+  student_admit_academic_year int
+  education_level_id int [ref: > education_level_category.education_level_id]
+  program_duration_years int
+  expected_graduation_year int
 
-  university_id int [not null, note: 'tenant key (composite FK -> student)']
-  faculty_id int [not null, note: 'FK -> faculty (composite)']
-  department_id int [not null, note: 'FK -> department (composite)']
-  advisor_id int [ref: > advisor.advisor_id, note: 'FK -> advisor (optional)']
-
-  student_program varchar(50) [note: 'โปรแกรม/หลักสูตร']
-  student_degree varchar(50) [note: 'ระดับปริญญา']
-  student_degree_name varchar(100) [note: 'ชื่อปริญญา']
-  student_admit_academic_year int [note: 'ปีเข้าศึกษา']
-  education_level EducationLevel [note: 'ระดับการศึกษา (Enum)']
-  program_duration_years int [note: 'จำนวนปีหลักสูตร']
-  expected_graduation_year int [note: 'ปีที่คาดว่าจะจบ']
-
-  Indexes {
-    (university_id, student_id) [unique]
-    (university_id, faculty_id)
-    (university_id, department_id)
-    (advisor_id)
-    (education_level)
-  }
-
-  Note: 'โครงสร้างการเรียนของนิสิต (คณะ/ภาค/อาจารย์ที่ปรึกษา)'
-}
-
-
-// ---------- CHRONIC CONDITION (โรคประจำตัว) ----------
-
-Table chronic_condition_category {
-  condition_category_id int [pk, increment, note: 'PK: รหัสหมวดโรค']
-
-  condition_code varchar(30) [not null, unique, note: 'โค้ดโรค (unique)']
-  condition_name_th varchar(100) [not null, note: 'ชื่อโรค (ไทย)']
-  condition_name_en varchar(100) [not null, note: 'ชื่อโรค (อังกฤษ)']
-  sort_order int [not null, default: 0, note: 'ลำดับแสดงผล']
-  is_active boolean [not null, default: true, note: 'เปิดใช้งาน']
-
-  Note: 'Master หมวดโรคประจำตัว'
+  Note: 'โครงสร้างการเรียนของนิสิต (1:1 กับ student)'
 }
 
 Table student_chronic_condition {
-  id int [pk, increment, note: 'PK: รหัสรายการ']
+  id int [pk, increment]
+  student_id int [not null]
+  university_id int [not null]
+  condition_category_id int [not null, ref: > chronic_condition_category.condition_category_id]
+  condition_detail varchar(200)
 
-  student_id int [not null, note: 'FK อ้าง student_profile (composite)']
-  university_id int [not null, note: 'FK อ้าง student_profile (composite)']
-  condition_category_id int [not null, ref: > chronic_condition_category.condition_category_id, note: 'FK -> chronic_condition_category']
 
-  condition_detail varchar(200) [note: 'รายละเอียดโรค (optional)']
+  Note: 'โรคประจำตัวนิสิต (many-to-many ผ่าน bridge)'
+}
 
-  Indexes {
-    (student_id, university_id, condition_category_id) [unique]
-    (condition_category_id)
-  }
+Table student_behavior_status {
+  student_id int [not null]
+  university_id int [not null]
+  student_trust_term_code varchar(20)
+  student_trust_late_cancel_count int [default: 0]
+  student_trust_no_show_count int [default: 0]
+  student_trust_locked_until timestamptz
+  student_trust_updated_at timestamp
 
-  Note: 'โรคประจำตัวของนิสิต (หลายรายการต่อ 1 คน, ผูก student_profile)'
+
+  Note: 'สถานะความน่าเชื่อถือนิสิต (ล็อคจอง/วินัย)'
 }
 
 
-// ---------- ACADEMIC ----------
+// =====================
+// ACADEMIC
+// =====================
 
 Table subject_group_category {
-  subject_group_category_id int [pk, increment, note: 'PK: รหัสหมวดสาขา ISCED']
-
-  isced_broad_field_code varchar(2) [not null, unique, note: 'รหัส ISCED broad field']
-  field_group_name_th varchar(150) [not null, note: 'ชื่อกลุ่มสาขา (ไทย)']
-  field_group_name_en varchar(150) [not null, note: 'ชื่อกลุ่มสาขา (อังกฤษ)']
+  subject_group_category_id int [pk, increment]
+  isced_broad_field_code varchar(2) [unique, not null]
+  field_group_name_th varchar(150) [not null]
+  field_group_name_en varchar(150) [not null]
 
   Note: 'หมวดสาขาการศึกษาตาม ISCED'
 }
 
 Table faculty {
-  faculty_id int [pk, increment, note: 'PK: รหัสคณะ']
+  faculty_id int [pk, increment]
+  university_id int [not null, ref: > university.university_id]
+  faculty_code varchar(10) [not null]
+  faculty_name_th varchar(100) [not null]
+  faculty_name_en varchar(100)
+  dean_account_id int [ref: > account.account_id]
+  subject_group_category_id int [ref: > subject_group_category.subject_group_category_id]
 
-  university_id int [not null, ref: > university.university_id, note: 'FK -> university (tenant)']
-  dean_account_id int [ref: > account.account_id, note: 'FK -> account (optional): คณบดี']
-  subject_group_category_id int [ref: > subject_group_category.subject_group_category_id, note: 'FK -> subject_group_category (optional)']
 
-  faculty_code varchar(10) [not null, note: 'โค้ดคณะภายในมหาลัย']
-  faculty_name_th varchar(100) [not null, note: 'ชื่อคณะ (ไทย)']
-  faculty_name_en varchar(100) [note: 'ชื่อคณะ (อังกฤษ)']
-
-  Indexes {
-    (university_id, faculty_id) [unique]
-    (university_id, faculty_code) [unique]
-    (university_id)
-    (subject_group_category_id)
-    (dean_account_id)
-  }
-
-  Note: 'คณะของมหาวิทยาลัย (tenant-aware)'
+  Note: 'คณะ (tenant-aware)'
 }
 
 Table department {
-  department_id int [pk, increment, note: 'PK: รหัสภาควิชา/สาขา']
+  department_id int [pk, increment]
+  university_id int [not null, ref: > university.university_id]
+  faculty_id int [not null]
+  head_account_id int [ref: > account.account_id]
+  department_code varchar(10) [not null]
+  department_name_th varchar(100) [not null]
+  department_name_en varchar(100)
 
-  university_id int [not null, ref: > university.university_id, note: 'FK -> university (tenant)']
-  faculty_id int [not null, note: 'FK -> faculty (composite university_id, faculty_id)']
 
-  department_code varchar(10) [not null, note: 'โค้ดภาควิชา']
-  department_name_th varchar(100) [not null, note: 'ชื่อภาควิชา (ไทย)']
-  department_name_en varchar(100) [note: 'ชื่อภาควิชา (อังกฤษ)']
-
-  Indexes {
-    (university_id, department_id) [unique]
-    (university_id, department_code) [unique]
-    (faculty_id)
-    (university_id, faculty_id)
-    (university_id)
-  }
-
-  Note: 'ภาควิชา/สาขา ภายใต้คณะ (tenant-aware)'
+  Note: 'ภาควิชา/สาขา (tenant-aware)'
 }
 
 Table advisor {
-  advisor_id int [pk, increment, note: 'PK: รหัสอาจารย์ที่ปรึกษา']
+  advisor_id int [pk, increment]
+  university_id int [not null, ref: > university.university_id]
+  faculty_id int [not null]
+  department_id int [not null]
+  account_id int [unique, ref: > account.account_id]
+  advisor_academic_rank varchar(50)
+  advisor_prefix varchar(50)
+  advisor_first_name varchar(100) [not null]
+  advisor_last_name varchar(100) [not null]
+  advisor_email varchar(100) [unique]
+  advisor_phone_number varchar(50)
+  advisor_office_location varchar(100)
 
-  university_id int [not null, ref: > university.university_id, note: 'FK -> university']
-  faculty_id int [not null, note: 'FK -> faculty (composite)']
-  department_id int [not null, note: 'FK -> department (composite)']
-  account_id int [unique, ref: > account.account_id, note: 'FK -> account (optional): ถ้ามี login']
+  Note: 'อาจารย์ที่ปรึกษา (ผูกคณะ/ภาค/account)'
+}
 
-  advisor_academic_rank varchar(50) [note: 'ตำแหน่งทางวิชาการ']
-  advisor_prefix varchar(50) [note: 'คำนำหน้า']
-  advisor_first_name varchar(100) [not null, note: 'ชื่อ']
-  advisor_last_name varchar(100) [not null, note: 'นามสกุล']
-  advisor_email varchar(100) [unique, note: 'อีเมล (optional, unique)']
-  advisor_phone_number varchar(50) [note: 'เบอร์โทร']
-  advisor_office_location varchar(100) [note: 'ที่ตั้งห้องทำงาน']
+Table academic_term_type {
+  academic_term_type_id int [pk, increment]
+  academic_term_type_code varchar(20) [unique, not null]
+  academic_term_type_name_th varchar(100) [not null]
+  academic_term_type_name_en varchar(100)
+  sort_order int [default: 0]
 
-  Indexes {
-    (university_id)
-    (university_id, faculty_id)
-    (university_id, department_id)
-  }
+  Note: 'ประเภทเทอม (เทอม 1/2/ฤดูร้อน)'
+}
 
-  Note: 'อาจารย์ที่ปรึกษา (ผูกคณะ/ภาค) และอาจผูก account เพื่อ login'
+Table academic_term {
+  term_id int [pk, increment]
+  university_id int [not null, ref: > university.university_id]
+  academic_term_type_id int [not null, ref: > academic_term_type.academic_term_type_id]
+  academic_year int [not null]
+  term_start_date date [not null]
+  term_end_date date [not null]
+  is_active boolean [default: false]
+
+
+  Note: 'เทอมของแต่ละมหาวิทยาลัย'
+}
+
+Table academic_period {
+  period_id int [pk, increment]
+  term_id int [not null, ref: > academic_term.term_id]
+  university_id int [not null, ref: > university.university_id]
+  academic_period_type_id int [not null, ref: > academic_period_type_category.academic_period_type_id]
+  period_name_th varchar(100) [not null]
+  period_name_en varchar(100)
+  period_start_date date [not null]
+  period_end_date date [not null]
+  sort_order int [default: 0]
+
+  Note: 'ช่วงย่อยในเทอม (สอบกลาง/ปลาย/ปิดเทอม)'
 }
 
 
-// ---------- CONSULTANT DOMAIN ----------
+// =====================
+// CONSULTANT DOMAIN
+// =====================
 
 Table organization {
-  organization_id int [pk, increment, note: 'PK: รหัสองค์กร']
-
-  organization_name varchar(100) [not null, unique, note: 'ชื่อองค์กร (unique)']
-  organization_type varchar(50) [note: 'ประเภทองค์กร']
+  organization_id int [pk, increment]
+  organization_name varchar(100) [unique, not null]
+  organization_type varchar(50)
 
   Note: 'องค์กร/หน่วยงานที่ consultant สังกัด'
 }
 
 Table consultant_shift_team {
-  shift_team_id int [pk, increment, note: 'PK: รหัสทีมเวร']
+  shift_team_id int [pk, increment]
+  university_id int [not null, ref: > university.university_id]
+  team_name varchar(50) [not null]
+  team_order int [default: 1]
 
-  university_id int [not null, ref: > university.university_id, note: 'FK -> university']
 
-  team_name varchar(50) [not null, note: 'ชื่อทีม เช่น "ทีม 1"']
-  team_order int [not null, default: 1, note: 'ลำดับทีม (1..4)']
-
-  Indexes {
-    (university_id, team_name) [unique]
-    (university_id, team_order) [unique]
-  }
-
-  Note: 'ทีมเวร/ทีมจัดตาราง consultant'
+  Note: 'ทีมเวรของ consultant (วน 4 ทีม ทุก 14 วัน)'
 }
 
 Table consultant {
-  consultant_id int [pk, increment, note: 'PK: รหัส consultant']
+  consultant_id int [pk, increment]
+  account_id int [unique, not null, ref: > account.account_id]
+  university_id int [not null, ref: > university.university_id]
+  organization_id int [not null, ref: > organization.organization_id]
+  shift_team_id int [ref: > consultant_shift_team.shift_team_id]
+  consultant_created_at timestamp [default: `now()`]
 
-  account_id int [not null, unique, ref: > account.account_id, note: 'FK -> account (unique)']
-  university_id int [not null, ref: > university.university_id, note: 'FK -> university']
-  organization_id int [not null, ref: > organization.organization_id, note: 'FK -> organization']
-  consultantShiftTeamShift_team_id int [ref: > consultant_shift_team.shift_team_id, note: 'FK -> consultant_shift_team (optional): ทีมเวรปัจจุบัน']
-
-  shift_team_id int [note: 'ทีมเวรแบบ legacy']
-  consultant_created_at timestamp [not null, default: `now()`, note: 'เวลาสร้าง']
-
-  Indexes {
-    (university_id, consultant_id) [unique]
-    (organization_id)
-    (university_id)
-  }
 
   Note: 'ที่ปรึกษา/นักจิตวิทยา (ผูก account + university + organization)'
 }
 
 Table consultant_profile {
-  consultant_id int [pk, ref: > consultant.consultant_id, note: 'PK + FK: 1:1 กับ consultant']
+  consultant_id int [pk, ref: - consultant.consultant_id]
+  consultant_prefix varchar(50)
+  consultant_first_name varchar(100) [not null]
+  consultant_last_name varchar(100) [not null]
+  consultant_nickname varchar(50)
+  consultant_gender varchar(20)
+  consultant_nationality varchar(50)
+  consultant_phone_number varchar(20)
+  consultant_email varchar(100)
 
-  consultant_prefix varchar(50) [note: 'คำนำหน้า']
-  consultant_first_name varchar(100) [not null, note: 'ชื่อ']
-  consultant_last_name varchar(100) [not null, note: 'นามสกุล']
-  consultant_nickname varchar(50) [note: 'ชื่อเล่น']
-  consultant_gender varchar(20) [note: 'เพศ']
-  consultant_nationality varchar(50) [note: 'สัญชาติ']
-  consultant_phone_number varchar(20) [note: 'เบอร์โทร']
-  consultant_email varchar(100) [note: 'อีเมล']
-
-  Note: 'โปรไฟล์รายละเอียดของ consultant (1:1)'
+  Note: 'โปรไฟล์ consultant (1:1)'
 }
 
 Table consultant_language {
-  consultant_language_id int [pk, increment, note: 'PK']
+  consultant_language_id int [pk, increment]
+  consultant_id int [not null, ref: > consultant.consultant_id]
+  consultant_language_code varchar(10) [not null]
+  consultant_language_fluency_level varchar(20)
 
-  consultant_id int [not null, ref: > consultant.consultant_id, note: 'FK -> consultant']
-
-  consultant_language_code varchar(10) [not null, note: 'โค้ดภาษา เช่น TH/EN']
-  consultant_language_fluency_level varchar(20) [note: 'ระดับความคล่อง']
-
-  Indexes {
-    (consultant_id, consultant_language_code) [unique]
-  }
 
   Note: 'ภาษาที่ consultant ใช้ได้'
 }
 
 Table consultant_specialization {
-  consultant_specialization_id int [pk, increment, note: 'PK']
+  consultant_specialization_id int [pk, increment]
+  consultant_id int [not null, ref: > consultant.consultant_id]
+  consultant_specialization_topic varchar(100) [not null]
 
-  consultant_id int [not null, ref: > consultant.consultant_id, note: 'FK -> consultant']
-
-  consultant_specialization_topic varchar(100) [not null, note: 'หัวข้อความเชี่ยวชาญ']
-
-  Indexes {
-    (consultant_id, consultant_specialization_topic) [unique]
-  }
 
   Note: 'ความเชี่ยวชาญของ consultant'
 }
 
 
-// ---------- SCHEDULING ----------
+// =====================
+// SCHEDULING
+// =====================
 
 Table day_period {
-  day_period_id int [pk, increment, note: 'PK']
+  day_period_id int [pk, increment]
+  university_id int [ref: > university.university_id]
+  day_period_code varchar(30) [not null]
+  day_period_name_th varchar(50) [not null]
+  day_period_name_en varchar(50)
+  start_time time [not null]
+  end_time time [not null]
+  spans_midnight boolean [default: false]
+  sort_order int [default: 0]
+  is_active boolean [default: true]
 
-  university_id int [ref: > university.university_id, note: 'FK -> university (optional): null=global']
 
-  day_period_code varchar(30) [not null, note: 'โค้ดช่วงเวลา เช่น MORNING']
-  day_period_name_th varchar(50) [not null, note: 'ชื่อช่วงเวลา (ไทย)']
-  day_period_name_en varchar(50) [note: 'ชื่อช่วงเวลา (อังกฤษ)']
-  start_time time [not null, note: 'เวลาเริ่ม']
-  end_time time [not null, note: 'เวลาสิ้นสุด']
-  spans_midnight boolean [not null, default: false, note: 'ข้ามเที่ยงคืน']
-  sort_order int [not null, default: 0, note: 'ลำดับแสดงผล']
-  is_active boolean [not null, default: true, note: 'เปิดใช้งาน']
-
-  Indexes {
-    (university_id, day_period_code) [unique]
-    (university_id, is_active)
-  }
-
-  Note: 'Master ช่วงเวลาในวัน (เช้า/บ่าย/เย็น)'
+  Note: 'ช่วงเวลาในวัน (เช้า/บ่าย/เย็น)'
 }
 
 Table time_slot {
-  time_slot_id int [pk, increment, note: 'PK']
+  time_slot_id int [pk, increment]
+  university_id int [not null, ref: > university.university_id]
+  day_period_id int [ref: > day_period.day_period_id]
+  time_slot_start_datetime timestamptz [not null]
+  time_slot_end_datetime timestamptz [not null]
+  time_slot_max_capacity int [default: 1]
+  time_slot_status TimeSlotStatus [not null, default: 'OPEN']
 
-  university_id int [not null, ref: > university.university_id, note: 'FK -> university']
-  day_period_id int [ref: > day_period.day_period_id, note: 'FK -> day_period (optional)']
 
-  time_slot_start_datetime timestamptz [not null, note: 'วันเวลาเริ่ม']
-  time_slot_end_datetime timestamptz [not null, note: 'วันเวลาจบ']
-  time_slot_max_capacity int [not null, default: 1, note: 'จำนวนจองสูงสุด']
-  time_slot_status TimeSlotStatus [not null, default: 'OPEN', note: 'สถานะ slot']
-
-  Indexes {
-    (university_id, time_slot_id) [unique]
-    (university_id, time_slot_start_datetime, time_slot_end_datetime) [unique]
-    (university_id, time_slot_start_datetime)
-    (university_id, day_period_id, time_slot_start_datetime)
-  }
-
-  Note: 'ช่องเวลานัดหมายของมหาลัย'
+  Note: 'ช่องเวลานัดหมาย'
 }
 
 
-// ---------- BOOKING FLOW ----------
+// =====================
+// BOOKING FLOW
+// =====================
 
 Table online_channel_category {
-  online_channel_category_id int [pk, increment, note: 'PK']
+  online_channel_category_id int [pk, increment]
+  online_channel_code varchar(50) [unique, not null]
+  online_channel_name_th varchar(100) [not null]
+  online_channel_name_en varchar(100)
+  is_active boolean [default: true]
 
-  online_channel_code varchar(50) [not null, unique, note: 'โค้ด เช่น LINE_CALL/GOOGLE_MEET']
-  online_channel_name_th varchar(100) [not null, note: 'ชื่อช่องทาง (ไทย)']
-  online_channel_name_en varchar(100) [note: 'ชื่อช่องทาง (อังกฤษ)']
-  is_active boolean [not null, default: true, note: 'เปิดใช้งาน']
-
-  Note: 'Master ช่องทางออนไลน์สำหรับ booking/session'
+  Note: 'Master ช่องทางออนไลน์ (LINE_CALL, GOOGLE_MEET, ZOOM, ...)'
 }
 
 Table problem_category {
-  problem_category_id int [pk, increment, note: 'PK']
-
-  problem_category_code varchar(20) [not null, unique, note: 'โค้ดหมวดปัญหา']
-  problem_category_name_th varchar(100) [not null, note: 'ชื่อหมวดปัญหา (ไทย)']
-  problem_category_name_en varchar(100) [note: 'ชื่อหมวดปัญหา (อังกฤษ)']
-  problem_category_description text [note: 'คำอธิบาย']
+  problem_category_id int [pk, increment]
+  problem_category_code varchar(20) [unique, not null]
+  problem_category_name_th varchar(100) [not null]
+  problem_category_name_en varchar(100)
+  problem_category_description text
 
   Note: 'หมวดปัญหา/หัวข้อเคส'
 }
 
+Table season {
+  season_id int [pk, increment]
+  season_code varchar(20) [unique, not null]
+  season_name_th varchar(50) [not null]
+  season_name_en varchar(50)
+  month_start int [not null]
+  month_end int [not null]
+  sort_order int [default: 0]
+
+  Note: 'ฤดูกาล (ร้อน/ฝน/หนาว)'
+}
+
 Table booking {
-  university_id int [not null, ref: > university.university_id, note: 'PK tenant-aware']
-  booking_id int [not null, increment, note: 'PK running id']
+  booking_id int [increment]
+  university_id int [not null, ref: > university.university_id]
+  student_id int [not null]
+  consultant_id int [ref: > consultant.consultant_id]
+  time_slot_id int [not null]
+  problem_category_id int [not null, ref: > problem_category.problem_category_id]
+  service_mode_id int [not null, ref: > service_mode_category.service_mode_id]
+  online_channel_category_id int [ref: > online_channel_category.online_channel_category_id]
+  season_id int [ref: > season.season_id]
+  academic_term_id int [ref: > academic_term.term_id]
+  booking_detail_text text
+  booking_status BookingStatus [not null, default: 'PENDING_ASSIGNMENT']
+  booking_created_at timestamp [default: `now()`]
+  booking_updated_at timestamp [default: `now()`]
 
-  student_id int [not null, note: 'FK อ้างนิสิต (tenant-aware)']
-  consultant_id int [ref: > consultant.consultant_id, note: 'FK -> consultant (optional)']
-  time_slot_id int [not null, note: 'FK อ้าง time_slot (tenant-aware)']
-  problem_category_id int [not null, ref: > problem_category.problem_category_id, note: 'FK -> problem_category']
-  online_channel_category_id int [ref: > online_channel_category.online_channel_category_id, note: 'FK -> online_channel_category (optional)']
-  season_id int [ref: > season.season_id, note: 'FK -> season (optional)']
-  academic_term_id int [ref: > academic_term.term_id, note: 'FK -> academic_term (optional)']
-
-  booking_service_mode ServiceMode [not null, note: 'โหมดบริการ']
-  booking_detail_text text [note: 'รายละเอียด']
-  booking_status BookingStatus [not null, default: 'PENDING_ASSIGNMENT', note: 'สถานะ workflow']
-  booking_created_at timestamp [not null, default: `now()`, note: 'เวลาสร้าง']
-  booking_updated_at timestamp [not null, default: `now()`, note: 'เวลาอัปเดต']
-
-  Indexes {
-    (university_id, booking_id) [pk]
-    (university_id, time_slot_id)
-    (booking_status)
-    (student_id)
-    (consultant_id)
-    (problem_category_id)
-    (university_id, problem_category_id)
-    (student_id, booking_status)
-    (university_id, time_slot_id, booking_status)
-    (booking_status, university_id, student_id)
-    (season_id)
-    (academic_term_id)
-  }
 
   Note: 'การจองนัดหมายหลัก (tenant-aware composite PK)'
 }
 
 Table booking_session {
-  booking_session_id int [pk, increment, note: 'PK']
+  booking_session_id int [pk, increment]
+  university_id int [not null]
+  booking_id int [not null]
+  service_mode_id int [not null, ref: > service_mode_category.service_mode_id]
+  online_channel_category_id int [ref: > online_channel_category.online_channel_category_id]
+  booking_session_join_url text
+  booking_session_phone_number varchar(30)
+  booking_session_location_text varchar(200)
+  booking_session_extra_detail text
+  booking_session_is_link_visible boolean [default: true]
+  provided_by_account_id int [ref: > account.account_id]
+  provided_at timestamptz
 
-  university_id int [not null, note: 'FK อ้าง booking (tenant-aware)']
-  booking_id int [not null, note: 'FK อ้าง booking (tenant-aware)']
-  online_channel_category_id int [ref: > online_channel_category.online_channel_category_id, note: 'FK -> online_channel_category (optional)']
-  provided_by_account_id int [ref: > account.account_id, note: 'FK -> account (optional): ผู้ให้ข้อมูล']
 
-  booking_session_mode ServiceMode [not null, note: 'โหมดจริง']
-  booking_session_join_url text [note: 'ลิงก์เข้าร่วม']
-  booking_session_phone_number varchar(30) [note: 'เบอร์โทร']
-  booking_session_location_text varchar(200) [note: 'สถานที่ onsite']
-  booking_session_extra_detail text [note: 'รายละเอียดเพิ่ม']
-  booking_session_is_link_visible boolean [not null, default: true, note: 'แสดงลิงก์ให้นิสิต']
-  provided_at timestamptz [note: 'เวลาให้ข้อมูล']
-
-  Indexes {
-    (university_id, booking_id) [unique]
-    (provided_by_account_id, provided_at)
-  }
-
-  Note: 'รายละเอียด session ที่ consultant ส่งจริง (1:1 booking)'
+  Note: 'รายละเอียด session จริง (ลิงก์/สถานที่)'
 }
 
 Table booking_assignment {
-  booking_assignment_id int [pk, increment, note: 'PK']
+  booking_assignment_id int [pk, increment]
+  university_id int [not null]
+  booking_id int [not null]
+  consultant_id int [not null]
+  consultant_university_id int [not null, ref: > university.university_id]
+  borrow_assignment_id int [ref: > borrow_assignment.borrow_assignment_id]
+  assigned_by_account_id int [ref: > account.account_id]
+  is_auto_assigned boolean [default: false]
+  is_active boolean [default: true]
+  assigned_note text
+  assigned_at timestamptz [default: `now()`]
 
-  university_id int [not null, note: 'FK อ้าง booking (tenant-aware)']
-  booking_id int [not null, note: 'FK อ้าง booking (tenant-aware)']
-  consultant_id int [not null, note: 'FK -> consultant']
-  consultant_university_id int [not null, ref: > university.university_id, note: 'FK -> university (มหาลัยจริงของ consultant)']
-  borrow_assignment_id int [ref: > borrow_assignment.borrow_assignment_id, note: 'FK -> borrow_assignment (optional)']
-  assigned_by_account_id int [ref: > account.account_id, note: 'FK -> account (optional): ผู้ assign']
-
-  is_auto_assigned boolean [not null, default: false, note: 'ระบบ assign อัตโนมัติ']
-  is_active boolean [not null, default: true, note: 'record ปัจจุบัน/ประวัติ']
-  assigned_note text [note: 'หมายเหตุ']
-  assigned_at timestamptz [not null, default: `now()`, note: 'เวลา assign']
-
-  Indexes {
-    (university_id, booking_id)
-    (consultant_id, assigned_at)
-    (borrow_assignment_id)
-  }
-
-  Note: 'ประวัติการมอบหมาย consultant ให้ booking'
+  Note: 'ประวัติมอบหมาย consultant (รวมยืมตัว)'
 }
 
 Table booking_outcome {
-  university_id int [not null, note: 'PK tenant-aware']
-  booking_id int [not null, note: 'PK tenant-aware']
+  booking_id int [not null]
+  university_id int [not null]
+  booking_outcome_consultant_note text [not null]
+  booking_outcome_next_step text
+  booking_outcome_risk_level int
+  booking_outcome_recorded_at timestamp [default: `now()`]
 
-  booking_outcome_consultant_note text [not null, note: 'บันทึกสรุปโดย consultant']
-  booking_outcome_next_step text [note: 'แนวทางถัดไป']
-  booking_outcome_risk_level int [note: 'ระดับความเสี่ยง']
-  booking_outcome_recorded_at timestamp [not null, default: `now()`, note: 'เวลาบันทึก']
 
-  Indexes {
-    (university_id, booking_id) [pk]
-    (booking_id)
-  }
-
-  Note: 'บันทึกผลการให้คำปรึกษา (1:1 booking)'
+  Note: 'ผลการให้คำปรึกษา (1:1 กับ booking)'
 }
 
 Table booking_agreement_signature {
-  booking_agreement_signature_id int [pk, increment, note: 'PK']
+  booking_agreement_signature_id int [pk, increment]
+  university_id int [not null]
+  booking_id int [not null]
+  student_id int [not null]
+  signature_method ConsentSignatureMethod [default: 'DRAW']
+  signature_payload json [not null]
 
-  university_id int [not null, note: 'FK อ้าง booking (tenant-aware)']
-  booking_id int [not null, note: 'FK อ้าง booking (tenant-aware)']
-  student_id int [not null, note: 'FK อ้าง student (tenant-aware)']
 
-  signature_method ConsentSignatureMethod [not null, default: 'DRAW', note: 'วิธีเซ็น']
-  signature_payload json [not null, note: 'ข้อมูลลายเซ็น (JSON)']
-
-  Indexes {
-    (university_id, booking_id) [unique]
-    (university_id, student_id)
-  }
-
-  Note: 'ลายเซ็นยินยอมของนิสิต (1:1 booking)'
+  Note: 'ลายเซ็นยินยอม (1 booking ต่อ 1 signature)'
 }
 
 Table cancellation_reason {
-  cancellation_reason_id int [pk, increment, note: 'PK']
+  cancellation_reason_id int [pk, increment]
+  cancellation_reason_code varchar(20) [unique, not null]
+  cancellation_reason_name_th varchar(100) [not null]
+  cancellation_reason_name_en varchar(100)
+  cancellation_reason_description text
 
-  cancellation_reason_code varchar(20) [not null, unique, note: 'โค้ดเหตุผล']
-  cancellation_reason_name_th varchar(100) [not null, note: 'ชื่อเหตุผล (ไทย)']
-  cancellation_reason_name_en varchar(100) [note: 'ชื่อเหตุผล (อังกฤษ)']
-  cancellation_reason_description text [note: 'คำอธิบาย']
-
-  Note: 'Master เหตุผลการยกเลิก booking'
+  Note: 'Master เหตุผลยกเลิกการจอง'
 }
 
 Table booking_cancellation {
-  university_id int [not null, note: 'PK tenant-aware']
-  booking_id int [not null, note: 'PK tenant-aware']
+  booking_id int [not null]
+  university_id int [not null]
+  cancellation_reason_id int [not null, ref: > cancellation_reason.cancellation_reason_id]
+  booking_cancellation_note text
+  booking_cancellation_cancelled_by_id int [not null, ref: > account.account_id]
+  booking_cancellation_cancelled_at timestamp [default: `now()`]
 
-  cancellation_reason_id int [not null, ref: > cancellation_reason.cancellation_reason_id, note: 'FK -> cancellation_reason']
-  booking_cancellation_cancelled_by_id int [not null, ref: > account.account_id, note: 'FK -> account (ผู้ยกเลิก)']
 
-  booking_cancellation_note text [note: 'หมายเหตุ']
-  booking_cancellation_cancelled_at timestamp [not null, default: `now()`, note: 'เวลายกเลิก']
-
-  Indexes {
-    (university_id, booking_id) [pk]
-    (booking_cancellation_cancelled_by_id)
-    (booking_id)
-    (cancellation_reason_id)
-  }
-
-  Note: 'ข้อมูลการยกเลิก (1:1 booking)'
+  Note: 'รายละเอียดการยกเลิกจอง (1:1 กับ booking)'
 }
 
 
-// ---------- FEEDBACK & NOTIFICATION ----------
-
-Table feedback {
-  feedback_id int [pk, increment, note: 'PK']
-
-  university_id int [not null, note: 'FK อ้าง booking (tenant-aware)']
-  booking_id int [not null, note: 'FK อ้าง booking (tenant-aware)']
-  student_id int [not null, note: 'FK อ้าง student (tenant-aware)']
-  consultant_id int [not null, note: 'FK อ้าง consultant']
-  consultant_university_id int [not null, note: 'tenant ของ consultant']
-
-  feedback_is_anonymous boolean [not null, default: true, note: 'ซ่อนตัวตน']
-  feedback_created_at timestamp [not null, default: `now()`, note: 'เวลาให้ feedback']
-
-  Indexes {
-    (university_id, booking_id) [unique]
-    (consultant_id)
-    (student_id)
-    (university_id)
-    (consultant_university_id, consultant_id)
-  }
-
-  Note: 'แบบประเมิน/feedback ต่อ booking (1:1)'
-}
-
-Table evaluation_criterion {
-  evaluation_criterion_id int [pk, increment, note: 'PK']
-
-  evaluation_criterion_topic_th varchar(100) [not null, note: 'หัวข้อเกณฑ์ (ไทย)']
-  evaluation_criterion_topic_en varchar(100) [note: 'หัวข้อเกณฑ์ (อังกฤษ)']
-  evaluation_criterion_weight decimal(3,2) [not null, default: 1.00, note: 'ค่าน้ำหนัก']
-  evaluation_criterion_display_order int [not null, default: 0, note: 'ลำดับแสดงผล']
-
-  Note: 'Master เกณฑ์การประเมิน'
-}
-
-Table feedback_rating {
-  feedback_rating_id int [pk, increment, note: 'PK']
-
-  feedback_id int [not null, ref: > feedback.feedback_id, note: 'FK -> feedback']
-  evaluation_criterion_id int [not null, ref: > evaluation_criterion.evaluation_criterion_id, note: 'FK -> evaluation_criterion']
-
-  feedback_rating_score int [not null, note: 'คะแนน (1..5)']
-
-  Indexes {
-    (feedback_id, evaluation_criterion_id) [unique]
-    (evaluation_criterion_id)
-  }
-
-  Note: 'คะแนนรายข้อของ feedback'
-}
-
-Table feedback_comment {
-  feedback_id int [pk, ref: > feedback.feedback_id, note: 'PK + FK: 1:1 กับ feedback']
-
-  feedback_comment_replied_by_id int [ref: > account.account_id, note: 'FK -> account (optional): ผู้ตอบกลับ']
-
-  feedback_comment_text text [note: 'คอมเมนต์จากนิสิต']
-  feedback_comment_admin_reply text [note: 'ตอบกลับจาก admin']
-  feedback_comment_replied_at timestamp [note: 'เวลาตอบกลับ']
-
-  Indexes {
-    (feedback_comment_replied_by_id)
-  }
-
-  Note: 'คอมเมนต์ใน feedback + การตอบกลับ'
-}
-
-Table notification_template {
-  notification_template_id int [pk, increment, note: 'PK']
-
-  notification_template_code varchar(50) [not null, unique, note: 'โค้ด template']
-  notification_template_title varchar(200) [note: 'หัวข้อ']
-  notification_template_body text [note: 'เนื้อความ template']
-  notification_template_format varchar(20) [not null, default: 'TEXT', note: 'รูปแบบ']
-
-  Note: 'แม่แบบข้อความแจ้งเตือน'
-}
-
-Table notification {
-  notification_id int [pk, increment, note: 'PK']
-
-  account_id int [not null, ref: > account.account_id, note: 'FK -> account (ผู้รับ)']
-  notification_template_id int [not null, ref: > notification_template.notification_template_id, note: 'FK -> notification_template']
-  university_id int [note: 'FK อ้าง booking (optional)']
-  booking_id int [note: 'FK อ้าง booking (optional)']
-
-  notification_channel varchar(20) [not null, default: 'LINE', note: 'ช่องทางส่ง']
-  notification_data json [note: 'payload เพิ่มเติม']
-  notification_status varchar(20) [not null, default: 'PENDING', note: 'สถานะส่ง']
-  notification_sent_at timestamp [note: 'เวลาส่งสำเร็จ']
-  notification_error_message text [note: 'error']
-  notification_created_at timestamp [not null, default: `now()`, note: 'เวลาสร้าง']
-
-  Indexes {
-    (account_id)
-    (notification_status)
-    (university_id, booking_id)
-    (notification_template_id)
-  }
-
-  Note: 'คิว/ประวัติการส่งแจ้งเตือน'
-}
-
-
-// ---------- POINTS ----------
-
-Table point_rule {
-  point_rule_id int [pk, increment, note: 'PK']
-
-  point_rule_code varchar(50) [not null, unique, note: 'โค้ดกติกา']
-  point_rule_name_th varchar(200) [not null, note: 'ชื่อกติกา (ไทย)']
-  point_rule_points int [not null, note: 'จำนวนแต้ม']
-  point_rule_is_active boolean [not null, default: true, note: 'เปิดใช้งาน']
-  point_rule_created_at timestamp [not null, default: `now()`, note: 'เวลาสร้าง']
-
-  Indexes {
-    (point_rule_is_active)
-  }
-
-  Note: 'Master กติกาการให้แต้ม'
-}
-
-Table student_point_wallet {
-  university_id int [not null, note: 'PK tenant-aware']
-  student_id int [not null, note: 'PK tenant-aware']
-
-  student_point_balance int [not null, default: 0, note: 'ยอดแต้มคงเหลือ']
-
-  Indexes {
-    (university_id, student_id) [pk]
-  }
-
-  Note: 'กระเป๋าแต้มของนิสิต'
-}
-
-Table student_point_transaction {
-  student_point_transaction_id int [pk, increment, note: 'PK']
-
-  student_id int [not null, ref: > student.student_id, note: 'FK -> student']
-  point_rule_id int [ref: > point_rule.point_rule_id, note: 'FK -> point_rule (optional)']
-  booking_university_id int [note: 'FK อ้าง booking (optional)']
-  booking_id int [note: 'FK อ้าง booking (optional)']
-
-  student_point_txn_type PointTxnType [not null, note: 'ประเภท txn (Enum)']
-  student_point_amount int [not null, note: 'จำนวนแต้มที่เปลี่ยน']
-  student_point_note text [note: 'หมายเหตุ']
-  student_point_created_at timestamp [not null, default: `now()`, note: 'เวลาเกิด txn']
-
-  Indexes {
-    (student_id)
-    (point_rule_id)
-    (student_point_txn_type)
-    (booking_university_id, booking_id)
-  }
-
-  Note: 'ประวัติธุรกรรมแต้ม (Earn/Redeem/Adjust/Expire)'
-}
-
-
-// ---------- ATTENDANCE / EXCEPTION / DISCIPLINE ----------
-
-Table student_behavior_status {
-  university_id int [not null, note: 'PK tenant-aware']
-  student_id int [not null, note: 'PK tenant-aware']
-
-  student_trust_term_code varchar(20) [note: 'รหัสเทอม']
-  student_trust_late_cancel_count int [not null, default: 0, note: 'จำนวนครั้งยกเลิกช้า']
-  student_trust_no_show_count int [not null, default: 0, note: 'จำนวนครั้งไม่มา']
-  student_trust_locked_until timestamptz [note: 'ล็อคสิทธิ์ถึง']
-  student_trust_updated_at timestamp [not null, note: 'เวลาอัปเดต']
-
-  Indexes {
-    (university_id, student_id) [pk]
-    (student_trust_locked_until)
-  }
-
-  Note: 'สถานะพฤติกรรม/ความน่าเชื่อถือของนิสิต'
-}
+// =====================
+// ATTENDANCE & EXCEPTION
+// =====================
 
 Table booking_attendance {
-  university_id int [not null, note: 'PK tenant-aware']
-  booking_id int [not null, note: 'PK tenant-aware']
+  university_id int [not null]
+  booking_id int [not null]
+  booking_attendance_status AttendanceStatus [default: 'PENDING']
+  booking_attendance_checked_in_at timestamptz
+  booking_attendance_late_minutes int
+  booking_attendance_note text
+  booking_attendance_marked_by_id int [ref: > account.account_id]
+  booking_attendance_marked_at timestamptz
 
-  booking_attendance_marked_by_id int [ref: > account.account_id, note: 'FK -> account (optional)']
 
-  booking_attendance_status AttendanceStatus [not null, default: 'PENDING', note: 'สถานะ attendance']
-  booking_attendance_checked_in_at timestamptz [note: 'เวลาเช็คอิน']
-  booking_attendance_late_minutes int [note: 'นาทีที่มาสาย']
-  booking_attendance_note text [note: 'หมายเหตุ']
-  booking_attendance_marked_at timestamptz [note: 'เวลาที่ mark']
-
-  Indexes {
-    (university_id, booking_id) [pk]
-    (booking_attendance_status)
-  }
-
-  Note: 'บันทึกการเข้ารับบริการ (check-in/late/no-show)'
+  Note: 'สถานะเข้าร่วมของนิสิต (เช็คอิน/มาสาย/ไม่มา)'
 }
 
 Table exception_reason {
-  exception_reason_id int [pk, increment, note: 'PK']
+  exception_reason_id int [pk, increment]
+  exception_reason_code varchar(30) [unique, not null]
+  exception_reason_name_th varchar(100) [not null]
+  exception_reason_name_en varchar(100)
+  exception_reason_description text
+  exception_reason_is_active boolean [default: true]
+  exception_reason_sort_order int [default: 0]
 
-  exception_reason_code varchar(30) [not null, unique, note: 'โค้ดเหตุผล']
-  exception_reason_name_th varchar(100) [not null, note: 'ชื่อเหตุผล (ไทย)']
-  exception_reason_name_en varchar(100) [note: 'ชื่อเหตุผล (อังกฤษ)']
-  exception_reason_description text [note: 'คำอธิบาย']
-  exception_reason_is_active boolean [not null, default: true, note: 'เปิดใช้งาน']
-  exception_reason_sort_order int [not null, default: 0, note: 'ลำดับแสดงผล']
-
-  Indexes {
-    (exception_reason_is_active, exception_reason_sort_order)
-  }
-
-  Note: 'Master เหตุผลสำหรับ exception'
+  Note: 'Master เหตุผลขอยกเว้น'
 }
 
 Table booking_exception_request {
-  booking_exception_request_id int [pk, increment, note: 'PK']
+  booking_exception_request_id int [pk, increment]
+  university_id int [not null]
+  booking_id int [not null]
+  student_id int [not null]
+  exception_reason_id int [ref: > exception_reason.exception_reason_id]
+  booking_exception_reason_code varchar(50) [not null]
+  booking_exception_reason_detail text [not null]
+  booking_exception_status ExceptionStatus [default: 'DRAFT']
+  booking_exception_deadline_at timestamptz
+  booking_exception_requested_at timestamptz [default: `now()`]
+  booking_exception_submitted_at timestamptz
+  booking_exception_reviewed_by_id int [ref: > account.account_id]
+  booking_exception_reviewed_at timestamptz
+  booking_exception_decision_note text
 
-  university_id int [not null, note: 'FK อ้าง booking (tenant-aware)']
-  booking_id int [not null, note: 'FK อ้าง booking (tenant-aware)']
-  student_id int [not null, note: 'FK อ้าง student (tenant-aware)']
-  exception_reason_id int [ref: > exception_reason.exception_reason_id, note: 'FK -> exception_reason (optional)']
-  booking_exception_reviewed_by_id int [ref: > account.account_id, note: 'FK -> account (reviewer)']
 
-  booking_exception_reason_code varchar(50) [not null, note: 'code เหตุผล']
-  booking_exception_reason_detail text [not null, note: 'รายละเอียดคำร้อง']
-  booking_exception_status ExceptionStatus [not null, default: 'DRAFT', note: 'สถานะ workflow']
-  booking_exception_deadline_at timestamptz [note: 'deadline']
-  booking_exception_requested_at timestamptz [not null, default: `now()`, note: 'เวลาสร้างคำร้อง']
-  booking_exception_submitted_at timestamptz [note: 'เวลาส่งคำร้อง']
-  booking_exception_reviewed_at timestamptz [note: 'เวลาพิจารณา']
-  booking_exception_decision_note text [note: 'หมายเหตุการตัดสินใจ']
-
-  Indexes {
-    (university_id, booking_id) [unique]
-    (booking_exception_status, booking_exception_requested_at)
-    (booking_exception_reviewed_by_id, booking_exception_reviewed_at)
-    (exception_reason_id)
-  }
-
-  Note: 'คำร้องขอยกเว้น/อุทธรณ์ (1:1 booking)'
+  Note: 'คำร้องขอยกเว้น (ไม่มา/สาย)'
 }
 
 Table booking_exception_evidence {
-  booking_exception_evidence_id int [pk, increment, note: 'PK']
+  booking_exception_evidence_id int [pk, increment]
+  booking_exception_request_id int [not null, ref: > booking_exception_request.booking_exception_request_id]
+  booking_exception_evidence_url text [not null]
+  booking_exception_evidence_name varchar(255)
+  booking_exception_evidence_type varchar(50)
+  booking_exception_evidence_size int
+  booking_exception_evidence_uploaded_at timestamptz [default: `now()`]
 
-  booking_exception_request_id int [not null, ref: > booking_exception_request.booking_exception_request_id, note: 'FK -> booking_exception_request']
-
-  booking_exception_evidence_url text [not null, note: 'URL ไฟล์']
-  booking_exception_evidence_name varchar(255) [note: 'ชื่อไฟล์']
-  booking_exception_evidence_type varchar(50) [note: 'mime/type']
-  booking_exception_evidence_size int [note: 'ขนาดไฟล์ bytes']
-  booking_exception_evidence_uploaded_at timestamptz [not null, default: `now()`, note: 'เวลาอัปโหลด']
-
-  Indexes {
-    (booking_exception_request_id)
-  }
-
-  Note: 'หลักฐานประกอบ exception (หลายไฟล์ต่อ 1 คำร้อง)'
+  Note: 'หลักฐานแนบคำร้อง exception'
 }
 
 Table booking_punishment_log {
-  booking_discipline_log_id int [pk, increment, note: 'PK']
+  booking_discipline_log_id int [pk, increment]
+  university_id int [not null, ref: > university.university_id]
+  student_id int [not null, ref: > student.student_id]
+  booking_id int
+  booking_discipline_event_type varchar(30) [not null, ref: > discipline_event_type_category.code, note: 'ประเภทเหตุวินัย (FK -> discipline_event_type_category)']
+  booking_discipline_delta_score int
+  booking_discipline_delta_points int
+  booking_discipline_lock_until timestamptz
+  booking_discipline_note text
+  booking_discipline_created_by_id int [ref: > account.account_id]
+  booking_discipline_created_at timestamptz [default: `now()`]
 
-  university_id int [not null, note: 'tenant']
-  student_id int [not null, note: 'FK อ้าง student (tenant-aware)']
-  booking_id int [note: 'FK อ้าง booking (optional)']
-
-  booking_discipline_event_type DisciplineEventType [not null, note: 'ประเภทวินัย (Enum)']
-  booking_discipline_delta_score int [note: 'เปลี่ยนคะแนน trust']
-  booking_discipline_delta_points int [note: 'เปลี่ยนแต้ม reward']
-  booking_discipline_lock_until timestamptz [note: 'ล็อคสิทธิ์ถึง']
-  booking_discipline_note text [note: 'หมายเหตุ']
-  booking_discipline_created_by_id int [note: 'FK -> account']
-  booking_discipline_created_at timestamptz [not null, default: `now()`, note: 'เวลาบันทึก']
-
-  Indexes {
-    (university_id, student_id)
-    (booking_discipline_event_type, booking_discipline_created_at)
-  }
-
-  Note: 'บันทึกเหตุการณ์วินัยการจอง'
+  Note: 'บันทึกวินัย (โทษยกเลิกสาย/ไม่มา/ปลดล็อค)'
 }
 
 
-// ---------- AI KNOWLEDGE BASE ----------
+// =====================
+// FEEDBACK
+// =====================
+
+Table feedback {
+  feedback_id int [pk, increment]
+  university_id int [not null]
+  booking_id int [not null]
+  student_id int [not null]
+  consultant_id int [not null]
+  consultant_university_id int [not null]
+  feedback_is_anonymous boolean [default: true]
+  feedback_created_at timestamp [default: `now()`]
+
+
+  Note: 'Feedback ต่อ booking (1:1)'
+}
+
+Table evaluation_criterion {
+  evaluation_criterion_id int [pk, increment]
+  evaluation_criterion_topic_th varchar(100) [not null]
+  evaluation_criterion_topic_en varchar(100)
+  evaluation_criterion_weight decimal(3,2) [default: 1.00]
+  evaluation_criterion_display_order int [default: 0]
+
+  Note: 'เกณฑ์ประเมิน consultant'
+}
+
+Table feedback_rating {
+  feedback_rating_id int [pk, increment]
+  feedback_id int [not null, ref: > feedback.feedback_id]
+  evaluation_criterion_id int [not null, ref: > evaluation_criterion.evaluation_criterion_id]
+  feedback_rating_score int [not null]
+
+
+  Note: 'คะแนนประเมิน (each criterion per feedback)'
+}
+
+Table feedback_comment {
+  feedback_id int [pk, ref: - feedback.feedback_id]
+  feedback_comment_text text
+  feedback_comment_admin_reply text
+  feedback_comment_replied_by_id int [ref: > account.account_id]
+  feedback_comment_replied_at timestamp
+
+  Note: 'ความคิดเห็นเพิ่มเติม + admin reply (1:1 with feedback)'
+}
+
+
+// =====================
+// NOTIFICATION
+// =====================
+
+Table notification_template {
+  notification_template_id int [pk, increment]
+  notification_template_code varchar(50) [unique, not null]
+  notification_template_title varchar(200)
+  notification_template_body text
+  notification_template_format varchar(20) [default: 'TEXT']
+
+  Note: 'Template แจ้งเตือน'
+}
+
+Table notification {
+  notification_id int [pk, increment]
+  account_id int [not null, ref: > account.account_id]
+  notification_template_id int [not null, ref: > notification_template.notification_template_id]
+  university_id int
+  booking_id int
+  notification_channel varchar(20) [default: 'LINE']
+  notification_data json
+  notification_status varchar(20) [default: 'PENDING']
+  notification_sent_at timestamp
+  notification_error_message text
+  notification_created_at timestamp [default: `now()`]
+
+  Note: 'รายการแจ้งเตือน (LINE/email/push)'
+}
+
+
+// =====================
+// POINTS (สะสมแต้ม)
+// =====================
+
+Table point_rule {
+  point_rule_id int [pk, increment]
+  point_rule_code varchar(50) [unique, not null]
+  point_rule_name_th varchar(200) [not null]
+  point_rule_points int [not null]
+  point_rule_is_active boolean [default: true]
+  point_rule_created_at timestamp [default: `now()`]
+
+  Note: 'กฎการให้แต้ม'
+}
+
+Table student_point_wallet {
+  student_id int [not null]
+  university_id int [not null]
+  student_point_balance int [default: 0]
+
+
+  Note: 'กระเป๋าแต้มนิสิต (1:1 per university)'
+}
+
+Table student_point_transaction {
+  student_point_transaction_id int [pk, increment]
+  student_id int [not null, ref: > student.student_id]
+  point_rule_id int [ref: > point_rule.point_rule_id]
+  booking_university_id int
+  booking_id int
+  student_point_txn_type varchar(30) [not null, ref: > point_txn_type_category.code, note: 'ประเภทธุรกรรม (FK -> point_txn_type_category)']
+  student_point_amount int [not null]
+  student_point_note text
+  student_point_created_at timestamp [default: `now()`]
+
+  Note: 'ธุรกรรมแต้ม (EARN/REDEEM/ADJUST/EXPIRE)'
+}
+
+
+// =====================
+// AI KNOWLEDGE BASE
+// =====================
 
 Table ai_kb_document {
-  ai_kb_document_id int [pk, increment, note: 'PK']
+  ai_kb_document_id int [pk, increment]
+  university_id int [ref: > university.university_id]
+  ai_kb_document_key varchar(120) [not null]
+  ai_kb_document_title varchar(200) [not null]
+  ai_kb_document_category varchar(50)
+  ai_kb_document_url_hint varchar(200)
+  ai_kb_document_is_active boolean [default: true]
+  ai_kb_published_version_id int
+  ai_kb_document_created_at timestamptz [default: `now()`]
+  ai_kb_document_updated_at timestamptz [default: `now()`]
 
-  university_id int [ref: > university.university_id, note: 'FK -> university (optional): null=เอกสารกลาง']
-  ai_kb_published_version_id int [ref: > ai_kb_document_version.ai_kb_document_version_id, note: 'FK -> version (optional)']
 
-  ai_kb_document_key varchar(120) [not null, note: 'คีย์เอกสาร']
-  ai_kb_document_title varchar(200) [not null, note: 'ชื่อเอกสาร']
-  ai_kb_document_category varchar(50) [note: 'หมวดเอกสาร']
-  ai_kb_document_url_hint varchar(200) [note: 'hint/URL อ้างอิง']
-  ai_kb_document_is_active boolean [not null, default: true, note: 'เปิดใช้งาน']
-  ai_kb_document_created_at timestamptz [not null, default: `now()`, note: 'เวลาสร้าง']
-  ai_kb_document_updated_at timestamptz [not null, default: `now()`, note: 'เวลาอัปเดต']
-
-  Indexes {
-    (university_id, ai_kb_document_key) [unique]
-    (university_id, ai_kb_document_is_active)
-    (ai_kb_document_category)
-  }
-
-  Note: 'เอกสารความรู้ของ AI (KB) ทั้ง global และเฉพาะมหาลัย'
+  Note: 'เอกสาร KB สำหรับ AI chatbot (กลาง/ของแต่ละมหาลัย)'
 }
 
 Table ai_kb_document_role {
-  ai_kb_document_id int [not null, ref: > ai_kb_document.ai_kb_document_id, note: 'FK -> ai_kb_document']
-  ai_actor_role varchar(30) [not null, note: 'role ที่อ่านได้']
+  ai_kb_document_id int [not null, ref: > ai_kb_document.ai_kb_document_id]
+  ai_actor_role varchar(30) [not null]
 
-  Indexes {
-    (ai_kb_document_id, ai_actor_role) [pk]
-  }
 
-  Note: 'กำหนด role ที่เข้าถึงเอกสาร KB ได้'
+  Note: 'สิทธิ์เข้าถึง KB document ตาม role'
 }
 
 Table ai_kb_document_version {
-  ai_kb_document_version_id int [pk, increment, note: 'PK']
+  ai_kb_document_version_id int [pk, increment]
+  ai_kb_document_id int [not null, ref: > ai_kb_document.ai_kb_document_id]
+  ai_kb_version_no int [not null]
+  ai_kb_content_type varchar(30) [not null, ref: > kb_content_type_category.code, note: 'ประเภทเนื้อหา (FK -> kb_content_type_category)']
+  ai_kb_version_status KbVersionStatus [default: 'DRAFT']
+  ai_kb_source_path text
+  ai_kb_source_md text
+  ai_kb_source_json json
+  ai_kb_normalized_text text
+  ai_kb_index_status KbIndexStatus [default: 'PENDING']
+  ai_kb_index_error text
+  ai_kb_version_created_at timestamptz [default: `now()`]
+  ai_kb_version_updated_at timestamptz [default: `now()`]
 
-  ai_kb_document_id int [not null, ref: > ai_kb_document.ai_kb_document_id, note: 'FK -> ai_kb_document']
 
-  ai_kb_version_no int [not null, note: 'เลขเวอร์ชัน']
-  ai_kb_content_type KbContentType [not null, note: 'ชนิด content']
-  ai_kb_version_status KbVersionStatus [not null, default: 'DRAFT', note: 'สถานะเวอร์ชัน']
-  ai_kb_source_path text [note: 'path แหล่งเอกสาร']
-  ai_kb_source_md text [note: 'markdown content']
-  ai_kb_source_json json [note: 'json content']
-  ai_kb_normalized_text text [note: 'ข้อความ normalize สำหรับ chunk/search']
-  ai_kb_index_status KbIndexStatus [not null, default: 'PENDING', note: 'สถานะ index/chunk']
-  ai_kb_index_error text [note: 'error ขณะ index']
-  ai_kb_version_created_at timestamptz [not null, default: `now()`, note: 'เวลาสร้าง']
-  ai_kb_version_updated_at timestamptz [not null, default: `now()`, note: 'เวลาอัปเดต']
-
-  Indexes {
-    (ai_kb_document_id, ai_kb_version_no) [unique]
-    (ai_kb_index_status)
-  }
-
-  Note: 'เวอร์ชันของเอกสาร KB'
+  Note: 'เวอร์ชันเนื้อหา KB (draft/published/archived)'
 }
 
 Table ai_kb_chunk {
-  ai_kb_chunk_id int [pk, increment, note: 'PK']
+  ai_kb_chunk_id int [pk, increment]
+  ai_kb_document_id int [not null, ref: > ai_kb_document.ai_kb_document_id]
+  ai_kb_document_version_id int [not null, ref: > ai_kb_document_version.ai_kb_document_version_id]
+  ai_kb_chunk_index int [not null]
+  ai_kb_chunk_content_text text [not null]
+  ai_kb_chunk_embedding json
+  ai_kb_chunk_token_count int
+  university_id int [ref: > university.university_id]
+  ai_kb_chunk_created_at timestamptz [default: `now()`]
 
-  ai_kb_document_id int [not null, ref: > ai_kb_document.ai_kb_document_id, note: 'FK -> ai_kb_document']
-  ai_kb_document_version_id int [not null, ref: > ai_kb_document_version.ai_kb_document_version_id, note: 'FK -> version']
-  university_id int [ref: > university.university_id, note: 'FK -> university (optional)']
 
-  ai_kb_chunk_index int [not null, note: 'ลำดับ chunk']
-  ai_kb_chunk_content_text text [not null, note: 'ข้อความของ chunk']
-  ai_kb_chunk_embedding json [note: 'embedding']
-  ai_kb_chunk_token_count int [note: 'จำนวน token']
-  ai_kb_chunk_created_at timestamptz [not null, default: `now()`, note: 'เวลาสร้าง']
-
-  Indexes {
-    (ai_kb_document_version_id, ai_kb_chunk_index) [unique]
-    (university_id)
-  }
-
-  Note: 'Chunk สำหรับ retrieval (RAG)'
+  Note: 'ชิ้นส่วน KB สำหรับ RAG (vector search)'
 }
 
 Table ai_feedback_event {
-  ai_feedback_event_id int [pk, increment, note: 'PK']
+  ai_feedback_event_id int [pk, increment]
+  university_id int [ref: > university.university_id]
+  account_id int [ref: > account.account_id]
+  ai_user_role varchar(30)
+  ai_feedback_type varchar(30) [not null, ref: > ai_feedback_type_category.code, note: 'ประเภท feedback (FK -> ai_feedback_type_category)']
+  ai_user_question_text text [not null]
+  ai_assistant_reply_excerpt varchar(500)
+  ai_feedback_status AiFeedbackStatus [default: 'OPEN']
+  ai_resolved_document_id int [ref: > ai_kb_document.ai_kb_document_id]
+  ai_created_at timestamptz [default: `now()`]
 
-  university_id int [ref: > university.university_id, note: 'FK -> university (optional)']
-  account_id int [ref: > account.account_id, note: 'FK -> account (optional)']
-  ai_resolved_document_id int [ref: > ai_kb_document.ai_kb_document_id, note: 'FK -> ai_kb_document (optional)']
-
-  ai_user_role varchar(30) [note: 'role ของผู้ใช้']
-  ai_feedback_type AiFeedbackType [not null, note: 'ประเภท feedback']
-  ai_user_question_text text [not null, note: 'คำถามที่ถาม AI']
-  ai_assistant_reply_excerpt varchar(500) [note: 'สรุปคำตอบ AI']
-  ai_feedback_status AiFeedbackStatus [not null, default: 'OPEN', note: 'สถานะเคส']
-  ai_created_at timestamptz [not null, default: `now()`, note: 'เวลาสร้าง']
-
-  Indexes {
-    (university_id)
-    (ai_feedback_type)
-    (ai_feedback_status)
-  }
-
-  Note: 'บันทึก feedback ต่อคำตอบ AI เพื่อปรับปรุง KB'
+  Note: 'เคส feedback AI ที่ตอบไม่ได้/ผิด/ถูกบล็อก'
 }
 
 
-// ---------- BORROW SYSTEM ----------
+// =====================
+// BORROW (ระบบยืมที่ปรึกษา)
+// =====================
 
 Table borrow_request {
-  borrow_request_id int [pk, increment, note: 'PK']
+  borrow_request_id int [pk, increment]
+  from_university_id int [not null, ref: > university.university_id]
+  requested_by_account_id int [not null, ref: > account.account_id]
+  borrow_request_title varchar(200) [not null]
+  borrow_request_reason text [not null]
+  borrow_request_detail text
+  borrow_needed_from timestamptz
+  borrow_needed_to timestamptz
+  borrow_needed_count int [default: 1]
+  borrow_request_status BorrowRequestStatus [default: 'DRAFT']
+  borrow_submitted_at timestamptz
+  borrow_submitted_by_account_id int [ref: > account.account_id]
+  borrow_submit_note text
+  borrow_approved_at timestamptz
+  borrow_approved_by_account_id int [ref: > account.account_id]
+  borrow_rejected_at timestamptz
+  borrow_rejected_by_account_id int [ref: > account.account_id]
+  borrow_reject_reason text
+  borrow_request_created_at timestamptz [default: `now()`]
+  borrow_request_updated_at timestamptz [default: `now()`]
 
-  from_university_id int [not null, ref: > university.university_id, note: 'FK -> university (มหาลัยผู้ขอ)']
-  requested_by_account_id int [not null, ref: > account.account_id, note: 'FK -> account (ผู้สร้างคำขอ)']
-  borrow_submitted_by_account_id int [ref: > account.account_id, note: 'FK -> account (optional)']
-  borrow_approved_by_account_id int [ref: > account.account_id, note: 'FK -> account (optional)']
-  borrow_rejected_by_account_id int [ref: > account.account_id, note: 'FK -> account (optional)']
-
-  borrow_request_title varchar(200) [not null, note: 'หัวข้อคำขอ']
-  borrow_request_reason text [not null, note: 'เหตุผลการยืม']
-  borrow_request_detail text [note: 'รายละเอียดเพิ่ม']
-  borrow_needed_from timestamptz [note: 'ต้องการตั้งแต่']
-  borrow_needed_to timestamptz [note: 'ต้องการถึง']
-  borrow_needed_count int [not null, default: 1, note: 'จำนวนคนที่ต้องการ']
-  borrow_request_status BorrowRequestStatus [not null, default: 'DRAFT', note: 'สถานะ workflow']
-  borrow_submitted_at timestamptz [note: 'เวลาส่งคำขอ']
-  borrow_submit_note text [note: 'note ตอนส่ง']
-  borrow_approved_at timestamptz [note: 'เวลาอนุมัติ']
-  borrow_rejected_at timestamptz [note: 'เวลาปฏิเสธ']
-  borrow_reject_reason text [note: 'เหตุผลปฏิเสธ']
-  borrow_request_created_at timestamptz [not null, default: `now()`, note: 'เวลาสร้าง']
-  borrow_request_updated_at timestamptz [not null, default: `now()`, note: 'เวลาอัปเดต']
-
-  Indexes {
-    (from_university_id)
-    (requested_by_account_id)
-    (borrow_request_status)
-    (borrow_request_created_at)
-  }
-
-  Note: 'คำขอยืม consultant จากมหาลัยอื่น'
+  Note: 'คำขอยืมที่ปรึกษาข้ามมหาวิทยาลัย'
 }
 
 Table borrow_assignment {
-  borrow_assignment_id int [pk, increment, note: 'PK']
+  borrow_assignment_id int [pk, increment]
+  borrow_request_id int [not null, ref: > borrow_request.borrow_request_id]
+  consultant_id int [not null, ref: > consultant.consultant_id]
+  consultant_university_id int [not null, ref: > university.university_id]
+  borrow_assign_start_at timestamptz [not null]
+  borrow_assign_end_at timestamptz [not null]
+  borrow_assigned_by_account_id int [not null, ref: > account.account_id]
+  borrow_assignment_note text
+  borrow_assigned_at timestamptz [default: `now()`]
 
-  borrow_request_id int [not null, ref: > borrow_request.borrow_request_id, note: 'FK -> borrow_request']
-  consultant_id int [not null, ref: > consultant.consultant_id, note: 'FK -> consultant']
-  consultant_university_id int [not null, ref: > university.university_id, note: 'FK -> university']
-  borrow_assigned_by_account_id int [not null, ref: > account.account_id, note: 'FK -> account (ผู้ assign)']
 
-  borrow_assign_start_at timestamptz [not null, note: 'ช่วงเวลาเริ่ม']
-  borrow_assign_end_at timestamptz [not null, note: 'ช่วงเวลาสิ้นสุด']
-  borrow_assignment_note text [note: 'หมายเหตุ']
-  borrow_assigned_at timestamptz [not null, default: `now()`, note: 'เวลา assign']
-
-  Indexes {
-    (borrow_request_id, consultant_id) [unique]
-    (consultant_id, borrow_assign_start_at)
-    (consultant_university_id, borrow_assign_start_at)
-  }
-
-  Note: 'การมอบหมาย consultant ให้คำขอยืม'
+  Note: 'การมอบหมาย consultant ยืมตัว (1 request -> many assignments)'
 }
 
 Table consultant_borrow_availability {
-  consultant_borrow_availability_id int [pk, increment, note: 'PK']
+  consultant_borrow_availability_id int [pk, increment]
+  borrow_plan_id uuid [not null]
+  consultant_id int [not null, ref: > consultant.consultant_id]
+  home_university_id int [not null, ref: > university.university_id]
+  target_university_id int [not null, ref: > university.university_id]
+  borrow_assignment_id int [ref: > borrow_assignment.borrow_assignment_id]
+  availability_start_date date [not null]
+  availability_end_date date [not null]
+  status BorrowAvailabilityStatus [default: 'ACTIVE']
+  note text
+  created_by_account_id int [ref: > account.account_id]
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+  completed_at timestamptz
 
-  consultant_id int [not null, ref: > consultant.consultant_id, note: 'FK -> consultant']
-  home_university_id int [not null, ref: > university.university_id, note: 'FK -> university (ต้นทาง)']
-  target_university_id int [not null, ref: > university.university_id, note: 'FK -> university (ปลายทาง)']
-  borrow_assignment_id int [ref: > borrow_assignment.borrow_assignment_id, note: 'FK -> borrow_assignment (optional)']
-  created_by_account_id int [ref: > account.account_id, note: 'FK -> account (optional)']
-
-  borrow_plan_id uuid [not null, default: `uuid()`, note: 'กลุ่มแผน']
-  availability_start_date date [not null, note: 'วันเริ่ม']
-  availability_end_date date [not null, note: 'วันสิ้นสุด (exclusive)']
-  status BorrowAvailabilityStatus [not null, default: 'ACTIVE', note: 'สถานะแผน']
-  note text [note: 'หมายเหตุ']
-  created_at timestamptz [not null, default: `now()`, note: 'เวลาสร้าง']
-  updated_at timestamptz [not null, default: `now()`, note: 'เวลาอัปเดต']
-  completed_at timestamptz [note: 'เวลาจบแผน']
-
-  Indexes {
-    (borrow_plan_id)
-    (target_university_id, availability_start_date)
-    (consultant_id, availability_start_date)
-    (status)
-  }
-
-  Note: 'แผน availability ของ consultant สำหรับการยืม'
+  Note: 'ตารางว่างของที่ปรึกษาที่ถูกยืม'
 }
 
 Table consultant_borrow_policy {
-  borrow_window_policy_id int [pk, increment, note: 'PK']
+  consultant_borrow_policy_id int [pk, increment]
+  university_id int [ref: > university.university_id]
+  borrow_window_days int [default: 14]
+  is_active boolean [default: true]
+  created_at timestamptz [default: `now()`]
 
-  university_id int [ref: > university.university_id, note: 'FK -> university (optional): null=global']
-
-  borrow_window_days int [not null, default: 14, note: 'จำนวนวันล่วงหน้า']
-  is_active boolean [not null, default: true, note: 'เปิดใช้งาน']
-  created_at timestamptz [not null, default: `now()`, note: 'เวลาสร้าง']
-
-  Indexes {
-    (university_id, is_active)
-  }
-
-  Note: 'นโยบาย window การยืม'
+  Note: 'นโยบายหน้าต่างยืมตัว (วันที่อนุญาต) — null = global default'
 }
 
 
-// ---------- CONTENT ----------
+// =====================
+// GUIDEBOOK
+// =====================
 
 Table guidebook_document {
-  document_id int [pk, increment, note: 'PK']
+  document_id int [pk, increment]
+  document_slug varchar(100) [unique, not null]
+  document_title varchar(200) [not null]
+  document_content text [not null]
+  document_is_active boolean [default: true]
+  document_order int [default: 0]
+  document_created_at timestamp [default: `now()`]
+  document_updated_at timestamp
 
-  document_slug varchar(100) [not null, unique, note: 'slug สำหรับ URL']
-  document_title varchar(200) [not null, note: 'ชื่อเอกสาร']
-  document_content text [not null, note: 'เนื้อหาเอกสาร']
-  document_is_active boolean [not null, default: true, note: 'เปิดใช้งาน']
-  document_order int [not null, default: 0, note: 'ลำดับแสดงผล']
-  document_created_at timestamp [not null, default: `now()`, note: 'เวลาสร้าง']
-  document_updated_at timestamp [not null, note: 'เวลาอัปเดต']
-
-  Note: 'เอกสารคู่มือ/guidebook ในระบบ (CMS)'
+  Note: 'เอกสารคู่มือ/ข้อมูลทั่วไป'
 }
 
 
-// ---------- SEASON ----------
+// =====================================================
+// ADDITIONAL FK REFS (เส้นเชื่อมที่ไม่ได้ใส่ inline)
+// =====================================================
 
-Table season {
-  season_id int [pk, increment, note: 'PK']
-
-  season_code varchar(20) [not null, unique, note: 'โค้ดฤดูกาล']
-  season_name_th varchar(50) [not null, note: 'ชื่อฤดูกาล (ไทย)']
-  season_name_en varchar(50) [note: 'ชื่อฤดูกาล (อังกฤษ)']
-  month_start int [not null, note: 'เดือนเริ่ม (1..12)']
-  month_end int [not null, note: 'เดือนจบ (1..12)']
-  sort_order int [not null, default: 0, note: 'ลำดับแสดงผล']
-
-  Note: 'ฤดูกาลของปี (ผูก booking สำหรับรายงาน)'
-}
-
-
-// ---------- COUNTRY ----------
-
-Table country {
-  country_id int [pk, increment, note: 'PK']
-
-  country_code_alpha2 varchar(2) [not null, unique, note: 'ISO 3166-1 alpha-2']
-  country_code_alpha3 varchar(3) [not null, unique, note: 'ISO 3166-1 alpha-3']
-  country_name_th varchar(100) [not null, note: 'ชื่อประเทศ (ไทย)']
-  country_name_en varchar(100) [not null, note: 'ชื่อประเทศ (อังกฤษ)']
-  nationality_type NationalityType [not null, default: 'INTERNATIONAL', note: 'ประเภท THAI/INTERNATIONAL']
-  sort_order int [not null, default: 0, note: 'ลำดับแสดงผล']
-  is_active boolean [not null, default: true, note: 'เปิดใช้งาน']
-
-  Note: 'ประเทศ/เชื้อชาติ (ผูก student_profile สำหรับนิสิตต่างชาติ)'
-}
-
-
-// ---------- ACADEMIC TERM ----------
-
-Table academic_term_type {
-  academic_term_type_id int [pk, increment, note: 'PK']
-
-  academic_term_type_code varchar(20) [not null, unique, note: 'โค้ดประเภทเทอม']
-  academic_term_type_name_th varchar(100) [not null, note: 'ชื่อประเภทเทอม (ไทย)']
-  academic_term_type_name_en varchar(100) [note: 'ชื่อประเภทเทอม (อังกฤษ)']
-  sort_order int [not null, default: 0, note: 'ลำดับแสดงผล']
-
-  Note: 'Master ประเภทเทอมการศึกษา เช่น ภาคเรียน/ไตรภาค'
-}
-
-Table academic_term {
-  term_id int [pk, increment, note: 'PK']
-
-  university_id int [not null, ref: > university.university_id, note: 'FK -> university']
-  academic_term_type_id int [not null, ref: > academic_term_type.academic_term_type_id, note: 'FK -> academic_term_type']
-
-  academic_year int [not null, note: 'ปีการศึกษา']
-  term_start_date date [not null, note: 'วันเริ่มเทอม']
-  term_end_date date [not null, note: 'วันสิ้นสุดเทอม']
-  is_active boolean [not null, default: false, note: 'เทอมปัจจุบันหรือไม่']
-
-  Indexes {
-    (university_id, academic_term_type_id, academic_year) [unique]
-    (university_id, is_active)
-    (academic_term_type_id)
-  }
-
-  Note: 'เทอมการศึกษาของแต่ละมหาลัย'
-}
-
-Table academic_period {
-  period_id int [pk, increment, note: 'PK']
-
-  term_id int [not null, ref: > academic_term.term_id, note: 'FK -> academic_term']
-  university_id int [not null, ref: > university.university_id, note: 'FK -> university']
-
-  period_type AcademicPeriodType [not null, note: 'ประเภทช่วง (Enum)']
-  period_name_th varchar(100) [not null, note: 'ชื่อช่วง (ไทย)']
-  period_name_en varchar(100) [note: 'ชื่อช่วง (อังกฤษ)']
-  period_start_date date [not null, note: 'วันเริ่ม']
-  period_end_date date [not null, note: 'วันสิ้นสุด']
-  sort_order int [not null, default: 0, note: 'ลำดับแสดงผล']
-
-  Indexes {
-    (university_id, period_start_date, period_end_date)
-    (term_id)
-  }
-
-  Note: 'ช่วงย่อยในเทอม (สอบกลางภาค/ปลายภาค/ปิดภาค)'
-}
-
-
-// =====================
-// COMPOSITE FK RELATIONSHIPS
-// (แยกเป็น Single Reference เพื่อให้แสดงบน dbdiagram เป็นเส้นตรงๆ)
-// =====================
-
-// student_profile -> student
-Ref: student_profile.university_id > student.university_id
-Ref: student_profile.student_id > student.student_id
-
-// student_chronic_condition -> student_profile
-Ref: student_chronic_condition.university_id > student_profile.university_id
-Ref: student_chronic_condition.student_id > student_profile.student_id
-
-// student_address -> student
-Ref: student_address.university_id > student.university_id
-Ref: student_address.student_id > student.student_id
-
-// student_academic -> student
-Ref: student_academic.university_id > student.university_id
-Ref: student_academic.student_id > student.student_id
-
-// student_academic -> faculty (composite)
-Ref: student_academic.university_id > faculty.university_id
-Ref: student_academic.faculty_id > faculty.faculty_id
-
-// student_academic -> department (composite)
-Ref: student_academic.university_id > department.university_id
-Ref: student_academic.department_id > department.department_id
-
-// department -> faculty (composite)
-Ref: department.faculty_id > faculty.faculty_id
-
-// advisor -> faculty/department (composite)
-Ref: advisor.faculty_id > faculty.faculty_id
-Ref: advisor.department_id > department.department_id
-
-// booking -> student (composite)
+// --- Booking ---
 Ref: booking.student_id > student.student_id
-
-// booking -> time_slot (composite)
 Ref: booking.time_slot_id > time_slot.time_slot_id
 
-// booking_session -> booking (composite)
-Ref: booking_session.university_id > booking.university_id
+// --- Booking Session -> Booking ---
 Ref: booking_session.booking_id > booking.booking_id
 
-// booking_assignment -> booking (composite)
-Ref: booking_assignment.university_id > booking.university_id
+// --- Booking Assignment -> Booking ---
 Ref: booking_assignment.booking_id > booking.booking_id
 Ref: booking_assignment.consultant_id > consultant.consultant_id
 
-// booking_outcome -> booking (composite)
-Ref: booking_outcome.university_id > booking.university_id
+// --- Booking Outcome -> Booking ---
 Ref: booking_outcome.booking_id > booking.booking_id
 
-// booking_agreement_signature -> booking (composite)
-Ref: booking_agreement_signature.university_id > booking.university_id
+// --- Booking Agreement Signature ---
 Ref: booking_agreement_signature.booking_id > booking.booking_id
 Ref: booking_agreement_signature.student_id > student.student_id
 
-// booking_cancellation -> booking (composite)
-Ref: booking_cancellation.university_id > booking.university_id
+// --- Booking Cancellation -> Booking ---
 Ref: booking_cancellation.booking_id > booking.booking_id
 
-// feedback -> booking/student/consultant (composite)
-Ref: feedback.university_id > booking.university_id
-Ref: feedback.booking_id > booking.booking_id
-Ref: feedback.student_id > student.student_id
-Ref: feedback.consultant_id > consultant.consultant_id
-Ref: feedback.consultant_university_id > university.university_id
-
-// notification -> booking (composite)
-Ref: notification.university_id > booking.university_id
-Ref: notification.booking_id > booking.booking_id
-
-// student_point_wallet -> student (composite)
-Ref: student_point_wallet.university_id > student.university_id
-Ref: student_point_wallet.student_id > student.student_id
-
-// student_point_transaction -> booking (composite)
-Ref: student_point_transaction.booking_university_id > booking.university_id
-Ref: student_point_transaction.booking_id > booking.booking_id
-
-// student_behavior_status -> student (composite)
-Ref: student_behavior_status.university_id > student.university_id
-Ref: student_behavior_status.student_id > student.student_id
-
-// booking_attendance -> booking (composite)
-Ref: booking_attendance.university_id > booking.university_id
+// --- Booking Attendance -> Booking ---
 Ref: booking_attendance.booking_id > booking.booking_id
 
-// booking_exception_request -> booking/student (composite)
-Ref: booking_exception_request.university_id > booking.university_id
+// --- Booking Exception Request ---
 Ref: booking_exception_request.booking_id > booking.booking_id
 Ref: booking_exception_request.student_id > student.student_id
 
-// booking_punishment_log -> student (composite)
-Ref: booking_punishment_log.university_id > student.university_id
-Ref: booking_punishment_log.student_id > student.student_id
+// --- Feedback ---
+Ref: feedback.booking_id > booking.booking_id
+Ref: feedback.student_id > student.student_id
+Ref: feedback.consultant_id > consultant.consultant_id
+
+// --- Notification -> Booking ---
+Ref: notification.booking_id > booking.booking_id
+
+// --- Student Point Transaction -> Booking ---
+Ref: student_point_transaction.booking_id > booking.booking_id
+
+// --- Booking Punishment Log -> Booking ---
+Ref: booking_punishment_log.booking_id > booking.booking_id
+
+// --- Student Point Wallet -> Student ---
+Ref: student_point_wallet.student_id > student.student_id
+
+
+// --- Student Address -> Student ---
+Ref: student_address.student_id > student.student_id
+
+// --- Student Academic -> Student/Faculty/Department ---
+Ref: student_academic.student_id > student.student_id
+Ref: student_academic.faculty_id > faculty.faculty_id
+Ref: student_academic.department_id > department.department_id
+
+// --- Student Chronic Condition -> Student Profile ---
+Ref: student_chronic_condition.student_id > student_profile.student_id
+
+// --- Student Behavior Status -> Student ---
+Ref: student_behavior_status.student_id > student.student_id
+
+// --- Department -> Faculty ---
+Ref: department.faculty_id > faculty.faculty_id
+
+// --- Advisor -> Faculty/Department ---
+Ref: advisor.faculty_id > faculty.faculty_id
+Ref: advisor.department_id > department.department_id
+
+// --- AI KB Document -> Published Version ---
+Ref: ai_kb_document.ai_kb_published_version_id > ai_kb_document_version.ai_kb_document_version_id
