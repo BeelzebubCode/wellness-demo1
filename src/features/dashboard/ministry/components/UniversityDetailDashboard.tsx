@@ -52,23 +52,38 @@ export function UniversityDetailDashboard({ universityCode }: UniversityDetailPr
     const [activeTab, setActiveTab] = useState("dashboard");
     const [showRankings, setShowRankings] = useState(false);
 
-    const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>(() => {
+    // Stable initial date range (30 days back)
+    const [initialDates] = useState(() => {
         const to = new Date();
         to.setHours(23, 59, 59, 999);
         const from = new Date(to);
         from.setDate(from.getDate() - 30);
         from.setHours(0, 0, 0, 0);
-        return { from, to };
+        const toYMD = (d: Date) => d.toISOString().split('T')[0];
+        return { from, to, date_start: toYMD(from), date_end: toYMD(to) };
     });
 
-    // Convert dateRange to string params for useAnalytics
-    const toYMD = (d?: Date) => d ? d.toISOString().split('T')[0] : undefined;
-
-    const { data: analyticsData, loading: analyticsLoading } = useAnalytics({
+    const { data: analyticsData, loading: analyticsLoading, setParams } = useAnalytics({
         university_code: universityCode,
-        date_start: toYMD(dateRange.from),
-        date_end: toYMD(dateRange.to),
+        date_start: initialDates.date_start,
+        date_end: initialDates.date_end,
     });
+
+    // Date range state for the picker UI
+    const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({
+        from: initialDates.from,
+        to: initialDates.to,
+    });
+
+    // Sync date picker changes → useAnalytics params
+    const handleDateChange = (range: { from?: Date; to?: Date }) => {
+        setDateRange(range);
+        const toYMD = (d?: Date) => d ? d.toISOString().split('T')[0] : undefined;
+        setParams({
+            date_start: toYMD(range.from),
+            date_end: toYMD(range.to),
+        });
+    };
 
     useEffect(() => {
         async function fetchUniversity() {
@@ -226,7 +241,7 @@ export function UniversityDetailDashboard({ universityCode }: UniversityDetailPr
                                 <FacultyDateRangePicker
                                     startDate={dateRange.from}
                                     endDate={dateRange.to}
-                                    onChange={(range: { from?: Date; to?: Date }) => setDateRange({ from: range.from, to: range.to })}
+                                    onChange={handleDateChange}
                                 />
                                 <p className="text-[9px] text-slate-400 font-black uppercase text-right">
                                     อัปเดตล่าสุด: {new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}
