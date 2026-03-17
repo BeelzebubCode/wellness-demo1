@@ -244,7 +244,6 @@ export async function GET(req: NextRequest) {
 
           addresses: {
             include: { province: true },
-            orderBy: { address_type_id: "asc" },
           },
         },
       });
@@ -261,6 +260,7 @@ export async function GET(req: NextRequest) {
 
       // ✅ ใช้ field *_th/_en ตาม schema
       const { first, last, nick } = pickStudentNames(req, p);
+      const isEn = (new URL(req.url).searchParams.get("lang") || "th").toLowerCase().trim() === "en";
 
       const dto: ProfileMeDTO = {
         activeUniversityId,
@@ -284,9 +284,9 @@ export async function GET(req: NextRequest) {
             : undefined,
 
           // student extras
-          gender: (p as any).gender_category_id ? String((p as any).gender_category_id) : null,
+          gender: (p as any).genderCategory ? (isEn ? (p as any).genderCategory.name_en : (p as any).genderCategory.name_th) : null,
           birthday: p.student_birthday ? p.student_birthday.toISOString() : null,
-          bloodGroup: (p as any).blood_group_id ? String((p as any).blood_group_id) : null,
+          bloodGroup: (p as any).bloodGroup ? (isEn ? (p as any).bloodGroup.name_en : (p as any).bloodGroup.name_th) : null,
           nationality: p.student_nationality ?? null,
           religion: p.student_religion ?? null,
 

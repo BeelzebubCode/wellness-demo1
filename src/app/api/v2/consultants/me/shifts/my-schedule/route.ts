@@ -108,12 +108,16 @@ export async function GET(req: NextRequest) {
     };
 
     // Fetch shift team manually via raw query to bypass old Prisma client memory in dev server
+    console.log("[DEBUG] Fetching shift team for consultant ID:", consultantId);
     const rawConsultant = await prisma.$queryRaw<any[]>`SELECT shift_team_id FROM consultant WHERE consultant_id = ${consultantId}`;
+    console.log("[DEBUG] Raw consultant result:", rawConsultant);
     const shiftTeamId = rawConsultant?.[0]?.shift_team_id;
 
     let myTeam = null;
     if (shiftTeamId) {
+      console.log("[DEBUG] Fetching team info for team ID:", shiftTeamId);
       const rawTeam = await prisma.$queryRaw<any[]>`SELECT shift_team_id, team_order, team_name FROM consultant_shift_team WHERE shift_team_id = ${shiftTeamId}`;
+      console.log("[DEBUG] Raw team result:", rawTeam);
       myTeam = rawTeam?.[0] || null;
     }
 

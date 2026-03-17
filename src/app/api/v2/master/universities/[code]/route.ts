@@ -99,6 +99,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         lat: Number(conn.targetUniversity.university_latitude),
         lng: Number(conn.targetUniversity.university_longitude),
       })),
+
     };
 
     return NextResponse.json(

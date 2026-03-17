@@ -89,7 +89,6 @@ export async function GET(req: NextRequest) {
         university_id: true,
         university_name_th: true,
         university_name_en: true,
-        university_type: true,
       },
     });
 
