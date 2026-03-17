@@ -33,7 +33,7 @@ export async function handleGetConsultant(
       languages: true,
       account: { select: { account_username: true, account_role: true, account_line_id: true } },
       bookings: { select: { booking_status: true } },
-      feedbacks: { include: { ratings: true } },
+      _count: { select: { feedbacks: true } },
     },
   });
 
@@ -51,9 +51,14 @@ export async function handleGetConsultant(
     b.booking_status === BookingStatus.ASSIGNED || b.booking_status === BookingStatus.IN_PROGRESS
   ).length;
 
-  let avg = 0;
-  const scores = c.feedbacks.flatMap((f) => f.ratings.map((r) => r.feedback_rating_score));
-  if (scores.length) avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+  // ✅ Batch avg rating via raw SQL (no N+1)
+  const ratingResult = await prisma.$queryRaw<Array<{ avg_rating: number }>>`
+    SELECT AVG(fr.feedback_rating_score)::float AS avg_rating
+    FROM feedback_rating fr
+    JOIN feedback f ON f.feedback_id = fr.feedback_id
+    WHERE f.consultant_id = ${c.consultant_id}
+  `;
+  const avg = ratingResult[0]?.avg_rating ?? 0;
 
   return NextResponse.json({
     success: true,
