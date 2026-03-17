@@ -45,11 +45,104 @@ function getSpecMatchScore(bookingText: string, specializations: any[]): number 
 
 export async function GET() {
   try {
-    // const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000); // 5 นาที (สำหรับ Production)
+    const now = new Date();
+
+    // ──────────────────────────────────────────
+    // 🕐 STEP 0: Auto-expire past-due PENDING bookings
+    // If time slot has already ended and booking is still PENDING → auto-cancel
+    // ──────────────────────────────────────────
+    const expiredBookings = await prisma.booking.findMany({
+      where: {
+        booking_status: BookingStatus.PENDING_ASSIGNMENT,
+        timeSlot: {
+          time_slot_end_datetime: { lt: now },
+        },
+      },
+      select: {
+        booking_id: true,
+        university_id: true,
+      },
+    });
+
+    let expiredCount = 0;
+    if (expiredBookings.length > 0) {
+      // Get or create the "EXPIRED" cancellation reason
+      let expiredReason = await prisma.cancellationReason.findUnique({
+        where: { cancellation_reason_code: "EXPIRED" },
+      });
+      if (!expiredReason) {
+        expiredReason = await prisma.cancellationReason.create({
+          data: {
+            cancellation_reason_code: "EXPIRED",
+            cancellation_reason_name_th: "เลยกำหนดเวลา",
+            cancellation_reason_name_en: "Time slot expired",
+            cancellation_reason_description: "ระบบยกเลิกอัตโนมัติเนื่องจากเลยกำหนดเวลานัดหมาย",
+          },
+        });
+      }
+
+      // Get system account (account_id = 1 or first SUPER_ADMIN)
+      const systemAccount = await prisma.account.findFirst({
+        where: { account_role: "SUPER_ADMIN" },
+        select: { account_id: true },
+      });
+      const systemAccountId = systemAccount?.account_id ?? 1;
+
+      for (const eb of expiredBookings) {
+        try {
+          await prisma.$transaction(async (tx) => {
+            const upd = await tx.booking.updateMany({
+              where: {
+                booking_id: eb.booking_id,
+                university_id: eb.university_id,
+                booking_status: BookingStatus.PENDING_ASSIGNMENT,
+              },
+              data: {
+                booking_status: BookingStatus.CANCELLED,
+              },
+            });
+
+            if (upd.count > 0) {
+              // Check if cancellation record already exists
+              const existing = await tx.bookingCancellation.findUnique({
+                where: {
+                  university_id_booking_id: {
+                    university_id: eb.university_id,
+                    booking_id: eb.booking_id,
+                  },
+                },
+              });
+              if (!existing) {
+                await tx.bookingCancellation.create({
+                  data: {
+                    booking_id: eb.booking_id,
+                    university_id: eb.university_id,
+                    cancellation_reason_id: expiredReason!.cancellation_reason_id,
+                    booking_cancellation_note: "[ระบบ] หมดเวลานัดหมาย – ยกเลิกอัตโนมัติ",
+                    booking_cancellation_cancelled_by_id: systemAccountId,
+                  },
+                });
+              }
+              expiredCount++;
+            }
+          });
+        } catch (err) {
+          console.error(`[CRON AutoExpire] Failed to expire booking ${eb.booking_id}:`, err);
+        }
+      }
+
+      if (expiredCount > 0) {
+        console.log(`[CRON AutoExpire] Expired ${expiredCount} past-due booking(s)`);
+      }
+    }
+
+    // ──────────────────────────────────────────
+    // 🤖 STEP 1: Auto-assign remaining PENDING bookings
+    // ──────────────────────────────────────────
     const delaySec = Number(process.env.NEXT_PUBLIC_AUTO_ASSIGN_DELAY_SEC) || 30;
     const thresholdAgo = new Date(Date.now() - delaySec * 1000);
 
-    // Fetch pending bookings along with problem details and timeSlot for clashing checks
+    // Fetch pending bookings (only future ones now since expired were cancelled above)
     const pendingBookings = await prisma.booking.findMany({
       where: {
         booking_status: BookingStatus.PENDING_ASSIGNMENT,
@@ -72,7 +165,10 @@ export async function GET() {
     });
 
     if (pendingBookings.length === 0) {
-      return NextResponse.json({ message: "No bookings to auto-assign" });
+      return NextResponse.json({
+        message: `Expired ${expiredCount} booking(s). No bookings to auto-assign.`,
+        expiredCount,
+      });
     }
 
     let assignedCount = 0;
@@ -241,7 +337,9 @@ export async function GET() {
     }
 
     return NextResponse.json({
-      message: `Auto-assigned ${assignedCount} bookings successfully`,
+      message: `Auto-expired ${expiredCount} booking(s), auto-assigned ${assignedCount} booking(s)`,
+      expiredCount,
+      assignedCount,
     });
   } catch (error) {
     console.error("[CRON AutoAssign Error]", error);

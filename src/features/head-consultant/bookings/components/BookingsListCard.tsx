@@ -48,6 +48,11 @@ function StatusBadge({ status }: { status?: string | null }) {
       cls: "bg-rose-50 text-rose-700 border-rose-200",
       dot: "bg-rose-600",
     },
+    EXPIRED: {
+      label: "หมดเวลา",
+      cls: "bg-gray-100 text-gray-500 border-gray-300",
+      dot: "bg-gray-400",
+    },
   };
 
   const cfg = map[s] ?? map.PENDING_ASSIGNMENT;
@@ -174,6 +179,12 @@ export function BookingsListCard({
   const latestAssignment = row.assignments?.[0];
   const isAutoAssigned = latestAssignment?.isAutoAssigned;
 
+  // Check if this is an expired (auto-cancelled) booking
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawCancellation = row.cancellation as any;
+  const isExpired = row.status === "CANCELLED" && rawCancellation?.cancellationReason?.cancellation_reason_code === "EXPIRED";
+  const displayStatus = isExpired ? "EXPIRED" : row.status;
+
   const timeLabel =
     row.startTime && row.endTime ? `${row.startTime}–${row.endTime} น.` : "-";
 
@@ -206,7 +217,7 @@ export function BookingsListCard({
                   {studentName}
                 </p>
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <StatusBadge status={row.status ?? null} />
+                  <StatusBadge status={displayStatus ?? null} />
 
                   {row.status === "PENDING_ASSIGNMENT" && countdown && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800 animate-pulse border border-amber-200">
