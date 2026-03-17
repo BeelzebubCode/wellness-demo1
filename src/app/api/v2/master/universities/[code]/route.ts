@@ -27,7 +27,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         university_name_en: true,
         university_latitude: true,
         university_longitude: true,
-        university_type: true,
+        university_type_id: true,
+        universityType: { select: { code: true, name_th: true } },
         province: {
           select: {
             province_name_th: true,
@@ -123,7 +124,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       regionNameTh: university.province.region.region_name_th, // ✅ Added Thai Region Name
       province: university.province.province_name_th,
       students: university._count.students,
-      type: university.university_type || "PUBLIC",
+      type: university.universityType?.code || "PUBLIC",
       logo: `/images/logo/${university.university_code}_logo.png`,
       connections: university.connectionsFrom.map((conn) => ({
         universityCode: conn.targetUniversity.university_code,
