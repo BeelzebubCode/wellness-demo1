@@ -49,10 +49,9 @@ interface UniversityDetailProps {
 export function UniversityDetailDashboard({ universityCode }: UniversityDetailProps) {
     const [university, setUniversity] = useState<any>(null);
     const [isUniLoading, setIsUniLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState("dashboard"); // Default to Dashboard
+    const [activeTab, setActiveTab] = useState("dashboard");
     const [showRankings, setShowRankings] = useState(false);
 
-    // Fetch analytical data
     const { data: analyticsData, loading: analyticsLoading, params, setParams } = useAnalytics({
         university_code: universityCode
     });
@@ -74,8 +73,17 @@ export function UniversityDetailDashboard({ universityCode }: UniversityDetailPr
         fetchUniversity();
     }, [universityCode]);
 
-    if (isUniLoading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div></div>;
-    if (!university) return <div>Not Found</div>;
+    if (isUniLoading) {
+        return (
+            <div className="min-h-[60vh] flex items-center justify-center bg-slate-50/50 rounded-2xl">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary" />
+                    <p className="text-slate-400 text-sm animate-pulse">กำลังเตรียมข้อมูลแดชบอร์ด...</p>
+                </div>
+            </div>
+        );
+    }
+    if (!university) return <div className="text-center py-20 text-slate-400">ไม่พบมหาวิทยาลัย</div>;
 
     const networkUniversities = (university.connections || [])
         .sort((a: any, b: any) => a.distance - b.distance)
@@ -94,101 +102,109 @@ export function UniversityDetailDashboard({ universityCode }: UniversityDetailPr
     ];
 
     return (
-        <div className="min-h-screen bg-bg font-sans text-fg pb-20">
+        <div className="max-w-7xl mx-auto space-y-8 pb-12">
+            {/* ── Premium Banner (matching HeadConsultant format) ─────────────── */}
+            <div className="relative overflow-hidden rounded-[2rem] bg-[#0f172a] p-8 text-white shadow-2xl mb-8">
+                <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
+                <div className="absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-primary-600/5 blur-3xl" />
 
-            {/* 💎 Premium Immersive Header - "Fiew Fiew" Style */}
-            <div className="relative w-full h-[400px] group overflow-hidden bg-slate-900">
-                {/* Background Image with Zoom Effect */}
-                <div className="absolute inset-0 transition-transform duration-1000 scale-105 group-hover:scale-100 z-0">
-                    <Image src="/images/pattern-bg.png" alt="pattern" fill className="object-cover opacity-60 mix-blend-overlay" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary-900/80 via-primary-800/80 to-primary-900/80"></div>
-                </div>
-
-                {/* Gradient Overlay for Readability */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent z-10 pointer-events-none"></div>
-
-                {/* Navigation Back Button */}
+                {/* Back Button */}
                 <Link
-                    href="/ministry"
-                    className="absolute top-6 left-6 z-30 flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md text-white/90 hover:bg-white/20 hover:text-white transition-all text-sm font-medium border border-white/10 group"
+                    href="/ministry/universities"
+                    className="relative z-10 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md text-white/90 hover:bg-white/20 hover:text-white transition-all text-sm font-medium border border-white/10 mb-6 group"
                 >
                     <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                     กลับหน้าหลัก
                 </Link>
 
-                {/* Content Container */}
-                <div className="absolute bottom-0 left-0 right-0 z-20 px-4 sm:px-6 pb-6">
-                    <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-end gap-8">
-                        {/* 🌟 Glowing Logo */}
-                        <div className="relative shrink-0 mb-2">
-                            <div className="absolute -inset-4 bg-primary/30 rounded-full blur-xl animate-pulse"></div>
-                            <div className="relative w-36 h-36 rounded-3xl bg-white p-2 shadow-2xl ring-4 ring-white/10 backdrop-blur-sm">
+                <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+                    <div className="flex items-center gap-6">
+                        {/* University Logo */}
+                        <div className="relative shrink-0">
+                            <div className="absolute -inset-3 bg-primary/20 rounded-[1.5rem] blur-xl animate-pulse" />
+                            <div className="relative w-20 h-20 rounded-[1.5rem] bg-white p-1.5 shadow-2xl ring-1 ring-white/20">
                                 <Image
                                     src={university.logo}
                                     alt={university.name}
-                                    width={144}
-                                    height={144}
-                                    className="object-contain w-full h-full"
+                                    width={80}
+                                    height={80}
+                                    className="object-contain w-full h-full rounded-xl"
                                 />
                             </div>
-                            <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg border border-white flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                            <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full shadow-lg border border-white flex items-center gap-1">
+                                <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
                                 ONLINE
                             </div>
                         </div>
 
-                        {/* Typography Info */}
-                        <div className="flex-1 pb-2 text-white">
-                            <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-3 leading-tight drop-shadow-xl text-white">
+                        <div>
+                            <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2">
                                 {university.name}
                             </h1>
-                            <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-white/90">
-                                <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-lg backdrop-blur-md border border-white/10 shadow-sm">
-                                    <MapPin className="w-4 h-4 text-emerald-300" /> {university.province}
+                            <div className="flex flex-wrap items-center gap-3 text-white/60 text-sm font-bold uppercase tracking-widest">
+                                <span className="flex items-center gap-1.5">
+                                    <MapPin className="w-3.5 h-3.5 text-emerald-400" /> {university.province}
                                 </span>
-                                <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-lg backdrop-blur-md border border-white/10 shadow-sm">
-                                    <Network className="w-4 h-4 text-amber-300" /> {university.regionNameTh || "ประเทศไทย"}
+                                <span className="h-1 w-1 rounded-full bg-primary/40" />
+                                <span className="flex items-center gap-1.5">
+                                    <Network className="w-3.5 h-3.5 text-amber-400" /> {university.regionNameTh || "ประเทศไทย"}
                                 </span>
-                                <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-lg backdrop-blur-md border border-white/10 shadow-sm">
-                                    <Users className="w-4 h-4 text-sky-300" /> {university.students.toLocaleString()} คน
-                                </span>
+                                <span className="h-1 w-1 rounded-full bg-primary/40" />
+                                <span className="text-primary">Ministry Portal</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-4 self-stretch md:self-auto">
+                        <div className="text-right">
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-1 opacity-70">สถานะปัจจุบัน</p>
+                            <div className="text-sm font-bold flex items-center gap-2 justify-end">
+                                อัปเดตล่าสุด: {new Date().toLocaleDateString('th-TH', {
+                                    day: 'numeric', month: 'long', year: 'numeric'
+                                })} เวลา {new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 bg-white/5 backdrop-blur-md rounded-full px-4 py-2 border border-white/10">
+                                <Users className="h-4 w-4 text-primary" />
+                                <span className="text-xs font-black">{university.students?.toLocaleString()} นิสิต</span>
+                            </div>
+                            <div className="flex items-center gap-2 bg-emerald-500/10 backdrop-blur-md rounded-full px-4 py-2 border border-emerald-500/20">
+                                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                                <span className="text-xs font-black text-emerald-400">เปิดการใช้งานปกติ</span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Tabs Bar */}
-            <div className="sticky top-0 z-40 bg-card/95 backdrop-blur-xl border-b border-border shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center gap-8 overflow-x-auto no-scrollbar">
+            {/* ── Tab Navigation ─────────────────────────── */}
+            <div className="mb-8 border-b border-slate-200">
+                <div className="flex gap-10">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`
-                        relative py-4 px-2 text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2
-                        ${activeTab === tab.id ? "text-primary" : "text-muted hover:text-fg"}
-                    `}
+                            className={`relative pb-4 text-sm font-black transition-all ${
+                                activeTab === tab.id ? "text-primary" : "text-slate-400 hover:text-slate-600"
+                            }`}
                         >
-                            <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? "text-primary" : "text-muted"}`} />
-                            {tab.label}
+                            <div className="flex items-center gap-2">
+                                <tab.icon className="h-4 w-4" />
+                                {tab.label}
+                            </div>
                             {activeTab === tab.id && (
-                                <motion.div
-                                    layoutId="activeTab"
-                                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full"
-                                />
+                                <div className="absolute bottom-0 left-0 h-1 w-full rounded-full bg-primary" />
                             )}
                         </button>
                     ))}
                 </div>
             </div>
 
-            {/* Content Area */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 min-h-[500px] space-y-12">
-
-                {/* Dashboard View */}
+            {/* ── Content ─────────────────────────── */}
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {activeTab === "dashboard" && (
-                    <div className="space-y-8 animate-in fade-in duration-500">
+                    <div className="space-y-6">
                         {/* Filters */}
                         <section className="relative z-40">
                             <DashboardFilterBar role="ministry" params={params} onChange={setParams} />
@@ -200,15 +216,19 @@ export function UniversityDetailDashboard({ universityCode }: UniversityDetailPr
                         </section>
 
                         {/* Charts Row */}
-                        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <LoadIndexChart
-                                data={analyticsData?.loadIndex ?? []}
-                                loading={analyticsLoading}
-                                title="Load Index ตามคณะ"
-                                subtitle="คณะไหนมีภาระงานสูงสุด"
-                            />
-                            <RiskDistributionChart data={analyticsData?.riskDistribution ?? null} loading={analyticsLoading} />
-                        </section>
+                        <div className="grid gap-6 lg:grid-cols-2 items-stretch">
+                            <div className="h-full">
+                                <LoadIndexChart
+                                    data={analyticsData?.loadIndex ?? []}
+                                    loading={analyticsLoading}
+                                    title="Load Index ตามคณะ"
+                                    subtitle="คณะไหนมีภาระงานสูงสุด"
+                                />
+                            </div>
+                            <div className="h-full">
+                                <RiskDistributionChart data={analyticsData?.riskDistribution ?? null} loading={analyticsLoading} />
+                            </div>
+                        </div>
 
                         {/* Problems */}
                         <section>
@@ -216,10 +236,14 @@ export function UniversityDetailDashboard({ universityCode }: UniversityDetailPr
                         </section>
 
                         {/* Breakdowns */}
-                        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <AttendanceChart data={analyticsData?.attendanceByGroup ?? []} loading={analyticsLoading} />
-                            <CancellationSummary data={analyticsData?.cancellationByGroup ?? []} loading={analyticsLoading} />
-                        </section>
+                        <div className="grid gap-6 lg:grid-cols-2 items-stretch">
+                            <div className="h-full">
+                                <AttendanceChart data={analyticsData?.attendanceByGroup ?? []} loading={analyticsLoading} />
+                            </div>
+                            <div className="h-full">
+                                <CancellationSummary data={analyticsData?.cancellationByGroup ?? []} loading={analyticsLoading} />
+                            </div>
+                        </div>
 
                         {/* Trend */}
                         <section>
@@ -228,21 +252,29 @@ export function UniversityDetailDashboard({ universityCode }: UniversityDetailPr
                     </div>
                 )}
 
-                {/* Network Map */}
                 {activeTab === "network-map" && (
-                    <div className="animate-in fade-in duration-500">
-                        <NetworkMapContent
-                            university={university}
-                            networkUniversities={networkUniversities}
-                            showRankings={showRankings}
-                            setShowRankings={setShowRankings}
-                        />
-                    </div>
+                    <NetworkMapContent
+                        university={university}
+                        networkUniversities={networkUniversities}
+                        showRankings={showRankings}
+                        setShowRankings={setShowRankings}
+                    />
                 )}
+            </div>
+
+            {/* ── Footer ─────────────────────────── */}
+            <div className="pt-12 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-400">
+                <div className="flex items-center gap-3">
+                    <span className="font-bold text-slate-500">{university.name}</span>
+                    <span className="hidden md:inline w-1 h-1 bg-slate-300 rounded-full" />
+                    <span>ข้อมูล ณ {new Date().toLocaleDateString('th-TH')}</span>
+                </div>
+                <span className="px-2 py-1 bg-slate-100 rounded text-slate-500 font-mono text-[10px] uppercase tracking-widest font-bold">Confidential</span>
             </div>
         </div>
     );
 }
+
 
 // Sub-components
 
