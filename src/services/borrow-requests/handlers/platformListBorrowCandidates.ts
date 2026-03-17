@@ -139,24 +139,15 @@ export async function platformListBorrowCandidates(input: {
     });
   }
 
-  // 5) ดึง consultant ทั้งหมดที่ "อยู่มหาลัยอื่น" พร้อมข้อมูลที่เกี่ยวข้อง
-  // ✅ Optimize: Include relations to avoid "too many parameters" error from large IN clauses
+  // 5) ดึง consultant ทั้งหมดที่ "อยู่มหาลัยอื่น" — ไม่ hard filter ตาม shift team
+  //    แต่ใช้ shift team เป็น soft ranking (คนเข้าเวร → ขึ้นก่อน)
+  const activeShiftTeamIdSet = new Set(activeShiftTeamIds);
   const consultants = await prisma.consultant.findMany({
     where: {
       university_id: { not: fromUniversityId }, // ✅ exclude ม.ต้นทาง
       account: {
         account_role: { not: "HEAD_CONSULTANT" }, // ✅ ไม่รวม Head Consultant
       },
-      // ✅ Must be in an active shift team during the requested period
-      // OR have no shift team assigned (don't exclude unassigned consultants)
-      ...(activeShiftTeamIds.length > 0
-        ? {
-          OR: [
-            { shift_team_id: { in: activeShiftTeamIds } },
-            { shift_team_id: null },
-          ],
-        }
-        : {}),
     },
     select: {
       consultant_id: true,
@@ -224,6 +215,7 @@ export async function platformListBorrowCandidates(input: {
         specializations: string[];
         topicMatchCount: number;
         alreadyAssigned: boolean; // ✅ ถูกมอบหมายแล้ว
+        isOnDuty: boolean; // ✅ เข้าเวรในช่วงที่ขอยืม
         shifts: Array<{
           shiftId: number;
           startAt: string;
@@ -295,6 +287,9 @@ export async function platformListBorrowCandidates(input: {
     // ✅ Check active assignments from relation
     const isAlreadyAssigned = c.borrowAssignments.length > 0;
 
+    // ✅ Check if on duty during the borrow period
+    const isOnDuty = c.shift_team_id != null && activeShiftTeamIdSet.has(c.shift_team_id);
+
     map.get(uniId)!.consultants.push({
       consultantId: c.consultant_id,
       fullName,
@@ -302,24 +297,30 @@ export async function platformListBorrowCandidates(input: {
       specializations,
       topicMatchCount,
       alreadyAssigned: isAlreadyAssigned,
+      isOnDuty,
       shifts: mappedShifts,
     });
   }
 
-  // 5) sort: ระยะทางใกล้ก่อน (null ไปท้าย) + ภายในมหาลัย sort ตาม topic match > ชื่อ
+  // 5) sort: ม.ใกล้ก่อน → ภายในม. เรียง: คนเข้าเวร → topic match → ชื่อ
   const groups = Array.from(map.values())
     .map((g) => ({
       ...g,
       consultants: [...g.consultants].sort((a, b) => {
-        // ✅ เรียงตามจำนวน topic match ก่อน (มากสุดอยู่บน)
+        // 1️⃣ คนเข้าเวรก่อน (on duty first)
+        if (a.isOnDuty !== b.isOnDuty) {
+          return a.isOnDuty ? -1 : 1;
+        }
+        // 2️⃣ เรียงตามจำนวน topic match (มากสุดอยู่บน)
         if (b.topicMatchCount !== a.topicMatchCount) {
           return b.topicMatchCount - a.topicMatchCount;
         }
-        // ถ้าจำนวน topic เท่ากัน ให้เรียงตามชื่อ
+        // 3️⃣ ถ้าเท่ากัน ให้เรียงตามชื่อ
         return a.fullName.localeCompare(b.fullName, "th");
       }),
     }))
     .sort((a, b) => {
+      // ม.ใกล้ก่อน (null ไปท้าย)
       const ad = a.distanceKm;
       const bd = b.distanceKm;
       if (ad == null && bd == null)

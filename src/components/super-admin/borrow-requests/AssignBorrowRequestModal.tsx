@@ -43,6 +43,7 @@ type CandidateConsultant = {
   nickname?: string | null;
   specializations: string[];
   alreadyAssigned?: boolean;
+  isOnDuty?: boolean;
   shifts: CandidateShift[];
 };
 
@@ -416,6 +417,12 @@ export function AssignBorrowRequestModal({
                                 <span className="inline-flex items-center gap-1 text-[11px] font-bold text-cyan-700 bg-cyan-100 px-2 py-0.5 rounded-md">
                                   <UserCheck className="w-3 h-3" />
                                   มอบหมายแล้ว
+                                </span>
+                              )}
+                              {!!c.isOnDuty && !isAssigned && (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">
+                                  <Clock className="w-3 h-3" />
+                                  เข้าเวร
                                 </span>
                               )}
                               {picked && !isAssigned && (
