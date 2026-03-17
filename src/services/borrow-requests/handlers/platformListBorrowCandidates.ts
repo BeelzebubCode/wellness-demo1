@@ -148,9 +148,13 @@ export async function platformListBorrowCandidates(input: {
         account_role: { not: "HEAD_CONSULTANT" }, // ✅ ไม่รวม Head Consultant
       },
       // ✅ Must be in an active shift team during the requested period
+      // OR have no shift team assigned (don't exclude unassigned consultants)
       ...(activeShiftTeamIds.length > 0
         ? {
-          shift_team_id: { in: activeShiftTeamIds },
+          OR: [
+            { shift_team_id: { in: activeShiftTeamIds } },
+            { shift_team_id: null },
+          ],
         }
         : {}),
     },
