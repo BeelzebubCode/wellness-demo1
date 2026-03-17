@@ -155,26 +155,31 @@ export async function GET() {
                 }
               }
             }
-          },
-          feedbacks: {
-            select: {
-              ratings: {
-                select: { feedback_rating_score: true }
-              }
-            }
           }
         }
       });
 
       if (consultantsInUni.length === 0) continue;
 
+      // ✅ Batch avg rating via raw SQL (1 query instead of N feedback_rating IN clauses)
+      const cIds = consultantsInUni.map(c => c.consultant_id);
+      const avgRatingsMap = cIds.length > 0
+        ? await (async () => {
+            const results = await prisma.$queryRaw<Array<{ consultant_id: number; avg_rating: number }>>`
+              SELECT f.consultant_id, AVG(fr.feedback_rating_score)::float AS avg_rating
+              FROM feedback_rating fr
+              JOIN feedback f ON f.feedback_id = fr.feedback_id
+              WHERE f.consultant_id = ANY(${cIds})
+              GROUP BY f.consultant_id
+            `;
+            return new Map(results.map(r => [r.consultant_id, Math.round(r.avg_rating * 10) / 10]));
+          })()
+        : new Map<number, number>();
+
       // Filter and Rank
       const candidates = consultantsInUni
         .map(c => {
-          const allScores = c.feedbacks.flatMap(f => f.ratings.map(r => r.feedback_rating_score));
-          const avgRating = allScores.length > 0
-            ? Math.round((allScores.reduce((a, b) => a + b, 0) / allScores.length) * 10) / 10
-            : 0;
+          const avgRating = avgRatingsMap.get(c.consultant_id) ?? 0;
 
           return {
             id: c.consultant_id,
