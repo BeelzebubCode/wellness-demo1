@@ -45,9 +45,13 @@ function buildScopeWhere(universityId: number, facultyId: number, filters: DeanF
     if (filters.parentalStatus?.length) {
         clauses.push(`parental_status_code IN (${filters.parentalStatus.map(v => `'${v}'`).join(",")})`);
     }
+    if (filters.chronicConditionIds?.length) {
+        clauses.push(`chronic_condition_ids && ARRAY[${filters.chronicConditionIds.join(",")}]::int[]`);
+    }
     const w = `WHERE ${clauses.join(" AND ")}`;
     const bookClauses: string[] = [`university_id = ${universityId}`, `faculty_id = ${facultyId}`];
     if (filters.departmentIds?.length) bookClauses.push(`department_id IN (${filters.departmentIds.join(",")})`);
+    if (filters.chronicConditionIds?.length) bookClauses.push(`chronic_condition_ids && ARRAY[${filters.chronicConditionIds.join(",")}]::int[]`);
     const bw = `WHERE ${bookClauses.join(" AND ")}`;
     return { studentWhere: w, bookingWhere: bw, riskWhere: bw };
 }
@@ -79,6 +83,45 @@ export const DeanStoryService = {
         const scope = buildScopeWhere(universityId, facultyId, filters);
         const stories = await queryAllStories(scope, story);
 
+        // ── Per-department consultation count ──
+        let departmentBookings: { id: number; nameTh: string; code: string; count: number }[] = [];
+        if (story === "all" || story === "departments") {
+            const raw = await prisma.$queryRawUnsafe<
+                { department_id: number; count: number }[]
+            >(`
+                SELECT department_id, SUM(total_bookings)::int AS count
+                FROM mv_booking_summary
+                WHERE university_id = ${universityId} AND faculty_id = ${facultyId}
+                GROUP BY department_id
+                ORDER BY count DESC
+            `);
+
+            const deptMap = new Map(departments.map(d => [d.department_id, d]));
+            departmentBookings = raw
+                .filter(r => deptMap.has(r.department_id))
+                .map(r => {
+                    const d = deptMap.get(r.department_id)!;
+                    return {
+                        id: r.department_id,
+                        nameTh: d.department_name_th,
+                        code: d.department_code ?? "",
+                        count: r.count ?? 0,
+                    };
+                });
+
+            // Add departments with 0 bookings
+            for (const d of departments) {
+                if (!departmentBookings.find(db => db.id === d.department_id)) {
+                    departmentBookings.push({
+                        id: d.department_id,
+                        nameTh: d.department_name_th,
+                        code: d.department_code ?? "",
+                        count: 0,
+                    });
+                }
+            }
+        }
+
         const elapsed = Date.now() - startTime;
         console.log(`[DEAN_MV] story=${story} took ${elapsed}ms`);
 
@@ -92,6 +135,7 @@ export const DeanStoryService = {
             departments: departments.map(d => ({
                 id: d.department_id, nameTh: d.department_name_th, code: d.department_code,
             })),
+            departmentBookings,
             ...stories,
         };
     },

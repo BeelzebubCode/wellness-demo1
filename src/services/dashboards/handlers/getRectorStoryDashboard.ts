@@ -78,6 +78,67 @@ export const RectorStoryService = {
         const scope = buildScopeWhere(universityId, filters);
         const stories = await queryAllStories(scope, story);
 
+        // ── Per-faculty consultation count ──
+        let facultyBookings: { id: number; nameTh: string; code: string; count: number }[] = [];
+        if (story === "all" || story === "departments") {
+            const raw = await prisma.$queryRawUnsafe<
+                { faculty_id: number; count: number }[]
+            >(`
+                SELECT faculty_id, SUM(total_bookings)::int AS count
+                FROM mv_booking_summary
+                WHERE university_id = ${universityId}
+                GROUP BY faculty_id
+                ORDER BY count DESC
+            `);
+
+            const facMap = new Map(faculties.map(f => [f.faculty_id, f]));
+            facultyBookings = raw
+                .filter(r => facMap.has(r.faculty_id))
+                .map(r => {
+                    const f = facMap.get(r.faculty_id)!;
+                    return {
+                        id: r.faculty_id,
+                        nameTh: f.faculty_name_th,
+                        code: f.faculty_code ?? "",
+                        count: r.count ?? 0,
+                    };
+                });
+
+            // Add faculties with 0 bookings
+            for (const f of faculties) {
+                if (!facultyBookings.find(fb => fb.id === f.faculty_id)) {
+                    facultyBookings.push({
+                        id: f.faculty_id,
+                        nameTh: f.faculty_name_th,
+                        code: f.faculty_code ?? "",
+                        count: 0,
+                    });
+                }
+            }
+        }
+
+        // ── Staff utilization: internal vs borrowed ──
+        let staffUtilization = { internal: 0, borrowed: 0 };
+        try {
+            const [internalResult, borrowedResult] = await Promise.all([
+                // Total booking assignments handled by consultants belonging to this university
+                prisma.bookingAssignment.count({
+                    where: {
+                        booking: { university_id: universityId },
+                        borrow_assignment_id: null, // internal assignment
+                    },
+                }),
+                // Total booking assignments done via borrow
+                prisma.bookingAssignment.count({
+                    where: {
+                        booking: { university_id: universityId },
+                        borrow_assignment_id: { not: null }, // borrowed
+                    },
+                }),
+            ]);
+            staffUtilization = { internal: internalResult, borrowed: borrowedResult };
+        } catch { /* silent — table might not exist */ }
+
         const elapsed = Date.now() - startTime;
         console.log(`[RECTOR_MV] story=${story} took ${elapsed}ms`);
 
@@ -88,6 +149,8 @@ export const RectorStoryService = {
                 code: uniInfo?.university_code ?? "",
             },
             faculties: faculties.map(f => ({ id: f.faculty_id, nameTh: f.faculty_name_th, code: f.faculty_code })),
+            facultyBookings,
+            staffUtilization,
             ...stories,
         };
     },

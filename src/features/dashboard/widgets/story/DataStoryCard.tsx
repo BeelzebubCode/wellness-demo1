@@ -27,6 +27,8 @@ interface Props {
     kpis?: StoryKpi[];
     /** Inline filters — collapsible */
     filters?: ReactNode;
+    /** Badge shown below filter toggle button (top-right, always visible) */
+    headerBadge?: ReactNode;
     /** Card body — charts / visualisations */
     children: ReactNode;
     /** Grid col-span class */
@@ -38,7 +40,7 @@ interface Props {
 }
 
 export function DataStoryCard({
-    icon, iconGradient, title, narration, kpis, filters,
+    icon, iconGradient, title, narration, kpis, filters, headerBadge,
     children, className, delay = 0, loading,
 }: Props) {
     const [filtersOpen, setFiltersOpen] = useState(false);
@@ -79,21 +81,24 @@ export function DataStoryCard({
 
                     {/* Filter toggle button — top-right with label */}
                     {hasFilters && (
-                        <button
-                            onClick={() => setFiltersOpen(!filtersOpen)}
-                            className={`
-                                shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold
-                                transition-all duration-200
-                                ${filtersOpen
-                                    ? "bg-indigo-50 text-indigo-600 border border-indigo-200"
-                                    : "text-slate-400 hover:text-slate-600 hover:bg-slate-50 border border-slate-200"
-                                }
-                            `}
-                        >
-                            <SlidersHorizontal className="w-3.5 h-3.5" />
-                            <span>ตัวกรอง</span>
-                            {filtersOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                        </button>
+                        <div className="shrink-0 flex flex-col items-end gap-1.5">
+                            <button
+                                onClick={() => setFiltersOpen(!filtersOpen)}
+                                className={`
+                                    flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold
+                                    transition-all duration-200
+                                    ${filtersOpen
+                                        ? "bg-indigo-50 text-indigo-600 border border-indigo-200"
+                                        : "text-slate-400 hover:text-slate-600 hover:bg-slate-50 border border-slate-200"
+                                    }
+                                `}
+                            >
+                                <SlidersHorizontal className="w-3.5 h-3.5" />
+                                <span>ตัวกรอง</span>
+                                {filtersOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                            </button>
+                            {headerBadge}
+                        </div>
                     )}
                 </div>
 

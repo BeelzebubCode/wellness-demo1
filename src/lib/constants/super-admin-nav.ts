@@ -1,5 +1,5 @@
 // src/lib/constants/super-admin-nav.ts
-import { BookOpen, Building2, Handshake, LayoutDashboard, FileText, MessageSquareWarning } from "lucide-react";
+import { BookOpen, Building2, Handshake, LayoutDashboard, FileText, MessageSquareWarning, Settings2, ClipboardList } from "lucide-react";
 import type { NavItem } from "@/components/layout/sidebar/types";
 
 export const SUPER_ADMIN_NAV: NavItem[] = [
@@ -33,5 +33,15 @@ export const SUPER_ADMIN_NAV: NavItem[] = [
     href: "/super-admin/ai-feedback",
     label: "AI Feedback",
     icon: MessageSquareWarning,
+  },
+  {
+    href: "/super-admin/channels",
+    label: "จัดการช่องทางออนไลน์",
+    icon: Settings2,
+  },
+  {
+    href: "/super-admin/problem-categories",
+    label: "จัดการประเภทปัญหา",
+    icon: ClipboardList,
   },
 ];

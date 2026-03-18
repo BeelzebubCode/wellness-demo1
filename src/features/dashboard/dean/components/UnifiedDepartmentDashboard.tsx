@@ -1,14 +1,19 @@
+// src/features/dashboard/dean/components/UnifiedDepartmentDashboard.tsx
+// ─────────────────────────────────────────────────────────────────────────────
+// Department detail view — story-card pattern with clean UX
+// ─────────────────────────────────────────────────────────────────────────────
 "use client";
 
 import React, { useEffect } from "react";
-import { 
-  ArrowLeft, Users, BookOpen, AlertCircle, TrendingUp, 
-  PieChart as PieIcon, GraduationCap, Activity, Calendar, Home
+import {
+  ArrowLeft, Users, BookOpen, Activity, TrendingUp,
+  GraduationCap, AlertTriangle, Shield,
 } from "lucide-react";
 import { DepartmentStat } from "./DepartmentListing";
-import { 
-  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, 
-  XAxis, YAxis, CartesianGrid, AreaChart, Area, BarChart, Bar
+import {
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
+  XAxis, YAxis, CartesianGrid, AreaChart, Area,
+  BarChart, Bar, LabelList,
 } from "recharts";
 
 interface Props {
@@ -19,380 +24,295 @@ interface Props {
   onBackToList?: () => void;
 }
 
-export function UnifiedDepartmentDashboard({ 
-  department, 
-  facultyName, 
+const RISK_COLORS = ["#ef4444", "#10b981"];
+
+export function UnifiedDepartmentDashboard({
+  department,
+  facultyName,
   universityName,
-  onBack, 
-  onBackToList 
+  onBack,
 }: Props) {
-  // Scroll to top when department detail is opened
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
-
-  const [activeIndex, setActiveIndex] = React.useState<number | null>(null);
-
-  const onPieEnter = (_: any, index: number) => {
-    setActiveIndex(index);
-  };
-
-  const onPieLeave = () => {
-    setActiveIndex(null);
-  };
 
   const riskData = department.riskData || [];
   const trendData = department.trendData || [];
+  const topProblems = department.topProblems || [];
+  const totalRisk = riskData.reduce((a, b) => a + b.value, 0);
+  const highRisk = riskData.find(r => r.name.includes("วิกฤต"))?.value ?? 0;
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] pb-24 animate-in fade-in duration-700">
-      <div className="max-w-6xl mx-auto px-6 md:px-12 pt-8 space-y-8">
-        
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-                {onBackToList && (
-                    <>
-                        <button
-                        onClick={onBackToList}
-                        className="group flex items-center gap-2 text-slate-400 hover:text-[rgb(var(--primary))] transition-all font-bold text-sm"
-                        >
-                        <div className="p-1.5 rounded-lg bg-white shadow-sm border border-slate-100 group-hover:border-[rgb(var(--primary))]">
-                            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-                        </div>
-                        ย้อนกลับ
-                        </button>
-                        <div className="w-px h-4 bg-slate-300"></div>
-                    </>
-                )}
+    <div className="min-h-screen pb-16">
+      <style>{`
+                @keyframes fadeUp {
+                    from { opacity: 0; transform: translateY(16px); }
+                    to   { opacity: 1; transform: translateY(0); }
+                }
+            `}</style>
 
-                <button
-                onClick={onBack}
-                className="group flex items-center gap-2 text-slate-400 hover:text-[rgb(var(--primary))] transition-all font-bold text-sm"
-                >
-                <div className="p-1.5 rounded-lg bg-white shadow-sm border border-slate-100 group-hover:border-[rgb(var(--primary))]">
-                    <Home className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-                </div>
-                กลับหน้าหลัก
-                </button>
-            </div>
-            <div className="flex items-center gap-4">
-               <div className="w-16 h-16 bg-white rounded-2xl shadow-lg border border-slate-100 flex items-center justify-center text-[rgb(var(--primary))]">
-                  <GraduationCap className="w-8 h-8" />
-               </div>
-               <div className="flex flex-col">
-                  <div className="flex items-center gap-3 mb-2 whitespace-nowrap">
-                    <div className="text-4xl font-black text-slate-900 tracking-tight">{department.name}</div>
-                    <span className="text-sm font-black text-primary bg-[rgb(var(--primary)/0.08)] border border-[rgb(var(--primary)/0.15)] px-2.5 py-0.5 rounded-lg uppercase tracking-wider shrink-0 transform translate-y-[4px]">{department.code}</span>
-                  </div>
-                  <p className="text-slate-500 font-bold text-lg leading-none">{facultyName} {universityName}</p>
-               </div>
-            </div>
-          </div>
+      <div className="max-w-6xl mx-auto px-6 md:px-10 pt-6 space-y-5">
+        {/* ── Back + Header ── */}
+        <div className="animate-[fadeUp_0.4s_ease-out_both]">
+          <button
+            onClick={onBack}
+            className="group flex items-center gap-2 text-slate-400 hover:text-indigo-600 transition-all text-sm font-medium mb-4"
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            กลับหน้ารายการภาควิชา
+          </button>
 
-          <div className="flex items-center gap-2 bg-white px-5 py-3 rounded-2xl shadow-sm border border-slate-100 group">
-             <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse ring-4 ring-green-50" />
-             <span className="text-xs font-black text-slate-600 uppercase tracking-widest">Live Content Delivery</span>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-2 h-9 rounded-full bg-gradient-to-b from-indigo-500 to-violet-500" />
+            <h1 className="text-2xl font-black bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">
+              {department.name}
+            </h1>
+            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-lg uppercase tracking-wider">
+              {department.code}
+            </span>
           </div>
+          <p className="text-sm text-slate-400 ml-4">
+            {facultyName} — {universityName}
+          </p>
         </div>
 
-        {/* Quick Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard 
-            icon={<Users className="w-5 h-5 text-blue-500" />} 
-            title="จำนวนนิสิตทั้งหมด" 
-            value={department.students.toLocaleString()} 
-            label="คน (Students)"
-            bgColor="bg-blue-50"
-            ringColor="ring-blue-100/50"
+        {/* ── KPI Row ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 animate-[fadeUp_0.4s_ease-out_both]" style={{ animationDelay: "50ms" }}>
+          <KpiCard
+            icon={<Users className="w-4 h-4" />}
+            gradient="from-blue-500 to-blue-600"
+            label="นิสิตทั้งหมด"
+            value={department.students.toLocaleString()}
+            unit="คน"
           />
-          <StatCard 
-            icon={<BookOpen className="w-5 h-5 text-indigo-500" />} 
-            title="จำนวนการเข้าพบ" 
-            value={department.sessions.toLocaleString()} 
-            label="ครั้ง (Sessions)"
-            bgColor="bg-indigo-50"
-            ringColor="ring-indigo-100/50"
+          <KpiCard
+            icon={<BookOpen className="w-4 h-4" />}
+            gradient="from-indigo-500 to-violet-600"
+            label="การเข้าปรึกษา"
+            value={department.sessions.toLocaleString()}
+            unit="ครั้ง"
           />
-          <StatCard 
-            icon={<Activity className="w-5 h-5 text-emerald-500" />} 
-            title="ความถี่เฉลี่ย" 
-            value={department.perStudent.toFixed(2)} 
-            label="ครั้ง/คน (Avg.)"
-            bgColor="bg-emerald-50"
-            ringColor="ring-emerald-100/50"
+          <KpiCard
+            icon={<Activity className="w-4 h-4" />}
+            gradient="from-emerald-500 to-teal-600"
+            label="เฉลี่ยต่อคน"
+            value={department.perStudent.toFixed(2)}
+            unit="ครั้ง/คน"
           />
-          <StatCard 
-            icon={<AlertCircle className="w-5 h-5 text-rose-500" />} 
-            title="แจ้งเตือนที่ต้องดูแล" 
-            value="7" 
-            label="รายการ (Alerts)"
-            bgColor="bg-rose-50"
-            ringColor="ring-rose-100/50"
+          <KpiCard
+            icon={<AlertTriangle className="w-4 h-4" />}
+            gradient="from-red-500 to-rose-600"
+            label="ความเสี่ยงสูง"
+            value={highRisk.toString()}
+            unit="คน"
           />
         </div>
 
-        {/* Main Charts Area */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          
-          {/* Risk Distribution (Donut) */}
-          <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/30 p-6 border border-slate-100 flex flex-col">
-            <div className="mb-6">
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <PieIcon className="w-4 h-4 text-amber-500" />
-                สถานะความเสี่ยงของนิสิต
-              </h3>
-              <p className="text-xs text-slate-400 font-medium">Risk Status Distribution</p>
+        {/* ── Row 1: Risk Donut + Trend ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          {/* Risk */}
+          <div className="lg:col-span-2 rounded-2xl border border-slate-100 bg-white shadow-sm p-5 animate-[fadeUp_0.4s_ease-out_both]" style={{ animationDelay: "100ms" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 grid place-items-center shadow">
+                <Shield className="h-3.5 w-3.5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-800">สถานะความเสี่ยง</h3>
+                <p className="text-[10px] text-slate-400">สัดส่วนนิสิตตามระดับ</p>
+              </div>
             </div>
-            
-            <div className="h-[240px] relative flex items-center justify-center">
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <div className={`flex flex-col items-center justify-center transition-all duration-300 absolute ${activeIndex !== null ? 'opacity-0 scale-90 translate-y-2' : 'opacity-100 scale-100 translate-y-0'}`}>
-                   <span className="text-3xl font-black text-slate-800 leading-none">{riskData.reduce((a, b) => a + b.value, 0)}</span>
-                   <p className="text-xs font-bold text-slate-400 mt-1">ราย</p>
-                </div>
 
-                <div className={`flex flex-col items-center justify-center transition-all duration-300 absolute px-6 text-center ${activeIndex === null ? 'opacity-0 scale-90 -translate-y-2' : 'opacity-100 scale-100 translate-y-0'}`}>
-                   {activeIndex !== null && riskData[activeIndex] && (
-                      <>
-                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1 leading-tight line-clamp-1 max-w-[120px]">
-                            {riskData[activeIndex].name}
-                         </span>
-                         <span className="text-3xl font-black text-slate-800 leading-none tabular-nums">
-                            {riskData[activeIndex].value}
-                         </span>
-                         <p className="text-xs font-bold text-slate-400 mt-1">ราย</p>
-                      </>
-                   )}
-                </div>
+            <div className="relative h-[180px]">
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-3xl font-black text-slate-800">{totalRisk}</span>
+                <span className="text-[10px] text-slate-400 font-bold">คน</span>
               </div>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                <Pie
-                    data={riskData}
-                    innerRadius={65}
-                    outerRadius={90}
-                    paddingAngle={5}
-                    dataKey="value"
-                    animationDuration={1000}
-                    onMouseEnter={onPieEnter}
-                    onMouseLeave={onPieLeave}
-                    stroke="none"
-                  >
-                    {riskData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={entry.color} 
-                        stroke="#fff"
-                        strokeWidth={activeIndex === index ? 4 : 2}
-                        style={{ 
-                          filter: activeIndex === index ? `drop-shadow(0 0 10px ${entry.color}66)` : 'none',
-                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                          cursor: 'pointer',
-                          transform: activeIndex === index ? 'scale(1.08)' : 'scale(1)',
-                          transformOrigin: 'center',
-                          outline: 'none'
-                        }}
-                      />
+                  <Pie data={riskData} innerRadius={55} outerRadius={75} paddingAngle={4} dataKey="value" stroke="none">
+                    {riskData.map((entry, idx) => (
+                      <Cell key={idx} fill={entry.color} />
                     ))}
                   </Pie>
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.[0]) return null;
+                      const d = payload[0].payload;
+                      return (
+                        <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-xl text-xs">
+                          <p className="font-bold text-slate-700">{d.name}</p>
+                          <p className="text-slate-500">{d.value} คน</p>
+                        </div>
+                      );
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mt-8">
-               {riskData.map((item, idx) => (
-                 <div key={idx} className="flex items-center gap-2 bg-slate-50 p-2.5 rounded-2xl border border-slate-100">
-                   <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                   <span className="text-xs font-bold text-slate-600 truncate">{item.name}</span>
-                 </div>
-               ))}
+            <div className="flex justify-center gap-4 mt-2">
+              {riskData.map((item, idx) => (
+                <div key={idx} className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                  <span className="text-[10px] font-bold text-slate-500">{item.name} ({item.value})</span>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Visit Trends (Area Chart) */}
-          <div className="lg:col-span-2 bg-white rounded-3xl shadow-lg shadow-slate-200/30 p-8 border border-slate-100 flex flex-col">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-              <div className="space-y-0.5">
-                <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-indigo-500" />
-                  แนวโน้มการเข้ารับคำปรึกษา
-                </h3>
-                <p className="text-xs text-slate-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis">Counseling Engagement Trend (Last 6 Months)</p>
+          {/* Trend */}
+          <div className="lg:col-span-3 rounded-2xl border border-slate-100 bg-white shadow-sm p-5 animate-[fadeUp_0.4s_ease-out_both]" style={{ animationDelay: "150ms" }}>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 grid place-items-center shadow">
+                <TrendingUp className="h-3.5 w-3.5 text-white" />
               </div>
-              <div className="px-4 py-2 bg-indigo-50 rounded-2xl border border-indigo-100 text-indigo-600 text-xs font-black flex items-center gap-2 shrink-0">
-                <Calendar className="w-3.5 h-3.5" />
-                Updated Today
+              <div>
+                <h3 className="text-sm font-bold text-slate-800">แนวโน้มการเข้ารับคำปรึกษา</h3>
+                <p className="text-[10px] text-slate-400">รายเดือน (6 เดือนล่าสุด)</p>
               </div>
             </div>
-            
-            <div className="h-[280px] w-full mt-auto">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+
+            {trendData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={200}>
+                <AreaChart data={trendData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="colorSessionsDept" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="rgb(var(--primary))" stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor="rgb(var(--primary))" stopOpacity={0}/>
+                    <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis 
-                    dataKey="month" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: "#94a3b8", fontSize: 13, fontWeight: 600 }}
-                    dy={12}
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.[0]) return null;
+                      return (
+                        <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-xl text-xs">
+                          <p className="font-bold text-slate-700">{payload[0].payload.month}</p>
+                          <p className="text-indigo-600">{payload[0].value} ครั้ง</p>
+                        </div>
+                      );
+                    }}
                   />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: "#94a3b8", fontSize: 13 }} />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}
-                    allowEscapeViewBox={{ x: true, y: true }}
-                    animationDuration={200}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="sessions" 
-                    stroke="rgb(var(--primary))" 
-                    strokeWidth={5}
-                    fillOpacity={1} 
-                    fill="url(#colorSessionsDept)" 
-                    dot={{ r: 6, fill: "rgb(var(--primary))", strokeWidth: 3, stroke: "#fff" }}
-                    activeDot={{ r: 8, strokeWidth: 0 }}
-                    animationDuration={2000}
+                  <Area
+                    type="monotone"
+                    dataKey="sessions"
+                    stroke="#6366f1"
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#trendGrad)"
+                    dot={{ r: 4, fill: "#6366f1", strokeWidth: 2, stroke: "#fff" }}
                   />
                 </AreaChart>
               </ResponsiveContainer>
-            </div>
+            ) : (
+              <div className="h-[200px] flex items-center justify-center text-sm text-slate-300">
+                ยังไม่มีข้อมูลแนวโน้ม
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Problem Statistics by Category (Horizontal Bar Chart) */}
-        <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/30 p-8 border border-slate-100">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <div className="flex w-full items-start justify-between">
-              <div className="space-y-1">
-                <h3 className="text-xl font-black text-slate-800 tracking-tight">
-                  ประเภทปัญหาที่พบ
-                </h3>
-                <p className="text-xs text-slate-400 font-bold">
-                  แยกตามเพศ — หมวดหมู่ปัญหาที่พบ
-                </p>
+        {/* ── Row 2: Problem Categories ── */}
+        <div className="rounded-2xl border border-slate-100 bg-white shadow-sm p-5 animate-[fadeUp_0.4s_ease-out_both]" style={{ animationDelay: "200ms" }}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 grid place-items-center shadow">
+                <GraduationCap className="h-3.5 w-3.5 text-white" />
               </div>
-              <div className="text-right">
-                <div className="text-2xl font-black text-indigo-600">
-                  {(department.topProblems || []).reduce((sum, p) => sum + p.total, 0)}
-                </div>
-                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">รายทั้งหมด</div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-800">ประเภทปัญหาที่พบ</h3>
+                <p className="text-[10px] text-slate-400">แยกตามเพศ — Top 5 หมวดหมู่</p>
               </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Legend color="#3b82f6" label="ชาย" />
+              <Legend color="#ec4899" label="หญิง" />
+              <Legend color="#a855f7" label="อื่นๆ" />
             </div>
           </div>
-          
-            {/* Custom Legend */}
-            <div className="flex justify-end gap-4 mb-6 mt-2 px-4">
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-[#3b82f6]" />
-                <span className="text-[10px] font-bold text-slate-500">ชาย</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-[#ec4899]" />
-                <span className="text-[10px] font-bold text-slate-500">หญิง</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-[#a855f7]" />
-                <span className="text-[10px] font-bold text-slate-500">อื่นๆ</span>
-              </div>
-            </div>
 
-            <div className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart 
-                  data={department.topProblems} 
-                  layout="vertical" 
-                  margin={{ left: 0, right: 30, top: 0, bottom: 0 }}
-                  barGap={0}
-                >
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                  <XAxis type="number" hide />
-                  <YAxis 
-                    dataKey="name" 
-                    type="category" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: '#475569', fontSize: 11, fontWeight: 800 }}
-                    width={110}
-                    interval={0}
-                  />
-                  <Tooltip 
-                    cursor={{ fill: '#f8fafc', radius: 4 }}
-                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)', padding: '12px' }}
-                    allowEscapeViewBox={{ x: true, y: true }}
-                    animationDuration={200}
-                    content={({ active, payload, label }) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload;
-                        return (
-                          <div className="bg-white p-4 rounded-2xl shadow-xl border-0">
-                            <p className="text-sm font-black text-slate-800 mb-3">{label}</p>
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between gap-6 text-xs font-bold">
-                                <span className="text-blue-500">ชาย</span>
-                                <span className="text-slate-700">{data.male} คน</span>
-                              </div>
-                              <div className="flex items-center justify-between gap-6 text-xs font-bold">
-                                <span className="text-pink-500">หญิง</span>
-                                <span className="text-slate-700">{data.female} คน</span>
-                              </div>
-                              <div className="flex items-center justify-between gap-6 text-xs font-bold">
-                                <span className="text-purple-500">อื่นๆ</span>
-                                <span className="text-slate-700">{data.other} คน</span>
-                              </div>
-                              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs font-black">
-                                <span className="text-slate-400">รวม</span>
-                                <span className="text-indigo-600">{data.total} คน</span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Bar dataKey="male" stackId="a" fill="#3b82f6" radius={[2, 0, 0, 2]} barSize={14} />
-                  <Bar dataKey="female" stackId="a" fill="#ec4899" barSize={14} />
-                  <Bar dataKey="other" stackId="a" fill="#a855f7" radius={[0, 2, 2, 0]} barSize={14} />
-                </BarChart>
-              </ResponsiveContainer>
+          {topProblems.length > 0 ? (
+            <ResponsiveContainer width="100%" height={Math.max(topProblems.length * 50, 200)}>
+              <BarChart
+                data={topProblems}
+                layout="vertical"
+                margin={{ left: 0, right: 40, top: 0, bottom: 0 }}
+                barGap={0}
+              >
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }} />
+                <YAxis
+                  dataKey="name"
+                  type="category"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#475569", fontSize: 11, fontWeight: 600 }}
+                  width={120}
+                  interval={0}
+                />
+                <Tooltip
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null;
+                    const d = payload[0].payload;
+                    return (
+                      <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-xl text-xs space-y-1">
+                        <p className="font-bold text-slate-700">{label}</p>
+                        <p><span className="text-blue-500">ชาย:</span> {d.male}</p>
+                        <p><span className="text-pink-500">หญิง:</span> {d.female}</p>
+                        <p><span className="text-purple-500">อื่นๆ:</span> {d.other}</p>
+                        <p className="pt-1 border-t border-slate-100 font-bold text-slate-600">รวม: {d.total}</p>
+                      </div>
+                    );
+                  }}
+                />
+                <Bar dataKey="male" stackId="a" fill="#3b82f6" radius={[2, 0, 0, 2]} barSize={16} />
+                <Bar dataKey="female" stackId="a" fill="#ec4899" barSize={16} />
+                <Bar dataKey="other" stackId="a" fill="#a855f7" radius={[0, 2, 2, 0]} barSize={16} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[200px] flex items-center justify-center text-sm text-slate-300">
+              ยังไม่มีข้อมูลปัญหา
             </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="text-center text-xs text-slate-300 py-3 animate-[fadeUp_0.4s_ease-out_both]" style={{ animationDelay: "250ms" }}>
+          อัปเดตล่าสุด: {new Date().toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })}
         </div>
       </div>
     </div>
   );
 }
 
-function StatCard({ icon, title, value, label, bgColor, ringColor }: { 
-  icon: React.ReactNode; 
-  title: string; 
-  value: string; 
-  label: string;
-  bgColor: string;
-  ringColor: string;
+/* ── Utility ── */
+function KpiCard({ icon, gradient, label, value, unit }: {
+  icon: React.ReactNode; gradient: string; label: string; value: string; unit: string;
 }) {
   return (
-    <div className="bg-white rounded-2xl shadow shadow-slate-200/30 p-5 border border-slate-50 group hover:scale-[1.03] transition-all duration-500 overflow-hidden relative">
-      <div className={`${bgColor} w-12 h-12 rounded-xl flex items-center justify-center mb-4 ring-4 ${ringColor} transition-transform group-hover:rotate-6`}>
+    <div className="rounded-2xl border border-slate-100 bg-white shadow-sm p-4 flex items-center gap-3">
+      <div className={`h-9 w-9 rounded-xl bg-gradient-to-br ${gradient} grid place-items-center shadow text-white shrink-0`}>
         {icon}
       </div>
-      <div className="space-y-1">
-        <p className="text-slate-400 text-xs font-black uppercase tracking-widest leading-none">{title}</p>
-        <div className="flex items-baseline gap-2">
-          <h3 className="text-3xl font-black text-slate-900 tracking-tight">{value}</h3>
-          <span className="text-xs font-bold text-slate-400">{label}</span>
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</p>
+        <div className="flex items-baseline gap-1">
+          <span className="text-xl font-black text-slate-800">{value}</span>
+          <span className="text-[10px] text-slate-400">{unit}</span>
         </div>
       </div>
-      <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-        <TrendingUp className="w-10 h-10 text-slate-200" />
-      </div>
+    </div>
+  );
+}
+
+function Legend({ color, label }: { color: string; label: string }) {
+  return (
+    <div className="flex items-center gap-1">
+      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+      <span className="text-[10px] font-bold text-slate-500">{label}</span>
     </div>
   );
 }

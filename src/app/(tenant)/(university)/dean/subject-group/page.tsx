@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { Search, X } from "lucide-react";
 import { useDeanFacultyData } from "@/features/dashboard/dean/hooks/useDeanFacultyData";
 import { DepartmentListing, DepartmentStat } from "@/features/dashboard/dean/components/DepartmentListing";
 import { UnifiedDepartmentDashboard } from "@/features/dashboard/dean/components/UnifiedDepartmentDashboard";
@@ -10,6 +11,7 @@ export default function SubjectGroupPage() {
     const [facultyCode, setFacultyCode] = useState<string | null>(null);
     const { data, loading, error } = useDeanFacultyData(facultyCode || undefined);
     const [activeDepartment, setActiveDepartment] = useState<DepartmentStat | null>(null);
+    const [search, setSearch] = useState("");
 
     useEffect(() => {
         try {
@@ -98,16 +100,51 @@ export default function SubjectGroupPage() {
         }, []).sort((a: any, b: any) => b.total - a.total).slice(0, 5)
     }));
 
+    // Filter departments by search
+    const q = search.trim().toLowerCase();
+    const filteredDepartments = q
+        ? departments.filter(d =>
+            d.name.toLowerCase().includes(q) || d.code.toLowerCase().includes(q))
+        : departments;
+
     return (
         <div className="max-w-7xl mx-auto p-6 md:p-12 pb-32">
-             <div className="mb-6">
+            <div className="mb-6">
                 <h1 className="text-2xl font-bold text-slate-900">ภาควิชา</h1>
                 <p className="text-slate-500">ข้อมูลสถิติแยกตามภาควิชา</p>
             </div>
-            <DepartmentListing
-                departments={departments}
-                onSelect={setActiveDepartment}
-            />
+
+            {/* Search bar */}
+            <div className="relative mb-6">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                    type="text"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="ค้นหาภาควิชา... (ชื่อ หรือ รหัส)"
+                    className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-10 text-sm text-slate-700 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 transition"
+                />
+                {search && (
+                    <button
+                        onClick={() => setSearch("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                )}
+            </div>
+
+            {filteredDepartments.length === 0 ? (
+                <div className="py-16 text-center text-sm text-slate-400">
+                    ไม่พบภาควิชาที่ตรงกับ &quot;{search}&quot;
+                </div>
+            ) : (
+                <DepartmentListing
+                    departments={filteredDepartments}
+                    onSelect={setActiveDepartment}
+                />
+            )}
         </div>
     );
 }
+

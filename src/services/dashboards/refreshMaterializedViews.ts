@@ -10,6 +10,7 @@ const MV_NAMES = [
     "mv_student_summary",
     "mv_booking_summary",
     "mv_risk_summary",
+    "mv_student_risk_score",
 ] as const;
 
 export async function refreshDashboardMVs(): Promise<{

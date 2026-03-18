@@ -47,12 +47,18 @@ function buildScopeWhere(
     if (filters.parentalStatus?.length) {
         clauses.push(`parental_status_code IN (${filters.parentalStatus.map(v => `'${v}'`).join(",")})`);
     }
+    if (filters.chronicConditionIds?.length) {
+        clauses.push(`chronic_condition_ids && ARRAY[${filters.chronicConditionIds.join(",")}]::int[]`);
+    }
     const w = `WHERE ${clauses.join(" AND ")}`;
     const bookClauses: string[] = [
         `university_id = ${universityId}`,
         `faculty_id = ${facultyId}`,
         `department_id = ${departmentId}`,
     ];
+    if (filters.chronicConditionIds?.length) {
+        bookClauses.push(`chronic_condition_ids && ARRAY[${filters.chronicConditionIds.join(",")}]::int[]`);
+    }
     const bw = `WHERE ${bookClauses.join(" AND ")}`;
     return { studentWhere: w, bookingWhere: bw, riskWhere: bw };
 }

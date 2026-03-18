@@ -8,22 +8,22 @@ datasource db {
 }
 
 model Region {
-  region_id      Int     @id @default(autoincrement())
-  region_code    String  @unique @db.VarChar(30)
-  region_name_th String  @db.VarChar(50)
-  region_name_en String? @db.VarChar(50)
+  region_id      Int        @id @default(autoincrement())
+  region_code    String     @unique @db.VarChar(30)
+  region_name_th String     @db.VarChar(50)
+  region_name_en String?    @db.VarChar(50)
   provinces      Province[]
 
   @@map("region")
 }
 
 model Province {
-  province_id            Int      @id @default(autoincrement())
-  region_id              Int
-  province_code          String   @unique @db.VarChar(10)
-  province_name_th       String   @db.VarChar(100)
-  province_name_en       String?  @db.VarChar(100)
-  is_special_zone        Boolean  @default(false)
+  province_id      Int     @id @default(autoincrement())
+  region_id        Int
+  province_code    String  @unique @db.VarChar(10)
+  province_name_th String  @db.VarChar(100)
+  province_name_en String? @db.VarChar(100)
+  is_special_zone  Boolean @default(false)
 
   region           Region           @relation(fields: [region_id], references: [region_id])
   studentAddresses StudentAddress[]
@@ -34,22 +34,22 @@ model Province {
 }
 
 model University {
-  university_id            Int      @id @default(autoincrement())
-  university_code          String   @unique @db.VarChar(20)
-  university_name_th       String   @db.VarChar(200)
-  university_name_en       String?  @db.VarChar(200)
-  province_id              Int
-  university_is_active     Boolean  @default(true)
-  university_created_at    DateTime @default(now())
-  university_type_id       Int?
+  university_id         Int      @id @default(autoincrement())
+  university_code       String   @unique @db.VarChar(20)
+  university_name_th    String   @db.VarChar(200)
+  university_name_en    String?  @db.VarChar(200)
+  province_id           Int
+  university_is_active  Boolean  @default(true)
+  university_created_at DateTime @default(now())
+  university_type_id    Int?
 
   rector_account_id Int?
   rector            Account? @relation("UniversityRector", fields: [rector_account_id], references: [account_id])
 
-  province             Province              @relation(fields: [province_id], references: [province_id])
+  province             Province                @relation(fields: [province_id], references: [province_id])
   universityType       UniversityTypeCategory? @relation(fields: [university_type_id], references: [university_type_id])
-  university_latitude  Decimal?              @db.Decimal(9, 6)
-  university_longitude Decimal?              @db.Decimal(9, 6)
+  university_latitude  Decimal?                @db.Decimal(9, 6)
+  university_longitude Decimal?                @db.Decimal(9, 6)
 
   accountsHome      Account[]                     @relation("AccountHomeUniversity")
   accessPermissions AccountUniversityPermission[]
@@ -89,12 +89,12 @@ model University {
 }
 
 model AccountUniversityPermission {
-  account_university_permission_id Int      @id @default(autoincrement())
+  account_university_permission_id Int       @id @default(autoincrement())
   account_id                       Int
   university_id                    Int
-  access_role                      String   @default("STUDENT") @db.VarChar(30)
+  access_role                      String    @default("STUDENT") @db.VarChar(30)
   access_granted_by_account_id     Int?
-  access_granted_at                DateTime @default(now())
+  access_granted_at                DateTime  @default(now())
   access_revoked_at                DateTime?
 
   account          Account    @relation(fields: [account_id], references: [account_id])
@@ -113,13 +113,13 @@ model AccountUniversityPermission {
 // ==========================================
 
 model Account {
-  account_id                 Int    @id @default(autoincrement())
-  account_username           String @unique @db.VarChar(50)
-  account_password           String @db.VarChar(255)
-  account_role               String @db.VarChar(30)
+  account_id                 Int       @id @default(autoincrement())
+  account_username           String    @unique @db.VarChar(50)
+  account_password           String    @db.VarChar(255)
+  account_role               String    @db.VarChar(30)
   account_home_university_id Int?
-  account_line_id            String?     @unique @db.VarChar(100)
-  account_created_at         DateTime    @default(now())
+  account_line_id            String?   @unique @db.VarChar(100)
+  account_created_at         DateTime  @default(now())
   account_last_login_at      DateTime?
 
   homeUniversity        University?                   @relation("AccountHomeUniversity", fields: [account_home_university_id], references: [university_id])
@@ -229,12 +229,12 @@ model StudentProfile {
   income_bracket_id  Int?
   parental_status_id Int?
 
-  student           Student                    @relation(fields: [university_id, student_id], references: [university_id, student_id])
-  country           Country?                   @relation(fields: [country_id], references: [country_id])
-  genderCategory    GenderCategory?            @relation(fields: [gender_category_id], references: [gender_category_id])
-  bloodGroup        BloodGroupCategory?        @relation(fields: [blood_group_id], references: [blood_group_id])
-  incomeBracket     IncomeBracketCategory?     @relation(fields: [income_bracket_id], references: [income_bracket_id])
-  parentalStatus    ParentalStatusCategory?    @relation(fields: [parental_status_id], references: [parental_status_id])
+  student           Student                   @relation(fields: [university_id, student_id], references: [university_id, student_id])
+  country           Country?                  @relation(fields: [country_id], references: [country_id])
+  genderCategory    GenderCategory?           @relation(fields: [gender_category_id], references: [gender_category_id])
+  bloodGroup        BloodGroupCategory?       @relation(fields: [blood_group_id], references: [blood_group_id])
+  incomeBracket     IncomeBracketCategory?    @relation(fields: [income_bracket_id], references: [income_bracket_id])
+  parentalStatus    ParentalStatusCategory?   @relation(fields: [parental_status_id], references: [parental_status_id])
   chronicConditions StudentChronicCondition[]
 
   @@unique([university_id, student_id])
@@ -247,18 +247,18 @@ model StudentProfile {
 }
 
 model StudentAddress {
-  student_address_id           Int                @id @default(autoincrement())
+  student_address_id           Int                 @id @default(autoincrement())
   student_id                   Int
   university_id                Int
   province_id                  Int
-  address_type_id               Int
-  student_address_detail       String?              @db.VarChar(200)
-  student_address_sub_district String?              @db.VarChar(100)
-  student_address_district     String?              @db.VarChar(100)
-  student_address_postal_code  String               @db.VarChar(10)
-  province                     Province             @relation(fields: [province_id], references: [province_id])
-  student                      Student              @relation(fields: [university_id, student_id], references: [university_id, student_id])
-  addressType                  AddressTypeCategory  @relation(fields: [address_type_id], references: [address_type_id])
+  address_type_id              Int
+  student_address_detail       String?             @db.VarChar(200)
+  student_address_sub_district String?             @db.VarChar(100)
+  student_address_district     String?             @db.VarChar(100)
+  student_address_postal_code  String              @db.VarChar(10)
+  province                     Province            @relation(fields: [province_id], references: [province_id])
+  student                      Student             @relation(fields: [university_id, student_id], references: [university_id, student_id])
+  addressType                  AddressTypeCategory @relation(fields: [address_type_id], references: [address_type_id])
 
   @@unique([university_id, student_id, address_type_id])
   @@index([university_id, student_id])
@@ -272,19 +272,19 @@ model StudentAcademic {
   department_id Int
   advisor_id    Int?
 
-  student_program             String?         @db.VarChar(50)
-  student_degree              String?         @db.VarChar(50)
-  student_degree_name         String?         @db.VarChar(100)
+  student_program             String? @db.VarChar(50)
+  student_degree              String? @db.VarChar(50)
+  student_degree_name         String? @db.VarChar(100)
   student_admit_academic_year Int?
   education_level_id          Int?
   program_duration_years      Int?
   expected_graduation_year    Int?
 
-  student    Student    @relation(fields: [university_id, student_id], references: [university_id, student_id])
-  faculty    Faculty    @relation(fields: [university_id, faculty_id], references: [university_id, faculty_id])
-  department Department @relation(fields: [university_id, department_id], references: [university_id, department_id])
-  advisor         Advisor?                @relation(fields: [advisor_id], references: [advisor_id])
-  educationLevel  EducationLevelCategory? @relation(fields: [education_level_id], references: [education_level_id])
+  student        Student                 @relation(fields: [university_id, student_id], references: [university_id, student_id])
+  faculty        Faculty                 @relation(fields: [university_id, faculty_id], references: [university_id, faculty_id])
+  department     Department              @relation(fields: [university_id, department_id], references: [university_id, department_id])
+  advisor        Advisor?                @relation(fields: [advisor_id], references: [advisor_id])
+  educationLevel EducationLevelCategory? @relation(fields: [education_level_id], references: [education_level_id])
 
   @@unique([university_id, student_id])
   @@index([university_id, faculty_id])
@@ -407,9 +407,9 @@ model Consultant {
 
   bookings Booking[]
 
-  account      Account      @relation(fields: [account_id], references: [account_id])
-  university   University   @relation(fields: [university_id], references: [university_id])
-  organization Organization @relation(fields: [organization_id], references: [organization_id])
+  account      Account              @relation(fields: [account_id], references: [account_id])
+  university   University           @relation(fields: [university_id], references: [university_id])
+  organization Organization         @relation(fields: [organization_id], references: [organization_id])
   shiftTeam    ConsultantShiftTeam? @relation(fields: [shift_team_id], references: [shift_team_id])
 
   languages         ConsultantLanguage[]
@@ -550,6 +550,7 @@ model OnlineChannelCategory {
   online_channel_code        String  @unique @db.VarChar(50) // LINE_CALL, GOOGLE_MEET, etc.
   online_channel_name_th     String  @db.VarChar(100)
   online_channel_name_en     String? @db.VarChar(100)
+  online_channel_icon_key    String? @db.VarChar(50) // e.g. "line", "meet", "zoom", "teams", "phone"
   is_active                  Boolean @default(true)
 
   bookings        Booking[]
@@ -970,10 +971,10 @@ model StudentPointTransaction {
   booking_university_id Int?
   booking_id            Int?
 
-  student_point_txn_type   String       @db.VarChar(30)
+  student_point_txn_type   String   @db.VarChar(30)
   student_point_amount     Int
-  student_point_note       String?      @db.Text
-  student_point_created_at DateTime     @default(now())
+  student_point_note       String?  @db.Text
+  student_point_created_at DateTime @default(now())
 
   student Student    @relation(fields: [student_id], references: [student_id])
   rule    PointRule? @relation(fields: [point_rule_id], references: [point_rule_id])
@@ -1163,7 +1164,7 @@ model AiKbDocumentVersion {
   ai_kb_document_id         Int
 
   ai_kb_version_no     Int
-  ai_kb_content_type   String        @db.VarChar(30)
+  ai_kb_content_type   String          @db.VarChar(30)
   ai_kb_version_status KbVersionStatus @default(DRAFT)
 
   /// แนะนำเก็บเป็น path เพื่ออัปโหลด/แก้ไขง่าย
@@ -1227,8 +1228,8 @@ model AiFeedbackEvent {
   account_id    Int?
   ai_user_role  String? @db.VarChar(30)
 
-  ai_feedback_type      String         @db.VarChar(30)
-  ai_user_question_text String         @db.Text
+  ai_feedback_type      String @db.VarChar(30)
+  ai_user_question_text String @db.Text
 
   ai_assistant_reply_excerpt String?          @db.VarChar(500)
   ai_feedback_status         AiFeedbackStatus @default(OPEN)
@@ -1549,14 +1550,14 @@ model Season {
 // ==========================================
 
 model Country {
-  country_id          Int             @id @default(autoincrement())
-  country_code_alpha2 String          @unique @db.VarChar(2)
-  country_code_alpha3 String          @unique @db.VarChar(3)
-  country_name_th     String          @db.VarChar(100)
-  country_name_en     String          @db.VarChar(100)
+  country_id          Int     @id @default(autoincrement())
+  country_code_alpha2 String  @unique @db.VarChar(2)
+  country_code_alpha3 String  @unique @db.VarChar(3)
+  country_name_th     String  @db.VarChar(100)
+  country_name_en     String  @db.VarChar(100)
   nationality_type_id Int?
-  sort_order          Int             @default(0)
-  is_active           Boolean         @default(true)
+  sort_order          Int     @default(0)
+  is_active           Boolean @default(true)
 
   nationalityType NationalityTypeCategory? @relation(fields: [nationality_type_id], references: [nationality_type_id])
   studentProfiles StudentProfile[]
@@ -1609,18 +1610,18 @@ model AcademicTerm {
 // ==========================================
 
 model AcademicPeriod {
-  period_id                  Int      @id @default(autoincrement())
-  term_id                    Int
-  university_id              Int
-  academic_period_type_id    Int
-  period_name_th             String   @db.VarChar(100)
-  period_name_en             String?  @db.VarChar(100)
-  period_start_date          DateTime @db.Date
-  period_end_date            DateTime @db.Date
-  sort_order                 Int      @default(0)
+  period_id               Int      @id @default(autoincrement())
+  term_id                 Int
+  university_id           Int
+  academic_period_type_id Int
+  period_name_th          String   @db.VarChar(100)
+  period_name_en          String?  @db.VarChar(100)
+  period_start_date       DateTime @db.Date
+  period_end_date         DateTime @db.Date
+  sort_order              Int      @default(0)
 
-  term               AcademicTerm              @relation(fields: [term_id], references: [term_id])
-  university         University                @relation(fields: [university_id], references: [university_id])
+  term               AcademicTerm               @relation(fields: [term_id], references: [term_id])
+  university         University                 @relation(fields: [university_id], references: [university_id])
   academicPeriodType AcademicPeriodTypeCategory @relation(fields: [academic_period_type_id], references: [academic_period_type_id])
 
   @@index([university_id, period_start_date, period_end_date])

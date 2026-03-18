@@ -5,7 +5,6 @@ import { useMemo, useState } from "react";
 
 import type { TimeSlotCore } from "@/shared/types/timeSlot";
 import type { ServiceMode } from "@/shared/types/service";
-import type { OnlineChannelCode } from "@/lib/constants/booking-service";
 
 import { Modal, Button } from "@/components/ui";
 import { AlertBox } from "@/components/notification/AlertBox";
@@ -16,14 +15,10 @@ import {
   type BookingFormData,
 } from "@/features/booking/components/forms/BookingForm";
 import { ServiceModePicker } from "@/features/booking/components/forms/ServiceMode";
+import type { ServicePick } from "@/features/booking/components/forms/ServiceMode/ServiceMode.types";
 
 import { ConsentBlock } from "@/features/booking/components/forms/ConsentBlock";
 import { SignaturePad } from "@/features/booking/components/forms/SignaturePad";
-
-type ServicePick = {
-  mode: ServiceMode;
-  onlineChannelCode?: OnlineChannelCode | null;
-};
 
 export function BookingConfirmModal({
   open,
@@ -41,7 +36,7 @@ export function BookingConfirmModal({
     problemCategoryId: number;
     bookingDetailText: string;
     serviceMode: ServiceMode;
-    onlineChannelCode?: OnlineChannelCode | null;
+    onlineChannelCode?: string | null;
     consentChecked: boolean;
     agreementSignatureDataUrl?: string | null;
   }) => Promise<void> | void;

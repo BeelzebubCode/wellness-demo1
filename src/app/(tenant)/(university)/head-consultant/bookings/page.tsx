@@ -24,7 +24,7 @@ import { useBookingActions } from "@/features/head-consultant/bookings/hook/useB
 import { toYMD, fromYMD } from "@/lib/date";
 
 export default function HeadConsultantBookingsPage() {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [statusFilter, setStatusFilter] = useState<BookingStatus | "ALL">("PENDING_ASSIGNMENT");
   const [consultantId, setConsultantId] = useState<string>("");
   const [problemCategoryId, setProblemCategoryId] = useState<string>("");

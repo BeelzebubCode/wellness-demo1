@@ -8,14 +8,16 @@ import { ServiceModeEnum } from "@/shared/types/service";
 
 import { Building2, Laptop } from "lucide-react";
 
-import {
-  PICKABLE_ONLINE_CHANNELS,
-  ONLINE_CHANNEL_META,
-  type PickableOnlineChannel,
-} from "@/lib/constants/booking-service";
-
 import type { ServicePick } from "./ServiceMode.types";
 import { ChannelIcon } from "./ServiceModeIcons";
+
+// ---------- types ----------
+interface ChannelFromDB {
+  online_channel_code: string;
+  online_channel_name_th: string;
+  online_channel_name_en: string | null;
+  online_channel_icon_key: string | null;
+}
 
 export function ServiceModePicker({
   value,
@@ -29,8 +31,27 @@ export function ServiceModePicker({
   const mode = value.mode;
   const canPickChannel = mode === ServiceModeEnum.ONLINE;
 
-  const [bubbleOpenKey, setBubbleOpenKey] =
-    useState<PickableOnlineChannel | null>(null);
+  // --- Fetch channels from DB ---
+  const [channels, setChannels] = useState<ChannelFromDB[]>([]);
+  const [loadingChannels, setLoadingChannels] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingChannels(true);
+    (async () => {
+      try {
+        const res = await fetch("/api/v2/master/online-channels");
+        const json = await res.json();
+        if (!cancelled && Array.isArray(json.channels)) setChannels(json.channels);
+      } catch { /* silent */ } finally {
+        if (!cancelled) setLoadingChannels(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // --- Speech bubble state ---
+  const [bubbleOpenKey, setBubbleOpenKey] = useState<string | null>(null);
 
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -75,7 +96,7 @@ export function ServiceModePicker({
               onChange({
                 mode: ServiceModeEnum.ONLINE,
                 onlineChannelCode:
-                  value.onlineChannelCode ?? PICKABLE_ONLINE_CHANNELS[0], // Default to first available
+                  value.onlineChannelCode ?? channels[0]?.online_channel_code ?? null,
               })
             }
             icon={<Laptop className="h-5 w-5" />}
@@ -91,67 +112,66 @@ export function ServiceModePicker({
             ช่องทางออนไลน์ <span className="text-red-500">*</span>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            {PICKABLE_ONLINE_CHANNELS.map((key) => {
-              const meta = ONLINE_CHANNEL_META[key];
-              const active = value.onlineChannelCode === key;
-              const bubbleOpen = bubbleOpenKey === key;
+          {loadingChannels ? (
+            <div className="grid grid-cols-3 gap-3">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-[75px] rounded-[15px] bg-gray-100 animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-3">
+              {channels.map((ch) => {
+                const active = value.onlineChannelCode === ch.online_channel_code;
+                const bubbleOpen = bubbleOpenKey === ch.online_channel_code;
+                const iconKey = ch.online_channel_icon_key ?? "default";
+                const label = ch.online_channel_name_en || ch.online_channel_name_th;
 
-              return (
-                <div key={key} className="relative">
-                  <button
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => {
-                      onChange({
-                        mode: ServiceModeEnum.ONLINE,
-                        onlineChannelCode: key,
-                      });
-                      setBubbleOpenKey(key);
-                    }}
-                    onMouseEnter={() => setBubbleOpenKey(key)}
-                    onMouseLeave={() =>
-                      setBubbleOpenKey((prev) => (prev === key ? null : prev))
-                    }
-                    className={cn(
-                      // ⬛ compact square card
-                      "w-full h-[75px] rounded-[15px] border",
+                return (
+                  <div key={ch.online_channel_code} className="relative">
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => {
+                        onChange({
+                          mode: ServiceModeEnum.ONLINE,
+                          onlineChannelCode: ch.online_channel_code,
+                        });
+                        setBubbleOpenKey(ch.online_channel_code);
+                      }}
+                      onMouseEnter={() => setBubbleOpenKey(ch.online_channel_code)}
+                      onMouseLeave={() =>
+                        setBubbleOpenKey((prev) => (prev === ch.online_channel_code ? null : prev))
+                      }
+                      className={cn(
+                        "w-full h-[75px] rounded-[15px] border",
+                        "flex items-center justify-center",
+                        "transition-all duration-200",
 
-                      // center icon
-                      "flex items-center justify-center",
+                        !active &&
+                        "bg-white border-gray-200 hover:border-primary-300 hover:shadow-sm",
 
-                      // animation
-                      "transition-all duration-200",
+                        active &&
+                        "bg-primary-50 border-primary-500 ring-2 ring-primary-200 shadow-sm",
 
-                      // normal
-                      !active &&
-                      "bg-white border-gray-200 hover:border-primary-300 hover:shadow-sm",
+                        disabled && "opacity-50 cursor-not-allowed",
+                      )}
+                      aria-label={label}
+                    >
+                      <div className="h-8 w-8 grid place-items-center">
+                        <ChannelIcon iconKey={iconKey} disabled={disabled} />
+                      </div>
+                    </button>
 
-                      // active
-                      active &&
-                      "bg-primary-50 border-primary-500 ring-2 ring-primary-200 shadow-sm",
-
-                      // disabled
-                      disabled && "opacity-50 cursor-not-allowed",
-                    )}
-                    aria-label={meta.label}
-                  >
-                    <div className="h-8 w-8 grid place-items-center">
-                      <ChannelIcon iconKey={meta.iconKey} disabled={disabled} />
-                    </div>
-                  </button>
-
-                  <SpeechBubble
-                    show={bubbleOpen}
-                    text={meta.label}
-                    active={active}
-                  />
-                </div>
-              );
-            })}
-          </div>
-
-
+                    <SpeechBubble
+                      show={bubbleOpen}
+                      text={label}
+                      active={active}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           <p className="mt-4 text-xs text-gray-500">
             เลือกช่องทางที่สะดวก ระบบจะแจ้งลิงก์/รายละเอียดภายหลัง

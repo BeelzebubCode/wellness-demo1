@@ -24,7 +24,7 @@ import { useBookingActions } from "@/features/head-consultant/bookings/hook/useB
 import { toYMD, fromYMD } from "@/lib/date";
 
 export default function AssignmentHistoryPage() {
-    const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
     // Default to ALL for history view, or ASSIGNED/COMPLETED to focus on what was assigned
     const [statusFilter, setStatusFilter] = useState<BookingStatus | "ALL">("ALL");
     const [consultantId, setConsultantId] = useState<string>("");

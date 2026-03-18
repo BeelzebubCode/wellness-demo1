@@ -11,24 +11,24 @@ export async function GET(req: NextRequest) {
     if (!tokenCookie) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
-    
+
     // verify token to get university_id if needed, but for now we list all or filter by query
     const token = await verifyToken(tokenCookie.value);
     if (!token) {
-        return NextResponse.json({ success: false, error: "Invalid token" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Invalid token" }, { status: 401 });
     }
-    
+
     // If user is Rector/Staff, they might need data specific to their university
     // Fetch universityId from account
     const account = await prisma.account.findUnique({
-        where: { account_id: token.accountId },
-        select: { account_home_university_id: true }
+      where: { account_id: token.accountId },
+      select: { account_home_university_id: true }
     });
-    
+
     const universityId = account?.account_home_university_id;
 
     if (!universityId) {
-         return NextResponse.json({ success: false, error: "University not found for user" }, { status: 404 });
+      return NextResponse.json({ success: false, error: "University not found for user" }, { status: 404 });
     }
 
     // 2. Fetch Data in Parallel
@@ -49,12 +49,19 @@ export async function GET(req: NextRequest) {
       })
     ]);
 
+    // Sort: "OTHER" / "อื่นๆ" always last
+    const sortedCategories = problemCategories.sort((a, b) => {
+      const aOther = a.problem_category_name_th === "อื่นๆ" ? 1 : 0;
+      const bOther = b.problem_category_name_th === "อื่นๆ" ? 1 : 0;
+      return aOther - bOther;
+    });
+
     return NextResponse.json({
       success: true,
       data: {
         faculties,
         departments,
-        problemCategories,
+        problemCategories: sortedCategories,
       },
     });
 

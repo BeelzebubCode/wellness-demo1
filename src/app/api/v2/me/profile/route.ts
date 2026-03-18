@@ -229,7 +229,12 @@ export async function GET(req: NextRequest) {
           university_id: activeUniversityId,
         },
         include: {
-          profile: true,
+          profile: {
+            include: {
+              genderCategory: true,
+              bloodGroup: true,
+            },
+          },
           university: inc.university,
 
           // จะ include ไว้ตลอดก็ได้ (ง่ายและชัวร์)

@@ -8,7 +8,7 @@
 import prisma from "@/lib/prisma";
 
 export type StoryType =
-    | "students" | "bookings" | "problems" | "risk" | "all";
+    | "students" | "bookings" | "problems" | "risk" | "departments" | "all";
 
 export interface MVScope {
     studentWhere: string;
@@ -155,25 +155,52 @@ export async function queryProblemStory(scope: MVScope) {
     return result;
 }
 
-// ─── Risk Story ─────────────────────────────────────────────────────────────
+// ─── Risk Story (EWMA-based) ────────────────────────────────────────────────
 export async function queryRiskStory(scope: MVScope) {
-    const cacheKey = `risk:${scope.riskWhere}`;
+    const cacheKey = `risk_ewma:${scope.riskWhere}`;
     const cached = getCached<any>(cacheKey);
     if (cached) return cached;
 
-    const riskDist = await prisma.$queryRawUnsafe<{
-        risk_level: string; count: number;
-    }[]>(`
-        SELECT risk_level, SUM(count)::int AS count
-        FROM mv_risk_summary ${scope.riskWhere}
-        GROUP BY risk_level ORDER BY count DESC
-    `);
+    // Build WHERE using the same scope columns but against the new MV
+    // scope.riskWhere uses university_id, faculty_id, department_id, advisor_id
+    const riskWhere = scope.riskWhere
+        .replace(/mv_risk_summary/g, "mv_student_risk_score");
+
+    const [bandDist, summary] = await Promise.all([
+        // Distribution by risk band (CRITICAL, HIGH, MEDIUM, NORMAL)
+        prisma.$queryRawUnsafe<
+            { risk_band: string; count: number }[]
+        >(`
+            SELECT risk_band, COUNT(*)::int AS count
+            FROM mv_student_risk_score ${scope.riskWhere}
+            GROUP BY risk_band ORDER BY count DESC
+        `),
+        // Summary stats
+        prisma.$queryRawUnsafe<
+            { avg_score: number; total_students: number; critical_count: number; high_count: number }[]
+        >(`
+            SELECT
+                ROUND(AVG(risk_score)::numeric, 2) AS avg_score,
+                COUNT(*)::int AS total_students,
+                COUNT(CASE WHEN risk_band = 'CRITICAL' THEN 1 END)::int AS critical_count,
+                COUNT(CASE WHEN risk_band = 'HIGH' THEN 1 END)::int AS high_count
+            FROM mv_student_risk_score ${scope.riskWhere}
+        `),
+    ]);
+
+    const s = summary[0] || { avg_score: 0, total_students: 0, critical_count: 0, high_count: 0 };
 
     const result = {
-        distribution: riskDist.map(r => ({ label: r.risk_level, count: r.count })),
-        highRiskCount: riskDist
-            .filter(r => ["HIGH", "CRITICAL", "4", "5"].includes(r.risk_level))
-            .reduce((sum, r) => sum + r.count, 0),
+        riskDistribution: {
+            high: Number(s.critical_count) + Number(s.high_count),
+            medium: bandDist.find(b => b.risk_band === "MEDIUM")?.count ?? 0,
+            low: bandDist.find(b => b.risk_band === "NORMAL")?.count ?? 0,
+        },
+        distribution: bandDist.map(r => ({ label: r.risk_band, count: r.count })),
+        highRiskCount: Number(s.critical_count) + Number(s.high_count),
+        avgRiskScore: Number(s.avg_score),
+        totalAssessed: Number(s.total_students),
+        method: "EWMA+PeakMemory",
     };
     setCache(cacheKey, result);
     return result;
@@ -192,7 +219,7 @@ export async function queryAllStories(
             case "students": return { students: await queryStudentStory(scope) };
             case "bookings": return { bookings: await queryBookingStory(scope) };
             case "problems": return { problems: await queryProblemStory(scope) };
-            case "risk":     return { risk: await queryRiskStory(scope) };
+            case "risk": return { risk: await queryRiskStory(scope) };
         }
     }
 

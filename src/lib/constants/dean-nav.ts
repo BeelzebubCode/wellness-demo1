@@ -14,11 +14,6 @@ export const DEAN_NAV: NavItem[] = [
         icon: School,
     },
     {
-        href: "/dean/filter",
-        label: "Filter",
-        icon: School,
-    },
-    {
         href: "/dean/ai-insight",
         label: "AI สรุปผล",
         icon: Bot,

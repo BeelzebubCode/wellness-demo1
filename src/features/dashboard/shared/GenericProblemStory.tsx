@@ -1,7 +1,7 @@
 // src/features/dashboard/shared/GenericProblemStory.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { AlertTriangle } from "lucide-react";
 import { DataStoryCard } from "../widgets/story/DataStoryCard";
@@ -46,11 +46,21 @@ export default function GenericProblemStory({ apiPath, title, delay = 0 }: Props
     const [income, setIncome] = useState<string[]>([]);
     const [blood, setBlood] = useState<string[]>([]);
     const [parental, setParental] = useState<string[]>([]);
+    const [chronic, setChronic] = useState<string[]>([]);
+    const [chronicConditions, setChronicConditions] = useState<{ id: number; nameTh: string }[]>([]);
+
+    useEffect(() => {
+        fetch('/api/v2/analytics/chronic-conditions', { credentials: 'include' })
+            .then(r => r.json())
+            .then(j => setChronicConditions(j.data ?? []))
+            .catch(() => { });
+    }, []);
 
     const { data, loading } = useStoryData<any>(apiPath, "problems", {
         family_income_bracket: income,
         blood_group: blood,
         parental_status: parental,
+        chronic_condition_ids: chronic,
     }, date, customRange);
 
     const categories = data?.categories ?? [];
@@ -110,6 +120,11 @@ export default function GenericProblemStory({ apiPath, title, delay = 0 }: Props
                         { value: "MOTHER_DECEASED", label: "มารดาเสียชีวิต" },
                         { value: "BOTH_DECEASED", label: "เสียชีวิตทั้งคู่" },
                     ]} selected={parental} onChange={setParental} />
+                    {chronicConditions.length > 0 && (
+                        <StoryChipGroup label="โรคประจำตัว" options={chronicConditions.map(c => ({
+                            value: String(c.id), label: c.nameTh
+                        }))} selected={chronic} onChange={setChronic} />
+                    )}
                 </StoryFilterStack>
             }
             delay={delay}

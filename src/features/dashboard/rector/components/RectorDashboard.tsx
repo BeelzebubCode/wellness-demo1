@@ -1,16 +1,17 @@
 // src/features/dashboard/rector/components/RectorDashboard.tsx
 // ─────────────────────────────────────────────────────────────────────────────
-// Story-based rector dashboard — 4 story cards
-// Data scope: University (all faculties)
+// Rector dashboard — University-wide view with faculty drill-down
 // ─────────────────────────────────────────────────────────────────────────────
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { DataStoryGrid } from "../../widgets/story/DataStoryGrid";
-import GenericStudentStory from "../../shared/GenericStudentStory";
 import GenericBookingStory from "../../shared/GenericBookingStory";
 import GenericProblemStory from "../../shared/GenericProblemStory";
 import GenericRiskStory from "../../shared/GenericRiskStory";
+import FacultyConsultationChart from "./sections/FacultyConsultationChart";
+import StaffUtilizationDonut from "./sections/StaffUtilizationDonut";
+import PolicySummaryCard from "./sections/PolicySummaryCard";
 
 const API = "/api/v2/dashboards/rector/story";
 
@@ -55,17 +56,23 @@ export function RectorDashboard() {
                     )}
                 </div>
 
-                {/* Row 1: Overview + Bookings */}
+                {/* ★ Hero: Faculty-level consultation chart */}
+                <FacultyConsultationChart />
+
+                {/* Row 1: Staff Utilization + Policy Summary */}
                 <DataStoryGrid cols={2}>
-                    <GenericStudentStory apiPath={API} title="ภาพรวมนิสิตทั้งมหาวิทยาลัย" delay={0} />
-                    <GenericBookingStory apiPath={API} title="การใช้บริการทั้งมหาวิทยาลัย" delay={1} />
+                    <StaffUtilizationDonut />
+                    <PolicySummaryCard />
                 </DataStoryGrid>
 
-                {/* Row 2: Problems + Profile */}
-                <GenericProblemStory apiPath={API} title="ประเด็นปัญหา + โปรไฟล์นิสิตทั้งมหาวิทยาลัย" delay={2} />
+                {/* Row 2: Bookings + Risk */}
+                <DataStoryGrid cols={2}>
+                    <GenericBookingStory apiPath={API} title="การใช้บริการทั้งมหาวิทยาลัย" delay={2} />
+                    <GenericRiskStory apiPath={API} title="ระดับความเสี่ยงทั้งมหาวิทยาลัย" delay={3} />
+                </DataStoryGrid>
 
-                {/* Row 3: Risk */}
-                <GenericRiskStory apiPath={API} title="ระดับความเสี่ยงทั้งมหาวิทยาลัย" delay={3} />
+                {/* Row 3: Problems + Profile */}
+                <GenericProblemStory apiPath={API} title="ประเด็นปัญหา + โปรไฟล์นิสิตทั้งมหาวิทยาลัย" delay={4} />
 
                 {/* Footer */}
                 <div className="text-center text-xs text-slate-300 py-3 animate-[fadeUp_0.5s_ease-out_both]" style={{ animationDelay: "400ms" }}>
