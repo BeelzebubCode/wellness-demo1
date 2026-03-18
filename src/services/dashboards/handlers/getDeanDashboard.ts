@@ -54,6 +54,7 @@ export const DeanService = {
     const account = await prisma.account.findUnique({
       where: { account_id: deanAccountId },
       include: {
+        roleCategory: true,
         facultiesDean: {
           include: {
             university: {
@@ -81,7 +82,7 @@ export const DeanService = {
       },
     });
 
-    if (!account || account.account_role !== "DEAN") {
+    if (!account || account.roleCategory?.code !== "DEAN") {
       throw new Error("Account is not a dean or does not exist");
     }
 
@@ -115,7 +116,7 @@ export const DeanService = {
     if (dateRange && (dateRange.start || dateRange.end)) {
       ayStart = dateRange.start || defaultRange.start;
       ayEnd = dateRange.end || defaultRange.end;
-      
+
       const startStr = ayStart.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
       const endStr = ayEnd.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
       ayLabel = `${startStr} - ${endStr}`;
@@ -157,22 +158,22 @@ export const DeanService = {
     const currentBuddhistYear = currentYear + 543;
 
     // Filters Construction
-    const whereDept = filters?.department && filters.department !== 'ALL' 
-      ? Prisma.sql`AND d.department_code = ${filters.department}` 
+    const whereDept = filters?.department && filters.department !== 'ALL'
+      ? Prisma.sql`AND d.department_code = ${filters.department}`
       : Prisma.empty;
 
     const whereYear = filters?.yearLevel && filters.yearLevel !== 'ALL'
-      ? (filters.yearLevel === 'YEAR_5_PLUS' 
-          ? Prisma.sql`AND (${currentBuddhistYear} - sa.student_admit_academic_year + 1) > 4` 
-          : Prisma.sql`AND (${currentBuddhistYear} - sa.student_admit_academic_year + 1) = ${Number(filters.yearLevel.replace('YEAR_', ''))}`)
+      ? (filters.yearLevel === 'YEAR_5_PLUS'
+        ? Prisma.sql`AND (${currentBuddhistYear} - sa.student_admit_academic_year + 1) > 4`
+        : Prisma.sql`AND (${currentBuddhistYear} - sa.student_admit_academic_year + 1) = ${Number(filters.yearLevel.replace('YEAR_', ''))}`)
       : Prisma.empty;
 
     const whereRisk = filters?.riskLevel && filters.riskLevel !== 'ALL'
       ? (filters.riskLevel === 'CRITICAL' ? Prisma.sql`AND bo.booking_outcome_risk_level >= 4`
         : (filters.riskLevel === 'HIGH' ? Prisma.sql`AND bo.booking_outcome_risk_level = 3`
-        : (filters.riskLevel === 'MODERATE' ? Prisma.sql`AND bo.booking_outcome_risk_level = 2`
-        : (filters.riskLevel === 'NORMAL' ? Prisma.sql`AND bo.booking_outcome_risk_level = 1`
-        : Prisma.empty))))
+          : (filters.riskLevel === 'MODERATE' ? Prisma.sql`AND bo.booking_outcome_risk_level = 2`
+            : (filters.riskLevel === 'NORMAL' ? Prisma.sql`AND bo.booking_outcome_risk_level = 1`
+              : Prisma.empty))))
       : Prisma.empty;
 
     const whereProblem = filters?.problemCategory && filters.problemCategory !== 'ALL'
@@ -222,7 +223,7 @@ export const DeanService = {
     // However, if NO booking filters are applied (only Dept/Year/Gender), we want ALL students in that Dept/Year/Gender, even if no booking?
     // User requirement: "Filter Dashboard". Usually means filter the *Dataset* being visualized.
     // If "High Risk" is selected, "Total Students" = Students with High Risk.
-    
+
     // Logic: 
     // If booking-specific filters (Risk, Problem, Search Booking ID) are active, or Date Range is active -> Count Distinct Students from Bookings.
     // If only static filters (Dept, Year, Gender) active -> Count from Student Academic?
@@ -232,7 +233,7 @@ export const DeanService = {
     // If I filter "High Risk", I expect to see stats for High Risk cases.
     // So "Total Students" should be "Students with High Risk".
     // AND "Total Bookings" should be "High Risk Bookings".
-    
+
     // Thus, I will use Query based on BookingContext for everything IF any booking-related filter is present.
     // BUT what if simply filtering by "Department"? Use Population of Department?
     // Yes.
@@ -242,9 +243,9 @@ export const DeanService = {
     // B) Apply ALL filters to EVERYTHING.
     //    Strategy B is what "Advanced Multi-dimensional Data Filtering" usually implies.
     //    If I toggle "High Risk", I want to see "99 Students, 100 Bookings".
-    
+
     // So I will use the `commonWhereBooking` for everything that counts booking-related entities.
-    
+
     // For "Total Students" specifically:
     // If Risk/Problem/Date/Search is used -> Count DISTINCT students from Booking query.
     // If ONLY Dept/Year/Gender used (and no date range?), we might want total population.
@@ -255,7 +256,7 @@ export const DeanService = {
     // It showed "Total Students in Faculty" (Population).
     // If I select "Year 1", I want "Total Year 1 Students".
     // If I select "High Risk", I want "Total High Risk Students" (who had high risk booking in this period).
-    
+
     // So:
     // 1. Base Student Filter (Dept, Year, Gender, Name Search)
     const baseStudentFilter = Prisma.sql`
@@ -268,29 +269,29 @@ export const DeanService = {
     `;
 
     // 2. Booking Filter (Risk, Problem, Date, BookingID Search)
-    const hasBookingFilters = (filters?.riskLevel && filters.riskLevel !== 'ALL') || 
-                              (filters?.problemCategory && filters.problemCategory !== 'ALL') ||
-                              (filters?.search && !isNaN(Number(filters.search))) || // heuristic
-                              true; // Actually we always have Date Range.
-    
+    const hasBookingFilters = (filters?.riskLevel && filters.riskLevel !== 'ALL') ||
+      (filters?.problemCategory && filters.problemCategory !== 'ALL') ||
+      (filters?.search && !isNaN(Number(filters.search))) || // heuristic
+      true; // Actually we always have Date Range.
+
     // Let's stick to: "Total Students" = Population matching Dept/Year/Gender.
     // "Active Students" / "Risk Students" = Subsets.
     // BUT if "High Risk" is selected, the "Total Students" text probably explicitly means "Students matching filter".
-    
+
     // To simplify: I will apply `commonWhereBooking` to `totalStudentsQuery` as well?
     // If I do, then "Total Students" becomes "Active Students in Period" (since it requires a booking).
     // That might be confusing if usually it shows 4000, and suddenly shows 50 (active).
-    
+
     // Compromise: 
     // If Risk/Problem filters are active -> Use Booking-based count.
     // If only Dept/Year/Gender active -> Use Population-based count.
-    
-    const useBookingContext = (filters?.riskLevel && filters.riskLevel !== 'ALL') || 
-                              (filters?.problemCategory && filters.problemCategory !== 'ALL');
+
+    const useBookingContext = (filters?.riskLevel && filters.riskLevel !== 'ALL') ||
+      (filters?.problemCategory && filters.problemCategory !== 'ALL');
 
     let totalStudents = 0;
     if (useBookingContext) {
-         const q = await prisma.$queryRaw<{ count: bigint }[]>`
+      const q = await prisma.$queryRaw<{ count: bigint }[]>`
             SELECT COUNT(DISTINCT sa.student_id)::int as count
             FROM "booking" b
             JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
@@ -300,9 +301,9 @@ export const DeanService = {
             LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
             ${commonWhereBooking}
          `;
-         totalStudents = Number(q[0]?.count || 0);
+      totalStudents = Number(q[0]?.count || 0);
     } else {
-         const q = await prisma.$queryRaw<{ count: bigint }[]>`
+      const q = await prisma.$queryRaw<{ count: bigint }[]>`
             SELECT COUNT(DISTINCT sa.student_id)::int as count
             FROM "student_academic" sa
             JOIN "student_profile" sp ON sa.student_id = sp.student_id AND sa.university_id = sp.university_id
@@ -310,7 +311,7 @@ export const DeanService = {
             WHERE sa.university_id = ${universityId}
             ${baseStudentFilter}
          `;
-         totalStudents = Number(q[0]?.count || 0);
+      totalStudents = Number(q[0]?.count || 0);
     }
 
     // ─── 3. Total Bookings ───
@@ -464,7 +465,7 @@ export const DeanService = {
     // ─── 8. Department Stats (this academic year for bookings) ───
     // Student count: all-time (population), Bookings: this academic year
     // Scoped: university_id + faculty_id via department → faculty
-    
+
     // 8.1. Fetch Risk distribution for each department
     const deptRiskStats = await prisma.$queryRaw<{ department_id: number, risk: number, count: bigint }[]>`
         SELECT 
@@ -563,7 +564,7 @@ export const DeanService = {
 
     const departmentStats = deptStatsQuery.map(d => {
       const deptId = d.department_id;
-      
+
       // Filter risk distribution for this dept
       const riskDist = { HIGH: 0, MEDIUM: 0, LOW: 0, NORMAL: 0 };
       deptRiskStats.filter(r => r.department_id === deptId).forEach(r => {
@@ -746,7 +747,7 @@ export const DeanService = {
       else if (riskLevel === 2) risk = "MODERATE";
 
       const currentYear = new Date().getFullYear() + 543;
-      const yearLevel = b.admitYear 
+      const yearLevel = b.admitYear
         ? Math.min(5, currentYear - Number(b.admitYear) + 1)
         : 1;
 
@@ -766,7 +767,7 @@ export const DeanService = {
     });
   },
 
-  async getStrategicAnalysis(facultyId: number, universityId: number, ayStart: Date, ayEnd: Date, deptStats: { departmentName: string; riskDistribution: { HIGH: number }; [key: string]: unknown }[]) {
+  async getStrategicAnalysis(facultyId: number, universityId: number, ayStart: Date, ayEnd: Date, deptStats: { departmentName: string; riskDistribution: { HIGH: number };[key: string]: unknown }[]) {
     // 1. Highest Risk Group (Department or Year)
     const topRiskDept = [...deptStats].sort((a, b) => b.riskDistribution.HIGH - a.riskDistribution.HIGH)[0];
 

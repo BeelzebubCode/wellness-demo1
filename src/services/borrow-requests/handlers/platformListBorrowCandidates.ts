@@ -146,7 +146,7 @@ export async function platformListBorrowCandidates(input: {
     where: {
       university_id: { not: fromUniversityId }, // ✅ exclude ม.ต้นทาง
       account: {
-        account_role: { not: "HEAD_CONSULTANT" }, // ✅ ไม่รวม Head Consultant
+        roleCategory: { code: { not: "HEAD_CONSULTANT" } }, // ✅ ไม่รวม Head Consultant
       },
     },
     select: {

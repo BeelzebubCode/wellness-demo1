@@ -11,10 +11,10 @@ export async function GET(req: NextRequest) {
 
         const account = await prisma.account.findUnique({
             where: { account_id: token.accountId },
-            select: { account_role: true, account_home_university_id: true },
+            select: { roleCategory: { select: { code: true } }, account_home_university_id: true },
         });
 
-        if (!account || account.account_role !== "RECTOR") {
+        if (!account || account.roleCategory.code !== "RECTOR") {
             return NextResponse.json({ success: false, error: "Forbidden: Rector access required" }, { status: 403 });
         }
         if (!account.account_home_university_id) {

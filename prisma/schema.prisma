@@ -116,25 +116,25 @@ model Account {
   account_id                 Int       @id @default(autoincrement())
   account_username           String    @unique @db.VarChar(50)
   account_password           String    @db.VarChar(255)
-  account_role               String    @db.VarChar(30)
+  account_role_id            Int // ✅ FK → AccountRoleCategory
   account_home_university_id Int?
-  account_line_id            String?   @unique @db.VarChar(100)
   account_created_at         DateTime  @default(now())
   account_last_login_at      DateTime?
 
+  roleCategory          AccountRoleCategory           @relation(fields: [account_role_id], references: [account_role_id])
   homeUniversity        University?                   @relation("AccountHomeUniversity", fields: [account_home_university_id], references: [university_id])
   accessPermissions     AccountUniversityPermission[]
   accessGrantedToOthers AccountUniversityPermission[] @relation("AccessGrantedBy")
 
   bookingCancellations   BookingCancellation[]
   consultant             Consultant?
-  advisor                Advisor? // [NEW] Link to Advisor
+  advisor                Advisor?
   feedbackCommentReplies FeedbackComment[]     @relation("FeedbackCommentRepliedBy")
   notifications          Notification[]
   student                Student?
   aiFeedbackEvents       AiFeedbackEvent[]
-  facultiesDean          Faculty[]             @relation("FacultyDean") // [NEW] Faculties where this account is Dean
-  departmentsHead        Department[]          @relation("DepartmentHead") // [NEW] Departments where this account is Head
+  facultiesDean          Faculty[]             @relation("FacultyDean")
+  departmentsHead        Department[]          @relation("DepartmentHead")
   rectorOfUniversities   University[]          @relation("UniversityRector")
 
   borrowRequestsRequested BorrowRequest[] @relation("BorrowRequestedBy")
@@ -152,7 +152,7 @@ model Account {
   bookingExceptionRequests BookingExceptionRequest[]      @relation("ExceptionReviewedBy")
   disciplineLogsCreated    BookingPunishmentLog[]         @relation("DisciplineCreatedBy")
 
-  @@index([account_role])
+  @@index([account_role_id])
   @@index([account_home_university_id])
   @@map("account")
 }
@@ -903,6 +903,8 @@ model AccountRoleCategory {
   description     String? @db.Text
   sort_order      Int     @default(0)
   is_active       Boolean @default(true)
+
+  accounts Account[] // ✅ back-relation
 
   @@map("account_role_category")
 }

@@ -34,6 +34,7 @@ export async function GET(req: NextRequest) {
         const account = await prisma.account.findUnique({
             where: { account_id: token.accountId },
             include: {
+                roleCategory: { select: { code: true } },
                 departmentsHead: {
                     select: {
                         department_id: true,
@@ -44,7 +45,7 @@ export async function GET(req: NextRequest) {
             },
         });
 
-        if (!account || account.account_role !== "HEAD_DEPARTMENT") {
+        if (!account || account.roleCategory.code !== "HEAD_DEPARTMENT") {
             return NextResponse.json(
                 { success: false, error: "Forbidden: Head Department access required" },
                 { status: 403 },

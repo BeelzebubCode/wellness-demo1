@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
                         select: {
                             account_id: true,
                             account_username: true,
-                            account_role: true,
+                            roleCategory: { select: { code: true } },
                         },
                     },
                     university: { select: { university_name_th: true } },

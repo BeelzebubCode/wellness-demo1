@@ -33,8 +33,8 @@ export async function getAccountFromRequest(
     select: {
       account_id: true,
       account_username: true,
-      account_role: true,
       account_home_university_id: true,
+      roleCategory: { select: { code: true } },
       consultant: {
         select: {
           profile: {
@@ -107,7 +107,7 @@ export async function getAccountFromRequest(
     accountId: account.account_id,
     username: account.account_username,
     displayName,
-    role: account.account_role,
+    role: account.roleCategory.code,
     consultantId: jwt.consultantId,
     studentId: jwt.studentId,
     homeUniversityId: account.account_home_university_id ?? undefined,

@@ -5,7 +5,7 @@ export async function getBorrowRequestById(borrowRequestId: number) {
     where: { borrow_request_id: borrowRequestId },
     include: {
       fromUniversity: true,
-      requestedBy: { select: { account_id: true, account_role: true } },
+      requestedBy: { select: { account_id: true, roleCategory: { select: { code: true } } } },
       assignments: true,
     },
   });
@@ -53,9 +53,9 @@ export async function getBorrowWindowDays(universityId?: number | null) {
   const policy =
     (universityId
       ? await prisma.consultantBorrowPolicy.findFirst({
-          where: { university_id: universityId, is_active: true },
-          orderBy: { created_at: "desc" },
-        })
+        where: { university_id: universityId, is_active: true },
+        orderBy: { created_at: "desc" },
+      })
       : null) ??
     (await prisma.consultantBorrowPolicy.findFirst({
       where: { university_id: null, is_active: true },

@@ -21,11 +21,12 @@ export async function GET(req: NextRequest) {
     const account = await prisma.account.findUnique({
       where: { account_id: token.accountId },
       include: {
+        roleCategory: { select: { code: true } },
         facultiesDean: true, // Get linked faculties
       },
     });
 
-    if (!account || account.account_role !== "DEAN") {
+    if (!account || account.roleCategory.code !== "DEAN") {
       return NextResponse.json({ success: false, error: "Forbidden: Dean access required" }, { status: 403 });
     }
 
@@ -76,7 +77,7 @@ export async function GET(req: NextRequest) {
           dateRange.end = adjustedEnd;
         }
       }
-      
+
       // If none were valid, reset to undefined
       if (Object.keys(dateRange).length === 0) {
         dateRange = undefined;

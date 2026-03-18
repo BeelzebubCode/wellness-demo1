@@ -199,7 +199,7 @@ export async function handleListBookings(
           },
           account: {
             select: {
-              account_line_id: true,
+              account_username: true,
             },
           },
         },
@@ -303,19 +303,19 @@ export async function handleListBookings(
       consultantId: b.consultant_id,
 
       userName: sp ? `${sp.student_first_name_th} ${sp.student_last_name_th}` : "ไม่ทราบชื่อ",
-      lineUserId: b.student.account.account_line_id ?? "-",
+      lineUserId: "-",
 
       problemDescription: b.booking_detail_text ?? null,
       problemType: b.problemCategory.problem_category_name_th,
 
-      date: slot?.time_slot_start_datetime 
-        ? slot.time_slot_start_datetime.toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" }) 
+      date: slot?.time_slot_start_datetime
+        ? slot.time_slot_start_datetime.toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" })
         : null,
-      startTime: slot?.time_slot_start_datetime 
-        ? slot.time_slot_start_datetime.toLocaleTimeString("en-GB", { timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit" }) 
+      startTime: slot?.time_slot_start_datetime
+        ? slot.time_slot_start_datetime.toLocaleTimeString("en-GB", { timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit" })
         : null,
-      endTime: slot?.time_slot_end_datetime 
-        ? slot.time_slot_end_datetime.toLocaleTimeString("en-GB", { timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit" }) 
+      endTime: slot?.time_slot_end_datetime
+        ? slot.time_slot_end_datetime.toLocaleTimeString("en-GB", { timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit" })
         : null,
 
       student: {
@@ -344,9 +344,9 @@ export async function handleListBookings(
           : null,
         assignedBy: assign.assignedBy
           ? {
-              username: assign.assignedBy.account_username,
-              name: assign.assignedBy.account_username,
-            }
+            username: assign.assignedBy.account_username,
+            name: assign.assignedBy.account_username,
+          }
           : null,
       })),
     };

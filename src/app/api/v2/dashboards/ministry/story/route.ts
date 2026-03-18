@@ -11,10 +11,10 @@ export async function GET(req: NextRequest) {
 
         const account = await prisma.account.findUnique({
             where: { account_id: token.accountId },
-            select: { account_role: true },
+            select: { roleCategory: { select: { code: true } } },
         });
 
-        if (!account || !["MINISTRY", "SUPER_ADMIN"].includes(account.account_role)) {
+        if (!account || !["MINISTRY", "SUPER_ADMIN"].includes(account.roleCategory.code)) {
             return NextResponse.json({ success: false, error: "Forbidden: Ministry access required" }, { status: 403 });
         }
 

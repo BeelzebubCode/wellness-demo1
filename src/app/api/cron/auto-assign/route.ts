@@ -83,7 +83,7 @@ export async function GET() {
 
       // Get system account (account_id = 1 or first SUPER_ADMIN)
       const systemAccount = await prisma.account.findFirst({
-        where: { account_role: "SUPER_ADMIN" },
+        where: { roleCategory: { code: "SUPER_ADMIN" } },
         select: { account_id: true },
       });
       const systemAccountId = systemAccount?.account_id ?? 1;
@@ -186,7 +186,7 @@ export async function GET() {
       // Fetch consultants within the same university OR borrowed to this university for this date
       const consultantsInUni = await prisma.consultant.findMany({
         where: {
-          account: { account_role: "CONSULTANT" },
+          account: { roleCategory: { code: "CONSULTANT" } },
           OR: [
             { university_id: universityId },
             {
@@ -261,15 +261,15 @@ export async function GET() {
       const cIds = consultantsInUni.map(c => c.consultant_id);
       const avgRatingsMap = cIds.length > 0
         ? await (async () => {
-            const results = await prisma.$queryRaw<Array<{ consultant_id: number; avg_rating: number }>>`
+          const results = await prisma.$queryRaw<Array<{ consultant_id: number; avg_rating: number }>>`
               SELECT f.consultant_id, AVG(fr.feedback_rating_score)::float AS avg_rating
               FROM feedback_rating fr
               JOIN feedback f ON f.feedback_id = fr.feedback_id
               WHERE f.consultant_id = ANY(${cIds})
               GROUP BY f.consultant_id
             `;
-            return new Map(results.map(r => [r.consultant_id, Math.round(r.avg_rating * 10) / 10]));
-          })()
+          return new Map(results.map(r => [r.consultant_id, Math.round(r.avg_rating * 10) / 10]));
+        })()
         : new Map<number, number>();
 
       // Filter and Rank

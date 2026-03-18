@@ -31,7 +31,7 @@ export async function handleGetConsultant(
       organization: true,
       specializations: true,
       languages: true,
-      account: { select: { account_username: true, account_role: true, account_line_id: true } },
+      account: { select: { account_username: true, roleCategory: { select: { code: true } } } },
       bookings: { select: { booking_status: true } },
       _count: { select: { feedbacks: true } },
     },
@@ -67,8 +67,7 @@ export async function handleGetConsultant(
       accountId: c.account_id,
       universityId: c.university_id,
       username: c.account.account_username,
-      role: c.account.account_role,
-      lineId: c.account.account_line_id,
+      role: c.account.roleCategory.code,
 
       name: c.profile ? `${c.profile.consultant_first_name} ${c.profile.consultant_last_name}` : null,
       firstName: c.profile?.consultant_first_name ?? null,

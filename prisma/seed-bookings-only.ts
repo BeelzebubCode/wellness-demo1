@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   console.log('🎯 Seeding bookings only...\n');
-  
+
   try {
     // Fetch all required data from database
     console.log('📚 Fetching data from database...');
@@ -17,7 +17,7 @@ async function main() {
     const criteria = await prisma.evaluationCriterion.findMany();
     const onlineChannels = await prisma.onlineChannelCategory.findMany();
     const cancellationReasons = await prisma.cancellationReason.findMany();
-    const accounts = await prisma.account.findMany({ where: { account_role: 'HEAD_CONSULTANT' } });
+    const accounts = await prisma.account.findMany({ where: { roleCategory: { code: 'HEAD_CONSULTANT' } } });
     const pointRules = await prisma.pointRule.findMany();
     const templates = await prisma.notificationTemplate.findMany();
 

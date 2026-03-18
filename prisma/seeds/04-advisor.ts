@@ -50,7 +50,7 @@ export async function seedAdvisors(
   for (let i = 0; i < universities.length; i += BATCH_SIZE) {
     const uniBatch = universities.slice(i, i + BATCH_SIZE);
     const uniIds = uniBatch.map(u => u.university_id);
-    
+
     // 1. Fetch all faculties and departments for this batch of universities
     const faculties = await prisma.faculty.findMany({
       where: { university_id: { in: uniIds } },
@@ -59,7 +59,7 @@ export async function seedAdvisors(
 
     const accountsToCreate: any[] = [];
     const advisorsToCreate: any[] = [];
-    
+
     // Map to store temporary relationships
     // username -> { advisor data }
     const advisorDataMap = new Map<string, any>();
@@ -79,7 +79,7 @@ export async function seedAdvisors(
           accountsToCreate.push({
             account_username: username,
             account_password: passwordHash,
-            account_role: "ADVISOR",
+            account_role_id: 4, // ADVISOR
             account_home_university_id: uni.university_id,
           });
 
@@ -142,11 +142,11 @@ export async function seedAdvisors(
       totalAdvisorsCreated += finalAdvisors.length;
     }
   }
-  
+
   // ✅ Fetch all advisors for the seeded universities to return
   const allAdvisors = await prisma.advisor.findMany({
-    where: { 
-      university_id: { in: universities.map(u => u.university_id) } 
+    where: {
+      university_id: { in: universities.map(u => u.university_id) }
     }
   });
 

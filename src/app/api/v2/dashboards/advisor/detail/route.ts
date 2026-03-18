@@ -230,9 +230,9 @@ export async function GET(req: NextRequest) {
 
         const account = await prisma.account.findUnique({
             where: { account_id: token.accountId },
-            select: { account_role: true, account_home_university_id: true },
+            select: { roleCategory: { select: { code: true } }, account_home_university_id: true },
         });
-        if (!account || account.account_role !== "ADVISOR")
+        if (!account || account.roleCategory.code !== "ADVISOR")
             return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
 
         const advisor = await prisma.advisor.findUnique({

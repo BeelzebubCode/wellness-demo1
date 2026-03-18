@@ -72,7 +72,7 @@ export async function handleListConsultants(
       consultant_id: true,
       university_id: true,
       university: { select: { university_code: true } },
-      account: { select: { account_role: true } },
+      account: { select: { roleCategory: { select: { code: true } } } },
       profile: {
         select: {
           consultant_first_name: true,
@@ -147,15 +147,15 @@ export async function handleListConsultants(
   const consultantIds = consultants.map(c => c.consultant_id);
   const avgRatings = consultantIds.length > 0
     ? await (async () => {
-        const results = await prisma.$queryRaw<Array<{ consultant_id: number; avg_rating: number }>>`
+      const results = await prisma.$queryRaw<Array<{ consultant_id: number; avg_rating: number }>>`
           SELECT f.consultant_id, AVG(fr.feedback_rating_score)::float AS avg_rating
           FROM feedback_rating fr
           JOIN feedback f ON f.feedback_id = fr.feedback_id
           WHERE f.consultant_id = ANY(${consultantIds})
           GROUP BY f.consultant_id
         `;
-        return new Map(results.map(r => [r.consultant_id, Math.round(r.avg_rating * 10) / 10]));
-      })()
+      return new Map(results.map(r => [r.consultant_id, Math.round(r.avg_rating * 10) / 10]));
+    })()
     : new Map<number, number>();
 
   const formatted = consultants
@@ -197,7 +197,7 @@ export async function handleListConsultants(
         borrowAssignmentId,
         borrowWindow,
         name,
-        accountRole: c.account?.account_role ?? null,
+        accountRole: c.account?.roleCategory?.code ?? null,
         activeBookings: c._count.bookings,
         avgRating,
         feedbackCount: c._count.feedbacks,

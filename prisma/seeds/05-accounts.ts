@@ -28,12 +28,12 @@ export async function seedAccounts(
       create: {
         account_username: username,
         account_password: passwordHash,
-        account_role: "HEAD_CONSULTANT",
+        account_role_id: 3, // HEAD_CONSULTANT
         account_home_university_id: uni.university_id,
       },
       update: {
         account_password: passwordHash,
-        account_role: "HEAD_CONSULTANT",
+        account_role_id: 3, // HEAD_CONSULTANT
         account_home_university_id: uni.university_id,
       },
     });
@@ -127,12 +127,12 @@ export async function seedAccounts(
       create: {
         account_username: username,
         account_password: passwordHash,
-        account_role: "RECTOR",
+        account_role_id: 7, // RECTOR
         account_home_university_id: uni.university_id,
       },
       update: {
         account_password: passwordHash,
-        account_role: "RECTOR",
+        account_role_id: 7, // RECTOR
         account_home_university_id: uni.university_id,
       },
     });
@@ -141,18 +141,18 @@ export async function seedAccounts(
   }
 
   console.log("🏛️ Upserting ministry account...");
-  
+
   await prisma.account.upsert({
     where: { account_username: "ministry_admin" },
     create: {
       account_username: "ministry_admin",
       account_password: passwordHash,
-      account_role: "MINISTRY",
+      account_role_id: 9, // MINISTRY
       account_home_university_id: null,
     },
     update: {
       account_password: passwordHash,
-      account_role: "MINISTRY",
+      account_role_id: 9, // MINISTRY
       account_home_university_id: null,
     },
   });
@@ -164,12 +164,12 @@ export async function seedAccounts(
     create: {
       account_username: "superAdmin",
       account_password: passwordHash,
-      account_role: "SUPER_ADMIN",
+      account_role_id: 8, // SUPER_ADMIN
       account_home_university_id: null,
     },
     update: {
       account_password: passwordHash,
-      account_role: "SUPER_ADMIN",
+      account_role_id: 8, // SUPER_ADMIN
       account_home_university_id: null,
     },
   });

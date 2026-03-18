@@ -34,7 +34,7 @@ interface FeedbackItem {
     account: {
         account_id: number;
         account_username: string;
-        account_role: string;
+        roleCategory: { code: string };
     } | null;
     university: { university_name_th: string } | null;
 }

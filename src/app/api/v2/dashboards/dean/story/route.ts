@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
         const account = await prisma.account.findUnique({
             where: { account_id: token.accountId },
             include: {
+                roleCategory: { select: { code: true } },
                 facultiesDean: {
                     select: {
                         faculty_id: true,
@@ -24,7 +25,7 @@ export async function GET(req: NextRequest) {
             },
         });
 
-        if (!account || account.account_role !== "DEAN") {
+        if (!account || account.roleCategory.code !== "DEAN") {
             return NextResponse.json(
                 { success: false, error: "Forbidden: Dean access required" },
                 { status: 403 }

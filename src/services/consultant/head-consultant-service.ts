@@ -39,12 +39,12 @@ export const HeadConsultantService = {
         }),
       ]);
 
-    return { 
-      pending, 
-      assigned, 
-      inProgress, 
-      completed, 
-      cancelled, 
+    return {
+      pending,
+      assigned,
+      inProgress,
+      completed,
+      cancelled,
       totalThisMonth: totalInPeriod // Keep name for compatibility or update UI
     };
   },
@@ -55,7 +55,7 @@ export const HeadConsultantService = {
   async getProblemCategoryDistribution(universityId: number, options?: { startDate?: Date; endDate?: Date }) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = { university_id: universityId };
-    
+
     if (options?.startDate || options?.endDate) {
       where.booking_created_at = {
         ...(options.startDate && { gte: options.startDate }),
@@ -140,10 +140,10 @@ export const HeadConsultantService = {
 
     // Get all consultants for this university (EXCLUDE HEAD)
     const consultants = await prisma.consultant.findMany({
-      where: { 
+      where: {
         university_id: universityId,
         account: {
-          account_role: { not: "HEAD_CONSULTANT" }
+          roleCategory: { code: { not: "HEAD_CONSULTANT" } }
         }
       },
       include: {
@@ -156,28 +156,28 @@ export const HeadConsultantService = {
     const cIds = consultants.map(c => c.consultant_id);
     const avgMap = cIds.length > 0
       ? await (async () => {
-          // Build date filter for raw SQL
-          let dateClause = '';
-          const params: any[] = [cIds];
-          if (options?.startDate) {
-            dateClause += ` AND f.feedback_created_at >= $2`;
-            params.push(options.startDate);
-          }
-          if (options?.endDate) {
-            const idx = params.length + 1;
-            dateClause += ` AND f.feedback_created_at <= $${idx}`;
-            params.push(options.endDate);
-          }
-          const results = await prisma.$queryRawUnsafe<Array<{ consultant_id: number; avg_rating: number; cnt: number }>>(
-            `SELECT f.consultant_id, AVG(fr.feedback_rating_score)::float AS avg_rating, COUNT(DISTINCT f.feedback_id)::int AS cnt
+        // Build date filter for raw SQL
+        let dateClause = '';
+        const params: any[] = [cIds];
+        if (options?.startDate) {
+          dateClause += ` AND f.feedback_created_at >= $2`;
+          params.push(options.startDate);
+        }
+        if (options?.endDate) {
+          const idx = params.length + 1;
+          dateClause += ` AND f.feedback_created_at <= $${idx}`;
+          params.push(options.endDate);
+        }
+        const results = await prisma.$queryRawUnsafe<Array<{ consultant_id: number; avg_rating: number; cnt: number }>>(
+          `SELECT f.consultant_id, AVG(fr.feedback_rating_score)::float AS avg_rating, COUNT(DISTINCT f.feedback_id)::int AS cnt
              FROM feedback_rating fr
              JOIN feedback f ON f.feedback_id = fr.feedback_id
              WHERE f.consultant_id = ANY($1) ${dateClause}
              GROUP BY f.consultant_id`,
-            ...params
-          );
-          return new Map(results.map(r => [r.consultant_id, { avg: Math.round(r.avg_rating * 100) / 100, count: r.cnt }]));
-        })()
+          ...params
+        );
+        return new Map(results.map(r => [r.consultant_id, { avg: Math.round(r.avg_rating * 100) / 100, count: r.cnt }]));
+      })()
       : new Map<number, { avg: number; count: number }>();
 
     return consultants.map((c) => {
@@ -216,15 +216,15 @@ export const HeadConsultantService = {
     }
 
     const consultants = await prisma.consultant.findMany({
-      where: { 
+      where: {
         university_id: universityId,
         account: {
-          account_role: { not: "HEAD_CONSULTANT" }
+          roleCategory: { code: { not: "HEAD_CONSULTANT" } }
         }
       },
       include: {
         profile: true,
-        account: { select: { account_role: true } },
+        account: { select: { roleCategory: { select: { code: true } } } },
         bookings: {
           where: bookingFilter,
           select: { booking_id: true, booking_created_at: true },
@@ -238,15 +238,15 @@ export const HeadConsultantService = {
     const cIds = consultants.map(c => c.consultant_id);
     const avgMap = cIds.length > 0
       ? await (async () => {
-          const results = await prisma.$queryRaw<Array<{ consultant_id: number; avg_rating: number }>>`
+        const results = await prisma.$queryRaw<Array<{ consultant_id: number; avg_rating: number }>>`
             SELECT f.consultant_id, AVG(fr.feedback_rating_score)::float AS avg_rating
             FROM feedback_rating fr
             JOIN feedback f ON f.feedback_id = fr.feedback_id
             WHERE f.consultant_id = ANY(${cIds})
             GROUP BY f.consultant_id
           `;
-          return new Map(results.map(r => [r.consultant_id, Math.round(r.avg_rating * 10) / 10]));
-        })()
+        return new Map(results.map(r => [r.consultant_id, Math.round(r.avg_rating * 10) / 10]));
+      })()
       : new Map<number, number>();
 
     return consultants.map((c) => {
@@ -271,7 +271,7 @@ export const HeadConsultantService = {
   // 6️⃣  Consultant Case History (with Pagination & Filter)
   // ──────────────────────────────────────────
   async getConsultantCaseHistory(
-    universityId: number, 
+    universityId: number,
     consultantId: number,
     options?: { startDate?: Date; endDate?: Date; skip?: number; take?: number }
   ) {

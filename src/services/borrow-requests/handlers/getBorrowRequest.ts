@@ -51,7 +51,7 @@ function mapBorrowRequest(pr: any) {
       ? {
         accountId: pr.requestedBy.account_id,
         username: pr.requestedBy.account_username ?? null,
-        role: pr.requestedBy.account_role ?? null,
+        role: pr.requestedBy?.roleCategory?.code ?? null,
       }
       : undefined,
 
@@ -146,9 +146,8 @@ export async function getBorrowRequest(params: {
       },
       requestedBy: {
         select: {
-          account_id: true,
           account_username: true,
-          account_role: true,
+          roleCategory: { select: { code: true } },
           // account_display_name ถ้ามีจริงค่อยใส่ (ตอนนี้ใน schema ที่ส่งมาไม่มี)
         },
       },
@@ -217,8 +216,8 @@ export async function getBorrowRequest(params: {
   const consultants = await prisma.consultant.findMany({
     where: { university_id: { in: uniIds } },
     include: {
-        profile: true,
-        specializations: true,
+      profile: true,
+      specializations: true,
     }
   });
 
@@ -231,18 +230,18 @@ export async function getBorrowRequest(params: {
       availability_end_date: { gt: now },
     },
     select: {
-        consultant_id: true,
-        availability_start_date: true,
-        availability_end_date: true,
+      consultant_id: true,
+      availability_start_date: true,
+      availability_end_date: true,
     }
   });
 
   // Map busy ranges by consultant
   const busyMap = new Map<number, typeof busyShifts>();
   for (const s of busyShifts) {
-      const arr = busyMap.get(s.consultant_id) ?? [];
-      arr.push(s);
-      busyMap.set(s.consultant_id, arr);
+    const arr = busyMap.get(s.consultant_id) ?? [];
+    arr.push(s);
+    busyMap.set(s.consultant_id, arr);
   }
 
   // Group consultants by University
@@ -271,7 +270,7 @@ export async function getBorrowRequest(params: {
 
     for (const c of uniConsultants) {
       const id = c.consultant_id;
-      
+
       // Check if busy in the requested period (if specific period requested)
       // Or just check if fully booked?
       // For ranking, we just want "Available".
@@ -279,17 +278,17 @@ export async function getBorrowRequest(params: {
       const busyArr = busyMap.get(id) ?? [];
       let isBusy = false;
       if (requestStart && requestEnd) {
-          isBusy = busyArr.some(s => s.availability_start_date < requestEnd && s.availability_end_date > requestStart);
+        isBusy = busyArr.some(s => s.availability_start_date < requestEnd && s.availability_end_date > requestStart);
       } else {
-          // If no specific time requested, maybe check if busy "now"? 
-          // Or just list them as available.
-          // Let's assume available unless busy *now*?
-          // For list view, we usually want to see everyone who *can* take it.
-          // Let's filter out only if they are busy *overlapping the default window*?
-          // If they have ANY overlap with [now, windowEnd] they might be partially busy.
-          // Simplification: if specific Dates requested, filter strictly.
-          // If not, show everyone (maybe mark busy in UI? but types don't support it yet).
-          isBusy = false; 
+        // If no specific time requested, maybe check if busy "now"? 
+        // Or just list them as available.
+        // Let's assume available unless busy *now*?
+        // For list view, we usually want to see everyone who *can* take it.
+        // Let's filter out only if they are busy *overlapping the default window*?
+        // If they have ANY overlap with [now, windowEnd] they might be partially busy.
+        // Simplification: if specific Dates requested, filter strictly.
+        // If not, show everyone (maybe mark busy in UI? but types don't support it yet).
+        isBusy = false;
       }
 
       if (isBusy) continue;

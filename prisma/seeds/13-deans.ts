@@ -36,11 +36,11 @@ export async function seedDeans(
       for (const faculty of uniFaculties) {
         const facCode = faculty.faculty_code.toLowerCase();
         const username = `dean_${uniCode}_${facCode}`;
-        
+
         accountsToCreate.push({
           account_username: username,
           account_password: passwordHash,
-          account_role: "DEAN",
+          account_role_id: 5, // DEAN
           account_home_university_id: uni.university_id,
         });
 
@@ -59,7 +59,7 @@ export async function seedDeans(
     // 3. Update Faculties with Dean Account IDs
     // Since we need to update existing rows, we can't easily use createMany.
     // However, we can fetch the accounts and then run parallel update promises.
-    
+
     const createdAccounts = await prisma.account.findMany({
       where: { account_username: { in: accountsToCreate.map(a => a.account_username) } },
       select: { account_id: true, account_username: true },
@@ -72,11 +72,11 @@ export async function seedDeans(
     for (let j = 0; j < accountsToLink.length; j += UPDATE_CHUNK_SIZE) {
       const chunk = accountsToLink.slice(j, j + UPDATE_CHUNK_SIZE);
       await Promise.all(chunk.map(acc => {
-         const facultyId = deanFacultyMap.get(acc.account_username);
-         return prisma.faculty.update({
-            where: { faculty_id: facultyId },
-            data: { dean_account_id: acc.account_id },
-         });
+        const facultyId = deanFacultyMap.get(acc.account_username);
+        return prisma.faculty.update({
+          where: { faculty_id: facultyId },
+          data: { dean_account_id: acc.account_id },
+        });
       }));
     }
 

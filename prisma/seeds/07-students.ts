@@ -74,7 +74,7 @@ export async function seedStudents(
   function generateYearBuckets(totalCount: number): Array<{ year: number; count: number }> {
     const perYear = Math.floor(totalCount / 4);
     const remainder = totalCount % 4;
-    
+
     return [
       { year: 2568, count: perYear + (remainder > 0 ? 1 : 0) },
       { year: 2567, count: perYear + (remainder > 1 ? 1 : 0) },
@@ -134,7 +134,7 @@ export async function seedStudents(
 
     const rawCount = getStudentCountForUniversity(uniCode);
     const PER_UNI = Math.min(rawCount, MAX_STUDENTS_PER_UNI);
-    
+
     if (PER_UNI === 0) {
       console.log(`⏭️  Skip ${uniCode}: configured to seed 0 students`);
       continue;
@@ -165,9 +165,9 @@ export async function seedStudents(
     for (let j = 1; j <= PER_UNI; j++) {
       const idx0 = j - 1;
       const username = `stu_${uniCodeLower}_${String(j).padStart(4, "0")}`;
-      const person = randomPerson(); 
+      const person = randomPerson();
       // person.gender is now available from our update to people.ts
-      
+
       const hasEn = Math.random() < 0.6;
 
       const fnameTh = person.first.th;
@@ -182,7 +182,7 @@ export async function seedStudents(
       // If person.gender is "MALE" -> StudentGender.MALE
       // If person.gender is "FEMALE" -> StudentGender.FEMALE
       const genderStr = (person as any).gender || (Math.random() < 0.5 ? "MALE" : "FEMALE");
-      
+
       // Map to FK ID
       const genderCategoryId = genderStr === "FEMALE" ? genderFemale.gender_category_id : genderMale.gender_category_id;
       const prefix = genderStr === "FEMALE" ? "นางสาว" : "นาย";
@@ -196,7 +196,7 @@ export async function seedStudents(
       // Most students in Eng, Sci, Bus, Nurse
       // assign weights once
       let weightedDepts = (uniDeptList as any)._weightedDepts;
-      
+
       if (!weightedDepts) {
         let sum = 0;
         weightedDepts = uniDeptList.map((d: any) => {
@@ -205,24 +205,24 @@ export async function seedStudents(
           if (name.match(/engineer|วิศว|sci|vidya|wit|pharm|nurse|medic|dent|tech/i)) w = 5;
           else if (name.match(/bus|account|manage|admin|econ|comm/i)) w = 4;
           else if (name.match(/edu|human|art|social|law|poli/i)) w = 3;
-          
+
           sum += w;
           return { dep: d, weight: w, cum: sum };
         });
         (uniDeptList as any)._weightedDepts = weightedDepts;
       }
-      
+
       const r = Math.random() * weightedDepts[weightedDepts.length - 1].cum;
       const selected = weightedDepts.find((item: any) => item.cum >= r);
       const dep = selected ? selected.dep : uniDeptList[0];
-      
+
       const sessionAdvisor = advisors.find(
         (a) => a.university_id === uni.university_id && a.department_id === dep.department_id,
       );
-      
+
       // Fallback 1: Any advisor in the same faculty
       let advisor = sessionAdvisor ?? advisors.find(
-         (a) => a.university_id === uni.university_id && a.faculty_id === dep.faculty_id
+        (a) => a.university_id === uni.university_id && a.faculty_id === dep.faculty_id
       );
 
       // Fallback 2: Any advisor in the same university (Last Resort to ensure assignment)
@@ -240,8 +240,7 @@ export async function seedStudents(
       accountsData.push({
         account_username: username,
         account_password: passwordHash,
-        account_role: "STUDENT",
-        account_line_id: lineId,
+        account_role_id: 1, // STUDENT
         account_home_university_id: uni.university_id,
       });
 
@@ -326,14 +325,14 @@ export async function seedStudents(
         data: batch,
         skipDuplicates: true,
       });
-      
+
       // Fetch account IDs for this batch
       const usernames = batch.map(a => a.account_username);
       const accounts = await prisma.account.findMany({
         where: { account_username: { in: usernames } },
         select: { account_id: true, account_username: true },
       });
-      
+
       accounts.forEach(acc => {
         accountMap.set(acc.account_username, acc.account_id);
       });
@@ -356,7 +355,7 @@ export async function seedStudents(
     for (let i = 0; i < studentsWithAccounts.length; i += BATCH_SIZE) {
       const batch = studentsWithAccounts.slice(i, i + BATCH_SIZE);
       const cleanBatch = batch.map(({ _username, ...rest }) => rest);
-      
+
       await prisma.student.createMany({
         data: cleanBatch,
         skipDuplicates: true,

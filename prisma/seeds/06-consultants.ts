@@ -45,7 +45,7 @@ function biasFromUsername(username: string, forceLow?: boolean) {
   const r01 = (hash32(`bias:${username}`) % 10000) / 10000;
 
   if (forceLow) return 2.1 + r01 * 0.7; // 2.1-2.8 (Low: ~3 people)
-  
+
   // Remaining ~17 people:
   // User wants ~8 High, ~9-10 Mid.
   // 8/17 is approx 0.47. Let's use 0.45 to be safe.
@@ -96,12 +96,12 @@ export async function seedConsultants(
         create: {
           account_username: username,
           account_password: passwordHash,
-          account_role: "CONSULTANT",
+          account_role_id: 2, // CONSULTANT
           account_home_university_id: uni.university_id,
         },
         update: {
           account_password: passwordHash,
-          account_role: "CONSULTANT",
+          account_role_id: 2, // CONSULTANT
           account_home_university_id: uni.university_id,
         },
       });

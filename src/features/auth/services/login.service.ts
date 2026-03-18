@@ -42,8 +42,8 @@ export async function handleLogin(request: NextRequest) {
         account_id: true,
         account_username: true,
         account_password: true,
-        account_role: true,
         account_home_university_id: true,
+        roleCategory: { select: { code: true, name_th: true } },
 
         consultant: {
           select: {
@@ -96,17 +96,19 @@ export async function handleLogin(request: NextRequest) {
       })
       .catch(() => { });
 
-    console.log(`[LOGIN] Success: ${username} (role=${account.account_role})`);
+    console.log(`[LOGIN] Success: ${username} (role=${account.roleCategory.code})`);
 
     /* =========================================================
       ✅ SUPER_ADMIN / MINISTRY: platform-level (ไม่ผูกมหาลัย)
       activeUniversityId = null
     ========================================================= */
-    if (account.account_role === "SUPER_ADMIN" || account.account_role === "MINISTRY") {
+    const role = account.roleCategory.code;
+
+    if (role === "SUPER_ADMIN" || role === "MINISTRY") {
       const token = await generateToken({
         accountId: account.account_id,
         username: account.account_username,
-        role: account.account_role,
+        role: role,
         homeUniversityId: account.account_home_university_id ?? undefined,
         activeUniversityId: undefined,
         allowedUniversityIds: [],
@@ -124,7 +126,7 @@ export async function handleLogin(request: NextRequest) {
           id: account.account_id,
           username: account.account_username,
           name: account.account_username,
-          role: account.account_role,
+          role: role,
           consultantId: null,
           studentId: null,
           homeUniversityId: account.account_home_university_id ?? null,
@@ -194,7 +196,9 @@ export async function handleLogin(request: NextRequest) {
     }
 
     // ✅ choose active university (ไม่ต้องดูจาก domain)
-    const role = account.account_role;
+    // role already set from roleCategory.code above for SUPER_ADMIN/MINISTRY
+    // For other roles, use the same value
+    // (role is set at line ~107 for platform roles, need to re-set here for normal flow)
 
     const roleDefaultUniId =
       role === "STUDENT"

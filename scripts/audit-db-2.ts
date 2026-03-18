@@ -35,7 +35,7 @@ async function main() {
   if (br) {
     const fromUniId = br.from_university_id;
     console.log(`  from_university_id: ${fromUniId}`);
-    
+
     const otherConsultants = await prisma.consultant.count({
       where: { university_id: { not: fromUniId } },
     });
@@ -45,7 +45,7 @@ async function main() {
     const nonHeadConsultants = await prisma.consultant.count({
       where: {
         university_id: { not: fromUniId },
-        account: { account_role: { not: "HEAD_CONSULTANT" } },
+        account: { roleCategory: { code: { not: "HEAD_CONSULTANT" } } },
       },
     });
     console.log(`  After HEAD_CONSULTANT filter: ${nonHeadConsultants}`);
