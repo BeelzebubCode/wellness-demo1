@@ -87,6 +87,8 @@ export const RectorStoryService = {
                 SELECT faculty_id, SUM(total_bookings)::int AS count
                 FROM mv_booking_summary
                 WHERE university_id = ${universityId}
+                ${filters.facultyIds?.length ? `AND faculty_id IN (${filters.facultyIds.join(",")})` : ""}
+                ${filters.departmentIds?.length ? `AND department_id IN (${filters.departmentIds.join(",")})` : ""}
                 GROUP BY faculty_id
                 ORDER BY count DESC
             `);
@@ -103,41 +105,33 @@ export const RectorStoryService = {
                         count: r.count ?? 0,
                     };
                 });
-
-            // Add faculties with 0 bookings
-            for (const f of faculties) {
-                if (!facultyBookings.find(fb => fb.id === f.faculty_id)) {
-                    facultyBookings.push({
-                        id: f.faculty_id,
-                        nameTh: f.faculty_name_th,
-                        code: f.faculty_code ?? "",
-                        count: 0,
-                    });
-                }
-            }
         }
 
         // ── Staff utilization: internal vs borrowed ──
         let staffUtilization = { internal: 0, borrowed: 0 };
         try {
+            const assignmentWhere: any = {
+                booking: { 
+                    university_id: universityId,
+                    ...(filters.facultyIds?.length ? { student: { academic: { faculty_id: { in: filters.facultyIds } } } } : {}),
+                    ...(filters.departmentIds?.length ? { student: { academic: { department_id: { in: filters.departmentIds } } } } : {}),
+                    ...(filters.gender?.length ? { student: { profile: { genderCategory: { code: { in: filters.gender } } } } } : {}),
+                    ...(filters.problemCategoryIds?.length ? { problem_category_id: { in: filters.problemCategoryIds } } : {}),
+                }
+            };
+
             const [internalResult, borrowedResult] = await Promise.all([
-                // Total booking assignments handled by consultants belonging to this university
                 prisma.bookingAssignment.count({
-                    where: {
-                        booking: { university_id: universityId },
-                        borrow_assignment_id: null, // internal assignment
-                    },
+                    where: { ...assignmentWhere, borrow_assignment_id: null },
                 }),
-                // Total booking assignments done via borrow
                 prisma.bookingAssignment.count({
-                    where: {
-                        booking: { university_id: universityId },
-                        borrow_assignment_id: { not: null }, // borrowed
-                    },
+                    where: { ...assignmentWhere, borrow_assignment_id: { not: null } },
                 }),
             ]);
             staffUtilization = { internal: internalResult, borrowed: borrowedResult };
-        } catch { /* silent — table might not exist */ }
+        } catch (error) {
+            console.error("Staff utilization error:", error);
+        }
 
         const elapsed = Date.now() - startTime;
         console.log(`[RECTOR_MV] story=${story} took ${elapsed}ms`);

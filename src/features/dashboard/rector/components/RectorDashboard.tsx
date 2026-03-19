@@ -1,17 +1,16 @@
-// src/features/dashboard/rector/components/RectorDashboard.tsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Rector dashboard — University-wide view with faculty drill-down
-// ─────────────────────────────────────────────────────────────────────────────
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { DataStoryGrid } from "../../widgets/story/DataStoryGrid";
-import GenericBookingStory from "../../shared/GenericBookingStory";
-import GenericProblemStory from "../../shared/GenericProblemStory";
-import GenericRiskStory from "../../shared/GenericRiskStory";
+import { RectorFilter } from "./sections/RectorFilter";
+import RectorStatsCards from "./sections/RectorStatsCards";
 import FacultyConsultationChart from "./sections/FacultyConsultationChart";
 import StaffUtilizationDonut from "./sections/StaffUtilizationDonut";
 import PolicySummaryCard from "./sections/PolicySummaryCard";
+import RectorBookingSection from "./sections/RectorBookingSection";
+import RectorRiskSection from "./sections/RectorRiskSection";
+import RectorProblemSection from "./sections/RectorProblemSection";
+import { RectorDashboardFilters } from "../types";
 
 const API = "/api/v2/dashboards/rector/story";
 
@@ -19,6 +18,10 @@ export function RectorDashboard() {
     const [university, setUniversity] = useState<{
         nameTh: string; code: string;
     } | null>(null);
+
+    const [filters, setFilters] = useState<RectorDashboardFilters>({
+        // Default to last 30 days if needed, otherwise empty
+    });
 
     useEffect(() => {
         (async () => {
@@ -31,7 +34,7 @@ export function RectorDashboard() {
     }, []);
 
     return (
-        <div className="min-h-screen">
+        <div className="min-h-screen pb-10">
             <style>{`
                 @keyframes fadeUp {
                     from { opacity: 0; transform: translateY(16px); }
@@ -39,43 +42,68 @@ export function RectorDashboard() {
                 }
             `}</style>
 
-            <div className="space-y-5">
+            <div className="space-y-6">
                 {/* Header */}
-                <div className="animate-[fadeUp_0.5s_ease-out_both]">
-                    <div className="flex items-center gap-2.5 mb-1">
-                        <div className="w-2 h-9 rounded-full bg-gradient-to-b from-purple-500 to-indigo-600" />
-                        <h1 className="text-2xl font-black bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">
-                            แผงควบคุมอธิการบดี
-                        </h1>
+                <div className="animate-[fadeUp_0.5s_ease-out_both] flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div>
+                        <div className="flex items-center gap-2.5 mb-1">
+                            <div className="w-2 h-9 rounded-full bg-gradient-to-b from-purple-500 to-indigo-600" />
+                            <h1 className="text-2xl font-black bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">
+                                แผงควบคุมอธิการบดี
+                            </h1>
+                        </div>
+                        {university && (
+                            <p className="text-sm text-slate-400 ml-4">
+                                <span className="font-semibold text-purple-600">{university.nameTh}</span>
+                                {" — "}ภาพรวมทั้งมหาวิทยาลัย
+                            </p>
+                        )}
                     </div>
-                    {university && (
-                        <p className="text-sm text-slate-400 ml-4">
-                            <span className="font-semibold text-purple-600">{university.nameTh}</span>
-                            {" — "}ภาพรวมทั้งมหาวิทยาลัย
-                        </p>
-                    )}
                 </div>
 
+                {/* Global Filters */}
+                <div className="animate-[fadeUp_0.5s_ease-out_both]" style={{ animationDelay: "50ms" }}>
+                    <RectorFilter filters={filters} onFilterChange={setFilters} />
+                </div>
+
+                {/* KPI Overview */}
+                <RectorStatsCards globalFilters={filters} />
+
                 {/* ★ Hero: Faculty-level consultation chart */}
-                <FacultyConsultationChart />
+                <FacultyConsultationChart globalFilters={filters} />
 
                 {/* Row 1: Staff Utilization + Policy Summary */}
                 <DataStoryGrid cols={2}>
-                    <StaffUtilizationDonut />
-                    <PolicySummaryCard />
+                    <StaffUtilizationDonut globalFilters={filters} />
+                    <PolicySummaryCard globalFilters={filters} />
                 </DataStoryGrid>
 
                 {/* Row 2: Bookings + Risk */}
                 <DataStoryGrid cols={2}>
-                    <GenericBookingStory apiPath={API} title="การใช้บริการทั้งมหาวิทยาลัย" delay={2} />
-                    <GenericRiskStory apiPath={API} title="ระดับความเสี่ยงทั้งมหาวิทยาลัย" delay={3} />
+                    <RectorBookingSection 
+                        apiPath={API} 
+                        title="การใช้บริการทั้งมหาวิทยาลัย" 
+                        delay={2} 
+                        globalFilters={filters} 
+                    />
+                    <RectorRiskSection 
+                        apiPath={API} 
+                        title="ระดับความเสี่ยงทั้งมหาวิทยาลัย" 
+                        delay={3} 
+                        globalFilters={filters} 
+                    />
                 </DataStoryGrid>
 
                 {/* Row 3: Problems + Profile */}
-                <GenericProblemStory apiPath={API} title="ประเด็นปัญหา + โปรไฟล์นิสิตทั้งมหาวิทยาลัย" delay={4} />
+                <RectorProblemSection 
+                    apiPath={API} 
+                    title="ประเด็นปัญหา + โปรไฟล์นิสิตทั้งมหาวิทยาลัย" 
+                    delay={4} 
+                    globalFilters={filters} 
+                />
 
                 {/* Footer */}
-                <div className="text-center text-xs text-slate-300 py-3 animate-[fadeUp_0.5s_ease-out_both]" style={{ animationDelay: "400ms" }}>
+                <div className="text-center text-xs text-slate-300 py-6 animate-[fadeUp_0.5s_ease-out_both]" style={{ animationDelay: "400ms" }}>
                     อัปเดตล่าสุด: {new Date().toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })}
                 </div>
             </div>
