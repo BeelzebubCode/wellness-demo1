@@ -17,7 +17,8 @@ export default function StudentOverviewStory({ delay = 0 }: { delay?: number }) 
     const [customRange, setCustomRange] = useState<DateRange | undefined>();
     const [unit, setUnit] = useState<UnitMode>("count");
     const [gender, setGender] = useState<string[]>([]);
-    const { data, loading } = useStoryData<any>("students", { gender }, date, customRange);
+    const [advisorId, setAdvisorId] = useState<string[]>([]);
+    const { data, loading, advisors } = useStoryData<any>("students", { gender, advisorId }, date, customRange);
 
     const total = data?.totalStudents ?? 0;
     const consulted = data?.consultedCount ?? 0;
@@ -55,6 +56,14 @@ export default function StudentOverviewStory({ delay = 0 }: { delay?: number }) 
                         { value: "FEMALE", label: "หญิง" },
                         { value: "LGBTQ_PLUS", label: "LGBTQ+" },
                     ]} selected={gender} onChange={setGender} />
+                    {advisors.length > 0 && (
+                        <StoryChipGroup
+                            label="อาจารย์ที่ปรึกษา"
+                            options={advisors.map(a => ({ value: String(a.id), label: a.name }))}
+                            selected={advisorId}
+                            onChange={setAdvisorId}
+                        />
+                    )}
                 </StoryFilterStack>
             }
             delay={delay}

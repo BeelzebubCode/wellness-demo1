@@ -167,6 +167,9 @@ interface CardFilters {
     problemCategoryIds: string[];
     academicYear: string[];
     seasonIds: string[];
+    bloodGroup: string[];
+    educationLevel: string[];
+    serviceMode: string[];
     timePeriod: TimePeriod;
     customStart?: string;
     customEnd?: string;
@@ -175,12 +178,14 @@ interface CardFilters {
 const DEFAULT_FILTERS: CardFilters = {
     gender: [], incomeBracket: [], parentalStatus: [],
     problemCategoryIds: [], academicYear: [], seasonIds: [],
+    bloodGroup: [], educationLevel: [], serviceMode: [],
     timePeriod: "all",  // Default = ทั้งหมด
 };
 
 function isFiltersDirty(f: CardFilters): boolean {
     return f.gender.length > 0 || f.incomeBracket.length > 0 || f.parentalStatus.length > 0
         || f.problemCategoryIds.length > 0 || f.academicYear.length > 0 || f.seasonIds.length > 0
+        || f.bloodGroup.length > 0 || f.educationLevel.length > 0 || f.serviceMode.length > 0
         || f.timePeriod !== "all" || !!f.customStart || !!f.customEnd;
 }
 
@@ -236,6 +241,9 @@ function useCardData(section: string, filters: CardFilters) {
                     sp.set("academic_year", admitYears.join(","));
                 }
                 if (filters.seasonIds.length) sp.set("season_ids", filters.seasonIds.join(","));
+                if (filters.bloodGroup.length) sp.set("blood_group", filters.bloodGroup.join(","));
+                if (filters.educationLevel.length) sp.set("education_level", filters.educationLevel.join(","));
+                if (filters.serviceMode.length) sp.set("service_mode", filters.serviceMode.join(","));
 
                 // Time period → date params (supports custom)
                 const { dateStart, dateEnd } = getTimePeriodDates(filters.timePeriod, filters.customStart, filters.customEnd);
@@ -270,7 +278,14 @@ function DateRangeBadge({ period, customStart, customEnd }: { period: TimePeriod
 // ═══════════════════════════════════════════════════════════════════════════
 // SECTION 1: Student Consultation Count (Horizontal Bar)
 // ═══════════════════════════════════════════════════════════════════════════
-function ConsultationCard({ delay, onClickStudent, seasonOpts }: { delay: number; onClickStudent: (id: number) => void; seasonOpts: { value: string, label: string }[] }) {
+interface FilterOpts {
+    seasons: { value: string, label: string }[];
+    bloodGroups: { value: string, label: string }[];
+    eduLevels: { value: string, label: string }[];
+    serviceModes: { value: string, label: string }[];
+}
+
+function ConsultationCard({ delay, onClickStudent, opts }: { delay: number; onClickStudent: (id: number) => void; opts: FilterOpts }) {
     const [filters, setFilters] = useState<CardFilters>({ ...DEFAULT_FILTERS });
     const { data, loading } = useCardData("consultations", filters);
     const list = data?.consultations ?? [];
@@ -290,7 +305,12 @@ function ConsultationCard({ delay, onClickStudent, seasonOpts }: { delay: number
                 <StoryFilterStack>
                     <StoryChipGroup label="เพศ" options={GENDER_OPTS} selected={filters.gender} onChange={v => setFilters(p => ({ ...p, gender: v }))} />
                     <StoryChipGroup label="ชั้นปี" options={YEAR_OPTS} selected={filters.academicYear} onChange={v => setFilters(p => ({ ...p, academicYear: v }))} />
-                    {seasonOpts.length > 0 && <StoryChipGroup label="ฤดูกาล" options={seasonOpts} selected={filters.seasonIds} onChange={v => setFilters(p => ({ ...p, seasonIds: v }))} />}
+                    <StoryChipGroup label="รูปแบบ" options={opts.serviceModes} selected={filters.serviceMode} onChange={v => setFilters(p => ({ ...p, serviceMode: v }))} />
+                    {opts.seasons.length > 0 && <StoryChipGroup label="ฤดูกาล" options={opts.seasons} selected={filters.seasonIds} onChange={v => setFilters(p => ({ ...p, seasonIds: v }))} />}
+                    {opts.bloodGroups.length > 0 && <StoryChipGroup label="กรุ๊ปเลือด" options={opts.bloodGroups} selected={filters.bloodGroup} onChange={v => setFilters(p => ({ ...p, bloodGroup: v }))} />}
+                    {opts.eduLevels.length > 0 && <StoryChipGroup label="ระดับการศึกษา" options={opts.eduLevels} selected={filters.educationLevel} onChange={v => setFilters(p => ({ ...p, educationLevel: v }))} />}
+                    <StoryChipGroup label="รายได้" options={INCOME_OPTS} selected={filters.incomeBracket} onChange={v => setFilters(p => ({ ...p, incomeBracket: v }))} />
+                    <StoryChipGroup label="ครอบครัว" options={FAMILY_OPTS} selected={filters.parentalStatus} onChange={v => setFilters(p => ({ ...p, parentalStatus: v }))} />
                     <TimePeriodChips value={filters.timePeriod} onChange={v => setFilters(p => ({ ...p, timePeriod: v }))}
                         customStart={filters.customStart} customEnd={filters.customEnd}
                         onCustomChange={(s, e) => setFilters(p => ({ ...p, customStart: s, customEnd: e }))} />
@@ -323,7 +343,7 @@ function ConsultationCard({ delay, onClickStudent, seasonOpts }: { delay: number
 // ═══════════════════════════════════════════════════════════════════════════
 // SECTION 2: Booking Trend Timeline
 // ═══════════════════════════════════════════════════════════════════════════
-function TrendCard({ delay, seasonOpts }: { delay: number; seasonOpts: { value: string, label: string }[] }) {
+function TrendCard({ delay, opts }: { delay: number; opts: FilterOpts }) {
     const [filters, setFilters] = useState<CardFilters>({ ...DEFAULT_FILTERS });
     const { data, loading } = useCardData("trend", filters);
     const trend = data?.trend ?? [];
@@ -346,7 +366,8 @@ function TrendCard({ delay, seasonOpts }: { delay: number; seasonOpts: { value: 
                 <StoryFilterStack>
                     <StoryChipGroup label="เพศ" options={GENDER_OPTS} selected={filters.gender} onChange={v => setFilters(p => ({ ...p, gender: v }))} />
                     <StoryChipGroup label="ชั้นปี" options={YEAR_OPTS} selected={filters.academicYear} onChange={v => setFilters(p => ({ ...p, academicYear: v }))} />
-                    {seasonOpts.length > 0 && <StoryChipGroup label="ฤดูกาล" options={seasonOpts} selected={filters.seasonIds} onChange={v => setFilters(p => ({ ...p, seasonIds: v }))} />}
+                    <StoryChipGroup label="รูปแบบ" options={opts.serviceModes} selected={filters.serviceMode} onChange={v => setFilters(p => ({ ...p, serviceMode: v }))} />
+                    {opts.seasons.length > 0 && <StoryChipGroup label="ฤดูกาล" options={opts.seasons} selected={filters.seasonIds} onChange={v => setFilters(p => ({ ...p, seasonIds: v }))} />}
                     <TimePeriodChips value={filters.timePeriod} onChange={v => setFilters(p => ({ ...p, timePeriod: v }))}
                         customStart={filters.customStart} customEnd={filters.customEnd}
                         onCustomChange={(s, e) => setFilters(p => ({ ...p, customStart: s, customEnd: e }))} />
@@ -416,6 +437,7 @@ function StudentDetailModal({ studentId, onClose }: { studentId: number | null; 
         { icon: <Droplets className="w-4 h-4" />, label: "กรุ๊ปเลือด", value: student.bloodGroup ?? "-", color: "text-rose-500" },
         { icon: <Heart className="w-4 h-4" />, label: "ครอบครัว", value: student.familyStatus ?? "-", color: "text-pink-500" },
         { icon: <CreditCard className="w-4 h-4" />, label: "รายได้ครอบครัว", value: student.income ?? "-", color: "text-amber-500" },
+        { icon: <GraduationCap className="w-4 h-4" />, label: "ระดับการศึกษา", value: student.educationLevel ?? "-", color: "text-blue-500" },
     ] : [];
 
     return (
@@ -508,7 +530,7 @@ function StudentDetailModal({ studentId, onClose }: { studentId: number | null; 
 // ═══════════════════════════════════════════════════════════════════════════
 // SECTION 4: Problem Donut
 // ═══════════════════════════════════════════════════════════════════════════
-function ProblemDonutCard({ delay, seasonOpts }: { delay: number; seasonOpts: { value: string, label: string }[] }) {
+function ProblemDonutCard({ delay, opts }: { delay: number; opts: FilterOpts }) {
     const [filters, setFilters] = useState<CardFilters>({ ...DEFAULT_FILTERS });
     const { data, loading } = useCardData("problems", filters);
     const donut = data?.problems ?? [];
@@ -530,7 +552,8 @@ function ProblemDonutCard({ delay, seasonOpts }: { delay: number; seasonOpts: { 
                 <StoryFilterStack>
                     <StoryChipGroup label="เพศ" options={GENDER_OPTS} selected={filters.gender} onChange={v => setFilters(p => ({ ...p, gender: v }))} />
                     <StoryChipGroup label="ชั้นปี" options={YEAR_OPTS} selected={filters.academicYear} onChange={v => setFilters(p => ({ ...p, academicYear: v }))} />
-                    {seasonOpts.length > 0 && <StoryChipGroup label="ฤดูกาล" options={seasonOpts} selected={filters.seasonIds} onChange={v => setFilters(p => ({ ...p, seasonIds: v }))} />}
+                    <StoryChipGroup label="รูปแบบ" options={opts.serviceModes} selected={filters.serviceMode} onChange={v => setFilters(p => ({ ...p, serviceMode: v }))} />
+                    {opts.seasons.length > 0 && <StoryChipGroup label="ฤดูกาล" options={opts.seasons} selected={filters.seasonIds} onChange={v => setFilters(p => ({ ...p, seasonIds: v }))} />}
                     <TimePeriodChips value={filters.timePeriod} onChange={v => setFilters(p => ({ ...p, timePeriod: v }))}
                         customStart={filters.customStart} customEnd={filters.customEnd}
                         onCustomChange={(s, e) => setFilters(p => ({ ...p, customStart: s, customEnd: e }))} />
@@ -561,7 +584,7 @@ function ProblemDonutCard({ delay, seasonOpts }: { delay: number; seasonOpts: { 
 // ═══════════════════════════════════════════════════════════════════════════
 // SECTION 5: Comparison Charts
 // ═══════════════════════════════════════════════════════════════════════════
-function ComparisonCard({ delay, seasonOpts }: { delay: number; seasonOpts: { value: string, label: string }[] }) {
+function ComparisonCard({ delay, opts }: { delay: number; opts: FilterOpts }) {
     const [filters, setFilters] = useState<CardFilters>({ ...DEFAULT_FILTERS });
     const { data, loading } = useCardData("comparison", filters);
     const comparison = data?.comparison ?? { incomeVsCount: [], familyVsCount: [] };
@@ -576,7 +599,7 @@ function ComparisonCard({ delay, seasonOpts }: { delay: number; seasonOpts: { va
                 <StoryFilterStack>
                     <StoryChipGroup label="เพศ" options={GENDER_OPTS} selected={filters.gender} onChange={v => setFilters(p => ({ ...p, gender: v }))} />
                     <StoryChipGroup label="ชั้นปี" options={YEAR_OPTS} selected={filters.academicYear} onChange={v => setFilters(p => ({ ...p, academicYear: v }))} />
-                    {seasonOpts.length > 0 && <StoryChipGroup label="ฤดูกาล" options={seasonOpts} selected={filters.seasonIds} onChange={v => setFilters(p => ({ ...p, seasonIds: v }))} />}
+                    {opts.seasons.length > 0 && <StoryChipGroup label="ฤดูกาล" options={opts.seasons} selected={filters.seasonIds} onChange={v => setFilters(p => ({ ...p, seasonIds: v }))} />}
                     <TimePeriodChips value={filters.timePeriod} onChange={v => setFilters(p => ({ ...p, timePeriod: v }))}
                         customStart={filters.customStart} customEnd={filters.customEnd}
                         onCustomChange={(s, e) => setFilters(p => ({ ...p, customStart: s, customEnd: e }))} />
@@ -630,7 +653,7 @@ function ComparisonCard({ delay, seasonOpts }: { delay: number; seasonOpts: { va
 // ═══════════════════════════════════════════════════════════════════════════
 // SECTION 6: High Risk Students
 // ═══════════════════════════════════════════════════════════════════════════
-function HighRiskCard({ delay, onClickStudent, seasonOpts }: { delay: number; onClickStudent: (id: number) => void; seasonOpts: { value: string, label: string }[] }) {
+function HighRiskCard({ delay, onClickStudent, opts }: { delay: number; onClickStudent: (id: number) => void; opts: FilterOpts }) {
     const [filters, setFilters] = useState<CardFilters>({ ...DEFAULT_FILTERS });
     const { data, loading } = useCardData("highrisk", filters);
     const highRisk = data?.highrisk ?? [];
@@ -652,7 +675,9 @@ function HighRiskCard({ delay, onClickStudent, seasonOpts }: { delay: number; on
                 <StoryFilterStack>
                     <StoryChipGroup label="เพศ" options={GENDER_OPTS} selected={filters.gender} onChange={v => setFilters(p => ({ ...p, gender: v }))} />
                     <StoryChipGroup label="ชั้นปี" options={YEAR_OPTS} selected={filters.academicYear} onChange={v => setFilters(p => ({ ...p, academicYear: v }))} />
-                    {seasonOpts.length > 0 && <StoryChipGroup label="ฤดูกาล" options={seasonOpts} selected={filters.seasonIds} onChange={v => setFilters(p => ({ ...p, seasonIds: v }))} />}
+                    <StoryChipGroup label="รูปแบบ" options={opts.serviceModes} selected={filters.serviceMode} onChange={v => setFilters(p => ({ ...p, serviceMode: v }))} />
+                    {opts.seasons.length > 0 && <StoryChipGroup label="ฤดูกาล" options={opts.seasons} selected={filters.seasonIds} onChange={v => setFilters(p => ({ ...p, seasonIds: v }))} />}
+                    {opts.bloodGroups.length > 0 && <StoryChipGroup label="กรุ๊ปเลือด" options={opts.bloodGroups} selected={filters.bloodGroup} onChange={v => setFilters(p => ({ ...p, bloodGroup: v }))} />}
                     <TimePeriodChips value={filters.timePeriod} onChange={v => setFilters(p => ({ ...p, timePeriod: v }))}
                         customStart={filters.customStart} customEnd={filters.customEnd}
                         onCustomChange={(s, e) => setFilters(p => ({ ...p, customStart: s, customEnd: e }))} />
@@ -707,7 +732,7 @@ function HighRiskCard({ delay, onClickStudent, seasonOpts }: { delay: number; on
 export function AdvisorDashboard() {
     const [advisor, setAdvisor] = useState<{ name: string } | null>(null);
     const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
-    const [seasons, setSeasons] = useState<{ value: string; label: string }[]>([]);
+    const [opts, setOpts] = useState<FilterOpts>({ seasons: [], bloodGroups: [], eduLevels: [], serviceModes: [] });
 
     // Load advisor name once
     useEffect(() => {
@@ -716,7 +741,14 @@ export function AdvisorDashboard() {
                 const res = await fetch(`${API}?section=consultations&include_categories=true`, { credentials: "include" });
                 const json = await res.json();
                 if (json.data?.advisor) setAdvisor(json.data.advisor);
-                if (json.data?.seasons) setSeasons(json.data.seasons.map((s: any) => ({ value: String(s.id), label: s.name })));
+                if (json.data) {
+                    setOpts({
+                        seasons: json.data.seasons?.map((s: any) => ({ value: String(s.id), label: s.name })) || [],
+                        bloodGroups: json.data.bloodGroups || [],
+                        eduLevels: json.data.educationLevels || [],
+                        serviceModes: json.data.serviceModes || [],
+                    });
+                }
             } catch { /* silent */ }
         })();
     }, []);
@@ -744,15 +776,15 @@ export function AdvisorDashboard() {
                     )}
                 </div>
 
-                <ConsultationCard delay={0} onClickStudent={setSelectedStudentId} seasonOpts={seasons} />
-                <TrendCard delay={1} seasonOpts={seasons} />
+                <ConsultationCard delay={0} onClickStudent={setSelectedStudentId} opts={opts} />
+                <TrendCard delay={1} opts={opts} />
 
                 <DataStoryGrid cols={2}>
-                    <ProblemDonutCard delay={2} seasonOpts={seasons} />
-                    <ComparisonCard delay={3} seasonOpts={seasons} />
+                    <ProblemDonutCard delay={2} opts={opts} />
+                    <ComparisonCard delay={3} opts={opts} />
                 </DataStoryGrid>
 
-                <HighRiskCard delay={4} onClickStudent={setSelectedStudentId} seasonOpts={seasons} />
+                <HighRiskCard delay={4} onClickStudent={setSelectedStudentId} opts={opts} />
 
                 <div className="text-center text-xs text-slate-300 py-3 animate-[fadeUp_0.5s_ease-out_both]" style={{ animationDelay: "500ms" }}>
                     อัปเดตล่าสุด: {new Date().toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })}

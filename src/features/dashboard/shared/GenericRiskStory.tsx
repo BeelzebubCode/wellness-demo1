@@ -5,7 +5,7 @@ import React, { useState } from "react";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { ShieldAlert } from "lucide-react";
 import { DataStoryCard } from "../widgets/story/DataStoryCard";
-import { StoryFilterStack } from "../widgets/story/StoryFilterChips";
+import { StoryChipGroup, StoryFilterStack } from "../widgets/story/StoryFilterChips";
 import { DatePresetBar } from "./StoryUI";
 import { useStoryData, Tip, RISK_META, type DatePreset, type DateRange } from "./story-utils";
 
@@ -14,8 +14,19 @@ interface Props { apiPath: string; title: string; delay?: number; }
 export default function GenericRiskStory({ apiPath, title, delay = 0 }: Props) {
     const [date, setDate] = useState<DatePreset>("all");
     const [customRange, setCustomRange] = useState<DateRange | undefined>();
+    const [gender, setGender] = useState<string[]>([]);
+    const [income, setIncome] = useState<string[]>([]);
+    const [parental, setParental] = useState<string[]>([]);
+    const [blood, setBlood] = useState<string[]>([]);
+    const [deptIds, setDeptIds] = useState<string[]>([]);
 
-    const { data, loading } = useStoryData<any>(apiPath, "risk", {}, date, customRange);
+    const { data, loading, meta } = useStoryData<any>(apiPath, "risk", {
+        gender,
+        family_income_bracket: income,
+        parental_status: parental,
+        blood_group: blood,
+        department_ids: deptIds,
+    }, date, customRange);
 
     const distribution = data?.distribution ?? [];
     const total = distribution.reduce((s: number, d: any) => s + d.count, 0);
@@ -49,6 +60,33 @@ export default function GenericRiskStory({ apiPath, title, delay = 0 }: Props) {
             filters={
                 <StoryFilterStack>
                     <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} />
+                    {meta?.departments?.length > 0 && (
+                        <StoryChipGroup
+                            label="ภาควิชา"
+                            options={meta.departments.map((d: any) => ({ value: String(d.id), label: d.nameTh }))}
+                            selected={deptIds}
+                            onChange={setDeptIds}
+                        />
+                    )}
+                    <StoryChipGroup label="เพศ" options={[
+                        { value: "MALE", label: "ชาย" },
+                        { value: "FEMALE", label: "หญิง" },
+                        { value: "LGBTQ_PLUS", label: "LGBTQ+" },
+                    ]} selected={gender} onChange={setGender} />
+                    <StoryChipGroup label="รายได้" options={[
+                        { value: "UNDER_100K", label: "< 100K" }, { value: "BETWEEN_100K_200K", label: "100-200K" },
+                        { value: "BETWEEN_200K_300K", label: "200-300K" }, { value: "BETWEEN_300K_500K", label: "300-500K" },
+                        { value: "BETWEEN_500K_800K", label: "500-800K" }, { value: "OVER_1M", label: "> 1M" },
+                    ]} selected={income} onChange={setIncome} />
+                    <StoryChipGroup label="ครอบครัว" options={[
+                        { value: "TOGETHER", label: "อยู่ด้วยกัน" }, { value: "DIVORCED", label: "หย่าร้าง" },
+                        { value: "FATHER_DECEASED", label: "บิดาเสีย" }, { value: "MOTHER_DECEASED", label: "มารดาเสีย" },
+                        { value: "SINGLE_PARENT", label: "เลี้ยงเดี่ยว" },
+                    ]} selected={parental} onChange={setParental} />
+                    <StoryChipGroup label="กรุ๊ปเลือด" options={[
+                        { value: "A", label: "A" }, { value: "B", label: "B" },
+                        { value: "AB", label: "AB" }, { value: "O", label: "O" },
+                    ]} selected={blood} onChange={setBlood} />
                 </StoryFilterStack>
             }
             delay={delay}

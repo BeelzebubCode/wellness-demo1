@@ -60,15 +60,17 @@ export default function RiskStory({ delay = 0 }: { delay?: number }) {
     const [income, setIncome] = useState<string[]>([]);
     const [parental, setParental] = useState<string[]>([]);
     const [blood, setBlood] = useState<string[]>([]);
+    const [advisorId, setAdvisorId] = useState<string[]>([]);
 
     // Drill-down
     const [drillRisk, setDrillRisk] = useState<string | null>(null);
 
-    const { data, loading } = useStoryData<any>("risk", {
+    const { data, loading, advisors } = useStoryData<any>("risk", {
         gender,
         family_income_bracket: income,
         parental_status: parental,
         blood_group: blood,
+        advisorId,
     }, date, customRange);
 
     const dist: { label: string; count: number }[] = data?.distribution ?? [];
@@ -146,6 +148,14 @@ export default function RiskStory({ delay = 0 }: { delay?: number }) {
                             { value: "A", label: "A" }, { value: "B", label: "B" },
                             { value: "AB", label: "AB" }, { value: "O", label: "O" },
                         ]} selected={blood} onChange={setBlood} />
+                        {advisors.length > 0 && (
+                            <StoryChipGroup
+                                label="อาจารย์ที่ปรึกษา"
+                                options={advisors.map(a => ({ value: String(a.id), label: a.name }))}
+                                selected={advisorId}
+                                onChange={setAdvisorId}
+                            />
+                        )}
                     </StoryFilterStack>
                 }
                 delay={delay}

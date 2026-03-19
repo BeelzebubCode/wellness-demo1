@@ -122,12 +122,14 @@ export default function ProblemStory({ delay = 0 }: { delay?: number }) {
     const [parental, setParental] = useState<string[]>([]);
     const [blood, setBlood] = useState<string[]>([]);
     const [chronic, setChronic] = useState<string[]>([]);
+    const [advisorId, setAdvisorId] = useState<string[]>([]);
 
-    const { data, loading } = useStoryData<any>("problems", {
+    const { data, loading, advisors } = useStoryData<any>("problems", {
         family_income_bracket: income,
         parental_status: parental,
         blood_group: blood,
         chronic_condition_ids: chronic,
+        advisorId,
     }, date, customRange);
 
     const cats: { label: string; count: number }[] = data?.categories ?? [];
@@ -193,6 +195,14 @@ export default function ProblemStory({ delay = 0 }: { delay?: number }) {
                             { value: "A", label: "A" }, { value: "B", label: "B" },
                             { value: "AB", label: "AB" }, { value: "O", label: "O" },
                         ]} selected={blood} onChange={setBlood} />
+                        {advisors.length > 0 && (
+                            <StoryChipGroup
+                                label="อาจารย์ที่ปรึกษา"
+                                options={advisors.map(a => ({ value: String(a.id), label: a.name }))}
+                                selected={advisorId}
+                                onChange={setAdvisorId}
+                            />
+                        )}
                     </StoryFilterStack>
                 }
                 delay={delay}

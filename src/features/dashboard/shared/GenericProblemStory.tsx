@@ -47,6 +47,7 @@ export default function GenericProblemStory({ apiPath, title, delay = 0 }: Props
     const [blood, setBlood] = useState<string[]>([]);
     const [parental, setParental] = useState<string[]>([]);
     const [chronic, setChronic] = useState<string[]>([]);
+    const [deptIds, setDeptIds] = useState<string[]>([]);
     const [chronicConditions, setChronicConditions] = useState<{ id: number; nameTh: string }[]>([]);
 
     useEffect(() => {
@@ -56,11 +57,12 @@ export default function GenericProblemStory({ apiPath, title, delay = 0 }: Props
             .catch(() => { });
     }, []);
 
-    const { data, loading } = useStoryData<any>(apiPath, "problems", {
+    const { data, loading, meta } = useStoryData<any>(apiPath, "problems", {
         family_income_bracket: income,
         blood_group: blood,
         parental_status: parental,
         chronic_condition_ids: chronic,
+        department_ids: deptIds,
     }, date, customRange);
 
     const categories = data?.categories ?? [];
@@ -99,6 +101,14 @@ export default function GenericProblemStory({ apiPath, title, delay = 0 }: Props
                         <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} />
                         <UnitToggle value={unit} onChange={setUnit} />
                     </div>
+                    {meta?.departments?.length > 0 && (
+                        <StoryChipGroup
+                            label="ภาควิชา"
+                            options={meta.departments.map((d: any) => ({ value: String(d.id), label: d.nameTh }))}
+                            selected={deptIds}
+                            onChange={setDeptIds}
+                        />
+                    )}
                     <StoryChipGroup label="รายได้" options={[
                         { value: "UNDER_100K", label: "< 100K" },
                         { value: "BETWEEN_100K_200K", label: "100-200K" },

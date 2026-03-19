@@ -16,6 +16,9 @@ interface Filters {
     problemCategoryIds?: number[];
     academicYear?: number[];
     seasonIds?: number[];
+    bloodGroup?: string[];
+    educationLevel?: string[];
+    serviceMode?: string[];
     dateStart?: string;
     dateEnd?: string;
 }
@@ -34,6 +37,9 @@ function parseFilters(sp: URLSearchParams): Filters {
         problemCategoryIds: csvNum("problem_category_ids"),
         academicYear: csvNum("academic_year"),
         seasonIds: csvNum("season_ids"),
+        bloodGroup: csv("blood_group"),
+        educationLevel: csv("education_level"),
+        serviceMode: csv("service_mode"),
         dateStart: sp.get("date_start") || undefined,
         dateEnd: sp.get("date_end") || undefined,
     };
@@ -46,6 +52,8 @@ function buildStudentWhere(advisorId: number, universityId: number, f: Filters):
     if (f.incomeBracket?.length) c.push(`ibc.code IN (${f.incomeBracket.map(v => `'${v}'`).join(",")})`);
     if (f.parentalStatus?.length) c.push(`psc.code IN (${f.parentalStatus.map(v => `'${v}'`).join(",")})`);
     if (f.academicYear?.length) c.push(`sa.student_admit_academic_year IN (${f.academicYear.join(",")})`);
+    if (f.bloodGroup?.length) c.push(`bgc.code IN (${f.bloodGroup.map(v => `'${v}'`).join(",")})`);
+    if (f.educationLevel?.length) c.push(`elc.code IN (${f.educationLevel.map(v => `'${v}'`).join(",")})`);
     return c.join(" AND ");
 }
 
@@ -60,6 +68,7 @@ async function fetchStudents(advisorId: number, universityId: number, f: Filters
         parental_status: string | null; parental_status_code: string | null;
         gender: string | null; gender_code: string | null;
         phone_number: string | null;
+        education_level: string | null;
     }[]>(`
         SELECT sa.student_id, sp.student_prefix AS prefix,
                sp.student_first_name_th AS first_name, sp.student_last_name_th AS last_name,
@@ -67,13 +76,15 @@ async function fetchStudents(advisorId: number, universityId: number, f: Filters
                sp.student_phone_number AS phone_number,
                bgc.name_th AS blood_group, ibc.name_th AS income_bracket, ibc.code AS income_bracket_code,
                psc.name_th AS parental_status, psc.code AS parental_status_code,
-               gc.name_th AS gender, gc.code AS gender_code
+               gc.name_th AS gender, gc.code AS gender_code,
+               elc.name_th AS education_level
         FROM student_academic sa
         JOIN student_profile sp ON sp.student_id = sa.student_id AND sp.university_id = sa.university_id
         LEFT JOIN blood_group_category bgc ON bgc.blood_group_id = sp.blood_group_id
         LEFT JOIN income_bracket_category ibc ON ibc.income_bracket_id = sp.income_bracket_id
         LEFT JOIN parental_status_category psc ON psc.parental_status_id = sp.parental_status_id
         LEFT JOIN gender_category gc ON gc.gender_category_id = sp.gender_category_id
+        LEFT JOIN education_level_category elc ON elc.education_level_id = sa.education_level_id
         WHERE ${w}
     `);
 }
@@ -88,6 +99,7 @@ async function fetchBookings(universityId: number, studentIds: number[], f: Filt
     ];
     if (f.problemCategoryIds?.length) c.push(`b.problem_category_id IN (${f.problemCategoryIds.join(",")})`);
     if (f.seasonIds?.length) c.push(`b.season_id IN (${f.seasonIds.join(",")})`);
+    if (f.serviceMode?.length) c.push(`smc.code IN (${f.serviceMode.map(v => `'${v}'`).join(",")})`);
     if (f.dateStart) c.push(`ts.time_slot_start_datetime >= '${f.dateStart}'::timestamp`);
     if (f.dateEnd) c.push(`ts.time_slot_start_datetime <= '${f.dateEnd}'::timestamp + interval '1 day'`);
 
@@ -106,6 +118,7 @@ async function fetchBookings(universityId: number, studentIds: number[], f: Filt
         JOIN time_slot ts ON ts.time_slot_id = b.time_slot_id AND ts.university_id = b.university_id
         LEFT JOIN problem_category pc ON pc.problem_category_id = b.problem_category_id
         LEFT JOIN booking_outcome bo ON bo.booking_id = b.booking_id AND bo.university_id = b.university_id
+        LEFT JOIN service_mode_category smc ON smc.service_mode_id = b.service_mode_id
         WHERE ${c.join(" AND ")}
         ORDER BY ts.time_slot_start_datetime DESC
     `);
@@ -163,6 +176,7 @@ function shapeCards(students: any[], countMap: Map<number, number>, riskMap: Map
         bloodGroup: s.blood_group, familyStatus: s.parental_status,
         familyStatusCode: s.parental_status_code, income: s.income_bracket,
         incomeCode: s.income_bracket_code, gender: s.gender,
+        educationLevel: s.education_level,
         phone: s.phone_number,
         totalBookings: countMap.get(s.student_id) || 0, latestRisk: riskMap.get(s.student_id) || 0,
     })).filter(s => s.totalBookings > 0).sort((a, b) => b.totalBookings - a.totalBookings);
@@ -303,6 +317,24 @@ export async function GET(req: NextRequest) {
                 orderBy: { sort_order: "asc" },
             });
             data.seasons = seasons.map(s => ({ id: s.season_id, name: s.season_name_th }));
+
+            const bloodGroups = await prisma.bloodGroupCategory.findMany({
+                select: { code: true, name_th: true },
+                orderBy: { sort_order: "asc" },
+            });
+            data.bloodGroups = bloodGroups.map(bg => ({ value: bg.code, label: bg.name_th }));
+
+            const eduLevels = await prisma.educationLevelCategory.findMany({
+                select: { code: true, name_th: true },
+                orderBy: { sort_order: "asc" },
+            });
+            data.educationLevels = eduLevels.map(el => ({ value: el.code, label: el.name_th }));
+
+            const serviceModes = await prisma.serviceModeCategory.findMany({
+                select: { code: true, name_th: true },
+                orderBy: { sort_order: "asc" },
+            });
+            data.serviceModes = serviceModes.map(sm => ({ value: sm.code, label: sm.name_th }));
         }
 
         return NextResponse.json({ success: true, data });
