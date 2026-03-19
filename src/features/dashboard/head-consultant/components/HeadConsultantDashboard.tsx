@@ -1,19 +1,28 @@
 // features/dashboard/head-consultant/components/HeadConsultantDashboard.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useHeadConsultantDashboard } from "../hooks/useHeadConsultantDashboard";
 import { HeadConsultantStats } from "./HeadConsultantStats";
 import { TopStudentsCard } from "./TopStudentsCard";
-import { ConsultantPerformanceChart } from "./ConsultantPerformanceChart";
+
 import { TeamMembersView } from "./TeamMembersView";
 import { ConsultantHistoryView } from "./ConsultantHistoryView";
 import { LoadingSpinner, DateRangePicker } from "@/components/ui";
-import { LayoutDashboard, Users, Building2, Filter } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  Building2,
+  Filter,
+  AlertTriangle,
+  Clock,
+  ShieldAlert,
+  BarChart3,
+} from "lucide-react";
 import { cn } from "@/lib/cn";
 
-// ✅ Dynamic imports for heavy chart components (~30-40kB)
+// ✅ Dynamic imports — each story card is self-contained and heavy (Recharts)
 const ProblemCategoryChart = dynamic(
   () => import("./ProblemCategoryChart").then(mod => ({ default: mod.ProblemCategoryChart })),
   {
@@ -38,10 +47,50 @@ const ConsultantRatingTable = dynamic(
   }
 );
 
+const RiskDistributionCard = dynamic(
+  () => import("./RiskDistributionCard").then(mod => ({ default: mod.RiskDistributionCard })),
+  {
+    loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />,
+    ssr: false
+  }
+);
+
+const BookingTrendChart = dynamic(
+  () => import("./BookingTrendChart").then(mod => ({ default: mod.BookingTrendChart })),
+  {
+    loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />,
+    ssr: false
+  }
+);
+
+const WorkloadBalanceChart = dynamic(
+  () => import("./WorkloadBalanceChart").then(mod => ({ default: mod.WorkloadBalanceChart })),
+  {
+    loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />,
+    ssr: false
+  }
+);
+
+const PeakHoursCard = dynamic(
+  () => import("./PeakHoursCard").then(mod => ({ default: mod.PeakHoursCard })),
+  {
+    loading: () => <div className="h-64 bg-slate-50 animate-pulse rounded-xl" />,
+    ssr: false
+  }
+);
+
+const AttendanceInsightsCard = dynamic(
+  () => import("./AttendanceInsightsCard").then(mod => ({ default: mod.AttendanceInsightsCard })),
+  {
+    loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-xl" />,
+    ssr: false
+  }
+);
+
 type DashboardTab = "overview" | "team";
 
 export function HeadConsultantDashboard({
-  universityName = "มหาวิทยาลัยขอนแก่น", // Fallback for safety/dev
+  universityName = "มหาวิทยาลัยขอนแก่น",
 }: {
   universityName?: string;
 }) {
@@ -54,13 +103,16 @@ export function HeadConsultantDashboard({
     to: new Date()
   });
 
-  const { stats, categories, topStudents, ratings, team, isLoading } =
-    useHeadConsultantDashboard(dateRange);
+  // Central hook — still used for stats, categories, top students, ratings, team, alerts
+  const {
+    stats, categories, topStudents, ratings, team,
+    riskDist, responseTime, attendance,
+    isLoading,
+  } = useHeadConsultantDashboard(dateRange);
 
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
   const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
 
-  // Only show full-screen loader on initial load
   if (isLoading && !stats) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center bg-slate-50/50 rounded-2xl">
@@ -74,9 +126,15 @@ export function HeadConsultantDashboard({
 
   const selectedMember = team.find(m => m.consultantId === selectedMemberId);
 
+  // Alert counts from centralized data
+  const alertHighRisk = riskDist.highRiskCount;
+  const alertOverdue = responseTime.overdueCount;
+  const alertExceptions = attendance.pendingExceptions;
+  const hasAlerts = alertHighRisk > 0 || alertOverdue > 0 || alertExceptions > 0;
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
-      {/* ── Faculty/University Banner (Tenant-Aware) ─────────────────────────── */}
+      {/* ── Banner ─────────────────────────── */}
       <div className="relative overflow-hidden rounded-[2rem] bg-[#0f172a] p-8 text-white shadow-2xl mb-8">
         <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
         <div className="absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-primary-600/5 blur-3xl" />
@@ -169,17 +227,59 @@ export function HeadConsultantDashboard({
           />
         ) : activeTab === "overview" ? (
           <div className="space-y-6">
+
+            {/* ── 🔴 Alert Bar ─────────────────────────── */}
+            {hasAlerts && (
+              <div className="animate-in fade-in slide-in-from-top-2 duration-400">
+                <div className="bg-gradient-to-r from-red-50 via-amber-50 to-orange-50 border border-red-200/60 rounded-2xl px-5 py-4 shadow-sm">
+                  <div className="flex items-center gap-2 mb-3">
+                    <AlertTriangle className="w-4 h-4 text-red-500" />
+                    <span className="text-xs font-black text-red-700 uppercase tracking-wider">ต้องดำเนินการ</span>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    {alertHighRisk > 0 && (
+                      <div className="flex items-center gap-2 bg-white/80 backdrop-blur rounded-xl px-4 py-2.5 border border-red-200/50 shadow-sm">
+                        <ShieldAlert className="w-4 h-4 text-red-500" />
+                        <div>
+                          <span className="text-lg font-black text-red-600 tabular-nums">{alertHighRisk}</span>
+                          <span className="text-[11px] text-red-500 ml-1.5 font-bold">เคสเสี่ยงสูง/สูงมาก</span>
+                        </div>
+                      </div>
+                    )}
+                    {alertOverdue > 0 && (
+                      <div className="flex items-center gap-2 bg-white/80 backdrop-blur rounded-xl px-4 py-2.5 border border-amber-200/50 shadow-sm">
+                        <Clock className="w-4 h-4 text-amber-500" />
+                        <div>
+                          <span className="text-lg font-black text-amber-600 tabular-nums">{alertOverdue}</span>
+                          <span className="text-[11px] text-amber-500 ml-1.5 font-bold">เคสรอเกิน 48 ชม.</span>
+                        </div>
+                      </div>
+                    )}
+                    {alertExceptions > 0 && (
+                      <div className="flex items-center gap-2 bg-white/80 backdrop-blur rounded-xl px-4 py-2.5 border border-orange-200/50 shadow-sm">
+                        <AlertTriangle className="w-4 h-4 text-orange-500" />
+                        <div>
+                          <span className="text-lg font-black text-orange-600 tabular-nums">{alertExceptions}</span>
+                          <span className="text-[11px] text-orange-500 ml-1.5 font-bold">exception รอ review</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Stats Cards (Original) ─────────────── */}
             <section>
               <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <h3 className="text-lg font-black text-slate-800 flex items-center gap-3">
                   <LayoutDashboard className="h-5 w-5 text-primary" />
                   สถิติสำคัญ
                 </h3>
-
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-400 mr-2">
                     <Filter className="w-4 h-4" />
-                    กรองข้อมูล:
+                    กรองสถิติ:
                   </div>
                   <DateRangePicker
                     startDate={dateRange.from}
@@ -191,22 +291,37 @@ export function HeadConsultantDashboard({
               {stats && <HeadConsultantStats stats={stats} />}
             </section>
 
-            <div className="grid gap-6 lg:grid-cols-2 items-stretch">
-              <div className="h-full">
-                <ProblemCategoryChart categories={categories} />
-              </div>
-              <div className="h-full">
-                <ConsultantPerformanceChart data={team} />
-              </div>
+            {/* ── Data Stories Section Header ─────────── */}
+            <div className="pt-4">
+              <h3 className="text-lg font-black text-slate-800 flex items-center gap-3 mb-1">
+                <BarChart3 className="h-5 w-5 text-indigo-500" />
+                Data Stories
+              </h3>
+              <p className="text-xs text-slate-400 mb-6">แต่ละการ์ดเล่าเรื่องและกรองข้อมูลได้อิสระ — กดปุ่ม &quot;ตัวกรอง&quot; ที่มุมขวาบนของแต่ละการ์ด</p>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-2 items-stretch">
-              <div className="h-full">
-                <TopStudentsCard students={topStudents} />
-              </div>
-              <div className="h-full">
-                <ConsultantRatingTable ratings={ratings} />
-              </div>
+            {/* ── Grid Row 1: Peak Hours + Risk Distribution ────────────────── */}
+            <div className="grid gap-6 lg:grid-cols-2">
+              <PeakHoursCard delay={0} />
+              <RiskDistributionCard delay={1} />
+            </div>
+
+            {/* ── Grid Row 2: Problems + Trend ─────────────────── */}
+            <div className="grid gap-6 lg:grid-cols-2">
+              <ProblemCategoryChart delay={2} />
+              <BookingTrendChart delay={3} />
+            </div>
+
+            {/* ── Grid Row 3: Attendance + Workload ──────────── */}
+            <div className="grid gap-6 lg:grid-cols-2">
+              <AttendanceInsightsCard delay={4} />
+              <WorkloadBalanceChart delay={5} />
+            </div>
+
+            {/* ── Grid Row 4: Ratings + Top Students ─────── */}
+            <div className="grid gap-6 lg:grid-cols-2">
+              <ConsultantRatingTable delay={6} />
+              <TopStudentsCard delay={7} />
             </div>
           </div>
         ) : (

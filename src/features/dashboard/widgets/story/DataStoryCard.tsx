@@ -21,6 +21,8 @@ interface Props {
     iconGradient?: string;
     /** Story title  */
     title: string;
+    /** Short explanation of what this card measures and its purpose */
+    description?: string;
     /** DataStory narration — one-sentence explanation */
     narration: string;
     /** KPI chips rendered below the header */
@@ -40,7 +42,7 @@ interface Props {
 }
 
 export function DataStoryCard({
-    icon, iconGradient, title, narration, kpis, filters, headerBadge,
+    icon, iconGradient, title, description, narration, kpis, filters, headerBadge,
     children, className, delay = 0, loading,
 }: Props) {
     const [filtersOpen, setFiltersOpen] = useState(false);
@@ -50,6 +52,7 @@ export function DataStoryCard({
         <div
             className={`
                 animate-[fadeUp_0.5s_ease-out_both] group relative
+                h-full flex flex-col
                 bg-white rounded-2xl border border-slate-100
                 shadow-sm hover:shadow-lg transition-all duration-500
                 overflow-hidden
@@ -73,7 +76,12 @@ export function DataStoryCard({
                             <h3 className="text-[15px] font-extrabold text-slate-800 leading-tight">
                                 {title}
                             </h3>
-                            <p className="text-[12px] text-slate-400 mt-0.5 leading-snug line-clamp-2">
+                            {description && (
+                                <p className="text-[12.5px] font-medium text-slate-500 mt-1 mb-0.5 leading-snug">
+                                    {description}
+                                </p>
+                            )}
+                            <p className="text-[12px] text-slate-400 leading-snug line-clamp-2">
                                 {narration}
                             </p>
                         </div>
@@ -138,9 +146,9 @@ export function DataStoryCard({
             )}
 
             {/* ── Body ─────────────────────────────────────────────── */}
-            <div className="px-5 pb-5">
+            <div className="px-5 pb-5 flex-1 flex flex-col justify-center">
                 {loading ? (
-                    <div className="h-48 bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl animate-pulse" />
+                    <div className="h-full min-h-[12rem] w-full bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl animate-pulse" />
                 ) : (
                     children
                 )}

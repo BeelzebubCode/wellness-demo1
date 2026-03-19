@@ -48,6 +48,20 @@ export const RISK_META: Record<string, { label: string; color: string; bg: strin
     UNKNOWN: { label: "ไม่ระบุ", color: "#94a3b8", bg: "bg-slate-50" },
 };
 
+export const SERVICE_MODE_OPTIONS = [
+    { value: "1", label: "Onsite" },
+    { value: "2", label: "Online" }
+];
+
+export const RISK_LEVEL_OPTIONS = [
+    { value: "4", label: "เสี่ยงสูง" },
+    { value: "5", label: "วิกฤต" },
+    { value: "3", label: "ปานกลาง" },
+    { value: "2", label: "ความเสี่ยงต่ำ" },
+    { value: "1", label: "ปกติ" }
+];
+
+
 // ─── Date Range Helper ──────────────────────────────────────────────────────
 export function getDateRange(
     preset: DatePreset,

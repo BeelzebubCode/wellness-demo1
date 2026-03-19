@@ -38,13 +38,14 @@ export async function getTopStudents(limit = 10) {
   }
 }
 
-export async function getCategoryDistribution(from?: string, to?: string) {
+export async function getCategoryDistribution(from?: string, to?: string, riskLevels?: number[]) {
   try {
     const uniId = await getUniversityId();
     if (!uniId) return [];
     return await HeadConsultantService.getProblemCategoryDistribution(uniId, {
       startDate: from ? new Date(from) : undefined,
       endDate: to ? new Date(to) : undefined,
+      riskLevels,
     });
   } catch (err) {
     console.error("getCategoryDistribution failed:", err);
@@ -101,3 +102,90 @@ export async function getConsultantHistory(
     return { items: [], total: 0 };
   }
 }
+
+export async function getRiskDistribution(from?: string, to?: string, serviceModes?: number[]) {
+  try {
+    const uniId = await getUniversityId();
+    if (!uniId) return { distribution: [], highRiskCount: 0 };
+    return await HeadConsultantService.getRiskDistribution(uniId, {
+      startDate: from ? new Date(from) : undefined,
+      endDate: to ? new Date(to) : undefined,
+      serviceModes,
+    });
+  } catch (err) {
+    console.error("getRiskDistribution failed:", err);
+    return { distribution: [], highRiskCount: 0 };
+  }
+}
+
+export async function getBookingTrend(from?: string, to?: string, serviceModes?: number[]) {
+  try {
+    const uniId = await getUniversityId();
+    if (!uniId) return [];
+    return await HeadConsultantService.getBookingTrend(uniId, {
+      startDate: from ? new Date(from) : undefined,
+      endDate: to ? new Date(to) : undefined,
+      serviceModes,
+    });
+  } catch (err) {
+    console.error("getBookingTrend failed:", err);
+    return [];
+  }
+}
+
+export async function getWorkloadBalance() {
+  try {
+    const uniId = await getUniversityId();
+    if (!uniId) return [];
+    return await HeadConsultantService.getWorkloadBalance(uniId);
+  } catch (err) {
+    console.error("getWorkloadBalance failed:", err);
+    return [];
+  }
+}
+
+export async function getResponseTimeMetrics(from?: string, to?: string, riskLevels?: number[]) {
+  try {
+    const uniId = await getUniversityId();
+    if (!uniId) return { avgAssignmentHours: 0, avgConsultationHours: 0, overdueCount: 0 };
+    return await HeadConsultantService.getResponseTimeMetrics(uniId, {
+      startDate: from ? new Date(from) : undefined,
+      endDate: to ? new Date(to) : undefined,
+      riskLevels,
+    });
+  } catch (err) {
+    console.error("getResponseTimeMetrics failed:", err);
+    return { avgAssignmentHours: 0, avgConsultationHours: 0, overdueCount: 0 };
+  }
+}
+
+export async function getPeakHoursMetrics(from?: string, to?: string, serviceModes?: number[]) {
+  try {
+    const uniId = await getUniversityId();
+    if (!uniId) return [];
+    return await HeadConsultantService.getPeakHoursMetrics(uniId, {
+      startDate: from ? new Date(from) : undefined,
+      endDate: to ? new Date(to) : undefined,
+      serviceModes,
+    });
+  } catch (err) {
+    console.error("getPeakHoursMetrics failed:", err);
+    return [];
+  }
+}
+
+export async function getAttendanceInsights(from?: string, to?: string, serviceModes?: number[]) {
+  try {
+    const uniId = await getUniversityId();
+    if (!uniId) return { checkedIn: 0, late: 0, noShow: 0, pending: 0, cancelledByConsultant: 0, pendingExceptions: 0 };
+    return await HeadConsultantService.getAttendanceInsights(uniId, {
+      startDate: from ? new Date(from) : undefined,
+      endDate: to ? new Date(to) : undefined,
+      serviceModes,
+    });
+  } catch (err) {
+    console.error("getAttendanceInsights failed:", err);
+    return { checkedIn: 0, late: 0, noShow: 0, pending: 0, cancelledByConsultant: 0, pendingExceptions: 0 };
+  }
+}
+
