@@ -171,7 +171,7 @@ export async function seedBookings(
   await prisma.$executeRawUnsafe(`
     INSERT INTO booking_outcome (
       university_id, booking_id, booking_outcome_consultant_note,
-      booking_outcome_next_step, booking_outcome_risk_level
+      booking_outcome_next_step, risk_level_id
     )
     SELECT
       b.university_id,

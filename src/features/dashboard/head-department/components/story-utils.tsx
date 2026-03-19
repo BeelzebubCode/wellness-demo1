@@ -47,9 +47,11 @@ export const MONTH_LABEL: Record<string, string> = {
 };
 
 export const RISK_META: Record<string, { label: string; color: string; bg: string }> = {
+    VERY_HIGH: { label: "สูงมาก", color: "#dc2626", bg: "bg-red-50" },
     HIGH: { label: "สูง", color: "#f43f5e", bg: "bg-rose-50" },
     MEDIUM: { label: "ปานกลาง", color: "#f59e0b", bg: "bg-amber-50" },
-    LOW: { label: "ต่ำ", color: "#10b981", bg: "bg-emerald-50" },
+    LOW: { label: "ต่ำ", color: "#22c55e", bg: "bg-green-50" },
+    VERY_LOW: { label: "ต่ำมาก", color: "#10b981", bg: "bg-emerald-50" },
     UNKNOWN: { label: "ไม่ระบุ", color: "#94a3b8", bg: "bg-slate-50" },
 };
 

@@ -92,9 +92,9 @@ export async function GET(req: NextRequest) {
             // Risk level drill-down
             filterJoin = `LEFT JOIN booking_outcome bo ON bo.booking_id = b.booking_id AND bo.university_id = b.university_id`;
             if (riskLevel === "null" || riskLevel === "UNKNOWN") {
-                filterWhere = `AND bo.booking_outcome_risk_level IS NULL`;
+                filterWhere = `AND bo.risk_level_id IS NULL`;
             } else {
-                filterWhere = `AND bo.booking_outcome_risk_level = $1`;
+                filterWhere = `AND bo.risk_level_id = $1`;
                 paramValues.push(parseInt(riskLevel, 10));
             }
         }

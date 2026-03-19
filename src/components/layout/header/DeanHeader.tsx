@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Bell, Menu, Settings, Shield, User, ChevronDown } from "lucide-react";
+import { Menu, Settings, Shield, User, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import LogoutButton from "@/components/auth/LogoutButton";
+import { NotificationBell } from "@/components/notification/NotificationBell";
 
 interface DeanHeaderProps {
     facultyName?: string;
@@ -67,11 +68,8 @@ export function DeanHeader({
             </div>
 
             <div className="ml-auto flex items-center gap-2">
-                {/* Notifications (Mock) */}
-                <Button variant="ghost" size="icon" className="relative text-slate-400 hover:text-blue-600 hover:bg-blue-50">
-                    <Bell className="h-5 w-5" />
-                    <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500 border-2 border-white"></span>
-                </Button>
+                {/* Notifications */}
+                <NotificationBell />
 
                 {/* Profile Dropdown */}
                 <div className="relative" ref={dropdownRef}>

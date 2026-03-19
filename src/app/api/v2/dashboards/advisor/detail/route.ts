@@ -99,7 +99,7 @@ async function fetchBookings(universityId: number, studentIds: number[], f: Filt
         SELECT b.booking_id, b.student_id,
                TO_CHAR(ts.time_slot_start_datetime, 'YYYY-MM') AS month,
                pc.problem_category_name_th AS problem_name, b.problem_category_id,
-               bo.booking_outcome_risk_level AS risk_level,
+               bo.risk_level_id AS risk_level,
                bo.booking_outcome_consultant_note AS consultant_note,
                TO_CHAR(ts.time_slot_start_datetime, 'YYYY-MM-DD') AS slot_date
         FROM booking b

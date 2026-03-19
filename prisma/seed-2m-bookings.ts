@@ -499,7 +499,7 @@ async function seedOutcomes() {
       university_id, booking_id,
       booking_outcome_consultant_note,
       booking_outcome_next_step,
-      booking_outcome_risk_level,
+      risk_level_id,
       booking_outcome_recorded_at
     )
     SELECT
@@ -879,14 +879,14 @@ async function printSummary() {
 
   // Risk distribution
   console.log("\n   🎯 Risk Level Distribution:");
-  const risks: { booking_outcome_risk_level: number; count: bigint }[] = await prisma.$queryRawUnsafe(`
-    SELECT booking_outcome_risk_level, COUNT(*)::bigint as count
+  const risks: { risk_level_id: number; count: bigint }[] = await prisma.$queryRawUnsafe(`
+    SELECT risk_level_id, COUNT(*)::bigint as count
     FROM booking_outcome
-    WHERE booking_outcome_risk_level IS NOT NULL
-    GROUP BY booking_outcome_risk_level ORDER BY booking_outcome_risk_level
+    WHERE risk_level_id IS NOT NULL
+    GROUP BY risk_level_id ORDER BY risk_level_id
   `);
   for (const r of risks) {
-    console.log(`      Level ${r.booking_outcome_risk_level}:   ${Number(r.count).toLocaleString().padStart(12)}`);
+    console.log(`      Level ${r.risk_level_id}:   ${Number(r.count).toLocaleString().padStart(12)}`);
   }
 }
 

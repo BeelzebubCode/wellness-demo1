@@ -696,19 +696,38 @@ model BookingAssignment {
   @@map("booking_assignment")
 }
 
+// ==========================================
+// ⚠️ RISK LEVEL CATEGORY (Lookup)
+// ==========================================
+
+model RiskLevelCategory {
+  risk_level_id Int    @id // 1-5
+  code          String @unique @db.VarChar(20) // VERY_LOW, LOW, MEDIUM, HIGH, VERY_HIGH
+  name_th       String @db.VarChar(50) // ต่ำมาก, ต่ำ, ปานกลาง, สูง, สูงมาก
+  name_en       String @db.VarChar(50) // Very Low, Low, Medium, High, Very High
+  color         String @default("#94a3b8") @db.VarChar(10)
+  sort_order    Int    @default(0)
+
+  bookingOutcomes BookingOutcome[]
+
+  @@map("risk_level_category")
+}
+
 model BookingOutcome {
   booking_id    Int
   university_id Int
 
   booking_outcome_consultant_note String   @db.Text
   booking_outcome_next_step       String?  @db.Text
-  booking_outcome_risk_level      Int?
+  risk_level_id                   Int?
   booking_outcome_recorded_at     DateTime @default(now())
 
-  booking Booking @relation(fields: [university_id, booking_id], references: [university_id, booking_id])
+  booking   Booking            @relation(fields: [university_id, booking_id], references: [university_id, booking_id])
+  riskLevel RiskLevelCategory? @relation(fields: [risk_level_id], references: [risk_level_id])
 
   @@id([university_id, booking_id])
   @@index([booking_id])
+  @@index([risk_level_id])
   @@map("booking_outcome")
 }
 
@@ -833,16 +852,17 @@ model FeedbackComment {
 }
 
 // ==========================================
-// 🔔 NOTIFICATION
+// 🔔 NOTIFICATION (In-Web)
 // ==========================================
 
 model NotificationTemplate {
-  notification_template_id     Int            @id @default(autoincrement())
-  notification_template_code   String         @unique @db.VarChar(50)
-  notification_template_title  String?        @db.VarChar(200)
-  notification_template_body   String?        @db.Text
-  notification_template_format String         @default("TEXT") @db.VarChar(20)
-  notifications                Notification[]
+  notification_template_id       Int            @id @default(autoincrement())
+  notification_template_code     String         @unique @db.VarChar(50)
+  notification_template_title    String?        @db.VarChar(200)
+  notification_template_body     String?        @db.Text
+  notification_template_icon     String         @default("BELL") @db.VarChar(30)
+  notification_template_category String         @default("SYSTEM") @db.VarChar(30)
+  notifications                  Notification[]
 
   @@map("notification_template")
 }
@@ -854,20 +874,19 @@ model Notification {
   university_id            Int?
   booking_id               Int?
 
-  notification_channel       String    @default("LINE") @db.VarChar(20)
-  notification_data          Json?
-  notification_status        String    @default("PENDING") @db.VarChar(20)
-  notification_sent_at       DateTime?
-  notification_error_message String?   @db.Text
-  notification_created_at    DateTime  @default(now())
+  notification_title      String?   @db.VarChar(200)
+  notification_body       String?   @db.Text
+  notification_channel    String    @default("WEB") @db.VarChar(20)
+  notification_data       Json?
+  notification_read_at    DateTime?
+  notification_created_at DateTime  @default(now())
 
   account  Account              @relation(fields: [account_id], references: [account_id])
   template NotificationTemplate @relation(fields: [notification_template_id], references: [notification_template_id])
 
   booking Booking? @relation(fields: [university_id, booking_id], references: [university_id, booking_id])
 
-  @@index([account_id])
-  @@index([notification_status])
+  @@index([account_id, notification_read_at])
   @@index([university_id, booking_id])
   @@index([notification_template_id])
   @@map("notification")

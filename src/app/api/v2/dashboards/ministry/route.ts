@@ -197,7 +197,7 @@ export async function GET(request: NextRequest) {
               booking: {
                 university_id: uni.university_id,
               },
-              booking_outcome_risk_level: { gte: 7 }, // 7-10 = High Risk
+              risk_level_id: { gte: 7 }, // 7-10 = High Risk
               booking_outcome_recorded_at: { gte: startDate },
             },
           });

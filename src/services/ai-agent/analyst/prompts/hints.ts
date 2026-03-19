@@ -11,7 +11,7 @@ export const SCHEMA_HINTS = `
 -- ⛔ student_gender values: 'MALE', 'FEMALE', 'LGBTQ_PLUS' — NEVER use Thai like 'หญิง'!
 -- ⛔ booking_service_mode: 'ONSITE', 'ONLINE' — NOT 'service_type'!
 -- ⛔ When filtering by name, ALWAYS use LIKE '%คำค้น%', NOT exact match '='!
--- ⛔ Risk level is in booking_outcome.booking_outcome_risk_level (int 1-5), NOT in booking!
+-- ⛔ Risk level is in booking_outcome.risk_level_id (int 1-5), NOT in booking!
 -- ⛔ When searching by NAME, use LIKE '%คำค้น%'. But when user gives a specific ID number (e.g. student id 1000009), use WHERE student_id = 1000009 directly
 -- ⛔ When searching a person by ONE name keyword (e.g. "อุไร"), use OR between first_name and last_name:
 --   WHERE cp.consultant_first_name LIKE '%อุไร%' OR cp.consultant_last_name LIKE '%อุไร%'
@@ -64,8 +64,8 @@ export const SCHEMA_HINTS = `
 -- ⚠️ LIMIT RULE: If user says "Top 5" → LIMIT 5, "Top 10" → LIMIT 10. ALWAYS match the user's requested N exactly!
 --   If user does NOT specify a number, default LIMIT 10. NEVER use LIMIT 20 unless user asks for "Top 20".
 -- Always include date filter on booking.booking_created_at when querying bookings
--- "stress/เครียด" = high booking count; "risk/เสี่ยง" = high booking_outcome_risk_level
--- booking_outcome stores risk: booking_outcome_risk_level (int 1-5, 5=highest)
+-- "stress/เครียด" = high booking count; "risk/เสี่ยง" = high risk_level_id
+-- booking_outcome stores risk: risk_level_id (int 1-5, 5=highest)
 -- "จังหวัด/province" = university → province (ON university.province_id = province.province_id)
 -- "ภาค/region" = university → province → region (ON province.region_id = region.region_id)
 -- ⛔ region_name_th is on REGION table, NOT province!

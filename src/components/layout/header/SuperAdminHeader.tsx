@@ -3,6 +3,7 @@
 
 import { User } from "lucide-react";
 import LogoutButton from "@/components/auth/LogoutButton";
+import { NotificationBell } from "@/components/notification/NotificationBell";
 
 export interface SuperAdminHeaderProps {
   adminName?: string;
@@ -17,6 +18,8 @@ export function SuperAdminHeader({
     <header className="bg-white sticky top-0 z-30 border-b border-slate-200 shadow-sm px-6 h-20 flex items-center justify-end">
       {/* Right only (เหมือน BookingHeader แต่ตัดซ้ายทิ้ง) */}
       <div className="flex items-center gap-4 lg:gap-6">
+        <NotificationBell />
+
         <div className="hidden sm:flex flex-col items-end mr-2">
           <p className="text-xs font-semibold text-slate-800 leading-none">
             {adminName || "Super Admin"}

@@ -1,10 +1,8 @@
 // src/app/(tenant)/(university)/head-consultant/assignment-history/page.tsx
-
 "use client";
 
 import { useMemo, useState } from "react";
 import { History, RotateCw } from "lucide-react";
-
 import { FilterBar } from "@/components/filters/FilterBar";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
@@ -12,15 +10,12 @@ import {
     ADMIN_BOOKINGS_FILTER_DEFS,
     type AdminBookingsFilters,
 } from "@/features/head-consultant/filters/defs";
-
 import type { BookingStatus } from "@/features/head-consultant/bookings/types";
 import { BookingsDashboard } from "@/features/head-consultant/bookings/components/BookingsDashboard";
-
 import { useBookingsQuery } from "@/features/head-consultant/bookings/hook/useBookingsQuery";
 import { useAssigneesQuery } from "@/features/head-consultant/bookings/hook/useAssigneesQuery";
 import { useProblemCategoriesQuery } from "@/features/head-consultant/bookings/hook/useProblemCategoriesQuery";
 import { useBookingActions } from "@/features/head-consultant/bookings/hook/useBookingActions";
-
 import { toYMD, fromYMD } from "@/lib/date";
 
 export default function AssignmentHistoryPage() {
@@ -58,10 +53,9 @@ export default function AssignmentHistoryPage() {
 
         return historyRows.filter((b) => {
             const user = String((b as any).userName ?? "").toLowerCase();
-            const line = String((b as any).lineUserId ?? "").toLowerCase();
             const problem = String((b as any).problemType ?? "").toLowerCase();
             const detail = String((b as any).problemDescription ?? "").toLowerCase();
-            return user.includes(q) || line.includes(q) || problem.includes(q) || detail.includes(q);
+            return user.includes(q) || problem.includes(q) || detail.includes(q);
         });
     }, [historyRows, search]);
 
@@ -142,7 +136,7 @@ export default function AssignmentHistoryPage() {
                 value={filterValue}
                 dateKey="date"
                 searchKey="search"
-                searchPlaceholder="ค้นหาชื่อ / LINE ID / ประเภทเรื่อง / รายละเอียด..."
+                searchPlaceholder="ค้นหาชื่อ / ประเภทเรื่อง / รายละเอียด..."
                 onChange={(next) => {
                     const nextDateStr = String((next as any).date ?? "").trim();
                     if (nextDateStr) setSelectedDate(fromYMD(nextDateStr));

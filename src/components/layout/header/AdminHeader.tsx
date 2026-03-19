@@ -3,6 +3,7 @@
 
 import { Menu, User } from "lucide-react";
 import LogoutButton from "@/components/auth/LogoutButton";
+import { NotificationBell } from "@/components/notification/NotificationBell";
 
 export interface AdminHeaderProps {
   adminName?: string;
@@ -35,6 +36,8 @@ export function AdminHeader({
 
       {/* Right */}
       <div className="flex items-center gap-4 lg:gap-6">
+        <NotificationBell />
+
         <div className="hidden sm:flex flex-col items-end mr-2">
           <p className="text-xs font-semibold text-gray-800 leading-none">
             {adminName || "Head Consultant"}

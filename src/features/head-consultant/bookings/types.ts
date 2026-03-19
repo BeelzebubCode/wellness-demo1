@@ -8,7 +8,6 @@ import type {
 
 export type AdminBookingRow = BookingCore & {
   userName: string;
-  lineUserId: string;
 
   problemType: string;
   problemCategoryCode?: string;

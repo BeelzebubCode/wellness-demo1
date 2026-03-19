@@ -48,7 +48,7 @@ export const RectorService = {
 
         // 1. Risk Score (Inverse of High Risk %)
         const riskQuery = await prisma.bookingOutcome.groupBy({
-            by: ['booking_outcome_risk_level'],
+            by: ['risk_level_id'],
             where: {
                 university_id: universityId,
                 booking: bookingWhere
@@ -63,8 +63,8 @@ export const RectorService = {
             const count = r._count as unknown as number; // Force cast safely if type is ambiguous
             if (typeof count === 'number') {
                 totalCases += count;
-                 // Assuming booking_outcome_risk_level is 1-5
-                if (r.booking_outcome_risk_level && r.booking_outcome_risk_level >= 4) {
+                 // Assuming risk_level_id is 1-5
+                if (r.risk_level_id && r.risk_level_id >= 4) {
                     highRiskCases += count;
                 }
             }
@@ -195,15 +195,15 @@ export const RectorService = {
                     university_id: universityId,
                     booking: facultyBookingFilter
                 },
-                _avg: { booking_outcome_risk_level: true }
+                _avg: { risk_level_id: true }
             });
-            const riskIndex = riskStats._avg.booking_outcome_risk_level || 0;
+            const riskIndex = riskStats._avg.risk_level_id || 0;
 
             // 3. High Risk Volume (Bubble Size or Color)
             const highRiskCount = await prisma.bookingOutcome.count({
                 where: {
                     university_id: universityId,
-                    booking_outcome_risk_level: { gte: 4 },
+                    risk_level_id: { gte: 4 },
                     booking: facultyBookingFilter
                 }
             });
@@ -316,7 +316,7 @@ export const RectorService = {
         // 4. Risk Distribution (SQL Group By) - DATE FILTERED + FILTERS
         const riskStats = await prisma.$queryRaw<{ risk: number, count: bigint }[]>`
              SELECT 
-                 bo.booking_outcome_risk_level as risk,
+                 bo.risk_level_id as risk,
                  COUNT(*)::int as count
              FROM "booking" b
              JOIN "booking_outcome" bo ON b.booking_id = bo.booking_id
@@ -326,7 +326,7 @@ export const RectorService = {
              AND b.booking_created_at >= ${start}
              AND b.booking_created_at <= ${end}
              ${sqlFilters.length > 0 ? Prisma.join(sqlFilters, " ") : Prisma.empty}
-             GROUP BY bo.booking_outcome_risk_level
+             GROUP BY bo.risk_level_id
          `;
 
         const riskDistribution = { HIGH: 0, MEDIUM: 0, LOW: 0, NORMAL: 0 };
@@ -485,9 +485,9 @@ export const RectorService = {
                      }
                  )::int as student_count,
                  COUNT(DISTINCT b.booking_id)::int as booking_count,
-                 COALESCE(SUM(CASE WHEN bo.booking_outcome_risk_level >= 4 THEN 1 ELSE 0 END), 0)::int as high_risk,
-                 COALESCE(SUM(CASE WHEN bo.booking_outcome_risk_level = 3 THEN 1 ELSE 0 END), 0)::int as medium_risk,
-                 COALESCE(SUM(CASE WHEN bo.booking_outcome_risk_level = 2 THEN 1 ELSE 0 END), 0)::int as low_risk
+                 COALESCE(SUM(CASE WHEN bo.risk_level_id >= 4 THEN 1 ELSE 0 END), 0)::int as high_risk,
+                 COALESCE(SUM(CASE WHEN bo.risk_level_id = 3 THEN 1 ELSE 0 END), 0)::int as medium_risk,
+                 COALESCE(SUM(CASE WHEN bo.risk_level_id = 2 THEN 1 ELSE 0 END), 0)::int as low_risk
              FROM "faculty" f
              -- We need to LEFT JOIN bookings that MATCH THE FILTER, otherwise we count everything for that faculty
              LEFT JOIN "student_academic" sa ON f.faculty_id = sa.faculty_id
@@ -611,7 +611,7 @@ export const RectorService = {
         const highRisk = await prisma.bookingOutcome.count({
             where: {
                 university_id: universityId,
-                booking_outcome_risk_level: { gte: 4 },
+                risk_level_id: { gte: 4 },
                 ...highRiskDateFilter,
             },
         });
@@ -692,7 +692,7 @@ export const RectorService = {
         }
 
         const risks = await prisma.bookingOutcome.groupBy({
-            by: ["booking_outcome_risk_level"],
+            by: ["risk_level_id"],
             where,
             _count: true,
         });
@@ -701,8 +701,8 @@ export const RectorService = {
         const counts = [0, 0, 0, 0, 0];
 
         risks.forEach((r) => {
-            if (r.booking_outcome_risk_level && r.booking_outcome_risk_level >= 1 && r.booking_outcome_risk_level <= 5) {
-                counts[r.booking_outcome_risk_level - 1] = r._count;
+            if (r.risk_level_id && r.risk_level_id >= 1 && r.risk_level_id <= 5) {
+                counts[r.risk_level_id - 1] = r._count;
             }
         });
 

@@ -160,7 +160,7 @@ export async function handleGetBooking(
       ? {
           note: booking.outcome.booking_outcome_consultant_note,
           nextStep: booking.outcome.booking_outcome_next_step,
-          riskLevel: booking.outcome.booking_outcome_risk_level,
+          riskLevel: booking.outcome.risk_level_id,
           recordedAt: booking.outcome.booking_outcome_recorded_at.toISOString(),
         }
       : null,

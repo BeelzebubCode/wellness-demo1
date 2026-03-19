@@ -29,7 +29,7 @@ export type ListBookingDTO = {
   universityId: number;
   consultantId: number | null;
   userName: string;
-  lineUserId: string;
+
   problemDescription: string | null;
   problemType: string;
   date: string | null; // yyyy-mm-dd
@@ -229,7 +229,7 @@ export async function handleListBookings(
       outcome: {
         select: {
           booking_outcome_consultant_note: true,
-          booking_outcome_risk_level: true,
+          risk_level_id: true,
           booking_outcome_next_step: true,
           booking_outcome_recorded_at: true,
         },
@@ -303,7 +303,7 @@ export async function handleListBookings(
       consultantId: b.consultant_id,
 
       userName: sp ? `${sp.student_first_name_th} ${sp.student_last_name_th}` : "ไม่ทราบชื่อ",
-      lineUserId: "-",
+
 
       problemDescription: b.booking_detail_text ?? null,
       problemType: b.problemCategory.problem_category_name_th,

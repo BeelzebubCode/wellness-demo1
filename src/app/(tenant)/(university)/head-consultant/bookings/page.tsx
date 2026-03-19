@@ -52,10 +52,9 @@ export default function HeadConsultantBookingsPage() {
 
     return rows.filter((b) => {
       const user = String((b as any).userName ?? "").toLowerCase();
-      const line = String((b as any).lineUserId ?? "").toLowerCase();
       const problem = String((b as any).problemType ?? "").toLowerCase();
       const detail = String((b as any).problemDescription ?? "").toLowerCase();
-      return user.includes(q) || line.includes(q) || problem.includes(q) || detail.includes(q);
+      return user.includes(q) || problem.includes(q) || detail.includes(q);
     });
   }, [rows, search]);
 
@@ -131,7 +130,7 @@ export default function HeadConsultantBookingsPage() {
         value={filterValue}
         dateKey="date"
         searchKey="search"
-        searchPlaceholder="ค้นหาชื่อ / LINE ID / ประเภทเรื่อง / รายละเอียด..."
+        searchPlaceholder="ค้นหาชื่อ / ประเภทเรื่อง / รายละเอียด..."
         onChange={(next) => {
           const nextDateStr = String((next as any).date ?? "").trim();
           if (nextDateStr) setSelectedDate(fromYMD(nextDateStr));

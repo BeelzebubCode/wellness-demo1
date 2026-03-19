@@ -115,7 +115,7 @@ export async function handleCompleteBooking(
       update: {
         booking_outcome_consultant_note: consultantNote,
         booking_outcome_next_step: nextStep,
-        booking_outcome_risk_level: riskLevel,
+        risk_level_id: riskLevel,
         booking_outcome_recorded_at: new Date(),
       },
       create: {
@@ -123,7 +123,7 @@ export async function handleCompleteBooking(
         booking_id: bookingId,
         booking_outcome_consultant_note: consultantNote,
         booking_outcome_next_step: nextStep,
-        booking_outcome_risk_level: riskLevel,
+        risk_level_id: riskLevel,
         booking_outcome_recorded_at: new Date(),
       },
     });

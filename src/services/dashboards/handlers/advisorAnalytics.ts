@@ -49,11 +49,11 @@ export async function getStudentRank(
       COUNT(b.booking_id)::int AS total_bookings,
       COUNT(CASE WHEN ba.booking_attendance_status = 'NO_SHOW' THEN 1 END)::int AS no_show_count,
       COUNT(CASE WHEN ba.booking_attendance_status = 'LATE' THEN 1 END)::int AS late_count,
-      ROUND(AVG(bo.booking_outcome_risk_level)::numeric, 2) AS avg_risk,
-      COUNT(CASE WHEN bo.booking_outcome_risk_level >= 4 THEN 1 END)::int AS high_risk_count,
+      ROUND(AVG(bo.risk_level_id)::numeric, 2) AS avg_risk,
+      COUNT(CASE WHEN bo.risk_level_id >= 4 THEN 1 END)::int AS high_risk_count,
       -- Composite risk score for ranking
       (
-        COALESCE(AVG(bo.booking_outcome_risk_level), 0) * 2
+        COALESCE(AVG(bo.risk_level_id), 0) * 2
         + COUNT(CASE WHEN ba.booking_attendance_status = 'NO_SHOW' THEN 1 END) * 3
         + COUNT(CASE WHEN ba.booking_attendance_status = 'LATE' THEN 1 END) * 1
       )::numeric AS risk_score

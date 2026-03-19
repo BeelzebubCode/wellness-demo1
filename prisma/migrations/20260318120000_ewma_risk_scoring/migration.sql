@@ -31,7 +31,7 @@ WITH
             sa.faculty_id,
             sa.department_id,
             COALESCE(sa.advisor_id, 0) AS advisor_id,
-            bo.booking_outcome_risk_level AS risk_level,
+            bo.risk_level_id AS risk_level,
             bo.booking_outcome_recorded_at AS recorded_at,
             ROW_NUMBER() OVER (
                 PARTITION BY
@@ -40,7 +40,7 @@ WITH
                 ORDER BY bo.booking_outcome_recorded_at DESC
             ) AS rn,
             -- Peak info
-            MAX(bo.booking_outcome_risk_level) OVER (
+            MAX(bo.risk_level_id) OVER (
                 PARTITION BY
                     b.university_id,
                     b.student_id
@@ -52,7 +52,7 @@ WITH
                 PARTITION BY
                     b.university_id,
                     b.student_id
-                ORDER BY bo.booking_outcome_risk_level DESC, bo.booking_outcome_recorded_at DESC
+                ORDER BY bo.risk_level_id DESC, bo.booking_outcome_recorded_at DESC
             ) AS peak_recorded_at,
             -- Total bookings with risk for this student
             COUNT(*) OVER (
@@ -68,8 +68,8 @@ WITH
             AND bo.university_id = b.university_id
         WHERE
             b.booking_status = 'COMPLETED'
-            AND bo.booking_outcome_risk_level IS NOT NULL
-            AND bo.booking_outcome_risk_level > 0
+            AND bo.risk_level_id IS NOT NULL
+            AND bo.risk_level_id > 0
     ),
     ewma_calc AS (
         -- Calculate EWMA: Σ α(1-α)^i × risk_i, normalized by Σ α(1-α)^i

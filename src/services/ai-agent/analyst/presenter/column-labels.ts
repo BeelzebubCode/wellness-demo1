@@ -57,7 +57,7 @@ const COLUMN_LABELS: Record<string, string> = {
     region_name_th: "ภูมิภาค",
     province_name_th: "จังหวัด",
     // Risk
-    booking_outcome_risk_level: "ระดับความเสี่ยง",
+    risk_level_id: "ระดับความเสี่ยง",
     risk_level: "ระดับความเสี่ยง",
     avg_risk: "ความเสี่ยงเฉลี่ย",
     avg_risk_level: "ความเสี่ยงเฉลี่ย",

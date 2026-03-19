@@ -291,9 +291,9 @@ export async function runAnalytics(
               COUNT(CASE WHEN ba.booking_attendance_status = 'CHECKED_IN' THEN 1 END)::int AS checked_in_count,
               COUNT(CASE WHEN ba.booking_attendance_status = 'LATE' THEN 1 END)::int AS late_count,
               COUNT(CASE WHEN ba.booking_attendance_status = 'NO_SHOW' THEN 1 END)::int AS no_show_count,
-              ROUND(AVG(bo.booking_outcome_risk_level)::numeric, 2) AS avg_risk,
-              COUNT(CASE WHEN bo.booking_outcome_risk_level >= 4 THEN 1 END)::int AS high_risk_count,
-              COUNT(bo.booking_outcome_risk_level)::int AS total_with_risk,
+              ROUND(AVG(bo.risk_level_id)::numeric, 2) AS avg_risk,
+              COUNT(CASE WHEN bo.risk_level_id >= 4 THEN 1 END)::int AS high_risk_count,
+              COUNT(bo.risk_level_id)::int AS total_with_risk,
               COUNT(CASE WHEN b.problem_category_id = ${mentalId} THEN 1 END)::int AS mental_count,
               COUNT(CASE WHEN b.booking_status = 'COMPLETED' THEN 1 END)::int AS completed_count,
               COUNT(CASE WHEN ba_res.consultant_university_id = b.university_id THEN 1 END)::int AS internal_res,
@@ -310,16 +310,16 @@ export async function runAnalytics(
 
             UNION ALL
 
-            SELECT 'risk' AS _section, bo.booking_outcome_risk_level AS level,
+            SELECT 'risk' AS _section, bo.risk_level_id AS level,
               COUNT(*)::int, 0, 0, 0, 0, NULL, 0, 0, 0, 0, 0, 0 -- 14 columns
             FROM booking b
             JOIN student_academic sa ON sa.university_id = b.university_id AND sa.student_id = b.student_id
             JOIN booking_outcome bo ON bo.university_id = b.university_id AND bo.booking_id = b.booking_id
             LEFT JOIN student_profile sp ON sp.university_id = b.university_id AND sp.student_id = b.student_id
             LEFT JOIN time_slot ts ON ts.university_id = b.university_id AND ts.time_slot_id = b.time_slot_id
-            WHERE bo.booking_outcome_risk_level IS NOT NULL
+            WHERE bo.risk_level_id IS NOT NULL
               ${scope.scopeSQL} ${filterSQL}
-            GROUP BY bo.booking_outcome_risk_level
+            GROUP BY bo.risk_level_id
             `,
         ),
 
@@ -331,7 +331,7 @@ export async function runAnalytics(
               ${Prisma.raw(grp.codeCol)} AS group_code,
               ${Prisma.raw(grp.nameCol)} AS group_name,
               COUNT(*)::int AS total_bookings,
-              COUNT(CASE WHEN bo.booking_outcome_risk_level >= 4 THEN 1 END)::int AS high_risk_count,
+              COUNT(CASE WHEN bo.risk_level_id >= 4 THEN 1 END)::int AS high_risk_count,
               COUNT(CASE WHEN ba.booking_attendance_status = 'NO_SHOW' THEN 1 END)::int AS no_show_count,
               COUNT(CASE WHEN ba.booking_attendance_status = 'LATE' THEN 1 END)::int AS late_count,
               COUNT(CASE WHEN ba.booking_attendance_status = 'CHECKED_IN' THEN 1 END)::int AS checked_in_count,
@@ -412,8 +412,8 @@ export async function runAnalytics(
               COUNT(*)::int AS total_bookings,
               COUNT(bc.booking_id)::int AS cancelled_count,
               COUNT(CASE WHEN ba.booking_attendance_status = 'NO_SHOW' THEN 1 END)::int AS no_show_count,
-              ROUND(AVG(bo.booking_outcome_risk_level)::numeric, 2) AS avg_risk,
-              COUNT(CASE WHEN bo.booking_outcome_risk_level >= 4 THEN 1 END)::int AS high_risk_count
+              ROUND(AVG(bo.risk_level_id)::numeric, 2) AS avg_risk,
+              COUNT(CASE WHEN bo.risk_level_id >= 4 THEN 1 END)::int AS high_risk_count
             FROM booking b
             JOIN student_academic sa ON sa.university_id = b.university_id AND sa.student_id = b.student_id
             LEFT JOIN student_profile sp ON sp.university_id = b.university_id AND sp.student_id = b.student_id
@@ -437,9 +437,9 @@ export async function runAnalytics(
                   COUNT(CASE WHEN ba.booking_attendance_status = 'CHECKED_IN' THEN 1 END)::int AS checked_in_count,
                   COUNT(CASE WHEN ba.booking_attendance_status = 'LATE' THEN 1 END)::int AS late_count,
                   COUNT(CASE WHEN ba.booking_attendance_status = 'NO_SHOW' THEN 1 END)::int AS no_show_count,
-                  ROUND(AVG(bo.booking_outcome_risk_level)::numeric, 2) AS avg_risk,
-                  COUNT(CASE WHEN bo.booking_outcome_risk_level >= 4 THEN 1 END)::int AS high_risk_count,
-                  COUNT(bo.booking_outcome_risk_level)::int AS total_with_risk,
+                  ROUND(AVG(bo.risk_level_id)::numeric, 2) AS avg_risk,
+                  COUNT(CASE WHEN bo.risk_level_id >= 4 THEN 1 END)::int AS high_risk_count,
+                  COUNT(bo.risk_level_id)::int AS total_with_risk,
                   COUNT(CASE WHEN b.problem_category_id = ${mentalId} THEN 1 END)::int AS mental_count,
                   COUNT(CASE WHEN b.booking_status = 'COMPLETED' THEN 1 END)::int AS completed_count
                 FROM booking b

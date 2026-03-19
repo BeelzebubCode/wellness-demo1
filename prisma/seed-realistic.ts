@@ -392,7 +392,7 @@ async function seedOutcomes() {
   await exec(`
     INSERT INTO booking_outcome (
       university_id, booking_id, booking_outcome_consultant_note,
-      booking_outcome_next_step, booking_outcome_risk_level, booking_outcome_recorded_at
+      booking_outcome_next_step, risk_level_id, booking_outcome_recorded_at
     )
     SELECT b.university_id, b.booking_id,
       CASE (b.booking_id % 8)
@@ -647,7 +647,7 @@ async function printSummary() {
   gd.forEach((g: any) => console.log(`      ${(g.g || 'NULL').padEnd(15)} ${Number(g.n).toLocaleString().padStart(10)}`));
 
   console.log("\n   🎯 Risk Level Distribution:");
-  const rl: any[] = await prisma.$queryRawUnsafe(`SELECT booking_outcome_risk_level AS lv, COUNT(*)::bigint as count FROM booking_outcome WHERE booking_outcome_risk_level IS NOT NULL GROUP BY 1 ORDER BY 1`);
+  const rl: any[] = await prisma.$queryRawUnsafe(`SELECT risk_level_id AS lv, COUNT(*)::bigint as count FROM booking_outcome WHERE risk_level_id IS NOT NULL GROUP BY 1 ORDER BY 1`);
   rl.forEach((r: any) => console.log(`      Level ${r.lv}:   ${Number(r.count).toLocaleString().padStart(12)}`));
 }
 

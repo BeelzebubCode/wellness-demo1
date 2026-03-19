@@ -7,7 +7,6 @@ export type BookingStatus = 'CONFIRMED' | 'ASSIGNED' | 'COMPLETED' | 'CANCELLED'
 // ใช้เป็นสรุป user ที่ผูกกับ booking (ให้ตรงกับ formatBooking)
 export interface BookingUser {
   id: string;
-  lineId: string | null;
   name: string | null;
   pictureUrl?: string | null;
   studentId?: string | null;
@@ -62,8 +61,6 @@ export interface Booking {
   userId?: string | null;
   consultantId?: string | null;
 
-  // lineUserId + userName เผื่อไว้ใช้บนหน้า booking / admin
-  lineUserId?: string | null;
   userName?: string | null;
 
   // object user / consultant ที่ formatBooking ใส่มาให้
@@ -74,7 +71,6 @@ export interface Booking {
 // ---------- DTOs ----------
 
 export interface CreateBookingDTO {
-  lineUserId: string;
   userName?: string;
   date: string;
   startTime: string;

@@ -55,7 +55,7 @@ async function seedOutcomes() {
   await exec(`
     INSERT INTO booking_outcome (
       university_id, booking_id, booking_outcome_consultant_note,
-      booking_outcome_next_step, booking_outcome_risk_level, booking_outcome_recorded_at
+      booking_outcome_next_step, risk_level_id, booking_outcome_recorded_at
     )
     SELECT b.university_id, b.booking_id,
       CASE (b.booking_id % 8)

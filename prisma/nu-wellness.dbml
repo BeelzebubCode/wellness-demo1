@@ -1,7 +1,7 @@
 // =====================================================
 // NU Wellness — DBML (Auto-generated from schema.prisma)
-// ✅ Synced 2026-03-17
-// ✅ 79 Tables · 13 Enums · 17 Reference Tables
+// ✅ Synced 2026-03-19
+// ✅ 80 Tables · 13 Enums · 18 Reference Tables
 // =====================================================
 
 
@@ -357,9 +357,8 @@ Table account {
   account_id int [pk, increment]
   account_username varchar(50) [unique, not null]
   account_password varchar(255) [not null]
-  account_role varchar(30) [not null, ref: > account_role_category.code, note: 'บทบาทหลัก (FK -> account_role_category)']
+  account_role_id int [not null, ref: > account_role_category.account_role_id, note: 'บทบาทหลัก (FK -> account_role_category)']
   account_home_university_id int [ref: > university.university_id]
-  account_line_id varchar(100) [unique]
   account_created_at timestamp [default: `now()`]
   account_last_login_at timestamp
 
@@ -772,12 +771,23 @@ Table booking_assignment {
   Note: 'ประวัติมอบหมาย consultant (รวมยืมตัว)'
 }
 
+Table risk_level_category {
+  risk_level_id int [pk, note: '1-5']
+  code varchar(20) [unique, not null, note: 'VERY_LOW, LOW, MEDIUM, HIGH, VERY_HIGH']
+  name_th varchar(50) [not null, note: 'ต่ำมาก, ต่ำ, ปานกลาง, สูง, สูงมาก']
+  name_en varchar(50) [not null]
+  color varchar(10) [default: '#94a3b8']
+  sort_order int [default: 0]
+
+  Note: 'ระดับความเสี่ยง (Lookup) — 1=ต่ำมาก, 2=ต่ำ, 3=ปานกลาง, 4=สูง, 5=สูงมาก'
+}
+
 Table booking_outcome {
   booking_id int [not null]
   university_id int [not null]
   booking_outcome_consultant_note text [not null]
   booking_outcome_next_step text
-  booking_outcome_risk_level int
+  risk_level_id int [ref: > risk_level_category.risk_level_id, note: 'FK ระดับความเสี่ยง (1-5)']
   booking_outcome_recorded_at timestamp [default: `now()`]
 
 
@@ -948,7 +958,7 @@ Table feedback_comment {
 
 
 // =====================
-// NOTIFICATION
+// NOTIFICATION (In-Web)
 // =====================
 
 Table notification_template {
@@ -956,9 +966,10 @@ Table notification_template {
   notification_template_code varchar(50) [unique, not null]
   notification_template_title varchar(200)
   notification_template_body text
-  notification_template_format varchar(20) [default: 'TEXT']
+  notification_template_icon varchar(30) [default: 'BELL', note: 'BELL, BOOKING, ALERT, INFO, ASSIGN, REWARD']
+  notification_template_category varchar(30) [default: 'SYSTEM', note: 'SYSTEM, BOOKING, ALERT, ASSIGNMENT, REWARD']
 
-  Note: 'Template แจ้งเตือน'
+  Note: 'Template แจ้งเตือนในเว็บ'
 }
 
 Table notification {
@@ -967,14 +978,14 @@ Table notification {
   notification_template_id int [not null, ref: > notification_template.notification_template_id]
   university_id int
   booking_id int
-  notification_channel varchar(20) [default: 'LINE']
+  notification_title varchar(200)
+  notification_body text
+  notification_channel varchar(20) [default: 'WEB']
   notification_data json
-  notification_status varchar(20) [default: 'PENDING']
-  notification_sent_at timestamp
-  notification_error_message text
+  notification_read_at timestamp [note: 'null=ยังไม่อ่าน']
   notification_created_at timestamp [default: `now()`]
 
-  Note: 'รายการแจ้งเตือน (LINE/email/push)'
+  Note: 'รายการแจ้งเตือนในเว็บ (กระดิ่ง 🔔)'
 }
 
 

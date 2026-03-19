@@ -169,10 +169,10 @@ export const DeanService = {
       : Prisma.empty;
 
     const whereRisk = filters?.riskLevel && filters.riskLevel !== 'ALL'
-      ? (filters.riskLevel === 'CRITICAL' ? Prisma.sql`AND bo.booking_outcome_risk_level >= 4`
-        : (filters.riskLevel === 'HIGH' ? Prisma.sql`AND bo.booking_outcome_risk_level = 3`
-          : (filters.riskLevel === 'MODERATE' ? Prisma.sql`AND bo.booking_outcome_risk_level = 2`
-            : (filters.riskLevel === 'NORMAL' ? Prisma.sql`AND bo.booking_outcome_risk_level = 1`
+      ? (filters.riskLevel === 'CRITICAL' ? Prisma.sql`AND bo.risk_level_id >= 4`
+        : (filters.riskLevel === 'HIGH' ? Prisma.sql`AND bo.risk_level_id = 3`
+          : (filters.riskLevel === 'MODERATE' ? Prisma.sql`AND bo.risk_level_id = 2`
+            : (filters.riskLevel === 'NORMAL' ? Prisma.sql`AND bo.risk_level_id = 1`
               : Prisma.empty))))
       : Prisma.empty;
 
@@ -330,7 +330,7 @@ export const DeanService = {
     // ─── 4. Risk Distribution (in selected range) ───
     const riskStats = await prisma.$queryRaw<{ risk: number, count: bigint }[]>`
         SELECT 
-            bo.booking_outcome_risk_level as risk,
+            bo.risk_level_id as risk,
             COUNT(*)::int as count
         FROM "booking" b
         JOIN "booking_outcome" bo ON b.university_id = bo.university_id AND b.booking_id = bo.booking_id
@@ -339,7 +339,7 @@ export const DeanService = {
         LEFT JOIN "department" d ON sa.department_id = d.department_id AND sa.university_id = d.university_id
         LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
         ${commonWhereBooking}
-        GROUP BY bo.booking_outcome_risk_level
+        GROUP BY bo.risk_level_id
     `;
 
     const riskDistribution = { HIGH: 0, MEDIUM: 0, LOW: 0, NORMAL: 0 };
@@ -470,7 +470,7 @@ export const DeanService = {
     const deptRiskStats = await prisma.$queryRaw<{ department_id: number, risk: number, count: bigint }[]>`
         SELECT 
             sa.department_id,
-            bo.booking_outcome_risk_level as risk,
+            bo.risk_level_id as risk,
             COUNT(*)::int as count
         FROM "booking" b
         JOIN "booking_outcome" bo ON b.university_id = bo.university_id AND b.booking_id = bo.booking_id
@@ -479,7 +479,7 @@ export const DeanService = {
         LEFT JOIN "department" d ON sa.department_id = d.department_id AND sa.university_id = d.university_id
         LEFT JOIN "problem_category" pc ON b.problem_category_id = pc.problem_category_id
         ${commonWhereBooking}
-        GROUP BY sa.department_id, bo.booking_outcome_risk_level
+        GROUP BY sa.department_id, bo.risk_level_id
     `;
 
     // 8.2. Fetch Problem stats for each department
@@ -719,7 +719,7 @@ export const DeanService = {
         d.department_name_th as "departmentName",
         d.department_code as "departmentCode",
         pc.problem_category_name_th as "problemName",
-        bo.booking_outcome_risk_level as "riskLevel",
+        bo.risk_level_id as "riskLevel",
         gc.code as gender
       FROM "booking" b
       JOIN "student_academic" sa ON b.student_id = sa.student_id AND b.university_id = sa.university_id
@@ -785,7 +785,7 @@ export const DeanService = {
       JOIN "student_academic" sa ON s.student_id = sa.student_id AND s.university_id = sa.university_id
       WHERE b.university_id = ${universityId}
       AND sa.faculty_id = ${facultyId}
-      AND bo.booking_outcome_risk_level >= 3
+      AND bo.risk_level_id >= 3
       AND b.booking_created_at >= ${ayStart}
       AND b.booking_created_at <= ${ayEnd}
       GROUP BY year_level

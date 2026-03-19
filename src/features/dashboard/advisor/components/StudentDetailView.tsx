@@ -209,9 +209,9 @@ export function StudentDetailView({ studentId }: Props) {
                           </div>
                         </div>
 
-                        {booking.outcome?.booking_outcome_risk_level && (
+                        {booking.outcome?.risk_level_id && (
                           <RiskLevelBadge
-                            level={booking.outcome.booking_outcome_risk_level}
+                            level={booking.outcome.risk_level_id}
                           />
                         )}
                       </div>

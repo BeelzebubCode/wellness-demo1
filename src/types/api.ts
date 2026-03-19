@@ -21,7 +21,6 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
 export interface BookingFilters {
   date?: string;
   status?: string;
-  lineUserId?: string;
   consultantId?: string;
   startDate?: string;
   endDate?: string;

@@ -11,7 +11,7 @@ export const MinistryService = {
       prisma.booking.count(),
       prisma.bookingOutcome.count({
         where: {
-          booking_outcome_risk_level: { gte: 4 }, // Assuming 4-5 is high risk
+          risk_level_id: { gte: 4 }, // Assuming 4-5 is high risk
         },
       }),
     ]);
@@ -30,7 +30,7 @@ export const MinistryService = {
   async getRiskDistribution() {
     // Group by risk level
     const riskGroups = await prisma.bookingOutcome.groupBy({
-      by: ["booking_outcome_risk_level"],
+      by: ["risk_level_id"],
       _count: {
         booking_id: true,
       },
@@ -40,7 +40,7 @@ export const MinistryService = {
     // Map to a cleaner object
     const distribution = Array.from({ length: 5 }, (_, i) => {
       const level = i + 1;
-      const found = riskGroups.find((g) => g.booking_outcome_risk_level === level);
+      const found = riskGroups.find((g) => g.risk_level_id === level);
       return {
         level,
         count: found?._count.booking_id || 0,
@@ -63,7 +63,7 @@ export const MinistryService = {
     const riskyUnis = await prisma.bookingOutcome.groupBy({
       by: ["university_id"],
       where: {
-        booking_outcome_risk_level: { gte: 4 },
+        risk_level_id: { gte: 4 },
       },
       _count: {
         booking_id: true,

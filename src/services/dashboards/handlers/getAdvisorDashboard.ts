@@ -43,7 +43,7 @@ export const AdvisorService = {
             },
           },
         },
-        booking_outcome_risk_level: { gte: 4 },
+        risk_level_id: { gte: 4 },
         booking_outcome_recorded_at: { gte: thirtyDaysAgo },
       },
     });
@@ -110,7 +110,7 @@ export const AdvisorService = {
       code: s.student_code,
       name: `${s.profile?.student_first_name_th} ${s.profile?.student_last_name_th}`,
       faculty: s.academic?.faculty.faculty_name_th,
-      latestRisk: s.bookings[0]?.outcome?.booking_outcome_risk_level || 0,
+      latestRisk: s.bookings[0]?.outcome?.risk_level_id || 0,
       lastActivity: s.bookings[0]?.booking_created_at || null,
     }));
 
@@ -173,7 +173,7 @@ export const AdvisorService = {
             }),
         },
         select: {
-            booking_outcome_risk_level: true,
+            risk_level_id: true,
             booking_outcome_recorded_at: true
         },
         orderBy: {
@@ -185,8 +185,8 @@ export const AdvisorService = {
     const grouped = outcomes.reduce((acc, curr) => {
         const month = curr.booking_outcome_recorded_at.toISOString().slice(0, 7); // YYYY-MM
         if (!acc[month]) acc[month] = { totalRisk: 0, count: 0 };
-        if (curr.booking_outcome_risk_level) {
-            acc[month].totalRisk += curr.booking_outcome_risk_level;
+        if (curr.risk_level_id) {
+            acc[month].totalRisk += curr.risk_level_id;
             acc[month].count++;
         }
         return acc;
@@ -310,7 +310,7 @@ export const AdvisorService = {
 
       // Risk Distribution
       // Use Outcome if available, else 0
-      const risk = booking.outcome?.booking_outcome_risk_level || 0;
+      const risk = booking.outcome?.risk_level_id || 0;
       if (risk >= 4) riskDistribution.HIGH++;
       else if (risk === 3) riskDistribution.MEDIUM++;
       else if (risk > 0) riskDistribution.LOW++;
