@@ -5,7 +5,7 @@ import React, { useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from "recharts";
 import { Calendar } from "lucide-react";
 import { DataStoryCard } from "../widgets/story/DataStoryCard";
-import { StoryFilterStack } from "../widgets/story/StoryFilterChips";
+import { StoryChipGroup, StoryFilterStack } from "../widgets/story/StoryFilterChips";
 import { DatePresetBar, UnitToggle } from "./StoryUI";
 import { useStoryData, Tip, MONTH_LABEL, type DatePreset, type DateRange, type UnitMode } from "./story-utils";
 
@@ -15,7 +15,17 @@ export default function GenericBookingStory({ apiPath, title, delay = 0 }: Props
     const [date, setDate] = useState<DatePreset>("all");
     const [customRange, setCustomRange] = useState<DateRange | undefined>();
     const [unit, setUnit] = useState<UnitMode>("count");
-    const { data, loading } = useStoryData<any>(apiPath, "bookings", {}, date, customRange);
+    const [status, setStatus] = useState<string[]>([]);
+    const [attendance, setAttendance] = useState<string[]>([]);
+    const [service, setService] = useState<string[]>([]);
+    const [deptIds, setDeptIds] = useState<string[]>([]);
+
+    const { data, loading, meta } = useStoryData<any>(apiPath, "bookings", {
+        booking_status: status,
+        attendance_status: attendance,
+        service_mode: service,
+        department_ids: deptIds,
+    }, date, customRange);
 
     const total = data?.totalBookings ?? 0;
     const checkedIn = data?.checkedInCount ?? 0;
@@ -49,6 +59,30 @@ export default function GenericBookingStory({ apiPath, title, delay = 0 }: Props
                         <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} />
                         <UnitToggle value={unit} onChange={setUnit} />
                     </div>
+                    {meta?.departments?.length > 0 && (
+                        <StoryChipGroup
+                            label="ภาควิชา"
+                            options={meta.departments.map((d: any) => ({ value: String(d.id), label: d.nameTh }))}
+                            selected={deptIds}
+                            onChange={setDeptIds}
+                        />
+                    )}
+                    <StoryChipGroup label="สถานะ" options={[
+                        { value: "PENDING_ASSIGNMENT", label: "รอประสาน" },
+                        { value: "CONFIRMED", label: "ยืนยัน" },
+                        { value: "IN_PROGRESS", label: "กำลังดำเนิน" },
+                        { value: "COMPLETED", label: "เสร็จ" },
+                        { value: "CANCELLED", label: "ยกเลิก" },
+                    ]} selected={status} onChange={setStatus} />
+                    <StoryChipGroup label="เข้าพบ" options={[
+                        { value: "CHECKED_IN", label: "เข้าพบ" },
+                        { value: "LATE", label: "สาย" },
+                        { value: "NO_SHOW", label: "ไม่มา" },
+                    ]} selected={attendance} onChange={setAttendance} />
+                    <StoryChipGroup label="บริการ" options={[
+                        { value: "ONLINE", label: "ออนไลน์" },
+                        { value: "ONSITE", label: "ออนไซต์" },
+                    ]} selected={service} onChange={setService} />
                 </StoryFilterStack>
             }
             delay={delay}

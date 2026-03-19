@@ -80,6 +80,7 @@ export async function GET(req: NextRequest) {
             birthOrder: parseCSV("birth_order"),
             chronicConditionIds: parseCSVNumbers("chronic_condition_ids"),
             parentalStatus: parseCSV("parental_status"),
+            advisorId: parseCSVNumbers("advisorId"),
         };
 
         const data = await HeadDepartmentService.getDepartmentStoryStats(

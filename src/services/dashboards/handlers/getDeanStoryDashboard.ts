@@ -23,6 +23,7 @@ export interface DeanFilters {
     birthOrder?: string[];
     chronicConditionIds?: number[];
     parentalStatus?: string[];
+    advisorId?: number[];
 }
 
 function buildScopeWhere(universityId: number, facultyId: number, filters: DeanFilters) {
@@ -32,6 +33,9 @@ function buildScopeWhere(universityId: number, facultyId: number, filters: DeanF
     ];
     if (filters.departmentIds?.length) {
         clauses.push(`department_id IN (${filters.departmentIds.join(",")})`);
+    }
+    if (filters.advisorId?.length) {
+        clauses.push(`advisor_id IN (${filters.advisorId.join(",")})`);
     }
     if (filters.gender?.length) {
         clauses.push(`gender_code IN (${filters.gender.map(g => `'${g}'`).join(",")})`);
@@ -46,14 +50,37 @@ function buildScopeWhere(universityId: number, facultyId: number, filters: DeanF
         clauses.push(`parental_status_code IN (${filters.parentalStatus.map(v => `'${v}'`).join(",")})`);
     }
     if (filters.chronicConditionIds?.length) {
+        // Correct PostgreSQL syntax for array intersection
         clauses.push(`chronic_condition_ids && ARRAY[${filters.chronicConditionIds.join(",")}]::int[]`);
     }
+
     const w = `WHERE ${clauses.join(" AND ")}`;
-    const bookClauses: string[] = [`university_id = ${universityId}`, `faculty_id = ${facultyId}`];
-    if (filters.departmentIds?.length) bookClauses.push(`department_id IN (${filters.departmentIds.join(",")})`);
-    if (filters.chronicConditionIds?.length) bookClauses.push(`chronic_condition_ids && ARRAY[${filters.chronicConditionIds.join(",")}]::int[]`);
+
+    // Booking clauses (can follow common filters)
+    const bookClauses: string[] = [...clauses];
+    if (filters.serviceMode?.length) {
+        bookClauses.push(`service_mode_code IN (${filters.serviceMode.map(v => `'${v}'`).join(",")})`);
+    }
+    if (filters.bookingStatus?.length) {
+        bookClauses.push(`booking_status IN (${filters.bookingStatus.map(v => `'${v}'`).join(",")})`);
+    }
+    if (filters.attendanceStatus?.length) {
+        bookClauses.push(`booking_attendance_status IN (${filters.attendanceStatus.map(v => `'${v}'`).join(",")})`);
+    }
+    if (filters.problemCategoryIds?.length) {
+        bookClauses.push(`problem_category_id IN (${filters.problemCategoryIds.join(",")})`);
+    }
+
     const bw = `WHERE ${bookClauses.join(" AND ")}`;
-    return { studentWhere: w, bookingWhere: bw, riskWhere: bw };
+
+    // Risk clauses (scoped to COMPLETED bookings usually, but scope filters apply)
+    const riskClauses: string[] = [...clauses];
+    if (filters.problemCategoryIds?.length) {
+        riskClauses.push(`problem_category_id IN (${filters.problemCategoryIds.join(",")})`);
+    }
+    const rw = `WHERE ${riskClauses.join(" AND ")}`;
+
+    return { studentWhere: w, bookingWhere: bw, riskWhere: rw };
 }
 
 export const DeanStoryService = {

@@ -22,6 +22,7 @@ export interface HeadDeptFilters {
     birthOrder?: string[];
     chronicConditionIds?: number[];
     parentalStatus?: string[];
+    advisorId?: number[];
 }
 
 function buildScopeWhere(
@@ -50,6 +51,10 @@ function buildScopeWhere(
     if (filters.chronicConditionIds?.length) {
         clauses.push(`chronic_condition_ids && ARRAY[${filters.chronicConditionIds.join(",")}]::int[]`);
     }
+    if (filters.advisorId?.length) {
+        clauses.push(`advisor_id IN (${filters.advisorId.join(",")})`);
+    }
+
     const w = `WHERE ${clauses.join(" AND ")}`;
     const bookClauses: string[] = [
         `university_id = ${universityId}`,
@@ -58,6 +63,9 @@ function buildScopeWhere(
     ];
     if (filters.chronicConditionIds?.length) {
         bookClauses.push(`chronic_condition_ids && ARRAY[${filters.chronicConditionIds.join(",")}]::int[]`);
+    }
+    if (filters.advisorId?.length) {
+        bookClauses.push(`advisor_id IN (${filters.advisorId.join(",")})`);
     }
     const bw = `WHERE ${bookClauses.join(" AND ")}`;
     return { studentWhere: w, bookingWhere: bw, riskWhere: bw };
@@ -90,8 +98,12 @@ export const HeadDepartmentService = {
                 where: { department_id: departmentId, university_id: universityId },
                 select: {
                     advisor_id: true,
+                    advisor_prefix: true,
+                    advisor_first_name: true,
+                    advisor_last_name: true,
                     account: { select: { account_username: true } },
                 },
+                orderBy: { advisor_first_name: "asc" },
             }),
         ]);
 
@@ -112,6 +124,7 @@ export const HeadDepartmentService = {
             advisors: advisors.map(a => ({
                 id: a.advisor_id,
                 username: a.account?.account_username ?? "",
+                name: `${a.advisor_prefix ?? ""}${a.advisor_first_name} ${a.advisor_last_name}`.trim(),
             })),
             ...stories,
         };

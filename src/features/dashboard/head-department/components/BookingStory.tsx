@@ -21,8 +21,10 @@ export default function BookingStory({ delay = 0 }: { delay?: number }) {
     const [status, setStatus] = useState<string[]>([]);
     const [attendance, setAttendance] = useState<string[]>([]);
     const [service, setService] = useState<string[]>([]);
-    const { data, loading } = useStoryData<any>("bookings", {
+    const [advisorId, setAdvisorId] = useState<string[]>([]);
+    const { data, loading, advisors } = useStoryData<any>("bookings", {
         booking_status: status, attendance_status: attendance, service_mode: service,
+        advisorId,
     }, date, customRange);
 
     const trend = useMemo(() =>
@@ -65,6 +67,14 @@ export default function BookingStory({ delay = 0 }: { delay?: number }) {
                         { value: "ONLINE", label: "ออนไลน์" },
                         { value: "ONSITE", label: "ออนไซต์" },
                     ]} selected={service} onChange={setService} />
+                    {advisors.length > 0 && (
+                        <StoryChipGroup
+                            label="อาจารย์ที่ปรึกษา"
+                            options={advisors.map(a => ({ value: String(a.id), label: a.name }))}
+                            selected={advisorId}
+                            onChange={setAdvisorId}
+                        />
+                    )}
                 </StoryFilterStack>
             }
             delay={delay}
