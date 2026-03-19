@@ -2,155 +2,101 @@
 
 import React, { useState, useEffect } from "react";
 import { Lightbulb, Loader2, TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { RectorDashboardFilters } from "../../types";
 
 const API = "/api/v2/dashboards/rector/story";
 
-interface StoryData {
-    staffUtilization?: { internal: number; borrowed: number };
-    totalBookings?: number;
-    completedCount?: number;
-    noShowCount?: number;
-    riskDistribution?: { high: number; medium: number; low: number };
+interface PolicyRec {
+    icon: string;
+    text: string;
+    type: "danger" | "warn" | "ok";
 }
 
-interface Props {
-    globalFilters?: RectorDashboardFilters;
-}
+function buildRecs(data: Record<string, unknown>): PolicyRec[] {
+    const recs: PolicyRec[] = [];
 
-function generateRecommendations(data: StoryData): { text: string; type: "up" | "down" | "neutral" }[] {
-    const recs: { text: string; type: "up" | "down" | "neutral" }[] = [];
+    const bookings = (data.bookings as { totalBookings?: number; noShowCount?: number; pendingCount?: number }) ?? {};
+    const risk = (data.risk as { highRiskCount?: number }) ?? {};
+    const staff = (data.staffUtilization as { internal?: number; borrowed?: number }) ?? {};
 
-    const staff = data.staffUtilization;
-    if (staff) {
-        const total = staff.internal + staff.borrowed;
-        if (total > 0) {
-            const borrowPct = Math.round((staff.borrowed / total) * 100);
-            if (borrowPct > 30) {
-                recs.push({
-                    text: `มีการยืมจิตแพทย์สูงถึง ${borrowPct}% — แนะนำให้พิจารณาเพิ่มอัตรากำลังภายในเพื่อความยั่งยืน`,
-                    type: "up",
-                });
-            } else if (borrowPct > 0) {
-                recs.push({
-                    text: `ระดับการยืมตัวบุคลากรอยู่ที่ ${borrowPct}% — อยู่ในเกณฑ์บริหารจัดการได้`,
-                    type: "neutral",
-                });
-            }
-            if (staff.borrowed === 0 && staff.internal > 0) {
-                recs.push({
-                    text: "บุคลากรภายในเพียงพอ — ไม่มีความจำเป็นต้องยืมตัวจิตแพทย์จากภายนอก",
-                    type: "neutral",
-                });
-            }
-        }
+    const total = bookings.totalBookings ?? 0;
+    const noShow = bookings.noShowCount ?? 0;
+    const pending = bookings.pendingCount ?? 0;
+
+    if (total > 0) {
+        const noShowPct = Math.round((noShow / total) * 100);
+        if (noShowPct > 20) recs.push({ icon: "🔴", type: "danger", text: `อัตราไม่มาตามนัดสูง (${noShowPct}%) — ควรพัฒนาระบบแจ้งเตือน SMS/Email` });
+        else if (noShowPct > 10) recs.push({ icon: "🟡", type: "warn", text: `อัตราไม่มาตามนัด ${noShowPct}% — ควรติดตามสาเหตุ` });
+        else recs.push({ icon: "🟢", type: "ok", text: `อัตราไม่มาตามนัดดี (${noShowPct}%) — อยู่ในเกณฑ์ปกติ` });
     }
 
-    const bookings = data.totalBookings ?? 0;
-    const noShow = data.noShowCount ?? 0;
-    if (bookings > 0) {
-        const noShowPct = Math.round((noShow / bookings) * 100);
-        if (noShowPct > 20) {
-            recs.push({
-                text: `อัตราไม่มาตามนัดสูง (${noShowPct}%) — ควรพัฒนาระบบแจ้งเตือนผ่าน SMS/Email เพื่อลดการเสียโอกาส`,
-                type: "down",
-            });
-        }
+    const highRisk = risk.highRiskCount ?? 0;
+    if (highRisk > 0) recs.push({ icon: "🔴", type: "danger", text: `พบนิสิตกลุ่มเสี่ยงสูง ${highRisk.toLocaleString()} ราย — ต้องติดตาม Follow-up ด่วน` });
+
+    const staffTotal = (staff.internal ?? 0) + (staff.borrowed ?? 0);
+    if (staffTotal > 0) {
+        const borrowPct = Math.round(((staff.borrowed ?? 0) / staffTotal) * 100);
+        if (borrowPct > 30) recs.push({ icon: "🔴", type: "danger", text: `ยืมบุคลากรสูง ${borrowPct}% — ต้องพิจารณาเพิ่มอัตรากำลังภายใน` });
+        else if (borrowPct > 0) recs.push({ icon: "🟡", type: "warn", text: `ยืมบุคลากร ${borrowPct}% — อยู่ในเกณฑ์บริหารจัดการได้` });
     }
 
-    const risk = data.riskDistribution;
-    if (risk && risk.high > 0) {
-        recs.push({
-            text: `พบนิสิตกลุ่มเสี่ยงสูง ${risk.high} ราย — จำเป็นต้องได้รับการติดตาม (Follow-up) อย่างเร่งด่วน`,
-            type: "up",
-        });
-    }
+    if (pending > 0) recs.push({ icon: "🟡", type: "warn", text: `มีการนัดหมายรอดำเนินการ ${pending.toLocaleString()} รายการ — ควรเร่งประสาน` });
 
-    if (recs.length === 0) {
-        recs.push({
-            text: "สถานการณ์ปัจจุบันอยู่ในเกณฑ์ปกติ — ยังไม่มีประเด็นที่ต้องดำเนินการเชิงนโยบายเป็นพิเศษ",
-            type: "neutral",
-        });
-    }
-
+    if (recs.length === 0) recs.push({ icon: "🟢", type: "ok", text: "สถานการณ์ปัจจุบันอยู่ในเกณฑ์ปกติ — ยังไม่มีประเด็นนโยบายเร่งด่วน" });
     return recs;
 }
 
-export default function PolicySummaryCard({ globalFilters }: Props) {
-    const [recs, setRecs] = useState<{ text: string; type: "up" | "down" | "neutral" }[]>([]);
+export default function PolicySummaryCard() {
+    const [recs, setRecs] = useState<PolicyRec[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        let cancelled = false;
         (async () => {
             setLoading(true);
             try {
-                const params = new URLSearchParams();
-                params.append("story", "all");
-                
-                if (globalFilters) {
-                    if (globalFilters.startDate) params.append("start_date", globalFilters.startDate.toISOString().split('T')[0]);
-                    if (globalFilters.endDate) params.append("end_date", globalFilters.endDate.toISOString().split('T')[0]);
-                    if (globalFilters.facultyId) params.append("faculty_ids", globalFilters.facultyId.toString());
-                    if (globalFilters.departmentId) params.append("department_ids", globalFilters.departmentId.toString());
-                    if (globalFilters.problemCategoryId) params.append("problem_category_ids", globalFilters.problemCategoryId.toString());
-                    if (globalFilters.gender) params.append("gender", globalFilters.gender);
-                }
-
-                if (!globalFilters?.startDate) {
-                    params.append("all_time", "true");
-                }
-
+                const params = new URLSearchParams({ story: "all", all_time: "true" });
                 const res = await fetch(`${API}?${params.toString()}`, { credentials: "include" });
                 const json = await res.json();
-                const d = json.data ?? {};
-                const storyData: StoryData = {
-                    staffUtilization: d.staffUtilization,
-                    totalBookings: d.bookings?.totalBookings,
-                    completedCount: d.bookings?.completedCount,
-                    noShowCount: d.bookings?.noShowCount,
-                    riskDistribution: d.risk?.riskDistribution,
-                };
-                setRecs(generateRecommendations(storyData));
-            } catch (error) {
-                console.error("Failed to fetch policy summary data:", error);
-            } finally {
-                setLoading(false);
+                if (!cancelled) setRecs(buildRecs(json.data ?? {}));
+            } catch { /* silent */ } finally {
+                if (!cancelled) setLoading(false);
             }
         })();
-    }, [globalFilters]);
+        return () => { cancelled = true; };
+    }, []);
 
-    const Icon = ({ type }: { type: string }) => {
-        if (type === "up") return <div className="p-1.5 rounded-lg bg-amber-50"><TrendingUp className="w-4 h-4 text-amber-500" /></div>;
-        if (type === "down") return <div className="p-1.5 rounded-lg bg-rose-50"><TrendingDown className="w-4 h-4 text-rose-500" /></div>;
-        return <div className="p-1.5 rounded-lg bg-emerald-50"><Minus className="w-4 h-4 text-emerald-500" /></div>;
+    const TypeIcon = ({ type }: { type: string }) => {
+        if (type === "danger") return <div className="p-1.5 rounded-lg bg-rose-50"><TrendingUp className="w-3.5 h-3.5 text-rose-500" /></div>;
+        if (type === "warn") return <div className="p-1.5 rounded-lg bg-amber-50"><TrendingDown className="w-3.5 h-3.5 text-amber-500" /></div>;
+        return <div className="p-1.5 rounded-lg bg-emerald-50"><Minus className="w-3.5 h-3.5 text-emerald-500" /></div>;
     };
 
     return (
-        <div className="rounded-2xl border border-slate-100 bg-white shadow-sm p-6 animate-[fadeUp_0.5s_ease-out_both]"
-            style={{ animationDelay: "300ms" }}>
-            <div className="flex items-center gap-3 mb-6">
+        <div className="rounded-2xl border border-slate-100 bg-white shadow-sm p-6 animate-[fadeUp_0.5s_ease-out_both]" style={{ animationDelay: "300ms" }}>
+            <div className="flex items-center gap-3 mb-5">
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 grid place-items-center shadow-lg shadow-emerald-200">
                     <Lightbulb className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                    <h2 className="text-lg font-bold text-slate-800 tracking-tight">สรุปนโยบาย & คำแนะนำ</h2>
-                    <p className="text-xs text-slate-400">การวิเคราะห์เชิงลึกเพื่อสนับสนุนการตัดสินใจ</p>
+                    <h2 className="text-base font-bold text-slate-800">สรุปนโยบาย & คำแนะนำ</h2>
+                    <p className="text-xs text-slate-400">วิเคราะห์จากข้อมูลจริงเพื่อสนับสนุนการตัดสินใจ</p>
                 </div>
             </div>
 
             {loading ? (
-                <div className="flex flex-col items-center justify-center py-10 grayscale opacity-50">
-                    <Loader2 className="w-6 h-6 text-emerald-500 animate-spin mb-2" />
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">วิเคราะห์ข้อมูล...</span>
+                <div className="flex items-center justify-center py-10 opacity-50">
+                    <Loader2 className="w-6 h-6 text-emerald-500 animate-spin mr-2" />
+                    <span className="text-xs text-slate-400 font-bold">วิเคราะห์ข้อมูล...</span>
                 </div>
             ) : (
-                <div className="space-y-4">
-                    {recs.map((rec, idx) => (
-                        <div key={idx} className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50/50 border border-slate-100 transition-colors hover:bg-slate-50">
-                            <div className="mt-0.5 shrink-0">
-                                <Icon type={rec.type} />
+                <div className="space-y-2.5">
+                    {recs.map((rec, i) => (
+                        <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-slate-50/60 border border-slate-100 hover:bg-slate-50 transition-colors">
+                            <div className="shrink-0 mt-0.5"><TypeIcon type={rec.type} /></div>
+                            <div className="flex items-start gap-2">
+                                <span className="text-sm leading-none mt-0.5">{rec.icon}</span>
+                                <p className="text-sm text-slate-600 leading-relaxed font-medium">{rec.text}</p>
                             </div>
-                            <p className="text-sm text-slate-600 leading-relaxed font-medium">{rec.text}</p>
                         </div>
                     ))}
                 </div>

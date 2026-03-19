@@ -26,6 +26,11 @@ export interface RectorFilters {
     parentalStatus?: string[];
 }
 
+/** Convert a Date to YYYY-MM string for MV month column comparisons */
+function toYYYYMM(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
 function buildScopeWhere(universityId: number, filters: RectorFilters) {
     const clauses: string[] = [`university_id = ${universityId}`];
     if (filters.facultyIds?.length) {
@@ -47,10 +52,23 @@ function buildScopeWhere(universityId: number, filters: RectorFilters) {
         clauses.push(`parental_status_code IN (${filters.parentalStatus.map(v => `'${v}'`).join(",")})`);
     }
     const w = `WHERE ${clauses.join(" AND ")}`;
+
     // Booking/risk MVs don't have profile codes, just scope IDs
     const bookClauses: string[] = [`university_id = ${universityId}`];
     if (filters.facultyIds?.length) bookClauses.push(`faculty_id IN (${filters.facultyIds.join(",")})`);
     if (filters.departmentIds?.length) bookClauses.push(`department_id IN (${filters.departmentIds.join(",")})`);
+
+    // ── Date range filtering on mv_booking_summary.month column ──
+    // Only apply when NOT all_time and at least one bound is given
+    if (!filters.allTime) {
+        if (filters.dateStart) {
+            bookClauses.push(`month >= '${toYYYYMM(filters.dateStart)}'`);
+        }
+        if (filters.dateEnd) {
+            bookClauses.push(`month <= '${toYYYYMM(filters.dateEnd)}'`);
+        }
+    }
+
     const bw = `WHERE ${bookClauses.join(" AND ")}`;
     return { studentWhere: w, bookingWhere: bw, riskWhere: bw };
 }
@@ -85,10 +103,7 @@ export const RectorStoryService = {
                 { faculty_id: number; count: number }[]
             >(`
                 SELECT faculty_id, SUM(total_bookings)::int AS count
-                FROM mv_booking_summary
-                WHERE university_id = ${universityId}
-                ${filters.facultyIds?.length ? `AND faculty_id IN (${filters.facultyIds.join(",")})` : ""}
-                ${filters.departmentIds?.length ? `AND department_id IN (${filters.departmentIds.join(",")})` : ""}
+                FROM mv_booking_summary ${scope.bookingWhere}
                 GROUP BY faculty_id
                 ORDER BY count DESC
             `);

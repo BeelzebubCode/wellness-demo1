@@ -96,7 +96,6 @@ export async function queryBookingStory(scope: MVScope) {
             SELECT month, SUM(total_bookings)::int AS bookings,
                    SUM(checked_in)::int AS checked_in
             FROM mv_booking_summary ${w}
-            ${andOrWhere} month >= TO_CHAR(NOW() - INTERVAL '12 months', 'YYYY-MM')
             GROUP BY month ORDER BY month
         `),
     ]);
