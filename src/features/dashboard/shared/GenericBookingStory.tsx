@@ -32,10 +32,12 @@ export default function GenericBookingStory({ apiPath, title, delay = 0, descrip
     const noShow = data?.noShowCount ?? 0;
     const completed = data?.completedCount ?? 0;
 
+    const calc = (val: number) => unit === "percent" && total > 0 ? ((val / total) * 100).toFixed(1) + "%" : val;
+
     const trendData = (data?.monthlyTrend ?? []).map((m: any) => ({
         month: MONTH_LABEL[m.month?.split("-")[1]] || m.month,
         จอง: m.bookings,
-        มาจริง: m.checkedIn,
+        มาจริง: unit === "percent" && m.bookings > 0 ? Number(((m.checkedIn / m.bookings) * 100).toFixed(1)) : m.checkedIn,
     }));
 
     return (
@@ -50,9 +52,9 @@ export default function GenericBookingStory({ apiPath, title, delay = 0, descrip
             }
             kpis={data ? [
                 { label: "นัดหมายรวม", value: total, color: "#059669" },
-                { label: "มาตามนัด", value: checkedIn, color: "#10b981" },
-                { label: "ไม่มา", value: noShow, color: "#f43f5e" },
-                { label: "สำเร็จ", value: completed, color: "#4f46e5" },
+                { label: "มาตามนัด", value: calc(checkedIn), color: "#10b981" },
+                { label: "ไม่มา", value: calc(noShow), color: "#f43f5e" },
+                { label: "สำเร็จ", value: calc(completed), color: "#4f46e5" },
             ] : undefined}
             filters={
                 <StoryFilterStack>

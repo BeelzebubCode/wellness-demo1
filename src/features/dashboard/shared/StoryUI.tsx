@@ -6,7 +6,7 @@
 
 import React, { useState } from "react";
 import { Hash, Percent, Calendar } from "lucide-react";
-import { DATE_PRESETS, type DatePreset, type DateRange, type UnitMode } from "./story-utils";
+import { DATE_PRESETS, toLocalISODate, type DatePreset, type DateRange, type UnitMode } from "./story-utils";
 
 interface DatePresetBarProps {
     value: DatePreset;
@@ -27,8 +27,8 @@ export function DatePresetBar({ value, onChange, customRange, onCustomRangeChang
                 const now = new Date();
                 const yearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
                 onCustomRangeChange({
-                    start: yearAgo.toISOString().split("T")[0],
-                    end: now.toISOString().split("T")[0],
+                    start: toLocalISODate(yearAgo),
+                    end: toLocalISODate(now),
                 });
             }
         } else {
@@ -59,7 +59,7 @@ export function DatePresetBar({ value, onChange, customRange, onCustomRangeChang
                         value={customRange?.start ?? ""}
                         onChange={e => onCustomRangeChange?.({
                             start: e.target.value,
-                            end: customRange?.end ?? new Date().toISOString().split("T")[0],
+                            end: customRange?.end ?? toLocalISODate(new Date()),
                         })}
                         className="px-2 py-0.5 rounded-lg border border-slate-200 text-[10px] text-slate-600 bg-white focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 outline-none transition-all"
                     />
@@ -125,7 +125,7 @@ export function getDateRangeLabel(
     }
     // Compute actual start/end dates for preset periods
     const now = new Date();
-    const end = now.toISOString().split("T")[0];
+    const end = toLocalISODate(now);
     let start: Date;
     switch (preset) {
         case "month": start = new Date(now.getFullYear(), now.getMonth(), 1); break;
@@ -134,7 +134,7 @@ export function getDateRangeLabel(
         case "year": start = new Date(now.getFullYear(), 0, 1); break;
         default: start = new Date(now.getFullYear(), now.getMonth(), 1);
     }
-    return `แสดงข้อมูล ${fmtDate(start.toISOString().split("T")[0])} ถึง ${fmtDate(end)}`;
+    return `แสดงข้อมูล ${fmtDate(toLocalISODate(start))} ถึง ${fmtDate(end)}`;
 }
 
 export function DataRangeBadge({ preset, dataRange, customRange }: {

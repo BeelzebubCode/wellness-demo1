@@ -84,16 +84,16 @@ export async function queryBookingStory(scope: MVScope) {
         }[]>(`
             SELECT
                 SUM(total_bookings)::int AS total_bookings,
-                SUM(checked_in)::int AS checked_in,
-                SUM(no_show)::int AS no_show,
-                SUM(completed)::int AS completed
+                SUM(CASE WHEN attendance_status = 'CHECKED_IN' THEN total_bookings ELSE 0 END)::int AS checked_in,
+                SUM(CASE WHEN attendance_status = 'NO_SHOW' THEN total_bookings ELSE 0 END)::int AS no_show,
+                SUM(CASE WHEN booking_status = 'COMPLETED' THEN total_bookings ELSE 0 END)::int AS completed
             FROM mv_booking_summary ${w}
         `),
         prisma.$queryRawUnsafe<{
             month: string; bookings: number; checked_in: number;
         }[]>(`
             SELECT month, SUM(total_bookings)::int AS bookings,
-                   SUM(checked_in)::int AS checked_in
+                   SUM(CASE WHEN attendance_status = 'CHECKED_IN' THEN total_bookings ELSE 0 END)::int AS checked_in
             FROM mv_booking_summary ${w}
             GROUP BY month ORDER BY month
         `),

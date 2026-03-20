@@ -11,6 +11,11 @@ import { useState, useEffect } from "react";
 export type DatePreset = "month" | "3m" | "6m" | "year" | "all" | "custom";
 export type UnitMode = "count" | "percent";
 
+export function toLocalISODate(d: Date): string {
+    const tzOffset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - tzOffset).toISOString().split("T")[0];
+}
+
 export interface DateRange {
     start: string; // YYYY-MM-DD
     end: string;
@@ -79,7 +84,7 @@ export function getDateRange(
         return { start: customRange.start, end: customRange.end, allTime: false };
     }
     const now = new Date();
-    const end = now.toISOString().split("T")[0];
+    const end = toLocalISODate(now);
     let start: Date;
     switch (preset) {
         case "month": start = new Date(now.getFullYear(), now.getMonth(), 1); break;
@@ -88,7 +93,7 @@ export function getDateRange(
         case "year": start = new Date(now.getFullYear(), 0, 1); break;
         default: start = new Date(now.getFullYear(), now.getMonth(), 1);
     }
-    return { start: start.toISOString().split("T")[0], end, allTime: false };
+    return { start: toLocalISODate(start), end, allTime: false };
 }
 
 // ─── Generic Hook: story data fetching (parameterized API path) ─────────────
