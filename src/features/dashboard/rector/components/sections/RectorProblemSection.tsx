@@ -228,44 +228,6 @@ export default function RectorProblemSection({ apiPath, title, delay = 0 }: Prop
                         </div>
                     )}
 
-                    {/* Income + Parental breakdown */}
-                    <div className="grid grid-cols-2 gap-4">
-                        {(data.incomeDist ?? []).length > 0 && (
-                            <div>
-                                <p className="text-[10px] text-slate-400 font-bold mb-2 uppercase tracking-wider">กลุ่มรายได้ครอบครัว</p>
-                                {(data.incomeDist ?? []).map((d, i) => {
-                                    const pct = totalProblems > 0 ? Math.round((d.count / totalProblems) * 100) : 0;
-                                    return (
-                                        <div key={i} className="flex items-center gap-2 mb-1.5">
-                                            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
-                                            <span className="text-[11px] text-slate-600 flex-1 truncate">{INCOME_LABEL[d.label] ?? d.label}</span>
-                                            <span className="text-[11px] font-bold text-slate-700 tabular-nums">
-                                                {unit === "count" ? d.count.toLocaleString() : `${pct}%`}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                        {(data.parentalDist ?? []).length > 0 && (
-                            <div>
-                                <p className="text-[10px] text-slate-400 font-bold mb-2 uppercase tracking-wider">สถานะบิดามารดา</p>
-                                {(data.parentalDist ?? []).map((d, i) => {
-                                    const pct = totalProblems > 0 ? Math.round((d.count / totalProblems) * 100) : 0;
-                                    return (
-                                        <div key={i} className="flex items-center gap-2 mb-1.5">
-                                            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
-                                            <span className="text-[11px] text-slate-600 flex-1 truncate">{PARENTAL_LABEL[d.label] ?? d.label}</span>
-                                            <span className="text-[11px] font-bold text-slate-700 tabular-nums">
-                                                {unit === "count" ? d.count.toLocaleString() : `${pct}%`}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-
                     {/* Insight Box */}
                     {insights.length > 0 && (
                         <div className="border-t border-slate-50 pt-3 space-y-1.5">
