@@ -6,6 +6,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell, Legend, LineChart, Line,
@@ -14,10 +15,16 @@ import {
     Users, TrendingUp, CreditCard, ShieldAlert, PieChart as PieIcon,
     GitCompareArrows, Droplets, Heart, GraduationCap, AlertTriangle,
     Calendar, StickyNote, CheckCircle, ClipboardList, X, Phone, RotateCcw, Wallet,
+    LayoutDashboard, BarChart3,
 } from "lucide-react";
 import { DataStoryCard } from "../../widgets/story/DataStoryCard";
 import { StoryFilterStack, StoryChipGroup } from "../../widgets/story/StoryFilterChips";
 import { DataStoryGrid } from "../../widgets/story/DataStoryGrid";
+
+const AdvisorStatsCards = dynamic(() => import("./AdvisorStatsCards"), {
+    loading: () => <div className="h-40 bg-slate-50 animate-pulse rounded-2xl" />,
+    ssr: false,
+});
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const API = "/api/v2/dashboards/advisor/detail";
@@ -929,16 +936,24 @@ function AdvisorIncomeCard({ delay, opts }: { delay: number; opts: FilterOpts })
 // ═══════════════════════════════════════════════════════════════════════════
 export function AdvisorDashboard() {
     const [advisor, setAdvisor] = useState<{ name: string } | null>(null);
+    const [highRiskCount, setHighRiskCount] = useState<number>(0);
+    const [alertLoaded, setAlertLoaded] = useState(false);
     const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
     const [opts, setOpts] = useState<FilterOpts>({ seasons: [], bloodGroups: [], eduLevels: [], serviceModes: [] });
 
-    // Load advisor name once
+    // Load advisor name + initial alert data
     useEffect(() => {
         (async () => {
             try {
-                const res = await fetch(`${API}?section=consultations&include_categories=true`, { credentials: "include" });
+                const res = await fetch(`${API}?section=all&include_categories=true`, { credentials: "include" });
                 const json = await res.json();
                 if (json.data?.advisor) setAdvisor(json.data.advisor);
+
+                // Compute unique high-risk students for alert bar
+                const highrisk: any[] = json.data?.highrisk ?? [];
+                const uniqueHighRisk = new Set(highrisk.map((h: any) => h.studentId)).size;
+                setHighRiskCount(uniqueHighRisk);
+
                 if (json.data) {
                     setOpts({
                         seasons: json.data.seasons?.map((s: any) => ({ value: String(s.id), label: s.name })) || [],
@@ -947,47 +962,128 @@ export function AdvisorDashboard() {
                         serviceModes: json.data.serviceModes || [],
                     });
                 }
-            } catch { /* silent */ }
+            } catch { /* silent */ } finally {
+                setAlertLoaded(true);
+            }
         })();
     }, []);
 
+    const hasAlerts = alertLoaded && highRiskCount > 0;
+
     return (
-        <div className="min-h-screen">
+        <div className="max-w-7xl mx-auto pb-12">
             <style>{`
                 @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
                 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
             `}</style>
 
-            <div className="space-y-5">
-                {/* Header */}
-                <div className="animate-[fadeUp_0.5s_ease-out_both]">
-                    <div className="flex items-center gap-2.5 mb-1">
-                        <div className="w-2 h-9 rounded-full bg-gradient-to-b from-teal-500 to-emerald-600" />
-                        <h1 className="text-2xl font-black bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">
-                            แผงควบคุมอาจารย์ที่ปรึกษา
-                        </h1>
+            <div className="space-y-8">
+                {/* ── Banner ─────────────────────────────────────────── */}
+                <div className="relative overflow-hidden rounded-[2rem] bg-[#0f172a] p-8 text-white shadow-2xl">
+                    <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-teal-500/10 blur-3xl" />
+                    <div className="absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-emerald-600/5 blur-3xl" />
+
+                    <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+                        <div className="flex items-center gap-6">
+                            <div className="flex h-20 w-20 items-center justify-center rounded-[1.5rem] bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl ring-1 ring-white/20">
+                                <GraduationCap className="h-10 w-10 text-teal-400" />
+                            </div>
+                            <div>
+                                <h1 className="text-4xl font-black tracking-tight mb-2">แผงควบคุมอาจารย์ที่ปรึกษา</h1>
+                                <div className="flex flex-wrap items-center gap-3 text-white/60 text-sm font-bold">
+                                    {advisor ? (
+                                        <span className="text-teal-300 normal-case font-semibold text-base">{advisor.name}</span>
+                                    ) : (
+                                        <span className="animate-pulse text-white/30 normal-case font-normal text-sm">กำลังโหลด...</span>
+                                    )}
+                                    <span className="h-1 w-1 rounded-full bg-teal-400/40" />
+                                    <span className="text-teal-400 uppercase tracking-widest text-xs">Advisor Portal</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col items-end gap-4 self-stretch md:self-auto">
+                            <div className="text-right">
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-400 mb-1 opacity-70">สถานะปัจจุบัน</p>
+                                <div className="text-sm font-bold">
+                                    อัปเดต: {new Date().toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" })}
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 bg-emerald-500/10 backdrop-blur-md rounded-full px-4 py-2 border border-emerald-500/20">
+                                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                                <span className="text-xs font-black text-emerald-400">สิทธิ์อาจารย์ที่ปรึกษา</span>
+                            </div>
+                        </div>
                     </div>
-                    {advisor && (
-                        <p className="text-sm text-slate-400 ml-4">
-                            <span className="font-semibold text-teal-600">{advisor.name}</span> — นิสิตในที่ปรึกษา
-                        </p>
-                    )}
                 </div>
 
-                <ConsultationCard delay={0} onClickStudent={setSelectedStudentId} opts={opts} />
-                <TrendCard delay={1} opts={opts} />
+                {/* ── Alert Bar (เมื่อมีนิสิตเสี่ยงสูง) ──────────────── */}
+                {hasAlerts && (
+                    <div className="animate-[fadeUp_0.4s_ease-out_both]">
+                        <div className="bg-gradient-to-r from-red-50 via-amber-50 to-orange-50 border border-red-200/60 rounded-2xl px-5 py-4 shadow-sm">
+                            <div className="flex items-center gap-2 mb-3">
+                                <AlertTriangle className="w-4 h-4 text-red-500" />
+                                <span className="text-xs font-black text-red-700 uppercase tracking-wider">ต้องดำเนินการ — นิสิตในที่ปรึกษารอการดูแล</span>
+                            </div>
+                            <div className="flex flex-wrap gap-3">
+                                <div className="flex items-center gap-2 bg-white/80 backdrop-blur rounded-xl px-4 py-2.5 border border-red-200/50 shadow-sm">
+                                    <ShieldAlert className="w-4 h-4 text-red-500" />
+                                    <div>
+                                        <span className="text-lg font-black text-red-600 tabular-nums">{highRiskCount}</span>
+                                        <span className="text-[11px] text-red-500 ml-1.5 font-bold">นิสิตเสี่ยงสูง / วิกฤต</span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 bg-white/80 backdrop-blur rounded-xl px-4 py-2.5 border border-orange-200/50 shadow-sm">
+                                    <AlertTriangle className="w-4 h-4 text-orange-400" />
+                                    <span className="text-[11px] text-orange-600 font-bold">เลื่อนลงดูรายชื่อนิสิตกลุ่มเสี่ยงด้านล่าง</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ── KPI Stats ──────────────────────────────────────── */}
+                <section>
+                    <div className="mb-3 flex items-center gap-2">
+                        <LayoutDashboard className="h-4 w-4 text-teal-500" />
+                        <h3 className="text-lg font-black text-slate-800">ภาพรวมสถิติ</h3>
+                        <span className="text-xs text-slate-400 font-medium">— มีตัวกรองช่วงเวลาของตัวเอง</span>
+                    </div>
+                    <AdvisorStatsCards />
+                </section>
+
+                {/* ── Data Stories ───────────────────────────────────── */}
+                <div className="pt-2">
+                    <h3 className="text-lg font-black text-slate-800 flex items-center gap-3 mb-1">
+                        <BarChart3 className="h-5 w-5 text-teal-500" />
+                        Data Stories
+                    </h3>
+                    <p className="text-xs text-slate-400 mb-2">
+                        แต่ละการ์ดกรองข้อมูลได้อิสระ — กดปุ่ม <strong className="text-slate-500">ตัวกรอง</strong> ที่มุมขวาบนของแต่ละการ์ด
+                    </p>
+                </div>
+
+                <TrendCard delay={0} opts={opts} />
 
                 <DataStoryGrid cols={2}>
-                    <ProblemDonutCard delay={2} opts={opts} />
-                    <ComparisonCard delay={3} opts={opts} />
+                    <ProblemDonutCard delay={1} opts={opts} />
+                    <ComparisonCard delay={2} opts={opts} />
                 </DataStoryGrid>
 
-                <AdvisorIncomeCard delay={4} opts={opts} />
+                <AdvisorIncomeCard delay={3} opts={opts} />
 
-                <HighRiskCard delay={5} onClickStudent={setSelectedStudentId} opts={opts} />
+                <HighRiskCard delay={4} onClickStudent={setSelectedStudentId} opts={opts} />
 
-                <div className="text-center text-xs text-slate-300 py-3 animate-[fadeUp_0.5s_ease-out_both]" style={{ animationDelay: "500ms" }}>
-                    อัปเดตล่าสุด: {new Date().toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })}
+                <ConsultationCard delay={5} onClickStudent={setSelectedStudentId} opts={opts} />
+
+                {/* ── Footer ─────────────────────────────────────────── */}
+                <div className="pt-12 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-400">
+                    <div className="flex items-center gap-3">
+                        <span className="font-bold text-slate-500">รายงานระดับอาจารย์ที่ปรึกษา</span>
+                        <span className="hidden md:inline w-1 h-1 bg-slate-300 rounded-full" />
+                        <span>ข้อมูล ณ {new Date().toLocaleDateString("th-TH")}</span>
+                    </div>
+                    <span className="px-2 py-1 bg-slate-100 rounded text-slate-500 font-mono text-[10px] uppercase tracking-widest font-bold">Confidential</span>
                 </div>
             </div>
 

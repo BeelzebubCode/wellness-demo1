@@ -20,6 +20,8 @@ import {
 import ProblemDrillDown from "./ProblemDrillDown";
 
 // ─── Risk level metadata ────────────────────────────────────────────────────
+// Keys MUST match what the API returns in distribution[].label
+// (VERY_HIGH / HIGH / MEDIUM / LOW / VERY_LOW / UNKNOWN)
 const RISK_LEVELS: {
     key: string;
     level: number | null;
@@ -28,12 +30,12 @@ const RISK_LEVELS: {
     gradient: [string, string];
     bg: string;
 }[] = [
-        { key: "5", level: 5, label: "สูงมาก (5)", color: "#dc2626", gradient: ["#dc2626", "#f87171"], bg: "bg-red-50" },
-        { key: "4", level: 4, label: "สูง (4)", color: "#f97316", gradient: ["#f97316", "#fb923c"], bg: "bg-orange-50" },
-        { key: "3", level: 3, label: "ปานกลาง (3)", color: "#eab308", gradient: ["#eab308", "#facc15"], bg: "bg-yellow-50" },
-        { key: "2", level: 2, label: "ต่ำ (2)", color: "#22c55e", gradient: ["#22c55e", "#4ade80"], bg: "bg-green-50" },
-        { key: "1", level: 1, label: "ต่ำมาก (1)", color: "#06b6d4", gradient: ["#06b6d4", "#67e8f9"], bg: "bg-cyan-50" },
-        { key: "UNKNOWN", level: null, label: "ไม่ระบุ", color: "#94a3b8", gradient: ["#94a3b8", "#cbd5e1"], bg: "bg-slate-50" },
+        { key: "VERY_HIGH", level: 5, label: "สูงมาก (5)", color: "#dc2626", gradient: ["#dc2626", "#f87171"], bg: "bg-red-50" },
+        { key: "HIGH",      level: 4, label: "สูง (4)",    color: "#f97316", gradient: ["#f97316", "#fb923c"], bg: "bg-orange-50" },
+        { key: "MEDIUM",    level: 3, label: "ปานกลาง (3)",color: "#eab308", gradient: ["#eab308", "#facc15"], bg: "bg-yellow-50" },
+        { key: "LOW",       level: 2, label: "ต่ำ (2)",    color: "#22c55e", gradient: ["#22c55e", "#4ade80"], bg: "bg-green-50" },
+        { key: "VERY_LOW",  level: 1, label: "ต่ำมาก (1)", color: "#06b6d4", gradient: ["#06b6d4", "#67e8f9"], bg: "bg-cyan-50" },
+        { key: "UNKNOWN",   level: null, label: "ไม่ระบุ",  color: "#94a3b8", gradient: ["#94a3b8", "#cbd5e1"], bg: "bg-slate-50" },
     ];
 
 function riskLabel(raw: string): string {
@@ -97,8 +99,8 @@ export default function RiskStory({ delay = 0 }: { delay?: number }) {
     }, [dist, totalAll, unit]);
 
     // Smart narration
-    const highCount = dist.find(d => d.label === "5")?.count ?? 0;
-    const medCount = dist.find(d => d.label === "3")?.count ?? 0;
+    const highCount = dist.find(d => d.label === "VERY_HIGH")?.count ?? 0;
+    const medCount  = dist.find(d => d.label === "MEDIUM")?.count  ?? 0;
     const narration = data
         ? `พบ ${totalAll} case — ความเสี่ยงสูงมาก ${highCount} คน, ปานกลาง ${medCount} คน`
         : "กำลังโหลด...";
@@ -106,8 +108,9 @@ export default function RiskStory({ delay = 0 }: { delay?: number }) {
     const handleBarClick = (_: any, idx: number) => {
         const item = chartData[idx];
         if (item) {
-            // Use risk level number or "null" for unknown
-            const riskParam = item.raw === "UNKNOWN" ? "null" : item.raw;
+            // Drill-down API expects numeric level ("1"-"5") or "null"
+            const rl = RISK_LEVELS.find(r => r.key === item.raw);
+            const riskParam = rl?.level != null ? String(rl.level) : "null";
             setDrillRisk(riskParam);
         }
     };
@@ -176,7 +179,7 @@ export default function RiskStory({ delay = 0 }: { delay?: number }) {
                     {/* Horizontal risk bars */}
                     {chartData.length > 0 ? (
                         <ResponsiveContainer width="100%" height={chartData.length * 40 + 10}>
-                            <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 45 }}>
+                            <BarChart data={chartData} layout="vertical" margin={{ left: 0, right: 45 }}>
                                 <defs>
                                     {RISK_LEVELS.map(rl => (
                                         <linearGradient key={rl.key} id={`risk-${rl.key}`} x1="0" y1="0" x2="1" y2="0">
@@ -195,7 +198,7 @@ export default function RiskStory({ delay = 0 }: { delay?: number }) {
                                 <YAxis
                                     type="category" dataKey="name"
                                     tick={{ fontSize: 11, fill: "#475569", fontWeight: 600 }}
-                                    width={100} axisLine={false} tickLine={false}
+                                    width={120} axisLine={false} tickLine={false}
                                 />
                                 <Tooltip
                                     content={({ active, payload }) => {
@@ -235,8 +238,8 @@ export default function RiskStory({ delay = 0 }: { delay?: number }) {
                                                     fill={`url(#${gradId})`}
                                                     className="transition-opacity hover:opacity-80"
                                                 />
-                                                {/* Color dot */}
-                                                <circle cx={x - 8} cy={y + height / 2} r={4} fill={payload.color} />
+                                                {/* Color dot — rendered inside bar start to avoid overlapping the Y-axis label */}
+                                                <circle cx={x + 12} cy={y + height / 2} r={4} fill="rgba(255,255,255,0.75)" />
                                             </g>
                                         );
                                     }}
@@ -254,7 +257,8 @@ export default function RiskStory({ delay = 0 }: { delay?: number }) {
                                 <button
                                     key={d.raw}
                                     onClick={() => {
-                                        const riskParam = d.raw === "UNKNOWN" ? "null" : d.raw;
+                                        const rl = RISK_LEVELS.find(r => r.key === d.raw);
+                                        const riskParam = rl?.level != null ? String(rl.level) : "null";
                                         setDrillRisk(riskParam);
                                     }}
                                     className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-100 hover:border-slate-300 hover:shadow-md transition-all duration-200 cursor-pointer group"
