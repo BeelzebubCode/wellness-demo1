@@ -16,9 +16,9 @@ const BAR_COLORS = [
 ];
 
 const PARENTAL_LABEL: Record<string, string> = {
-    TOGETHER:       "อยู่ด้วยกัน",   DIVORCED:        "หย่าร้าง",
-    FATHER_DECEASED:"บิดาเสียชีวิต", MOTHER_DECEASED: "มารดาเสียชีวิต",
-    BOTH_DECEASED:  "เสียชีวิตทั้งคู่", SINGLE_PARENT: "เลี้ยงเดี่ยว",
+    TOGETHER: "อยู่ด้วยกัน", DIVORCED: "หย่าร้าง",
+    FATHER_DECEASED: "บิดาเสียชีวิต", MOTHER_DECEASED: "มารดาเสียชีวิต",
+    BOTH_DECEASED: "เสียชีวิตทั้งคู่", SINGLE_PARENT: "เลี้ยงเดี่ยว",
 };
 
 interface Props { apiPath: string; title: string; delay?: number; }
@@ -36,41 +36,41 @@ function buildProblemInsights(
     // Top problem concentration
     if (topPct > 40) {
         insights.push({
-            icon:  <TrendingUp className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />,
+            icon: <TrendingUp className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />,
             color: "text-rose-700 bg-rose-50 border-rose-100",
-            text:  `⚠ ปัญหา "${top.label}" มีสัดส่วนสูงมากถึง ${topPct}% — ควรออกแบบโปรแกรมเฉพาะเจาะจง`,
+            text: `⚠ ปัญหา "${top.label}" มีสัดส่วนสูงมากถึง ${topPct}% — ควรออกแบบโปรแกรมเฉพาะเจาะจง`,
         });
     } else if (topPct > 25) {
         insights.push({
-            icon:  <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />,
+            icon: <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />,
             color: "text-amber-700 bg-amber-50 border-amber-100",
-            text:  `"${top.label}" เป็นปัญหาอันดับ 1 (${topPct}%) — ควรวางมาตรการป้องกันเชิงรุก`,
+            text: `"${top.label}" เป็นปัญหาอันดับ 1 (${topPct}%) — ควรวางมาตรการป้องกันเชิงรุก`,
         });
     } else {
         insights.push({
-            icon:  <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />,
+            icon: <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />,
             color: "text-blue-700 bg-blue-50 border-blue-100",
-            text:  `ปัญหากระจายตัวหลายประเภท — "${top.label}" นำ (${topPct}%) ควรดูแลแบบองค์รวม`,
+            text: `ปัญหากระจายตัวหลายประเภท — "${top.label}" นำ (${topPct}%) ควรดูแลแบบองค์รวม`,
         });
     }
 
     // Diversity of problems
     if (categories.length >= 8) {
         insights.push({
-            icon:  <TrendingUp className="w-3.5 h-3.5 text-purple-500 shrink-0 mt-0.5" />,
+            icon: <TrendingUp className="w-3.5 h-3.5 text-purple-500 shrink-0 mt-0.5" />,
             color: "text-purple-700 bg-purple-50 border-purple-100",
-            text:  `พบปัญหาหลากหลายถึง ${categories.length} ประเภท — ควรมีบุคลากรที่มีความเชี่ยวชาญหลากหลายด้าน`,
+            text: `พบปัญหาหลากหลายถึง ${categories.length} ประเภท — ควรมีบุคลากรที่มีความเชี่ยวชาญหลากหลายด้าน`,
         });
     }
 
     // Top 3 coverage
     const top3Total = categories.slice(0, 3).reduce((s, c) => s + c.count, 0);
-    const top3Pct   = Math.round((top3Total / total) * 100);
+    const top3Pct = Math.round((top3Total / total) * 100);
     if (top3Pct >= 70 && categories.length > 3) {
         insights.push({
-            icon:  <Minus className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />,
+            icon: <Minus className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />,
             color: "text-slate-700 bg-slate-50 border-slate-100",
-            text:  `3 ปัญหาแรกคิดเป็น ${top3Pct}% ของทั้งหมด — การแก้ไข 3 ปัญหานี้จะส่งผลกระทบสูงสุด`,
+            text: `3 ปัญหาแรกคิดเป็น ${top3Pct}% ของทั้งหมด — การแก้ไข 3 ปัญหานี้จะส่งผลกระทบสูงสุด`,
         });
     }
 
@@ -86,14 +86,14 @@ function buildProblemNarration(categories: { label: string; count: number }[], t
 }
 
 export default function RectorProblemSection({ apiPath, title, delay = 0 }: Props) {
-    const [date, setDate]               = useState<DatePreset>("all");
+    const [date, setDate] = useState<DatePreset>("all");
     const [customRange, setCustomRange] = useState<DateRange | undefined>();
-    const [unit, setUnit]               = useState<UnitMode>("count");
-    const [income, setIncome]           = useState<string[]>([]);
-    const [blood, setBlood]             = useState<string[]>([]);
-    const [parental, setParental]       = useState<string[]>([]);
-    const [chronic, setChronic]         = useState<string[]>([]);
-    const [deptIds, setDeptIds]         = useState<string[]>([]);
+    const [unit, setUnit] = useState<UnitMode>("count");
+    const [income, setIncome] = useState<string[]>([]);
+    const [blood, setBlood] = useState<string[]>([]);
+    const [parental, setParental] = useState<string[]>([]);
+    const [chronic, setChronic] = useState<string[]>([]);
+    const [deptIds, setDeptIds] = useState<string[]>([]);
     const [chronicConditions, setChronicConditions] = useState<{ id: number; nameTh: string }[]>([]);
 
     useEffect(() => {
@@ -104,34 +104,34 @@ export default function RectorProblemSection({ apiPath, title, delay = 0 }: Prop
     }, []);
 
     const storyFilters: Record<string, string[]> = {
-        department_ids:       deptIds,
+        department_ids: deptIds,
         family_income_bracket: income,
-        blood_group:          blood,
-        parental_status:      parental,
+        blood_group: blood,
+        parental_status: parental,
         chronic_condition_ids: chronic,
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, loading, meta } = useStoryData<{
-        categories?:  { label: string; count: number }[];
-        incomeDist?:  { label: string; count: number }[];
-        parentalDist?:{ label: string; count: number }[];
+        categories?: { label: string; count: number }[];
+        incomeDist?: { label: string; count: number }[];
+        parentalDist?: { label: string; count: number }[];
     }>(apiPath, "problems", storyFilters, date, customRange);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const metaDepts: { id: number; nameTh: string }[] = (meta as any)?.departments ?? [];
-    const categories   = data?.categories ?? [];
+    const categories = data?.categories ?? [];
     const totalProblems = categories.reduce((s, c) => s + c.count, 0);
     const barData = [...categories]
         .sort((a, b) => b.count - a.count)
         .map(c => ({
-            name:  c.label,
+            name: c.label,
             count: c.count,
-            pct:   totalProblems > 0 ? parseFloat(((c.count / totalProblems) * 100).toFixed(1)) : 0,
+            pct: totalProblems > 0 ? parseFloat(((c.count / totalProblems) * 100).toFixed(1)) : 0,
         }));
 
     const chartHeight = Math.max(200, barData.length * 34 + 40);
-    const insights    = data ? buildProblemInsights(barData, totalProblems) : [];
+    const insights = data ? buildProblemInsights(categories, totalProblems) : [];
 
     return (
         <DataStoryCard
@@ -139,15 +139,15 @@ export default function RectorProblemSection({ apiPath, title, delay = 0 }: Prop
             iconGradient="bg-gradient-to-br from-amber-500 to-orange-600"
             title={title}
             description="ประเภทปัญหาที่นิสิตนำเข้ามาขอรับบริการ — ใช้วิเคราะห์แนวโน้มและวางแผนป้องกันเชิงรุก"
-            narration={data ? buildProblemNarration(barData, totalProblems) : "กำลังโหลด..."}
+            narration={data ? buildProblemNarration(categories, totalProblems) : "กำลังโหลด..."}
             kpis={data ? [
-                { label: "กรณีทั้งหมด", value: totalProblems,    color: "#f59e0b" },
-                { label: "ประเภท",       value: categories.length, color: "#4f46e5" },
+                { label: "กรณีทั้งหมด", value: totalProblems, color: "#f59e0b" },
+                { label: "ประเภท", value: categories.length, color: "#4f46e5" },
             ] : undefined}
             filters={
                 <StoryFilterStack>
                     <div className="flex items-center justify-between gap-3">
-                        <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} />
+                        <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} dataRange={(meta as any)?.dataRange} />
                         <UnitToggle value={unit} onChange={setUnit} />
                     </div>
                     {metaDepts.length > 0 && (
@@ -158,25 +158,25 @@ export default function RectorProblemSection({ apiPath, title, delay = 0 }: Prop
                         />
                     )}
                     <StoryChipGroup label="รายได้" options={[
-                        { value: "UNDER_100K",        label: "< 100K"   },
+                        { value: "UNDER_100K", label: "< 100K" },
                         { value: "BETWEEN_100K_200K", label: "100-200K" },
                         { value: "BETWEEN_200K_300K", label: "200-300K" },
                         { value: "BETWEEN_300K_500K", label: "300-500K" },
                         { value: "BETWEEN_500K_800K", label: "500-800K" },
-                        { value: "BETWEEN_800K_1M",   label: "800K-1M"  },
-                        { value: "OVER_1M",           label: "> 1M"     },
+                        { value: "BETWEEN_800K_1M", label: "800K-1M" },
+                        { value: "OVER_1M", label: "> 1M" },
                     ]} selected={income} onChange={setIncome} />
                     <StoryChipGroup label="กรุ๊ปเลือด" options={[
-                        { value: "A", label: "A" }, { value: "B",  label: "B"  },
+                        { value: "A", label: "A" }, { value: "B", label: "B" },
                         { value: "O", label: "O" }, { value: "AB", label: "AB" },
                     ]} selected={blood} onChange={setBlood} />
                     <StoryChipGroup label="สถานะบิดามารดา" options={[
-                        { value: "TOGETHER",        label: "อยู่ด้วยกัน" },
-                        { value: "DIVORCED",        label: "หย่าร้าง"   },
-                        { value: "SINGLE_PARENT",   label: "เลี้ยงเดี่ยว" },
+                        { value: "TOGETHER", label: "อยู่ด้วยกัน" },
+                        { value: "DIVORCED", label: "หย่าร้าง" },
+                        { value: "SINGLE_PARENT", label: "เลี้ยงเดี่ยว" },
                         { value: "FATHER_DECEASED", label: "บิดาเสียชีวิต" },
                         { value: "MOTHER_DECEASED", label: "มารดาเสียชีวิต" },
-                        { value: "BOTH_DECEASED",   label: "เสียชีวิตทั้งคู่" },
+                        { value: "BOTH_DECEASED", label: "เสียชีวิตทั้งคู่" },
                     ]} selected={parental} onChange={setParental} />
                     {chronicConditions.length > 0 && (
                         <StoryChipGroup label="โรคประจำตัว"
@@ -185,6 +185,9 @@ export default function RectorProblemSection({ apiPath, title, delay = 0 }: Prop
                     )}
                 </StoryFilterStack>
             }
+            datePreset={date}
+            dataRange={(meta as any)?.dataRange}
+            customRange={customRange}
             delay={delay}
             loading={loading}
         >

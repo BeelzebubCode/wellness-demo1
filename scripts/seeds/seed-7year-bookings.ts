@@ -10,7 +10,7 @@
 //   5.  booking_agreement_signature — ทุก COMPLETED (student signed agreement)
 //   6.  booking_attendance      — ทุก COMPLETED/CANCELLED
 //   7.  booking_exception_request — 2% of NO_SHOW attendance
-//   8.  booking_discipline_log  — 5% of NO_SHOW cases
+//   8.  discipline_log           — 5% of NO_SHOW cases
 //   9.  feedback                — 80% of COMPLETED
 //   10. feedback_rating         — ทุก feedback × criteria
 //   11. feedback_comment        — 30% of feedback
@@ -35,7 +35,7 @@ async function main() {
   await prisma.$executeRawUnsafe(`
     TRUNCATE booking, booking_session, booking_assignment, booking_outcome,
              booking_cancellation, booking_attendance, booking_exception_request,
-             booking_exception_evidence, booking_discipline_log, 
+             booking_exception_evidence, discipline_log, 
              booking_agreement_signature,
              feedback, feedback_rating, feedback_comment,
              student_point_transaction, student_point_wallet,
@@ -403,16 +403,15 @@ async function main() {
   `);
   console.log(`         ${((Date.now() - t) / 1000).toFixed(0)}s`);
 
-  // 4.14 booking_discipline_log (NO_SHOW penalties)
-  console.log('   [14/14] booking_discipline_log...');
+  // 4.14 discipline_log (NO_SHOW penalties)
+  console.log('   [14/14] discipline_log...');
   t = Date.now();
   await prisma.$executeRawUnsafe(`
-    INSERT INTO booking_discipline_log (university_id, student_id, booking_id,
-      booking_discipline_event_type, booking_discipline_delta_score,
-      booking_discipline_note, booking_discipline_created_at)
+    INSERT INTO discipline_log (university_id, student_id, booking_id,
+      action_type_code,
+      note, created_at)
     SELECT ba.university_id, b.student_id, ba.booking_id,
-      'NO_SHOW_PENALTY'::"DisciplineEventType",
-      -1,
+      'NO_SHOW',
       'ลงโทษจากการไม่มาตามนัด (auto-seed)',
       ts.time_slot_start_datetime + interval '2 days'
     FROM booking_attendance ba

@@ -89,7 +89,6 @@ export async function consultantListBorrowedAssignments(input: {
             assignedAt: a.borrow_assigned_at.toISOString(),
             submittedAt: a.borrowRequest.borrow_submitted_at?.toISOString() || null,
             createdAt: a.borrowRequest.borrow_request_created_at.toISOString(),
-            note: a.borrow_assignment_note,
             assignedBookings: a.BookingAssignment.map(ba => {
                 const s = ba.booking.student;
                 const p = s.profile;

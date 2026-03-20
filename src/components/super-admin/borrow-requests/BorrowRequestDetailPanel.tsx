@@ -324,13 +324,7 @@ export function BorrowRequestDetailPanel({
                       </div>
                     )}
 
-                    {/* Note */}
-                    {a.borrowAssignmentNote && (
-                      <div className="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-200/60 rounded-lg px-3 py-2 whitespace-pre-wrap">
-                        <span className="font-bold">หมายเหตุ:</span>{" "}
-                        {a.borrowAssignmentNote}
-                      </div>
-                    )}
+
                   </div>
                 </div>
               );

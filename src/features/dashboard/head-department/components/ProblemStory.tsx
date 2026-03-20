@@ -124,7 +124,7 @@ export default function ProblemStory({ delay = 0 }: { delay?: number }) {
     const [chronic, setChronic] = useState<string[]>([]);
     const [advisorId, setAdvisorId] = useState<string[]>([]);
 
-    const { data, loading, advisors } = useStoryData<any>("problems", {
+    const { data, loading, advisors, dataRange } = useStoryData<any>("problems", {
         family_income_bracket: income,
         parental_status: parental,
         blood_group: blood,
@@ -178,7 +178,7 @@ export default function ProblemStory({ delay = 0 }: { delay?: number }) {
                 filters={
                     <StoryFilterStack>
                         <div className="flex items-center justify-between gap-3">
-                            <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} />
+                            <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} dataRange={dataRange} />
                             <UnitToggle value={unit} onChange={setUnit} />
                         </div>
                         <StoryChipGroup label="รายได้" options={[
@@ -205,6 +205,9 @@ export default function ProblemStory({ delay = 0 }: { delay?: number }) {
                         )}
                     </StoryFilterStack>
                 }
+                datePreset={date}
+                dataRange={dataRange}
+                customRange={customRange}
                 delay={delay}
                 loading={loading}
             >

@@ -89,10 +89,20 @@ function getTimePeriodDates(period: TimePeriod, customStart?: string, customEnd?
     return { dateStart: start.toISOString().split("T")[0], dateEnd: end };
 }
 
-function getTimePeriodLabel(period: TimePeriod, customStart?: string, customEnd?: string): string {
-    if (period === "all") return "ข้อมูลทั้งหมด";
-    const { dateStart, dateEnd } = getTimePeriodDates(period, customStart, customEnd);
+function getTimePeriodLabel(period: TimePeriod, customStart?: string, customEnd?: string, dataRange?: { minDate: string; maxDate: string } | null): string {
     const fmt = (d: string) => new Date(d).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" });
+    const fmtMonth = (ym: string) => {
+        const [y, m] = ym.split("-");
+        const d = new Date(Number(y), Number(m) - 1, 1);
+        return d.toLocaleDateString("th-TH", { month: "short", year: "numeric" });
+    };
+    if (period === "all") {
+        if (dataRange?.minDate && dataRange?.maxDate) {
+            return `ข้อมูลตั้งแต่ ${dataRange.minDate.length <= 7 ? fmtMonth(dataRange.minDate) : fmt(dataRange.minDate)} ถึง ${dataRange.maxDate.length <= 7 ? fmtMonth(dataRange.maxDate) : fmt(dataRange.maxDate)}`;
+        }
+        return "ข้อมูลทั้งหมด";
+    }
+    const { dateStart, dateEnd } = getTimePeriodDates(period, customStart, customEnd);
     if (!dateStart && !dateEnd) return "กรุณาเลือกวันที่";
     return `แสดงข้อมูล ${dateStart ? fmt(dateStart) : "..."} ถึง ${dateEnd ? fmt(dateEnd) : "ปัจจุบัน"}`;
 }
@@ -222,6 +232,7 @@ function ChartTip({ active, payload, label }: any) {
 function useCardData(section: string, filters: CardFilters) {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [dataRange, setDataRange] = useState<{ minDate: string; maxDate: string } | null>(null);
 
     const fetchKey = JSON.stringify({ section, ...filters });
 
@@ -254,7 +265,10 @@ function useCardData(section: string, filters: CardFilters) {
                 if (cancelled) return;
                 const json = await res.json();
                 if (cancelled) return;
-                if (json.success) setData(json.data);
+                if (json.success) {
+                    setData(json.data);
+                    if (json.data?.dataRange) setDataRange(json.data.dataRange);
+                }
             } catch { /* silent */ } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -262,15 +276,15 @@ function useCardData(section: string, filters: CardFilters) {
         return () => { cancelled = true; clearTimeout(timer); };
     }, [fetchKey]);
 
-    return { data, loading };
+    return { data, loading, dataRange };
 }
 
 // ─── Date Range Label badge ─────────────────────────────────────────────────
-function DateRangeBadge({ period, customStart, customEnd }: { period: TimePeriod; customStart?: string; customEnd?: string }) {
+function DateRangeBadge({ period, customStart, customEnd, dataRange }: { period: TimePeriod; customStart?: string; customEnd?: string; dataRange?: { minDate: string; maxDate: string } | null }) {
     return (
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 w-fit">
             <Calendar className="w-3.5 h-3.5 text-teal-500" />
-            <span className="text-[11px] font-medium text-slate-500">{getTimePeriodLabel(period, customStart, customEnd)}</span>
+            <span className="text-[11px] font-medium text-slate-500">{getTimePeriodLabel(period, customStart, customEnd, dataRange)}</span>
         </div>
     );
 }
@@ -287,7 +301,7 @@ interface FilterOpts {
 
 function ConsultationCard({ delay, onClickStudent, opts }: { delay: number; onClickStudent: (id: number) => void; opts: FilterOpts }) {
     const [filters, setFilters] = useState<CardFilters>({ ...DEFAULT_FILTERS });
-    const { data, loading } = useCardData("consultations", filters);
+    const { data, loading, dataRange } = useCardData("consultations", filters);
     const list = data?.consultations ?? [];
     const total = list.reduce((s: number, c: any) => s + c.count, 0);
 
@@ -318,7 +332,7 @@ function ConsultationCard({ delay, onClickStudent, opts }: { delay: number; onCl
                     {isFiltersDirty(filters) && <ResetFilterButton onClick={() => setFilters({ ...DEFAULT_FILTERS })} />}
                 </StoryFilterStack>
             }
-            headerBadge={<DateRangeBadge period={filters.timePeriod} customStart={filters.customStart} customEnd={filters.customEnd} />}
+            headerBadge={<DateRangeBadge period={filters.timePeriod} customStart={filters.customStart} customEnd={filters.customEnd} dataRange={dataRange} />}
             delay={delay} loading={loading}
         >
             {list.length > 0 ? (
@@ -346,7 +360,7 @@ function ConsultationCard({ delay, onClickStudent, opts }: { delay: number; onCl
 // ═══════════════════════════════════════════════════════════════════════════
 function TrendCard({ delay, opts }: { delay: number; opts: FilterOpts }) {
     const [filters, setFilters] = useState<CardFilters>({ ...DEFAULT_FILTERS });
-    const { data, loading } = useCardData("trend", filters);
+    const { data, loading, dataRange } = useCardData("trend", filters);
     const trend = data?.trend ?? [];
     const chartData = trend.map((t: any) => {
         const [y, m] = t.month.split("-");
@@ -376,7 +390,7 @@ function TrendCard({ delay, opts }: { delay: number; opts: FilterOpts }) {
                     {isFiltersDirty(filters) && <ResetFilterButton onClick={() => setFilters({ ...DEFAULT_FILTERS })} />}
                 </StoryFilterStack>
             }
-            headerBadge={<DateRangeBadge period={filters.timePeriod} customStart={filters.customStart} customEnd={filters.customEnd} />}
+            headerBadge={<DateRangeBadge period={filters.timePeriod} customStart={filters.customStart} customEnd={filters.customEnd} dataRange={dataRange} />}
             delay={delay} loading={loading}
         >
             {chartData.length > 0 ? (
@@ -534,7 +548,7 @@ function StudentDetailModal({ studentId, onClose }: { studentId: number | null; 
 // ═══════════════════════════════════════════════════════════════════════════
 function ProblemDonutCard({ delay, opts }: { delay: number; opts: FilterOpts }) {
     const [filters, setFilters] = useState<CardFilters>({ ...DEFAULT_FILTERS });
-    const { data, loading } = useCardData("problems", filters);
+    const { data, loading, dataRange } = useCardData("problems", filters);
     const donut = data?.problems ?? [];
     const donutData = donut.map((d: any, i: number) => ({
         name: d.category, value: d.count, color: PIE_COLORS[i % PIE_COLORS.length],
@@ -563,7 +577,7 @@ function ProblemDonutCard({ delay, opts }: { delay: number; opts: FilterOpts }) 
                     {isFiltersDirty(filters) && <ResetFilterButton onClick={() => setFilters({ ...DEFAULT_FILTERS })} />}
                 </StoryFilterStack>
             }
-            headerBadge={<DateRangeBadge period={filters.timePeriod} customStart={filters.customStart} customEnd={filters.customEnd} />}
+            headerBadge={<DateRangeBadge period={filters.timePeriod} customStart={filters.customStart} customEnd={filters.customEnd} dataRange={dataRange} />}
             delay={delay} loading={loading}
         >
             {donutData.length > 0 ? (
@@ -589,7 +603,7 @@ function ProblemDonutCard({ delay, opts }: { delay: number; opts: FilterOpts }) 
 // ═══════════════════════════════════════════════════════════════════════════
 function ComparisonCard({ delay, opts }: { delay: number; opts: FilterOpts }) {
     const [filters, setFilters] = useState<CardFilters>({ ...DEFAULT_FILTERS });
-    const { data, loading } = useCardData("comparison", filters);
+    const { data, loading, dataRange } = useCardData("comparison", filters);
     const comparison = data?.comparison ?? { incomeVsCount: [], familyVsCount: [] };
 
     return (
@@ -610,7 +624,7 @@ function ComparisonCard({ delay, opts }: { delay: number; opts: FilterOpts }) {
                     {isFiltersDirty(filters) && <ResetFilterButton onClick={() => setFilters({ ...DEFAULT_FILTERS })} />}
                 </StoryFilterStack>
             }
-            headerBadge={<DateRangeBadge period={filters.timePeriod} customStart={filters.customStart} customEnd={filters.customEnd} />}
+            headerBadge={<DateRangeBadge period={filters.timePeriod} customStart={filters.customStart} customEnd={filters.customEnd} dataRange={dataRange} />}
             delay={delay} loading={loading}
         >
             <div className="space-y-5 mt-2">
@@ -659,7 +673,7 @@ function ComparisonCard({ delay, opts }: { delay: number; opts: FilterOpts }) {
 // ═══════════════════════════════════════════════════════════════════════════
 function HighRiskCard({ delay, onClickStudent, opts }: { delay: number; onClickStudent: (id: number) => void; opts: FilterOpts }) {
     const [filters, setFilters] = useState<CardFilters>({ ...DEFAULT_FILTERS });
-    const { data, loading } = useCardData("highrisk", filters);
+    const { data, loading, dataRange } = useCardData("highrisk", filters);
     const highRisk = data?.highrisk ?? [];
 
     // Map risk data for bar chart
@@ -689,7 +703,7 @@ function HighRiskCard({ delay, onClickStudent, opts }: { delay: number; onClickS
                     {isFiltersDirty(filters) && <ResetFilterButton onClick={() => setFilters({ ...DEFAULT_FILTERS })} />}
                 </StoryFilterStack>
             }
-            headerBadge={<DateRangeBadge period={filters.timePeriod} customStart={filters.customStart} customEnd={filters.customEnd} />}
+            headerBadge={<DateRangeBadge period={filters.timePeriod} customStart={filters.customStart} customEnd={filters.customEnd} dataRange={dataRange} />}
             delay={delay} loading={loading}
         >
             {chartData.length > 0 ? (
@@ -740,23 +754,23 @@ const INCOME_LABEL_ADV: Record<string, string> = {
     "BETWEEN_500K_800K": "500-800K", "BETWEEN_800K_1M": "800K-1M",
     "OVER_1M": "> 1M", "UNKNOWN": "ไม่ทราบ",
 };
-const INCOME_COLORS_ADV = ["#10b981","#06b6d4","#3b82f6","#8b5cf6","#f59e0b","#f97316","#ef4444","#94a3b8"];
-const INCOME_ORDER_ADV = ["UNDER_100K","BETWEEN_100K_200K","BETWEEN_200K_300K","BETWEEN_300K_500K","BETWEEN_500K_800K","BETWEEN_800K_1M","OVER_1M","UNKNOWN"];
+const INCOME_COLORS_ADV = ["#10b981", "#06b6d4", "#3b82f6", "#8b5cf6", "#f59e0b", "#f97316", "#ef4444", "#94a3b8"];
+const INCOME_ORDER_ADV = ["UNDER_100K", "BETWEEN_100K_200K", "BETWEEN_200K_300K", "BETWEEN_300K_500K", "BETWEEN_500K_800K", "BETWEEN_800K_1M", "OVER_1M", "UNKNOWN"];
 
 // Parental status colors keyed by Thai label (API returns Thai names for advisor)
 const PARENTAL_COLORS_ADV: Record<string, string> = {
-    "อยู่ด้วยกัน":    "#10b981",
-    "หย่าร้าง":       "#f59e0b",
-    "เลี้ยงเดี่ยว":   "#3b82f6",
-    "บิดาเสียชีวิต":  "#f97316",
+    "อยู่ด้วยกัน": "#10b981",
+    "หย่าร้าง": "#f59e0b",
+    "เลี้ยงเดี่ยว": "#3b82f6",
+    "บิดาเสียชีวิต": "#f97316",
     "มารดาเสียชีวิต": "#8b5cf6",
     "เสียชีวิตทั้งคู่": "#ef4444",
-    "ไม่ระบุ":        "#94a3b8",
+    "ไม่ระบุ": "#94a3b8",
 };
 
 function AdvisorIncomeCard({ delay, opts }: { delay: number; opts: FilterOpts }) {
     const [filters, setFilters] = useState<CardFilters>({ ...DEFAULT_FILTERS });
-    const { data, loading } = useCardData("comparison", filters);
+    const { data, loading, dataRange } = useCardData("comparison", filters);
     const rawIncome: { incomeRange: string; code?: string; studentCount: number }[] = data?.comparison?.incomeVsCount ?? [];
     const total = rawIncome.reduce((s, d) => s + d.studentCount, 0);
 
@@ -786,7 +800,7 @@ function AdvisorIncomeCard({ delay, opts }: { delay: number; opts: FilterOpts })
         .filter(d => d.count > 0);
 
     const topGroup = [...sorted].sort((a, b) => b.count - a.count)[0];
-    const lowPct = sorted.filter(d => ["UNDER_100K","BETWEEN_100K_200K","BETWEEN_200K_300K"].includes(d.key))
+    const lowPct = sorted.filter(d => ["UNDER_100K", "BETWEEN_100K_200K", "BETWEEN_200K_300K"].includes(d.key))
         .reduce((s, d) => s + d.pct, 0);
     const narration = topGroup
         ? `กลุ่มรายได้ที่พบมากที่สุดคือ "${topGroup.name}" (${topGroup.pct}%) — นิสิตรายได้ต่ำ <300K/ปี รวม ${lowPct.toFixed(1)}%`
@@ -814,7 +828,7 @@ function AdvisorIncomeCard({ delay, opts }: { delay: number; opts: FilterOpts })
                     {isFiltersDirty(filters) && <ResetFilterButton onClick={() => setFilters({ ...DEFAULT_FILTERS })} />}
                 </StoryFilterStack>
             }
-            headerBadge={<DateRangeBadge period={filters.timePeriod} customStart={filters.customStart} customEnd={filters.customEnd} />}
+            headerBadge={<DateRangeBadge period={filters.timePeriod} customStart={filters.customStart} customEnd={filters.customEnd} dataRange={dataRange} />}
             delay={delay} loading={loading}
         >
             <div className="space-y-5">

@@ -68,11 +68,12 @@ services:
       PGADMIN_CONFIG_MAX_LOGIN_ATTEMPTS: "10"
       PGADMIN_CONFIG_CONSOLE_LOG_LEVEL: "30"
 
-      # ✅ ช่วยแก้ CSRF/session เพี้ยนแบบปลอดภัย
+      # ✅ แก้ CSRF สำหรับ multi-user access
       PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: "False"
-      # ถ้ามี reverse proxy 1 ชั้นค่อยเปิด 2 บรรทัดนี้
-      # PGADMIN_CONFIG_PROXY_X_FOR_COUNT: "1"
-      # PGADMIN_CONFIG_PROXY_X_PROTO_COUNT: "1"
+      PGADMIN_CONFIG_WTF_CSRF_CHECK_DEFAULT: "False"
+      PGADMIN_CONFIG_WTF_CSRF_ENABLED: "False"
+      PGADMIN_CONFIG_SESSION_COOKIE_SAMESITE: "'Lax'"
+      PGADMIN_CONFIG_SESSION_COOKIE_HTTPONLY: "True"
 
     ports:
       - "8080:80"

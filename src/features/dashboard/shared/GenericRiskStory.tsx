@@ -60,7 +60,7 @@ export default function GenericRiskStory({ apiPath, title, delay = 0, descriptio
             ] : undefined}
             filters={
                 <StoryFilterStack>
-                    <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} />
+                    <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} dataRange={meta?.dataRange} />
                     {meta?.departments?.length > 0 && (
                         <StoryChipGroup
                             label="ภาควิชา"
@@ -90,6 +90,9 @@ export default function GenericRiskStory({ apiPath, title, delay = 0, descriptio
                     ]} selected={blood} onChange={setBlood} />
                 </StoryFilterStack>
             }
+            datePreset={date}
+            dataRange={meta?.dataRange}
+            customRange={customRange}
             delay={delay}
             loading={loading}
         >

@@ -10,7 +10,6 @@ export async function assignBorrowRequest(params: {
 
   assignStartAt: Date;
   assignEndAt: Date;
-  note?: string;
 }) {
   const {
     borrowRequestId,
@@ -20,7 +19,6 @@ export async function assignBorrowRequest(params: {
 
     assignStartAt,
     assignEndAt,
-    note,
   } = params;
 
   const req = await prisma.borrowRequest.findUnique({
@@ -56,13 +54,12 @@ export async function assignBorrowRequest(params: {
       borrow_assign_start_at: assignStartAt,
       borrow_assign_end_at: assignEndAt,
       borrow_assigned_by_account_id: assignedByAccountId,
-      borrow_assignment_note: note ?? null,
     },
   });
 
   // 3. Create ConsultantBorrowAvailability (The actual borrow block)
   try {
-     await prisma.consultantBorrowAvailability.create({
+    await prisma.consultantBorrowAvailability.create({
       data: {
         consultant_id: consultantId,
         home_university_id: consultantUniversityId,

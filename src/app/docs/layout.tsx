@@ -5,6 +5,7 @@ import { BookOpen, AlertCircle, FileText, ChevronRight } from "lucide-react";
 import { Metadata } from "next";
 import { getPublicDocs } from "@/services/document/handlers/publicDoc";
 import { BackButton } from "./BackButton";
+import "./docs.css";
 
 export const metadata: Metadata = {
     title: "เอกสารอ้างอิงและคู่มือ (Document) | NU Wellness",

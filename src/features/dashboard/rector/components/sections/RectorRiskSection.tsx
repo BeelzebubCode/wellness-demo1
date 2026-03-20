@@ -23,47 +23,47 @@ function buildRiskInsights(
     if (total === 0) return [];
     const insights: { icon: React.ReactNode; text: string; color: string }[] = [];
 
-    const highPct     = Math.round((highRisk / total) * 100);
+    const highPct = Math.round((highRisk / total) * 100);
     const criticalRow = distribution.find(d => d.label === "CRITICAL");
-    const critPct     = criticalRow ? Math.round((criticalRow.count / total) * 100) : 0;
-    const normalRow   = distribution.find(d => d.label === "NORMAL" || d.label === "LOW");
-    const normalPct   = normalRow   ? Math.round((normalRow.count   / total) * 100) : 0;
+    const critPct = criticalRow ? Math.round((criticalRow.count / total) * 100) : 0;
+    const normalRow = distribution.find(d => d.label === "NORMAL" || d.label === "LOW");
+    const normalPct = normalRow ? Math.round((normalRow.count / total) * 100) : 0;
 
     if (critPct > 0) {
         insights.push({
-            icon:  <AlertTriangle className="w-3.5 h-3.5 text-red-600 shrink-0 mt-0.5" />,
+            icon: <AlertTriangle className="w-3.5 h-3.5 text-red-600 shrink-0 mt-0.5" />,
             color: "text-red-700 bg-red-50 border-red-200",
-            text:  `🔴 พบนิสิตระดับวิกฤต ${criticalRow!.count.toLocaleString()} ราย (${critPct}%) — ต้องดำเนินการติดตามทันที`,
+            text: `🔴 พบนิสิตระดับวิกฤต ${criticalRow!.count.toLocaleString()} ราย (${critPct}%) — ต้องดำเนินการติดตามทันที`,
         });
     }
 
     if (highPct > 30) {
         insights.push({
-            icon:  <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />,
+            icon: <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />,
             color: "text-rose-700 bg-rose-50 border-rose-100",
-            text:  `⚠ กลุ่มเสี่ยงสูง + วิกฤตรวมกัน ${highPct}% ของทั้งหมด — ควรเพิ่มบุคลากรรองรับ`,
+            text: `⚠ กลุ่มเสี่ยงสูง + วิกฤตรวมกัน ${highPct}% ของทั้งหมด — ควรเพิ่มบุคลากรรองรับ`,
         });
     } else if (highPct > 15) {
         insights.push({
-            icon:  <TrendingDown className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />,
+            icon: <TrendingDown className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />,
             color: "text-amber-700 bg-amber-50 border-amber-100",
-            text:  `กลุ่มเสี่ยงสูง ${highPct}% — ควรวางแผน Follow-up เชิงรุกเพื่อลดความเสี่ยงสะสม`,
+            text: `กลุ่มเสี่ยงสูง ${highPct}% — ควรวางแผน Follow-up เชิงรุกเพื่อลดความเสี่ยงสะสม`,
         });
     }
 
     if (normalPct >= 60) {
         insights.push({
-            icon:  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />,
+            icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />,
             color: "text-emerald-700 bg-emerald-50 border-emerald-100",
-            text:  `✅ นิสิตระดับปกติ ${normalPct}% — ส่วนใหญ่อยู่ในเกณฑ์ดี ควรรักษาระดับนี้ไว้`,
+            text: `✅ นิสิตระดับปกติ ${normalPct}% — ส่วนใหญ่อยู่ในเกณฑ์ดี ควรรักษาระดับนี้ไว้`,
         });
     }
 
     if (insights.length === 0) {
         insights.push({
-            icon:  <Minus className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />,
+            icon: <Minus className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />,
             color: "text-slate-600 bg-slate-50 border-slate-100",
-            text:  `ระดับความเสี่ยงโดยรวมอยู่ในเกณฑ์ที่บริหารจัดการได้ — ติดตามต่อเนื่องเพื่อป้องกันการเพิ่มขึ้น`,
+            text: `ระดับความเสี่ยงโดยรวมอยู่ในเกณฑ์ที่บริหารจัดการได้ — ติดตามต่อเนื่องเพื่อป้องกันการเพิ่มขึ้น`,
         });
     }
 
@@ -79,20 +79,20 @@ function buildRiskNarration(total: number, highRisk: number): string {
 }
 
 export default function RectorRiskSection({ apiPath, title, delay = 0 }: Props) {
-    const [date, setDate]               = useState<DatePreset>("all");
+    const [date, setDate] = useState<DatePreset>("all");
     const [customRange, setCustomRange] = useState<DateRange | undefined>();
-    const [gender, setGender]           = useState<string[]>([]);
-    const [income, setIncome]           = useState<string[]>([]);
-    const [parental, setParental]       = useState<string[]>([]);
-    const [blood, setBlood]             = useState<string[]>([]);
-    const [deptIds, setDeptIds]         = useState<string[]>([]);
+    const [gender, setGender] = useState<string[]>([]);
+    const [income, setIncome] = useState<string[]>([]);
+    const [parental, setParental] = useState<string[]>([]);
+    const [blood, setBlood] = useState<string[]>([]);
+    const [deptIds, setDeptIds] = useState<string[]>([]);
 
     const storyFilters: Record<string, string[]> = {
-        department_ids:       deptIds,
+        department_ids: deptIds,
         gender,
         family_income_bracket: income,
-        parental_status:      parental,
-        blood_group:          blood,
+        parental_status: parental,
+        blood_group: blood,
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -104,9 +104,9 @@ export default function RectorRiskSection({ apiPath, title, delay = 0 }: Props) 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const metaDepts: { id: number; nameTh: string }[] = (meta as any)?.departments ?? [];
     const distribution = data?.distribution ?? [];
-    const total        = distribution.reduce((s, d) => s + d.count, 0);
-    const highRisk     = data?.highRiskCount ?? 0;
-    const highPct      = total > 0 ? Math.round((highRisk / total) * 100) : 0;
+    const total = distribution.reduce((s, d) => s + d.count, 0);
+    const highRisk = data?.highRiskCount ?? 0;
+    const highPct = total > 0 ? Math.round((highRisk / total) * 100) : 0;
 
     const pieData = distribution.map(d => {
         const m = RISK_META[d.label] ?? RISK_META.UNKNOWN;
@@ -123,13 +123,13 @@ export default function RectorRiskSection({ apiPath, title, delay = 0 }: Props) 
             description="การกระจายตัวของระดับความเสี่ยงนิสิตที่รับบริการ — ใช้วางแผนดูแลเชิงรุกและจัดสรรทรัพยากร"
             narration={data ? buildRiskNarration(total, highRisk) : "กำลังโหลด..."}
             kpis={data ? [
-                { label: "ประเมินรวม", value: total,    color: "#4f46e5"  },
-                { label: "สูง/วิกฤต", value: highRisk, color: "#f43f5e"  },
-                { label: "อัตราสูง",  value: `${highPct}%`, color: "#f59e0b" },
+                { label: "ประเมินรวม", value: total, color: "#4f46e5" },
+                { label: "สูง/วิกฤต", value: highRisk, color: "#f43f5e" },
+                { label: "อัตราสูง", value: `${highPct}%`, color: "#f59e0b" },
             ] : undefined}
             filters={
                 <StoryFilterStack>
-                    <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} />
+                    <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} dataRange={(meta as any)?.dataRange} />
                     {metaDepts.length > 0 && (
                         <StoryChipGroup
                             label="ภาควิชา"
@@ -139,31 +139,34 @@ export default function RectorRiskSection({ apiPath, title, delay = 0 }: Props) 
                         />
                     )}
                     <StoryChipGroup label="เพศ" options={[
-                        { value: "MALE",       label: "ชาย"    },
-                        { value: "FEMALE",     label: "หญิง"   },
+                        { value: "MALE", label: "ชาย" },
+                        { value: "FEMALE", label: "หญิง" },
                         { value: "LGBTQ_PLUS", label: "LGBTQ+" },
                     ]} selected={gender} onChange={setGender} />
                     <StoryChipGroup label="รายได้" options={[
-                        { value: "UNDER_100K",          label: "< 100K"   },
-                        { value: "BETWEEN_100K_200K",   label: "100-200K" },
-                        { value: "BETWEEN_200K_300K",   label: "200-300K" },
-                        { value: "BETWEEN_300K_500K",   label: "300-500K" },
-                        { value: "BETWEEN_500K_800K",   label: "500-800K" },
-                        { value: "OVER_1M",             label: "> 1M"     },
+                        { value: "UNDER_100K", label: "< 100K" },
+                        { value: "BETWEEN_100K_200K", label: "100-200K" },
+                        { value: "BETWEEN_200K_300K", label: "200-300K" },
+                        { value: "BETWEEN_300K_500K", label: "300-500K" },
+                        { value: "BETWEEN_500K_800K", label: "500-800K" },
+                        { value: "OVER_1M", label: "> 1M" },
                     ]} selected={income} onChange={setIncome} />
                     <StoryChipGroup label="ครอบครัว" options={[
-                        { value: "TOGETHER",        label: "อยู่ด้วยกัน" },
-                        { value: "DIVORCED",        label: "หย่าร้าง"   },
-                        { value: "FATHER_DECEASED", label: "บิดาเสีย"   },
-                        { value: "MOTHER_DECEASED", label: "มารดาเสีย"  },
-                        { value: "SINGLE_PARENT",   label: "เลี้ยงเดี่ยว" },
+                        { value: "TOGETHER", label: "อยู่ด้วยกัน" },
+                        { value: "DIVORCED", label: "หย่าร้าง" },
+                        { value: "FATHER_DECEASED", label: "บิดาเสีย" },
+                        { value: "MOTHER_DECEASED", label: "มารดาเสีย" },
+                        { value: "SINGLE_PARENT", label: "เลี้ยงเดี่ยว" },
                     ]} selected={parental} onChange={setParental} />
                     <StoryChipGroup label="กรุ๊ปเลือด" options={[
-                        { value: "A", label: "A" }, { value: "B",  label: "B"  },
-                        { value: "AB",label: "AB"}, { value: "O",  label: "O"  },
+                        { value: "A", label: "A" }, { value: "B", label: "B" },
+                        { value: "AB", label: "AB" }, { value: "O", label: "O" },
                     ]} selected={blood} onChange={setBlood} />
                 </StoryFilterStack>
             }
+            datePreset={date}
+            dataRange={(meta as any)?.dataRange}
+            customRange={customRange}
             delay={delay}
             loading={loading}
         >
@@ -187,7 +190,7 @@ export default function RectorRiskSection({ apiPath, title, delay = 0 }: Props) 
                         </div>
                         <div className="w-40 shrink-0 space-y-1.5">
                             {distribution.map((d, i) => {
-                                const m   = RISK_META[d.label] ?? RISK_META.UNKNOWN;
+                                const m = RISK_META[d.label] ?? RISK_META.UNKNOWN;
                                 const pct = total > 0 ? Math.round((d.count / total) * 100) : 0;
                                 return (
                                     <div key={i} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg ${m.bg ?? "bg-slate-50"}`}>

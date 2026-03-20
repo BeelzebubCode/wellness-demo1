@@ -49,7 +49,6 @@ export type BorrowAssignment = {
 
   borrowAssignedByAccountId: number;
   borrowAssignedAt: string; // ISO
-  borrowAssignmentNote?: string | null;
 
   consultantUniversity?: {
     id: number;

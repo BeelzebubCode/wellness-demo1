@@ -24,7 +24,7 @@ export default function GenericStudentStory({ apiPath, title, delay = 0, descrip
     const [customRange, setCustomRange] = useState<DateRange | undefined>();
     const [unit, setUnit] = useState<UnitMode>("count");
     const [gender, setGender] = useState<string[]>([]);
-    const { data, loading } = useStoryData<any>(apiPath, "students", { gender }, date, customRange);
+    const { data, loading, meta } = useStoryData<any>(apiPath, "students", { gender }, date, customRange);
 
     const total = data?.totalStudents ?? 0;
     const consulted = data?.consultedCount ?? 0;
@@ -55,7 +55,7 @@ export default function GenericStudentStory({ apiPath, title, delay = 0, descrip
             filters={
                 <StoryFilterStack>
                     <div className="flex items-center justify-between gap-3">
-                        <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} />
+                        <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} dataRange={meta?.dataRange} />
                         <UnitToggle value={unit} onChange={setUnit} />
                     </div>
                     <StoryChipGroup label="เพศ" options={[
@@ -65,6 +65,9 @@ export default function GenericStudentStory({ apiPath, title, delay = 0, descrip
                     ]} selected={gender} onChange={setGender} />
                 </StoryFilterStack>
             }
+            datePreset={date}
+            dataRange={meta?.dataRange}
+            customRange={customRange}
             delay={delay}
             loading={loading}
         >

@@ -1,0 +1,226 @@
+/* Guidebook Document Styles */
+
+.document-content h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.document-content h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #334155;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.document-content h3 svg {
+  width: 20px;
+  height: 20px;
+  color: #6366f1;
+  flex-shrink: 0;
+}
+
+.document-content p {
+  color: #475569;
+  line-height: 1.75;
+  margin-bottom: 1rem;
+}
+
+.document-content ul, .document-content ol {
+  color: #475569;
+  line-height: 1.75;
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+
+.document-content li {
+  margin-bottom: 0.35rem;
+}
+
+.document-content strong {
+  color: #1e293b;
+}
+
+.document-content code {
+  background: #f1f5f9;
+  color: #6366f1;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+/* Tables */
+.document-content table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 1.25rem 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  font-size: 0.9rem;
+}
+
+.document-content thead {
+  background: #f8fafc;
+}
+
+.document-content th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  color: #334155;
+  border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.document-content td {
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #475569;
+}
+
+.document-content tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.document-content tbody tr:hover {
+  background: #f8fafc;
+}
+
+/* Callout boxes */
+.callout {
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  margin: 1.25rem 0;
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  line-height: 1.65;
+  font-size: 0.9rem;
+}
+
+.callout svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.callout-warning {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+.callout-warning svg { color: #d97706; }
+
+.callout-info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+}
+
+.callout-info svg { color: #3b82f6; }
+
+.callout-success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.callout-success svg { color: #16a34a; }
+
+.callout-danger {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.callout-danger svg { color: #dc2626; }
+
+/* Details/FAQ */
+.document-content details {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+}
+
+.document-content details summary {
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  font-weight: 500;
+  color: #334155;
+  background: #f8fafc;
+  transition: background 0.15s;
+}
+
+.document-content details summary:hover {
+  background: #f1f5f9;
+}
+
+.document-content details[open] summary {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.document-content details > p,
+.document-content details > div {
+  padding: 0.85rem 1rem;
+  margin: 0;
+  color: #475569;
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-red { background: #fef2f2; color: #dc2626; }
+.badge-green { background: #f0fdf4; color: #16a34a; }
+.badge-blue { background: #eff6ff; color: #3b82f6; }
+.badge-yellow { background: #fffbeb; color: #d97706; }
+
+/* Step cards */
+.step-list {
+  counter-reset: steps;
+  list-style: none !important;
+  padding-left: 0 !important;
+}
+
+.step-list > li {
+  counter-increment: steps;
+  padding-left: 2.5rem;
+  position: relative;
+  margin-bottom: 0.75rem;
+}
+
+.step-list > li::before {
+  content: counter(steps);
+  position: absolute;
+  left: 0;
+  top: 0.1rem;
+  width: 1.65rem;
+  height: 1.65rem;
+  background: #6366f1;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+}

@@ -76,7 +76,7 @@ async function main() {
     UNION ALL SELECT 'student_point_wallet', COUNT(*)::int FROM student_point_wallet
     UNION ALL SELECT 'notification', COUNT(*)::int FROM notification
     UNION ALL SELECT 'booking_exception_request', COUNT(*)::int FROM booking_exception_request
-    UNION ALL SELECT 'booking_discipline_log', COUNT(*)::int FROM booking_discipline_log
+    UNION ALL SELECT 'discipline_log', COUNT(*)::int FROM discipline_log
     ORDER BY n DESC`);
   for (const r of tables) console.log(`   ${r.tbl.padEnd(30)} ${r.n.toLocaleString().padStart(12)}`);
 

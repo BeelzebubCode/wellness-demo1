@@ -90,7 +90,7 @@ export default function GenericProblemStory({ apiPath, title, delay = 0, descrip
             filters={
                 <StoryFilterStack>
                     <div className="flex items-center justify-between gap-3">
-                        <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} />
+                        <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} dataRange={meta?.dataRange} />
                         <UnitToggle value={unit} onChange={setUnit} />
                     </div>
                     {meta?.departments?.length > 0 && (
@@ -129,6 +129,9 @@ export default function GenericProblemStory({ apiPath, title, delay = 0, descrip
                     )}
                 </StoryFilterStack>
             }
+            datePreset={date}
+            dataRange={meta?.dataRange}
+            customRange={customRange}
             delay={delay}
             loading={loading}
         >

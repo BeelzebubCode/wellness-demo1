@@ -199,6 +199,24 @@ export async function queryRiskStory(scope: MVScope) {
     return result;
 }
 
+// ─── Data Range (min/max month) ─────────────────────────────────────────────
+export async function queryDataRange(scope: MVScope) {
+    const cacheKey = `datarange:${scope.bookingWhere}`;
+    const cached = getCached<any>(cacheKey);
+    if (cached) return cached;
+
+    const rows = await prisma.$queryRawUnsafe<{ min_month: string; max_month: string }[]>(`
+        SELECT MIN(month) AS min_month, MAX(month) AS max_month
+        FROM mv_booking_summary ${scope.bookingWhere}
+    `);
+    const result = {
+        minDate: rows[0]?.min_month ?? null,
+        maxDate: rows[0]?.max_month ?? null,
+    };
+    setCache(cacheKey, result);
+    return result;
+}
+
 /**
  * Run all requested stories using MVs — IN PARALLEL
  */
@@ -206,23 +224,28 @@ export async function queryAllStories(
     scope: MVScope,
     story: StoryType,
 ): Promise<Record<string, any>> {
-    // Single story — direct call
+    // Single story — direct call (still include dataRange)
+    const dataRangePromise = queryDataRange(scope);
+
     if (story !== "all") {
+        let storyData: Record<string, any> = {};
         switch (story) {
-            case "students": return { students: await queryStudentStory(scope) };
-            case "bookings": return { bookings: await queryBookingStory(scope) };
-            case "problems": return { problems: await queryProblemStory(scope) };
-            case "risk": return { risk: await queryRiskStory(scope) };
+            case "students": storyData = { students: await queryStudentStory(scope) }; break;
+            case "bookings": storyData = { bookings: await queryBookingStory(scope) }; break;
+            case "problems": storyData = { problems: await queryProblemStory(scope) }; break;
+            case "risk": storyData = { risk: await queryRiskStory(scope) }; break;
         }
+        return { ...storyData, dataRange: await dataRangePromise };
     }
 
     // All stories — run in PARALLEL
-    const [students, bookings, problems, risk] = await Promise.all([
+    const [students, bookings, problems, risk, dataRange] = await Promise.all([
         queryStudentStory(scope),
         queryBookingStory(scope),
         queryProblemStory(scope),
         queryRiskStory(scope),
+        dataRangePromise,
     ]);
 
-    return { students, bookings, problems, risk };
+    return { students, bookings, problems, risk, dataRange };
 }

@@ -22,7 +22,7 @@ export default function BookingStory({ delay = 0 }: { delay?: number }) {
     const [attendance, setAttendance] = useState<string[]>([]);
     const [service, setService] = useState<string[]>([]);
     const [advisorId, setAdvisorId] = useState<string[]>([]);
-    const { data, loading, advisors } = useStoryData<any>("bookings", {
+    const { data, loading, advisors, dataRange } = useStoryData<any>("bookings", {
         booking_status: status, attendance_status: attendance, service_mode: service,
         advisorId,
     }, date, customRange);
@@ -50,7 +50,7 @@ export default function BookingStory({ delay = 0 }: { delay?: number }) {
             ] : undefined}
             filters={
                 <StoryFilterStack>
-                    <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} />
+                    <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} dataRange={dataRange} />
                     <StoryChipGroup label="สถานะ" options={[
                         { value: "PENDING_ASSIGNMENT", label: "รอ" },
                         { value: "CONFIRMED", label: "ยืนยัน" },
@@ -77,6 +77,9 @@ export default function BookingStory({ delay = 0 }: { delay?: number }) {
                     )}
                 </StoryFilterStack>
             }
+            datePreset={date}
+            dataRange={dataRange}
+            customRange={customRange}
             delay={delay}
             loading={loading}
         >

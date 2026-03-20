@@ -88,6 +88,7 @@ export function useStoryData<T>(
     const [loading, setLoading] = useState(true);
     const [dept, setDept] = useState<any>(null);
     const [advisors, setAdvisors] = useState<any[]>([]);
+    const [dataRange, setDataRange] = useState<{ minDate: string; maxDate: string } | null>(null);
 
     const fetchKey = JSON.stringify({ story, filters, datePreset, customRange });
 
@@ -122,6 +123,7 @@ export function useStoryData<T>(
                 setData(json.data?.[parsed.story] ?? null);
                 if (json.data?.department) setDept(json.data.department);
                 if (json.data?.advisors) setAdvisors(json.data.advisors);
+                if (json.data?.dataRange) setDataRange(json.data.dataRange);
             } catch { /* silent */ } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -130,7 +132,7 @@ export function useStoryData<T>(
         return () => { cancelled = true; clearTimeout(timer); };
     }, [fetchKey]);
 
-    return { data, loading, dept, advisors };
+    return { data, loading, dept, advisors, dataRange };
 }
 
 // ─── Shared Tooltip ─────────────────────────────────────────────────────────

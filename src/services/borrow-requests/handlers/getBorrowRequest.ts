@@ -112,8 +112,6 @@ function mapAssignment(a: any) {
       ? a.borrow_assigned_at.toISOString()
       : new Date().toISOString(),
 
-    borrowAssignmentNote: a.borrow_assignment_note ?? null,
-
     // ✅ bonus: ใคร assign (optional)
     assignedBy: a.assignedBy
       ? {

@@ -577,16 +577,7 @@ export function BorrowRequestDetailPanel({
                       </div>
                     </div>
 
-                    {/* Note */}
-                    {a.borrowAssignmentNote && (
-                      <div className="mt-3 ml-16 bg-amber-50 border border-amber-100 rounded-xl p-3.5 flex items-start gap-3">
-                        <FileText className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
-                        <div className="text-sm text-amber-900">
-                          <span className="font-semibold mr-1">Note:</span>
-                          {a.borrowAssignmentNote}
-                        </div>
-                      </div>
-                    )}
+
                   </div>
                 );
               })}

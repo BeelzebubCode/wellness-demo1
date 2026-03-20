@@ -63,7 +63,6 @@ async function assignOne(tx: Prisma.TransactionClient, input: {
       borrow_assign_end_at: endAt,
 
       borrow_assigned_by_account_id: input.assignedByAccountId,
-      borrow_assignment_note: input.note ? String(input.note).trim() : null,
     },
   });
 

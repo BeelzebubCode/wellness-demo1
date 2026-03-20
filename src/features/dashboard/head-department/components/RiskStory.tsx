@@ -65,7 +65,7 @@ export default function RiskStory({ delay = 0 }: { delay?: number }) {
     // Drill-down
     const [drillRisk, setDrillRisk] = useState<string | null>(null);
 
-    const { data, loading, advisors } = useStoryData<any>("risk", {
+    const { data, loading, advisors, dataRange } = useStoryData<any>("risk", {
         gender,
         family_income_bracket: income,
         parental_status: parental,
@@ -126,7 +126,7 @@ export default function RiskStory({ delay = 0 }: { delay?: number }) {
                 filters={
                     <StoryFilterStack>
                         <div className="flex items-center justify-between gap-3">
-                            <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} />
+                            <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} dataRange={dataRange} />
                             <UnitToggle value={unit} onChange={setUnit} />
                         </div>
                         <StoryChipGroup label="เพศ" options={[
@@ -158,6 +158,9 @@ export default function RiskStory({ delay = 0 }: { delay?: number }) {
                         )}
                     </StoryFilterStack>
                 }
+                datePreset={date}
+                dataRange={dataRange}
+                customRange={customRange}
                 delay={delay}
                 loading={loading}
             >
@@ -383,9 +386,9 @@ function RiskDrillDownModal({ riskLevel, onClose }: { riskLevel: string; onClose
                                     <div className="flex items-start gap-4">
                                         {/* Rank */}
                                         <div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${i === 0 ? "text-white shadow-lg" :
-                                                i === 1 ? "bg-gradient-to-br from-slate-300 to-slate-400 text-white" :
-                                                    i === 2 ? "bg-gradient-to-br from-amber-600 to-amber-700 text-white" :
-                                                        "bg-slate-100 text-slate-500"
+                                            i === 1 ? "bg-gradient-to-br from-slate-300 to-slate-400 text-white" :
+                                                i === 2 ? "bg-gradient-to-br from-amber-600 to-amber-700 text-white" :
+                                                    "bg-slate-100 text-slate-500"
                                             }`}
                                             style={i === 0 ? { background: `linear-gradient(135deg, ${riskMeta?.color}, ${riskMeta?.gradient[1]})` } : {}}>
                                             {i + 1}
@@ -398,8 +401,8 @@ function RiskDrillDownModal({ riskLevel, onClose }: { riskLevel: string; onClose
                                                     <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-mono">{s.studentCode}</span>
                                                 )}
                                                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${s.gender === "MALE" ? "bg-blue-50 text-blue-600" :
-                                                        s.gender === "FEMALE" ? "bg-pink-50 text-pink-600" :
-                                                            "bg-purple-50 text-purple-600"
+                                                    s.gender === "FEMALE" ? "bg-pink-50 text-pink-600" :
+                                                        "bg-purple-50 text-purple-600"
                                                     }`}>
                                                     {s.gender === "MALE" ? "ชาย" : s.gender === "FEMALE" ? "หญิง" : s.gender === "LGBTQ_PLUS" ? "LGBTQ+" : s.gender ?? "-"}
                                                 </span>

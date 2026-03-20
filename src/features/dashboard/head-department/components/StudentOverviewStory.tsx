@@ -18,7 +18,7 @@ export default function StudentOverviewStory({ delay = 0 }: { delay?: number }) 
     const [unit, setUnit] = useState<UnitMode>("count");
     const [gender, setGender] = useState<string[]>([]);
     const [advisorId, setAdvisorId] = useState<string[]>([]);
-    const { data, loading, advisors } = useStoryData<any>("students", { gender, advisorId }, date, customRange);
+    const { data, loading, advisors, dataRange } = useStoryData<any>("students", { gender, advisorId }, date, customRange);
 
     const total = data?.totalStudents ?? 0;
     const consulted = data?.consultedCount ?? 0;
@@ -48,7 +48,7 @@ export default function StudentOverviewStory({ delay = 0 }: { delay?: number }) 
             filters={
                 <StoryFilterStack>
                     <div className="flex items-center justify-between gap-3">
-                        <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} />
+                        <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} dataRange={dataRange} />
                         <UnitToggle value={unit} onChange={setUnit} />
                     </div>
                     <StoryChipGroup label="เพศ" options={[
@@ -66,6 +66,9 @@ export default function StudentOverviewStory({ delay = 0 }: { delay?: number }) 
                     )}
                 </StoryFilterStack>
             }
+            datePreset={date}
+            dataRange={dataRange}
+            customRange={customRange}
             delay={delay}
             loading={loading}
         >

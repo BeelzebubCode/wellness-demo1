@@ -80,7 +80,7 @@ model University {
   dayPeriods                 DayPeriod[]                    @relation("UniversityDayPeriods")
   academicTerms              AcademicTerm[]
   academicPeriods            AcademicPeriod[]
-  punishmentLogs             BookingPunishmentLog[]
+  disciplineLogs             DisciplineLog[]
 
   @@index([province_id])
   @@index([university_is_active])
@@ -150,7 +150,7 @@ model Account {
   borrowAvailabilities     ConsultantBorrowAvailability[]
   bookingAttendances       BookingAttendance[]            @relation("AttendanceMarkedBy")
   bookingExceptionRequests BookingExceptionRequest[]      @relation("ExceptionReviewedBy")
-  disciplineLogsCreated    BookingPunishmentLog[]         @relation("DisciplineCreatedBy")
+  disciplineLogsCreated    DisciplineLog[]                @relation("DisciplineCreatedBy")
 
   @@index([account_role_id])
   @@index([account_home_university_id])
@@ -184,7 +184,7 @@ model Student {
   // Exception & Attendance
   behaviorStatus    StudentBehaviorStatus?
   exceptionRequests BookingExceptionRequest[]
-  punishmentLogs    BookingPunishmentLog[]
+  disciplineLogs    DisciplineLog[]
 
   @@unique([university_id, student_id])
   @@unique([university_id, student_code])
@@ -589,7 +589,7 @@ model Booking {
   problemCategory ProblemCategory        @relation(fields: [problem_category_id], references: [problem_category_id])
   onlineChannel   OnlineChannelCategory? @relation(fields: [online_channel_category_id], references: [online_channel_category_id])
   season          Season?                @relation(fields: [season_id], references: [season_id])
-  academicTerm    AcademicTerm?          @relation(fields: [academic_term_id], references: [term_id])
+  academicTerm    AcademicTerm?          @relation(fields: [academic_term_id], references: [academic_term_id])
   serviceMode     ServiceModeCategory    @relation(fields: [service_mode_id], references: [service_mode_id])
 
   assignments        BookingAssignment[]
@@ -604,7 +604,7 @@ model Booking {
   // Exception & Attendance
   attendance       BookingAttendance?
   exceptionRequest BookingExceptionRequest?
-  punishmentLogs   BookingPunishmentLog[]
+  disciplineLogs   DisciplineLog[]
 
   @@id([university_id, booking_id])
   @@index([university_id, time_slot_id])
@@ -939,16 +939,19 @@ model PointTxnTypeCategory {
   @@map("point_txn_type_category")
 }
 
-model DisciplineEventTypeCategory {
-  discipline_event_type_id Int     @id @default(autoincrement())
-  code                     String  @unique @db.VarChar(30)
-  name_th                  String  @db.VarChar(100)
-  name_en                  String? @db.VarChar(100)
-  description              String? @db.Text
-  sort_order               Int     @default(0)
-  is_active                Boolean @default(true)
+model DisciplineActionType {
+  action_type_id Int     @id @default(autoincrement())
+  action_code    String  @unique @db.VarChar(30)
+  name_th        String  @db.VarChar(100)
+  name_en        String? @db.VarChar(100)
+  description    String? @db.Text
+  direction      String  @default("PENALTY") @db.VarChar(10) // PENALTY | REVERSAL
+  sort_order     Int     @default(0)
+  is_active      Boolean @default(true)
 
-  @@map("discipline_event_type_category")
+  logs DisciplineLog[]
+
+  @@map("discipline_action_type")
 }
 
 model AiFeedbackTypeCategory {
@@ -1106,29 +1109,29 @@ model BookingExceptionEvidence {
   @@map("booking_exception_evidence")
 }
 
-model BookingPunishmentLog {
-  booking_discipline_log_id        Int       @id @default(autoincrement())
-  university_id                    Int
-  student_id                       Int
-  booking_id                       Int?
-  booking_discipline_event_type    String    @db.VarChar(30)
-  booking_discipline_delta_score   Int?
-  booking_discipline_delta_points  Int?
-  booking_discipline_lock_until    DateTime? @db.Timestamptz(3)
-  booking_discipline_note          String?   @db.Text
-  booking_discipline_created_by_id Int?
-  booking_discipline_created_at    DateTime  @default(now()) @db.Timestamptz(3)
+model DisciplineLog {
+  discipline_log_id Int       @id @default(autoincrement())
+  university_id     Int
+  student_id        Int
+  booking_id        Int?
+  action_type_code  String    @db.VarChar(30)
+  delta_points      Int?
+  lock_until        DateTime? @db.Timestamptz(3)
+  note              String?   @db.Text
+  created_by_id     Int?
+  created_at        DateTime  @default(now()) @db.Timestamptz(3)
 
-  university University @relation(fields: [university_id], references: [university_id])
-  student    Student    @relation(fields: [university_id, student_id], references: [university_id, student_id])
-  booking    Booking?   @relation(fields: [university_id, booking_id], references: [university_id, booking_id])
-  createdBy  Account?   @relation("DisciplineCreatedBy", fields: [booking_discipline_created_by_id], references: [account_id])
+  actionType DisciplineActionType @relation(fields: [action_type_code], references: [action_code])
+  university University           @relation(fields: [university_id], references: [university_id])
+  student    Student              @relation(fields: [university_id, student_id], references: [university_id, student_id])
+  booking    Booking?             @relation(fields: [university_id, booking_id], references: [university_id, booking_id])
+  createdBy  Account?             @relation("DisciplineCreatedBy", fields: [created_by_id], references: [account_id])
 
   @@index([university_id, student_id])
-  @@index([booking_discipline_event_type, booking_discipline_created_at])
+  @@index([action_type_code, created_at])
   @@index([booking_id])
-  @@index([booking_discipline_created_by_id])
-  @@map("booking_punishment_log")
+  @@index([created_by_id])
+  @@map("discipline_log")
 }
 
 // ==========================================
@@ -1336,7 +1339,6 @@ model BorrowAssignment {
   borrow_assign_end_at   DateTime @db.Timestamptz(3)
 
   borrow_assigned_by_account_id Int
-  borrow_assignment_note        String?  @db.Text
   borrow_assigned_at            DateTime @default(now()) @db.Timestamptz(3)
 
   borrowRequest        BorrowRequest @relation(fields: [borrow_request_id], references: [borrow_request_id], onDelete: Cascade)
@@ -1392,7 +1394,7 @@ model ConsultantBorrowAvailability {
 }
 
 model ConsultantBorrowPolicy {
-  consultant_borrow_policy_id Int  @id @default(autoincrement()) @map("borrow_window_policy_id")
+  consultant_borrow_policy_id Int  @id @default(autoincrement())
   university_id               Int? // null = default/global
 
   borrow_window_days Int     @default(14)
@@ -1607,7 +1609,7 @@ model AcademicTermType {
 // ==========================================
 
 model AcademicTerm {
-  term_id               Int      @id @default(autoincrement())
+  academic_term_id      Int      @id @default(autoincrement())
   university_id         Int
   academic_term_type_id Int
   academic_year         Int
@@ -1632,7 +1634,7 @@ model AcademicTerm {
 
 model AcademicPeriod {
   period_id               Int      @id @default(autoincrement())
-  term_id                 Int
+  academic_term_id        Int
   university_id           Int
   academic_period_type_id Int
   period_name_th          String   @db.VarChar(100)
@@ -1641,12 +1643,12 @@ model AcademicPeriod {
   period_end_date         DateTime @db.Date
   sort_order              Int      @default(0)
 
-  term               AcademicTerm               @relation(fields: [term_id], references: [term_id])
+  term               AcademicTerm               @relation(fields: [academic_term_id], references: [academic_term_id])
   university         University                 @relation(fields: [university_id], references: [university_id])
   academicPeriodType AcademicPeriodTypeCategory @relation(fields: [academic_period_type_id], references: [academic_period_type_id])
 
   @@index([university_id, period_start_date, period_end_date])
-  @@index([term_id])
+  @@index([academic_term_id])
   @@map("academic_period")
 }
 

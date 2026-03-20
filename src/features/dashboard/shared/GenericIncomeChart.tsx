@@ -18,23 +18,23 @@ import { useStoryData, PIE_COLORS, INCOME_LABEL, type DatePreset, type DateRange
 
 // ─── Parental status labels & colors ────────────────────────────────────────
 const PARENTAL_LABEL: Record<string, string> = {
-    TOGETHER:        "อยู่ด้วยกัน",
-    DIVORCED:        "หย่าร้าง",
-    SINGLE_PARENT:   "เลี้ยงเดี่ยว",
+    TOGETHER: "อยู่ด้วยกัน",
+    DIVORCED: "หย่าร้าง",
+    SINGLE_PARENT: "เลี้ยงเดี่ยว",
     FATHER_DECEASED: "บิดาเสียชีวิต",
     MOTHER_DECEASED: "มารดาเสียชีวิต",
-    BOTH_DECEASED:   "เสียชีวิตทั้งคู่",
-    UNKNOWN:         "ไม่ระบุ",
+    BOTH_DECEASED: "เสียชีวิตทั้งคู่",
+    UNKNOWN: "ไม่ระบุ",
 };
 
 const PARENTAL_COLORS: Record<string, string> = {
-    TOGETHER:        "#10b981",
-    DIVORCED:        "#f59e0b",
-    SINGLE_PARENT:   "#3b82f6",
+    TOGETHER: "#10b981",
+    DIVORCED: "#f59e0b",
+    SINGLE_PARENT: "#3b82f6",
     FATHER_DECEASED: "#f97316",
     MOTHER_DECEASED: "#8b5cf6",
-    BOTH_DECEASED:   "#ef4444",
-    UNKNOWN:         "#94a3b8",
+    BOTH_DECEASED: "#ef4444",
+    UNKNOWN: "#94a3b8",
 };
 
 // Preferred display order
@@ -118,11 +118,11 @@ function buildInsights(sortedData: { label: string; count: number; pct: number }
 }
 
 export default function GenericIncomeChart({ apiPath, title = "โครงสร้างรายได้ครอบครัวนิสิต", delay = 0 }: Props) {
-    const [date, setDate]               = useState<DatePreset>("all");
+    const [date, setDate] = useState<DatePreset>("all");
     const [customRange, setCustomRange] = useState<DateRange | undefined>();
-    const [unit, setUnit]               = useState<UnitMode>("count");
-    const [gender, setGender]           = useState<string[]>([]);
-    const [deptIds, setDeptIds]         = useState<string[]>([]);
+    const [unit, setUnit] = useState<UnitMode>("count");
+    const [gender, setGender] = useState<string[]>([]);
+    const [deptIds, setDeptIds] = useState<string[]>([]);
 
     const { data, loading, meta } = useStoryData<any>(apiPath, "problems", {
         gender,
@@ -192,7 +192,7 @@ export default function GenericIncomeChart({ apiPath, title = "โครงส�
             filters={
                 <StoryFilterStack>
                     <div className="flex items-center justify-between gap-3">
-                        <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} />
+                        <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} dataRange={meta?.dataRange} />
                         <UnitToggle value={unit} onChange={setUnit} />
                     </div>
                     {(meta as any)?.departments?.length > 0 && (
@@ -210,6 +210,9 @@ export default function GenericIncomeChart({ apiPath, title = "โครงส�
                     ]} selected={gender} onChange={setGender} />
                 </StoryFilterStack>
             }
+            datePreset={date}
+            dataRange={meta?.dataRange}
+            customRange={customRange}
             delay={delay}
             loading={loading}
         >

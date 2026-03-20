@@ -6,7 +6,9 @@
 "use client";
 
 import React, { useState, type ReactNode } from "react";
-import { SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react";
+import { SlidersHorizontal, ChevronDown, ChevronUp, Calendar } from "lucide-react";
+import { getDateRangeLabel } from "@/features/dashboard/shared/StoryUI";
+import type { DatePreset, DateRange } from "@/features/dashboard/shared/story-utils";
 
 export interface StoryKpi {
     label: string;
@@ -31,6 +33,12 @@ interface Props {
     filters?: ReactNode;
     /** Badge shown below filter toggle button (top-right, always visible) */
     headerBadge?: ReactNode;
+    /** Date preset — if provided, auto-renders a date range badge in the header */
+    datePreset?: DatePreset;
+    /** Data range from API — used with datePreset to compute label for "all" */
+    dataRange?: { minDate: string; maxDate: string } | null;
+    /** Custom date range — used with datePreset for custom range label */
+    customRange?: DateRange;
     /** Card body — charts / visualisations */
     children: ReactNode;
     /** Grid col-span class */
@@ -43,10 +51,21 @@ interface Props {
 
 export function DataStoryCard({
     icon, iconGradient, title, description, narration, kpis, filters, headerBadge,
+    datePreset, dataRange, customRange,
     children, className, delay = 0, loading,
 }: Props) {
     const [filtersOpen, setFiltersOpen] = useState(false);
     const hasFilters = !!filters;
+
+    // Auto-render date range badge if datePreset is provided
+    const dateBadge = datePreset ? (
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 w-fit">
+            <Calendar className="w-3.5 h-3.5 text-indigo-500" />
+            <span className="text-[11px] font-medium text-slate-500">
+                {getDateRangeLabel(datePreset, dataRange, customRange)}
+            </span>
+        </div>
+    ) : null;
 
     return (
         <div
@@ -105,7 +124,7 @@ export function DataStoryCard({
                                 <span>ตัวกรอง</span>
                                 {filtersOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                             </button>
-                            {headerBadge}
+                            {headerBadge || dateBadge}
                         </div>
                     )}
                 </div>

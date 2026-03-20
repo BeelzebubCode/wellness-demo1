@@ -20,9 +20,9 @@ function buildBookingInsights(total: number, checkedIn: number, noShow: number, 
     if (total === 0) return [];
     const insights: { icon: React.ReactNode; text: string; color: string }[] = [];
 
-    const noShowPct   = Math.round((noShow   / total) * 100);
-    const successPct  = Math.round((completed / total) * 100);
-    const attendPct   = Math.round((checkedIn / total) * 100);
+    const noShowPct = Math.round((noShow / total) * 100);
+    const successPct = Math.round((completed / total) * 100);
+    const attendPct = Math.round((checkedIn / total) * 100);
 
     // No-show signal
     if (noShowPct > 20) {
@@ -78,7 +78,7 @@ function buildBookingInsights(total: number, checkedIn: number, noShow: number, 
 /** Smart narration sentence */
 function buildNarration(total: number, noShow: number, completed: number): string {
     if (total === 0) return "ยังไม่มีข้อมูลในช่วงเวลานี้";
-    const noShowPct  = Math.round((noShow   / total) * 100);
+    const noShowPct = Math.round((noShow / total) * 100);
     const successPct = Math.round((completed / total) * 100);
     if (noShowPct > 20) return `มีการนัดหมาย ${total.toLocaleString()} ครั้ง — ⚠ ต้องระวัง: ไม่มาตามนัดสูงถึง ${noShowPct}% ซึ่งเกินเกณฑ์ที่ควร`;
     if (successPct >= 80) return `มีการนัดหมาย ${total.toLocaleString()} ครั้ง — ✅ สำเร็จ ${successPct}% ระบบมีประสิทธิภาพสูง`;
@@ -86,19 +86,19 @@ function buildNarration(total: number, noShow: number, completed: number): strin
 }
 
 export default function RectorBookingSection({ apiPath, title, delay = 0 }: Props) {
-    const [date, setDate]             = useState<DatePreset>("all");
+    const [date, setDate] = useState<DatePreset>("all");
     const [customRange, setCustomRange] = useState<DateRange | undefined>();
-    const [unit, setUnit]             = useState<UnitMode>("count");
-    const [status, setStatus]         = useState<string[]>([]);
+    const [unit, setUnit] = useState<UnitMode>("count");
+    const [status, setStatus] = useState<string[]>([]);
     const [attendance, setAttendance] = useState<string[]>([]);
-    const [service, setService]       = useState<string[]>([]);
-    const [deptIds, setDeptIds]       = useState<string[]>([]);
+    const [service, setService] = useState<string[]>([]);
+    const [deptIds, setDeptIds] = useState<string[]>([]);
 
     const storyFilters: Record<string, string[]> = {
-        booking_status:    status,
+        booking_status: status,
         attendance_status: attendance,
-        service_mode:      service,
-        department_ids:    deptIds,
+        service_mode: service,
+        department_ids: deptIds,
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -112,14 +112,14 @@ export default function RectorBookingSection({ apiPath, title, delay = 0 }: Prop
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const metaDepts: { id: number; nameTh: string }[] = (meta as any)?.departments ?? [];
-    const total     = data?.totalBookings  ?? 0;
+    const total = data?.totalBookings ?? 0;
     const checkedIn = data?.checkedInCount ?? 0;
-    const noShow    = data?.noShowCount    ?? 0;
+    const noShow = data?.noShowCount ?? 0;
     const completed = data?.completedCount ?? 0;
 
     const trendData = (data?.monthlyTrend ?? []).map((m) => ({
         month: MONTH_LABEL[m.month?.split("-")[1]] || m.month,
-        จอง:    m.bookings,
+        จอง: m.bookings,
         มาจริง: m.checkedIn,
     }));
 
@@ -133,15 +133,15 @@ export default function RectorBookingSection({ apiPath, title, delay = 0 }: Prop
             description="ติดตามการนัดหมายและผลการเข้ารับบริการ — วัดประสิทธิภาพระบบและพฤติกรรมนิสิต"
             narration={data ? buildNarration(total, noShow, completed) : "กำลังโหลด..."}
             kpis={data ? [
-                { label: "นัดหมายรวม", value: total,     color: "#059669" },
-                { label: "มาตามนัด",   value: checkedIn, color: "#10b981" },
-                { label: "ไม่มา",      value: noShow,    color: "#f43f5e" },
-                { label: "สำเร็จ",     value: completed, color: "#4f46e5" },
+                { label: "นัดหมายรวม", value: total, color: "#059669" },
+                { label: "มาตามนัด", value: checkedIn, color: "#10b981" },
+                { label: "ไม่มา", value: noShow, color: "#f43f5e" },
+                { label: "สำเร็จ", value: completed, color: "#4f46e5" },
             ] : undefined}
             filters={
                 <StoryFilterStack>
                     <div className="flex items-center justify-between gap-3">
-                        <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} />
+                        <DatePresetBar value={date} onChange={setDate} customRange={customRange} onCustomRangeChange={setCustomRange} dataRange={(meta as any)?.dataRange} />
                         <UnitToggle value={unit} onChange={setUnit} />
                     </div>
                     {metaDepts.length > 0 && (
@@ -154,22 +154,25 @@ export default function RectorBookingSection({ apiPath, title, delay = 0 }: Prop
                     )}
                     <StoryChipGroup label="สถานะ" options={[
                         { value: "PENDING_ASSIGNMENT", label: "รอประสาน" },
-                        { value: "CONFIRMED",          label: "ยืนยัน"   },
-                        { value: "IN_PROGRESS",        label: "กำลังดำเนิน" },
-                        { value: "COMPLETED",          label: "เสร็จ"    },
-                        { value: "CANCELLED",          label: "ยกเลิก"   },
+                        { value: "CONFIRMED", label: "ยืนยัน" },
+                        { value: "IN_PROGRESS", label: "กำลังดำเนิน" },
+                        { value: "COMPLETED", label: "เสร็จ" },
+                        { value: "CANCELLED", label: "ยกเลิก" },
                     ]} selected={status} onChange={setStatus} />
                     <StoryChipGroup label="เข้าพบ" options={[
                         { value: "CHECKED_IN", label: "เข้าพบ" },
-                        { value: "LATE",       label: "สาย"    },
-                        { value: "NO_SHOW",    label: "ไม่มา"  },
+                        { value: "LATE", label: "สาย" },
+                        { value: "NO_SHOW", label: "ไม่มา" },
                     ]} selected={attendance} onChange={setAttendance} />
                     <StoryChipGroup label="บริการ" options={[
-                        { value: "ONLINE",  label: "ออนไลน์" },
-                        { value: "ONSITE",  label: "ออนไซต์" },
+                        { value: "ONLINE", label: "ออนไลน์" },
+                        { value: "ONSITE", label: "ออนไซต์" },
                     ]} selected={service} onChange={setService} />
                 </StoryFilterStack>
             }
+            datePreset={date}
+            dataRange={(meta as any)?.dataRange}
+            customRange={customRange}
             delay={delay}
             loading={loading}
         >
@@ -187,7 +190,7 @@ export default function RectorBookingSection({ apiPath, title, delay = 0 }: Prop
                                     <Tooltip content={<Tip />} />
                                     <Legend verticalAlign="bottom" iconType="circle"
                                         formatter={(v: string) => <span className="text-[10px] text-slate-500 font-medium">{v}</span>} />
-                                    <Line type="monotone" dataKey="จอง"    stroke="#4f46e5" strokeWidth={2} dot={{ r: 3 }} />
+                                    <Line type="monotone" dataKey="จอง" stroke="#4f46e5" strokeWidth={2} dot={{ r: 3 }} />
                                     <Line type="monotone" dataKey="มาจริง" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
                                 </LineChart>
                             </ResponsiveContainer>

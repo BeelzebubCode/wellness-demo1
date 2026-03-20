@@ -52,7 +52,6 @@ export function presentBorrowRequest(
       borrowAssignStartAt: a.borrow_assign_start_at.toISOString(),
       borrowAssignEndAt: a.borrow_assign_end_at.toISOString(),
       borrowAssignedAt: a.borrow_assigned_at.toISOString(),
-      borrowAssignmentNote: a.borrow_assignment_note ?? null,
 
       consultantName: a.consultant?.profile
         ? `${a.consultant.profile.consultant_first_name ?? ""} ${a.consultant.profile.consultant_last_name ?? ""}`.trim() || null

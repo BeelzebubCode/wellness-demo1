@@ -304,6 +304,12 @@ export async function GET(req: NextRequest) {
             data.highrisk = shapeHighRisk(bookings, studentMap);
         }
 
+        // Data range — compute actual min/max dates from bookings
+        if (bookings.length > 0) {
+            const dates = bookings.map(b => b.slot_date).filter(Boolean).sort();
+            data.dataRange = { minDate: dates[0], maxDate: dates[dates.length - 1] };
+        }
+
         // Problem categories for filter UI (only on first load)
         if (section === "all" || sp.get("include_categories") === "true") {
             const cats = await prisma.problemCategory.findMany({

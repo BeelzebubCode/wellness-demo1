@@ -104,24 +104,24 @@ async function writeDisciplineLog(
     studentId: number;
     bookingId?: number;
     eventType: string;
-    deltaScore?: number;
+
     deltaPoints?: number;
     lockUntil?: Date | null;
     note?: string;
     createdById?: number;
   },
 ) {
-  await tx.bookingPunishmentLog.create({
+  await tx.disciplineLog.create({
     data: {
       university_id: data.universityId,
       student_id: data.studentId,
       booking_id: data.bookingId ?? null,
-      booking_discipline_event_type: data.eventType,
-      booking_discipline_delta_score: data.deltaScore ?? null,
-      booking_discipline_delta_points: data.deltaPoints ?? null,
-      booking_discipline_lock_until: data.lockUntil ?? null,
-      booking_discipline_note: data.note ?? null,
-      booking_discipline_created_by_id: data.createdById ?? null,
+      action_type_code: data.eventType,
+
+      delta_points: data.deltaPoints ?? null,
+      lock_until: data.lockUntil ?? null,
+      note: data.note ?? null,
+      created_by_id: data.createdById ?? null,
     },
   });
 }
@@ -163,7 +163,7 @@ export async function applyLateCancelPenalty(tx: Tx, ctx: PenaltyCtx) {
       universityId: ctx.universityId,
       studentId: ctx.studentId,
       bookingId: ctx.bookingId,
-      eventType: "LATE_CANCEL_PENALTY",
+      eventType: "LATE_CANCEL",
       deltaPoints: -20,
       lockUntil,
       note: `ยกเลิกกะทันหันครั้งที่ ${newCount}`,
@@ -197,7 +197,7 @@ export async function applyNoShowPenalty(tx: Tx, ctx: PenaltyCtx) {
     universityId: ctx.universityId,
     studentId: ctx.studentId,
     bookingId: ctx.bookingId,
-    eventType: "NO_SHOW_PENALTY",
+    eventType: "NO_SHOW",
     deltaPoints: -30,
     lockUntil,
     note: `ไม่มาตามนัดครั้งที่ ${newCount} — ล็อก ${lockDays} วัน`,
@@ -229,7 +229,7 @@ export async function reverseNoShowPenalty(tx: Tx, ctx: PenaltyCtx) {
     universityId: ctx.universityId,
     studentId: ctx.studentId,
     bookingId: ctx.bookingId,
-    eventType: "EXCEPTION_APPROVED_ROLLBACK",
+    eventType: "EXCEPTION_APPROVED",
     deltaPoints: 30,
     lockUntil,
     note: `แก้ไขบันทึก (ยกเลิก No Show) — คืน 30 แต้ม`,
@@ -275,7 +275,7 @@ export async function rollbackPenalty(tx: Tx, ctx: RollbackCtx) {
       universityId: ctx.universityId,
       studentId: ctx.studentId,
       bookingId: request.booking_id,
-      eventType: "EXCEPTION_APPROVED_ROLLBACK",
+      eventType: "EXCEPTION_APPROVED",
       deltaPoints: refundAmount,
       lockUntil: null,
       note: `อนุมัติยกเว้นโทษ (No-Show) — คืน ${refundAmount} แต้ม, ปลด lock`,
@@ -301,7 +301,7 @@ export async function rollbackPenalty(tx: Tx, ctx: RollbackCtx) {
       universityId: ctx.universityId,
       studentId: ctx.studentId,
       bookingId: request.booking_id,
-      eventType: "EXCEPTION_APPROVED_ROLLBACK",
+      eventType: "EXCEPTION_APPROVED",
       deltaPoints: refundAmount,
       lockUntil: shouldUnlock ? null : trust.student_trust_locked_until,
       note: `อนุมัติยกเว้นโทษ (Late Cancel) — ลด count เป็น ${newCount}, คืน ${refundAmount} แต้ม${shouldUnlock ? ", ปลด lock" : ""}`,
