@@ -92,6 +92,8 @@ export function AttendanceInsightsCard({ delay = 0 }: { delay?: number }) {
       title="อัตราการเข้าพบ (Attendance)"
       description="มอนิเตอร์พฤติกรรมการมาตามนัดหมาย ถ้านิสิตเทคิว (No-show) หรือมาสายเยอะ อาจต้องปรับระบบแจ้งเตือนให้เข้มขึ้น"
       narration={narration}
+      datePreset={date}
+      customRange={customRange}
       kpis={!loading ? [
         { label: "ตรงนัด", value: data.checkedIn, color: "#10b981" },
         { label: "ขาดนัด", value: data.noShow, color: "#ef4444" },

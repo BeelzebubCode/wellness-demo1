@@ -76,6 +76,8 @@ export function PeakHoursCard({ delay = 0 }: { delay?: number }) {
       title="ช่วงเวลาคิวแน่น (Peak Hours)"
       description="ดูปริมาณการจองคิวแยกตามวันในสัปดาห์ เพื่อช่วยจัดเรียงตารางเวรให้ Consultant เข้ามาสแตนด์บายรับมือได้อย่างเพียงพอ"
       narration={narration}
+      datePreset={date}
+      customRange={customRange}
       kpis={!loading ? [
         { label: "วันคิวแน่นสุด", value: maxDay.day, color: "#4f46e5" },
         { label: "เคสรวม", value: total.toLocaleString(), color: "#3b82f6" },

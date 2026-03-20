@@ -96,6 +96,8 @@ export function BookingTrendChart({ delay = 0 }: { delay?: number }) {
       title="แนวโน้มความต้องการ (Booking Trend)"
       description="ติดตามปริมาณนิสิตที่เข้ามาจองในแต่ละสัปดาห์ เพื่อคาดเดาช่วงเวลาที่คิวแน่น (Peak Period) และเตรียม Consultant ให้พร้อม"
       narration={narration}
+      datePreset={date}
+      customRange={customRange}
       kpis={!loading ? [
         { label: "เคสทั้งหมด", value: totalBookings, color: "#3b82f6" },
         { label: "สำเร็จ", value: totalCompleted, color: "#10b981" },

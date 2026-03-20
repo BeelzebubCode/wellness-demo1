@@ -57,6 +57,7 @@ export function TopStudentsCard({ delay = 0, students: initialStudents }: { dela
       title="Leaderboard คะแนนสูงสุด"
       description="ติดตามอันดับนิสิตที่สะสมคะแนนจากกิจกรรม (เช่น เข้าพบตามนัด หรือทำภารกิจสำเร็จ) เพื่อสร้างสีสันและใช้พิจารณาให้รางวัล"
       narration={narration}
+      datePreset="all"
       kpis={!loading && topThree[0] ? [
         { label: "อันดับ 1", value: topThree[0].firstName, color: "#f59e0b" },
         { label: "คะแนนสูงสุด", value: topThree[0].points, color: "#d97706" },

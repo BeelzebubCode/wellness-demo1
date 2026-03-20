@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getAccountFromRequest } from "@/lib/auth/context";
+import { ensureConsultantAssignmentNotifications } from "@/services/notification/ensureConsultantAssignmentNotifications";
+import type { Prisma } from "@prisma/client";
 
 // GET — list notifications for current user
 export async function GET(req: NextRequest) {
@@ -11,12 +13,14 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
         }
 
+        await ensureConsultantAssignmentNotifications(ctx.accountId);
+
         const sp = req.nextUrl.searchParams;
         const limit = Math.min(parseInt(sp.get("limit") || "20"), 50);
         const offset = parseInt(sp.get("offset") || "0") || 0;
         const unreadOnly = sp.get("unread") === "true";
 
-        const where: any = { account_id: ctx.accountId };
+        const where: Prisma.NotificationWhereInput = { account_id: ctx.accountId };
         if (unreadOnly) {
             where.notification_read_at = null;
         }

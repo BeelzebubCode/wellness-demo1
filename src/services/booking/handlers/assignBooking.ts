@@ -10,10 +10,6 @@ type AssignBody = {
   borrowAssignmentId?: number; // ✅ ใช้เมื่อแจกข้ามมหาลัย
 };
 
-function nowTs() {
-  return new Date();
-}
-
 export async function handleAssignBooking(
   ctx: { accountId: number; role: string; activeUniversityId: number },
   bookingIdRaw: string,
@@ -80,6 +76,7 @@ export async function handleAssignBooking(
     select: {
       consultant_id: true,
       university_id: true,
+      account_id: true,
       account: {
         select: {
           accessPermissions: {
@@ -101,6 +98,7 @@ export async function handleAssignBooking(
 
   const consultantUniversityId = assignee.university_id;
   const hasAccess = (assignee.account?.accessPermissions?.length || 0) > 0;
+  const isReassigned = booking.consultant_id !== null && booking.consultant_id !== consultantId;
 
   let borrowAssignmentId: number | null = null;
   const baIdRaw = body?.borrowAssignmentId;
@@ -235,6 +233,53 @@ export async function handleAssignBooking(
           assigned_by_account_id: ctx.accountId,
           assigned_note: body?.note ?? null,
           is_active: true,
+        },
+      });
+
+      const notificationTemplateCode = isReassigned ? "BOOKING_REASSIGNED" : "BOOKING_ASSIGNED";
+      const notificationTitle = isReassigned
+        ? "Booking reassigned to you"
+        : "You received a new assignment";
+      const notificationBody = isReassigned
+        ? "Head consultant reassigned booking #" + bookingId + " to you."
+        : "Head consultant assigned booking #" + bookingId + " to you.";
+
+      const assignedTemplate = await tx.notificationTemplate.upsert({
+        where: { notification_template_code: notificationTemplateCode },
+        create: {
+          notification_template_code: notificationTemplateCode,
+          notification_template_title: notificationTitle,
+          notification_template_body: notificationBody,
+          notification_template_icon: "ASSIGN",
+          notification_template_category: "ASSIGNMENT",
+        },
+        update: {
+          notification_template_title: notificationTitle,
+          notification_template_body: notificationBody,
+          notification_template_icon: "ASSIGN",
+          notification_template_category: "ASSIGNMENT",
+        },
+        select: { notification_template_id: true },
+      });
+
+      await tx.notification.create({
+        data: {
+          account_id: assignee.account_id,
+          notification_template_id: assignedTemplate.notification_template_id,
+          university_id: activeUniversityId,
+          booking_id: bookingId,
+          notification_title: notificationTitle,
+          notification_body: notificationBody,
+          notification_channel: "WEB",
+          notification_data: {
+            bookingId,
+            universityId: activeUniversityId,
+            consultantId,
+            assignedByAccountId: ctx.accountId,
+            kind: notificationTemplateCode,
+            isReassigned,
+            actionUrl: "/consultant/my-jobs?bookingId=" + bookingId,
+          },
         },
       });
     });

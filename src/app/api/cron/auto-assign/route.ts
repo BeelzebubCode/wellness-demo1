@@ -205,6 +205,7 @@ export async function GET() {
         },
         select: {
           consultant_id: true,
+          account_id: true,
           university_id: true,
           specializations: {
             select: { consultant_specialization_topic: true }
@@ -279,6 +280,7 @@ export async function GET() {
 
           return {
             id: c.consultant_id,
+            accountId: c.account_id,
             homeUniversityId: c.university_id,
             borrowAssignmentId: c.borrowAssignments?.[0]?.borrow_assignment_id ?? null,
             isClash: hasClash({
@@ -331,6 +333,44 @@ export async function GET() {
               assigned_note: "[System Auto-Assignment] ระบบแจกงานโดยพิจารณาจาก: เวลาว่าง, ความถนัด, ปริมาณงานในมือ และเรตติ้งคิว",
             }
           });
+          const assignedTemplate = await tx.notificationTemplate.upsert({
+            where: { notification_template_code: "BOOKING_ASSIGNED" },
+            create: {
+              notification_template_code: "BOOKING_ASSIGNED",
+              notification_template_title: "New booking assignment",
+              notification_template_body: "System assigned a new booking to you.",
+              notification_template_icon: "ASSIGN",
+              notification_template_category: "ASSIGNMENT",
+            },
+            update: {
+              notification_template_title: "New booking assignment",
+              notification_template_body: "System assigned a new booking to you.",
+              notification_template_icon: "ASSIGN",
+              notification_template_category: "ASSIGNMENT",
+            },
+            select: { notification_template_id: true },
+          });
+
+          await tx.notification.create({
+            data: {
+              account_id: chosenCandidate.accountId,
+              notification_template_id: assignedTemplate.notification_template_id,
+              university_id: universityId,
+              booking_id: booking.booking_id,
+              notification_title: "You received a new assignment",
+              notification_body: "System assigned booking #" + booking.booking_id + " to you.",
+              notification_channel: "WEB",
+              notification_data: {
+                bookingId: booking.booking_id,
+                universityId,
+                consultantId: chosenCandidate.id,
+                kind: "BOOKING_ASSIGNED",
+                isAutoAssigned: true,
+                actionUrl: "/consultant/my-jobs?bookingId=" + booking.booking_id,
+              },
+            },
+          });
+
           assignedCount++;
         }
       });

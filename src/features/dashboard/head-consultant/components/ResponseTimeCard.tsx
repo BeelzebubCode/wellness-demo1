@@ -74,6 +74,8 @@ export function ResponseTimeCard({ delay = 0 }: { delay?: number }) {
       title="ประสิทธิภาพการตอบสนอง (Response Time)"
       description="ประเมินระยะเวลาการรอของนิสิตตั้งแต่เริ่มจองจนถึงตอนได้รับคำปรึกษา เพื่อลดปัญหาคอขวดและจัดสรรให้ทันท่วงที"
       narration={narration}
+      datePreset={date}
+      customRange={customRange}
       kpis={!loading ? [
         { label: "จัดสรร", value: formatHours(avgAssignmentHours), color: "#3b82f6" },
         { label: "ปิดเคส", value: formatHours(avgConsultationHours), color: "#10b981" },

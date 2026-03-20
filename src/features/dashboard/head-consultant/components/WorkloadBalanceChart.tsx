@@ -63,6 +63,7 @@ export function WorkloadBalanceChart({ delay = 0 }: { delay?: number }) {
       title="ภาระงานของบุคลากร (Workload)"
       description="ดูจำนวนเคสที่อยู่ในมือของ Consultant แต่ละคน เพื่อลดภาวะ Burnout และกระจายงานให้สมดุลและเป็นธรรม"
       narration={narration}
+      datePreset="all"
       kpis={!loading ? [
         { label: "สมาชิก", value: data.length, color: "#8b5cf6" },
         { label: "เคสรวม", value: totalActive, color: "#3b82f6" },

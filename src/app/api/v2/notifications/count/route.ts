@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getAccountFromRequest } from "@/lib/auth/context";
+import { ensureConsultantAssignmentNotifications } from "@/services/notification/ensureConsultantAssignmentNotifications";
 
 // GET — return unread notification count for bell badge
 export async function GET(req: NextRequest) {
@@ -10,6 +11,8 @@ export async function GET(req: NextRequest) {
         if (!ctx) {
             return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
         }
+
+        await ensureConsultantAssignmentNotifications(ctx.accountId);
 
         const count = await prisma.notification.count({
             where: {

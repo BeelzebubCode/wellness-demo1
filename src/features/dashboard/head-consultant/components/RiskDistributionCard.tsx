@@ -83,6 +83,8 @@ export function RiskDistributionCard({ delay = 0 }: { delay?: number }) {
       title="การกระจายตัวระดับความเสี่ยง"
       description="ดูสัดส่วนนิสิตที่ประเมินแล้วตกอยู่ในเกณฑ์เสี่ยงแต่ละระดับ เพื่อเน้นโฟกัสดูแลกลุ่มเปราะบาง (วิกฤต/เสี่ยงสูง) ก่อน"
       narration={narration}
+      datePreset={date}
+      customRange={customRange}
       kpis={!loading ? [
         { label: "ประเมินรวม", value: total, color: "#4f46e5" },
         { label: "สูง/วิกฤต", value: highRiskCount, color: "#f43f5e" },

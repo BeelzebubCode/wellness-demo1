@@ -85,6 +85,8 @@ export function ProblemCategoryChart({ delay = 0, categories: initialCategories 
       title="ปัญหาที่พบบ่อย (Problem Categories)"
       description="สรุปหัวข้อความเครียด/ปัญหาหลักๆ ที่นิสิตเจอ เพื่อใช้วางแผนจัดอบรมเพิ่มเติม หรือปรับแนวทางช่วยเหลือระดับมหาลัย"
       narration={narration}
+      datePreset={date}
+      customRange={customRange}
       kpis={!loading && topCategory ? [
         { label: "เคสทั้งหมด", value: total, color: "#3b82f6" },
         { label: "หมวดหมู่", value: data.length, color: "#8b5cf6" },

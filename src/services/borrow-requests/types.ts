@@ -1,4 +1,4 @@
-import type { ServiceMode } from "@prisma/client";
+type ServiceMode = "ONLINE" | "ONSITE";
 
 export type BorrowRequestDetailJson = {
   serviceMode?: ServiceMode; // ONLINE | ONSITE

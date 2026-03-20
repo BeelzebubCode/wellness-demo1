@@ -76,6 +76,8 @@ export function ConsultantRatingTable({ delay = 0, ratings: initialRatings }: { 
       title="คะแนนประเมินบุคลากร (Consultant Ratings)"
       description="ดูคะแนนความพึงพอใจและคอมเมนต์จากนิสิตหลังรับคำปรึกษา เพื่อประเมินผลงานและนำไปเป็น Feedback พัฒนาทีม"
       narration={narration}
+      datePreset={date}
+      customRange={customRange}
       kpis={!loading && sorted.length > 0 ? [
         { label: "รีวิวสะสม", value: totalFeedback, color: "#ec4899" },
         { label: "เฉลี่ยทีม", value: `${avgOverall} / 5`, color: "#f59e0b" },

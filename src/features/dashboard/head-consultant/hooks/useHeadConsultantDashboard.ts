@@ -92,7 +92,7 @@ export interface WorkloadItem {
 
 export interface ResponseTimeData {
   avgAssignmentHours: number;
-  avgCompletionHours: number;
+  avgConsultationHours: number;
   overdueCount: number;
 }
 
@@ -115,7 +115,7 @@ export function useHeadConsultantDashboard(dateRange?: { from?: Date; to?: Date 
   const [riskDist, setRiskDist] = useState<RiskDistributionData>({ distribution: [], highRiskCount: 0 });
   const [trend, setTrend] = useState<BookingTrendItem[]>([]);
   const [workload, setWorkload] = useState<WorkloadItem[]>([]);
-  const [responseTime, setResponseTime] = useState<ResponseTimeData>({ avgAssignmentHours: 0, avgCompletionHours: 0, overdueCount: 0 });
+  const [responseTime, setResponseTime] = useState<ResponseTimeData>({ avgAssignmentHours: 0, avgConsultationHours: 0, overdueCount: 0 });
   const [attendance, setAttendance] = useState<AttendanceData>({ checkedIn: 0, late: 0, noShow: 0, pending: 0, cancelledByConsultant: 0, pendingExceptions: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);

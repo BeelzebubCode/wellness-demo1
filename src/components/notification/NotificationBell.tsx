@@ -2,9 +2,11 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Bell, Check, CheckCheck, X, CalendarDays, AlertTriangle, Info, UserCheck, Sparkles } from "lucide-react";
+import { Bell, CheckCheck, X, CalendarDays, AlertTriangle, Info, UserCheck, Sparkles } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { useNotificationContext } from "@/components/notification/NotificationProvider";
 
 interface NotificationItem {
     id: number;
@@ -13,6 +15,9 @@ interface NotificationItem {
     icon: string;
     category: string;
     templateCode: string;
+    bookingId?: number | null;
+    universityId?: number | null;
+    data?: Record<string, unknown> | null;
     readAt: string | null;
     createdAt: string;
 }
@@ -46,29 +51,110 @@ function timeAgo(dateStr: string) {
     return new Date(dateStr).toLocaleDateString("th-TH", { day: "2-digit", month: "short" });
 }
 
+function playGeneratedTone() {
+    try {
+        const WebkitAudioContext = (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        const AudioContextCtor = window.AudioContext || WebkitAudioContext;
+        if (!AudioContextCtor) return;
+        const audioContext = new AudioContextCtor();
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        oscillator.type = "triangle";
+        oscillator.frequency.value = 1046;
+        gain.gain.value = 0.12;
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.2);
+    } catch {
+        // silent fallback if browser blocks autoplay/audio context
+    }
+}
+
+function playNotificationTone() {
+    try {
+        const audio = new Audio("/sounds/notification.mp3");
+        audio.volume = 0.9;
+        audio.play().catch(() => {
+            playGeneratedTone();
+        });
+        return;
+    } catch {
+        playGeneratedTone();
+    }
+}
+
 export function NotificationBell() {
+    const router = useRouter();
+    const { push } = useNotificationContext();
     const [open, setOpen] = useState(false);
     const [items, setItems] = useState<NotificationItem[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
+    const unreadCountRef = useRef(0);
+    const hasInitializedUnreadRef = useRef(false);
+    const lastToastNotificationIdRef = useRef<number | null>(null);
 
-    // Fetch unread count (poll every 30s)
+    // Fetch unread count (polling + refresh on window focus)
     const fetchCount = useCallback(async () => {
         try {
             const res = await fetch("/api/v2/notifications/count");
             const json = await res.json();
-            if (json.success) setUnreadCount(json.count);
+            if (json.success) {
+                const nextCount = Number(json.count ?? 0);
+                setUnreadCount(nextCount);
+            }
         } catch {
             // silent
         }
     }, []);
 
+    const maybeToastLatestAssignment = useCallback(async () => {
+        try {
+            const res = await fetch("/api/v2/notifications?unread=true&limit=1");
+            const json = await res.json();
+            if (!json?.success || !Array.isArray(json?.data) || json.data.length === 0) return;
+            const latest = json.data[0] as NotificationItem;
+            if (latest.id === lastToastNotificationIdRef.current) return;
+            if (!["BOOKING_ASSIGNED", "BOOKING_REASSIGNED"].includes(latest.templateCode)) return;
+
+            lastToastNotificationIdRef.current = latest.id;
+            push({
+                type: "info",
+                title: "มีงานใหม่เข้า",
+                message: latest.body ?? latest.title,
+                duration: 5000,
+            });
+            playNotificationTone();
+        } catch {
+            // silent
+        }
+    }, [push]);
+
     useEffect(() => {
         fetchCount();
-        const interval = setInterval(fetchCount, 30000);
-        return () => clearInterval(interval);
+        const interval = setInterval(fetchCount, 60000);
+        const onFocus = () => { fetchCount(); };
+        window.addEventListener("focus", onFocus);
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener("focus", onFocus);
+        };
     }, [fetchCount]);
+
+    useEffect(() => {
+        if (!hasInitializedUnreadRef.current) {
+            hasInitializedUnreadRef.current = true;
+            unreadCountRef.current = unreadCount;
+            return;
+        }
+        const prev = unreadCountRef.current;
+        if (unreadCount > prev && document.visibilityState === "visible") {
+            void maybeToastLatestAssignment();
+        }
+        unreadCountRef.current = unreadCount;
+    }, [unreadCount, maybeToastLatestAssignment]);
 
     // Fetch notification list
     const fetchList = useCallback(async () => {
@@ -110,6 +196,23 @@ export function NotificationBell() {
         });
         setItems((prev) => prev.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n)));
         setUnreadCount((c) => Math.max(0, c - 1));
+    };
+
+    const handleNotificationClick = async (item: NotificationItem) => {
+        const isUnread = !item.readAt;
+        if (isUnread) {
+            await markRead(item.id);
+        }
+
+        const data = item.data ?? {};
+        const actionUrl = typeof data?.actionUrl === "string" ? data.actionUrl : null;
+        const bookingId = Number(item.bookingId ?? (typeof data?.bookingId === "number" ? data.bookingId : NaN));
+        const targetUrl = actionUrl || (Number.isFinite(bookingId) ? `/consultant/my-jobs?bookingId=${bookingId}` : null);
+
+        if (targetUrl) {
+            setOpen(false);
+            router.push(targetUrl);
+        }
     };
 
     // Mark all as read
@@ -210,7 +313,7 @@ export function NotificationBell() {
                                     return (
                                         <button
                                             key={item.id}
-                                            onClick={() => isUnread && markRead(item.id)}
+                                            onClick={() => handleNotificationClick(item)}
                                             className={cn(
                                                 "w-full text-left px-4 py-3 flex gap-3 transition-colors",
                                                 isUnread

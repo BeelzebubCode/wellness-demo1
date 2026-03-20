@@ -143,9 +143,9 @@ export function DataRangeBadge({ preset, dataRange, customRange }: {
     customRange?: DateRange;
 }) {
     return (
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 w-fit">
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-100 w-fit max-w-full">
             <Calendar className="w-3.5 h-3.5 text-indigo-500" />
-            <span className="text-[11px] font-medium text-slate-500">
+            <span className="text-[11px] font-medium text-slate-500 whitespace-nowrap">
                 {getDateRangeLabel(preset, dataRange, customRange)}
             </span>
         </div>

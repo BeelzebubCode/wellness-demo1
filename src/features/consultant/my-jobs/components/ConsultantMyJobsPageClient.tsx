@@ -2,9 +2,10 @@
 
 "use client";
 
-import React, { useState } from "react";
-import { CalendarClock, Clock3, PlayCircle, CheckCircle2, ClipboardList, TrendingUp, ChevronDown } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { CalendarClock, Clock3, PlayCircle, CheckCircle2, ClipboardList, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useSearchParams } from "next/navigation";
 
 import { FilterBar } from "@/components/filters/FilterBar";
 import { CONSULTANT_MY_JOBS_FILTER_DEFS, type ConsultantMyJobsFilters } from "../filters/defs";
@@ -17,14 +18,15 @@ import { OutcomeModal } from "./OutcomeModal";
 import { OnlineChannelModal } from "./OnlineChannelModal";
 import { CancelNoShowModal } from "./CancelNoShowModal";
 
-function toISODateString(date: Date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
 export function ConsultantMyJobsPageClient() {
+  const searchParams = useSearchParams();
+  const bookingIdFromQuery = useMemo(() => {
+    const raw = searchParams.get("bookingId");
+    if (!raw) return null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  }, [searchParams]);
+
   const [filters, setFilters] = useState<ConsultantMyJobsFilters>(() => ({
     date: "", // ✅ Default to all days
     status: "ALL",
@@ -32,9 +34,11 @@ export function ConsultantMyJobsPageClient() {
   }));
 
   const vm = useConsultantMyJobs(filters);
+  const { setExpandedId } = vm;
 
   // ================= PAGINATION =================
   const [currentPage, setCurrentPage] = useState(1);
+  const [highlightedJobId, setHighlightedJobId] = useState<number | null>(null);
   const ITEMS_PER_PAGE = 10;
 
   // Reset page when filters change
@@ -47,6 +51,20 @@ export function ConsultantMyJobsPageClient() {
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
+
+  React.useEffect(() => {
+    if (!bookingIdFromQuery) return;
+    const idx = vm.jobs.findIndex((j) => j.id === bookingIdFromQuery);
+    if (idx < 0) return;
+
+    const targetPage = Math.floor(idx / ITEMS_PER_PAGE) + 1;
+    setCurrentPage(targetPage);
+    setExpandedId(bookingIdFromQuery);
+    setHighlightedJobId(bookingIdFromQuery);
+
+    const timer = setTimeout(() => setHighlightedJobId(null), 6000);
+    return () => clearTimeout(timer);
+  }, [bookingIdFromQuery, vm.jobs, setExpandedId]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 font-sans text-slate-900 pb-20 relative overflow-hidden selection:bg-[rgba(var(--ring),0.25)] selection:text-slate-900">
@@ -156,7 +174,10 @@ export function ConsultantMyJobsPageClient() {
                 {paginatedJobs.map((job, index) => (
                   <div
                     key={job.id}
-                    className="animate-in fade-in slide-in-from-bottom-4"
+                    className={cn(
+                      "animate-in fade-in slide-in-from-bottom-4 rounded-2xl transition-all duration-500",
+                      highlightedJobId === job.id && "ring-2 ring-primary/50 shadow-[0_0_0_6px_rgba(59,130,246,0.12)]"
+                    )}
                     style={{
                       animationDelay: `${index * 60}ms`,
                       animationDuration: "400ms",

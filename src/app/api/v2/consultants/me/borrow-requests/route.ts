@@ -3,7 +3,7 @@
 import { NextRequest } from "next/server";
 import { requireTenant, assertRole } from "@/lib/tenant/server";
 import prisma from "@/lib/prisma";
-import { consultantListBorrowedAssignments } from "@/services/borrow-requests";
+import { consultantListBorrowedAssignments } from "@/services/borrow-requests/handlers/consultantListBorrowedAssignments";
 
 export async function GET(req: NextRequest) {
     try {
@@ -50,7 +50,12 @@ export async function GET(req: NextRequest) {
         }
 
         return Response.json(
-            { ok: false, error: "Internal server error" },
+            {
+                ok: false,
+                error: error?.message ?? "Internal server error",
+                name: error?.name,
+                code: error?.code,
+            },
             { status: 500 }
         );
     }
