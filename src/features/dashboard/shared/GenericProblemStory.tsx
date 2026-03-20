@@ -7,7 +7,7 @@ import { AlertTriangle } from "lucide-react";
 import { DataStoryCard } from "../widgets/story/DataStoryCard";
 import { StoryChipGroup, StoryFilterStack } from "../widgets/story/StoryFilterChips";
 import { DatePresetBar, UnitToggle } from "./StoryUI";
-import { useStoryData, Tip, PIE_COLORS, INCOME_LABEL, type DatePreset, type DateRange, type UnitMode } from "./story-utils";
+import { useStoryData, type DatePreset, type DateRange, type UnitMode } from "./story-utils";
 
 // ─── Colors for each problem category (14 distinct colors) ───────────────────
 const BAR_COLORS = [
@@ -27,19 +27,10 @@ const BAR_COLORS = [
     "#a3a3a3", // 14 neutral
 ];
 
-// ─── Parental status label mapping ───────────────────────────────────────────
-const PARENTAL_LABEL: Record<string, string> = {
-    TOGETHER: "อยู่ด้วยกัน",
-    DIVORCED: "หย่าร้าง",
-    FATHER_DECEASED: "บิดาเสียชีวิต",
-    MOTHER_DECEASED: "มารดาเสียชีวิต",
-    BOTH_DECEASED: "เสียชีวิตทั้งคู่",
-    SINGLE_PARENT: "เลี้ยงเดี่ยว",
-};
 
-interface Props { apiPath: string; title: string; delay?: number; }
+interface Props { apiPath: string; title: string; delay?: number; description?: string; }
 
-export default function GenericProblemStory({ apiPath, title, delay = 0 }: Props) {
+export default function GenericProblemStory({ apiPath, title, delay = 0, description }: Props) {
     const [date, setDate] = useState<DatePreset>("all");
     const [customRange, setCustomRange] = useState<DateRange | undefined>();
     const [unit, setUnit] = useState<UnitMode>("count");
@@ -86,6 +77,7 @@ export default function GenericProblemStory({ apiPath, title, delay = 0 }: Props
             icon={<AlertTriangle className="w-5 h-5" />}
             iconGradient="bg-gradient-to-br from-amber-500 to-orange-600"
             title={title}
+            description={description}
             narration={
                 data
                     ? `พบปัญหา ${totalProblems.toLocaleString()} กรณี จาก ${categories.length} ประเภท — ปัญหาอันดับ 1: ${categories[0]?.label ?? "ไม่มีข้อมูล"}`
@@ -164,43 +156,6 @@ export default function GenericProblemStory({ apiPath, title, delay = 0 }: Props
                         </div>
                     )}
 
-                    {/* Income + Parental distribution side by side */}
-                    <div className="grid grid-cols-2 gap-4">
-                        {data.incomeDist?.length > 0 && (
-                            <div>
-                                <p className="text-[10px] text-slate-400 font-bold mb-2 uppercase tracking-wider">กลุ่มรายได้ครอบครัว</p>
-                                {data.incomeDist.map((d: any, i: number) => {
-                                    const pct = totalProblems > 0 ? Math.round(d.count / totalProblems * 100) : 0;
-                                    return (
-                                        <div key={i} className="flex items-center gap-2 mb-1.5">
-                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
-                                            <span className="text-[11px] text-slate-600 flex-1">{INCOME_LABEL[d.label] ?? d.label}</span>
-                                            <span className="text-[11px] font-bold text-slate-700 tabular-nums">
-                                                {unit === "count" ? d.count.toLocaleString() : `${pct}%`}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                        {data.parentalDist?.length > 0 && (
-                            <div>
-                                <p className="text-[10px] text-slate-400 font-bold mb-2 uppercase tracking-wider">สถานะบิดามารดา</p>
-                                {data.parentalDist.map((d: any, i: number) => {
-                                    const pct = totalProblems > 0 ? Math.round(d.count / totalProblems * 100) : 0;
-                                    return (
-                                        <div key={i} className="flex items-center gap-2 mb-1.5">
-                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
-                                            <span className="text-[11px] text-slate-600 flex-1">{PARENTAL_LABEL[d.label] ?? d.label}</span>
-                                            <span className="text-[11px] font-bold text-slate-700 tabular-nums">
-                                                {unit === "count" ? d.count.toLocaleString() : `${pct}%`}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
                 </div>
             )}
         </DataStoryCard>

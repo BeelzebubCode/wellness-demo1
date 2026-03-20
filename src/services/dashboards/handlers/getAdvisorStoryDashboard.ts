@@ -22,23 +22,42 @@ export interface AdvisorFilters {
     parentalStatus?: string[];
 }
 
+function toYYYYMM(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+function toDateStr(d: Date): string {
+    return d.toISOString().split("T")[0];
+}
+
 function buildScopeWhere(advisorId: number, filters: AdvisorFilters) {
-    const clauses: string[] = [`advisor_id = ${advisorId}`];
-    if (filters.gender?.length) {
-        clauses.push(`gender_code IN (${filters.gender.map(g => `'${g}'`).join(",")})`);
+    // ── mv_student_summary: structural + profile columns ──────────────────────
+    const studentClauses: string[] = [`advisor_id = ${advisorId}`];
+    if (filters.gender?.length)        studentClauses.push(`gender_code IN (${filters.gender.map(g => `'${g}'`).join(",")})`);
+    if (filters.familyIncomeBracket?.length) studentClauses.push(`income_bracket_code IN (${filters.familyIncomeBracket.map(v => `'${v}'`).join(",")})`);
+    if (filters.bloodGroup?.length)    studentClauses.push(`blood_group_code IN (${filters.bloodGroup.map(v => `'${v}'`).join(",")})`);
+    if (filters.parentalStatus?.length) studentClauses.push(`parental_status_code IN (${filters.parentalStatus.map(v => `'${v}'`).join(",")})`);
+    const w = `WHERE ${studentClauses.join(" AND ")}`;
+
+    // ── mv_booking_summary: structural + month + problem_category_id + booking_status + service_mode_code ─
+    const bookClauses: string[] = [`advisor_id = ${advisorId}`];
+    if (filters.problemCategoryIds?.length) bookClauses.push(`problem_category_id IN (${filters.problemCategoryIds.join(",")})`);
+    if (filters.bookingStatus?.length)    bookClauses.push(`booking_status IN (${filters.bookingStatus.map(v => `'${v}'`).join(",")})`);
+    if (filters.serviceMode?.length)      bookClauses.push(`service_mode_code IN (${filters.serviceMode.map(v => `'${v}'`).join(",")})`);
+    if (!filters.allTime) {
+        if (filters.dateStart) bookClauses.push(`month >= '${toYYYYMM(filters.dateStart)}'`);
+        if (filters.dateEnd)   bookClauses.push(`month <= '${toYYYYMM(filters.dateEnd)}'`);
     }
-    if (filters.familyIncomeBracket?.length) {
-        clauses.push(`income_bracket_code IN (${filters.familyIncomeBracket.map(v => `'${v}'`).join(",")})`);
+    const bw = `WHERE ${bookClauses.join(" AND ")}`;
+
+    // ── mv_student_risk_score: structural + latest_recorded_at ONLY ───────────
+    const riskClauses: string[] = [`advisor_id = ${advisorId}`];
+    if (!filters.allTime) {
+        if (filters.dateStart) riskClauses.push(`latest_recorded_at >= '${toDateStr(filters.dateStart)}'`);
+        if (filters.dateEnd)   riskClauses.push(`latest_recorded_at <= '${toDateStr(filters.dateEnd)} 23:59:59'`);
     }
-    if (filters.bloodGroup?.length) {
-        clauses.push(`blood_group_code IN (${filters.bloodGroup.map(v => `'${v}'`).join(",")})`);
-    }
-    if (filters.parentalStatus?.length) {
-        clauses.push(`parental_status_code IN (${filters.parentalStatus.map(v => `'${v}'`).join(",")})`);
-    }
-    const w = `WHERE ${clauses.join(" AND ")}`;
-    const bw = `WHERE advisor_id = ${advisorId}`;
-    return { studentWhere: w, bookingWhere: bw, riskWhere: bw };
+    const rw = `WHERE ${riskClauses.join(" AND ")}`;
+
+    return { studentWhere: w, bookingWhere: bw, riskWhere: rw };
 }
 
 export const AdvisorStoryService = {

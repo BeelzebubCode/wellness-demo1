@@ -10,7 +10,6 @@ import {
     Tooltip,
     ResponsiveContainer,
     Cell,
-    LabelList,
 } from "recharts";
 import { LoadIndexItem } from "../../widgets/types/analytics-types";
 
@@ -58,7 +57,7 @@ export function FacultyVolumeChart({ data, loading, onBarClick }: FacultyVolumeC
                             <BarChart
                                 data={sortedData}
                                 layout="vertical"
-                                margin={{ top: 5, right: 60, left: 10, bottom: 5 }}
+                                margin={{ top: 5, right: 16, left: 10, bottom: 5 }}
                                 onClick={(state: any) => {
                                     if (state && state.activePayload && onBarClick) {
                                         onBarClick(state.activePayload[0].payload);
@@ -105,12 +104,6 @@ export function FacultyVolumeChart({ data, loading, onBarClick }: FacultyVolumeC
                                             fillOpacity={0.9 - (index / sortedData.length) * 0.6}
                                         />
                                     ))}
-                                    <LabelList
-                                        dataKey="totalBookings"
-                                        position="right"
-                                        style={{ fill: "#475569", fontSize: 11, fontWeight: 700 }}
-                                        formatter={(val: any) => `${val} เคส`}
-                                    />
                                 </Bar>
                             </BarChart>
                         </ResponsiveContainer>

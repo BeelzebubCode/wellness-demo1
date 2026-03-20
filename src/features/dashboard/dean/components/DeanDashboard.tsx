@@ -9,6 +9,7 @@ import { DataStoryGrid } from "../../widgets/story/DataStoryGrid";
 import GenericBookingStory from "../../shared/GenericBookingStory";
 import GenericProblemStory from "../../shared/GenericProblemStory";
 import GenericRiskStory from "../../shared/GenericRiskStory";
+import GenericIncomeChart from "../../shared/GenericIncomeChart";
 import DepartmentConsultationChart from "./sections/DepartmentConsultationChart";
 
 const API = "/api/v2/dashboards/dean/story";
@@ -57,14 +58,20 @@ export function DeanDashboard() {
                 {/* ★ Hero: Department-level consultation chart — the main overview */}
                 <DepartmentConsultationChart />
 
-                {/* Row 1: Bookings + Problem */}
+                {/* Row 1: Bookings + Risk */}
                 <DataStoryGrid cols={2}>
-                    <GenericBookingStory apiPath={API} title="การใช้บริการในคณะ" delay={1} />
-                    <GenericRiskStory apiPath={API} title="ระดับความเสี่ยงในคณะ" delay={2} />
+                    <GenericBookingStory apiPath={API} title="การใช้บริการในคณะ" delay={1}
+                        description="ติดตามจำนวนการนัดหมาย อัตราสำเร็จ และแนวโน้มรายเดือนในคณะ — ใช้ประเมินความต้องการบริการและวางแผนกำลังคน" />
+                    <GenericRiskStory apiPath={API} title="ระดับความเสี่ยงในคณะ" delay={2}
+                        description="การกระจายระดับความเสี่ยงนิสิตในคณะ 5 ระดับ — ช่วยระบุกลุ่มที่ต้องการการดูแลเร่งด่วนและวางแผนการแทรกแซงเชิงรุก" />
                 </DataStoryGrid>
 
                 {/* Row 2: Problems + Profile (full width) */}
-                <GenericProblemStory apiPath={API} title="ประเด็นปัญหา + โปรไฟล์นิสิตในคณะ" delay={3} />
+                <GenericProblemStory apiPath={API} title="ประเด็นปัญหา + โปรไฟล์นิสิตในคณะ" delay={3}
+                    description="ประเภทปัญหาที่นิสิตในคณะนำเข้ามาขอรับบริการ พร้อมโปรไฟล์กลุ่มรายได้และสถานะครอบครัว — ใช้วางแผนโครงการสนับสนุนที่ตรงกลุ่มเป้าหมาย" />
+
+                {/* Row 3: Income Distribution (full width) */}
+                <GenericIncomeChart apiPath={API} title="รายได้ครอบครัวนิสิตในคณะ" delay={4} />
 
                 {/* Footer */}
                 <div className="text-center text-xs text-slate-300 py-3 animate-[fadeUp_0.5s_ease-out_both]" style={{ animationDelay: "400ms" }}>

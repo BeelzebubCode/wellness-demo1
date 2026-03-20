@@ -26,57 +26,53 @@ export interface DeanFilters {
     advisorId?: number[];
 }
 
+function toYYYYMM(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+function toDateStr(d: Date): string {
+    return d.toISOString().split("T")[0];
+}
+
 function buildScopeWhere(universityId: number, facultyId: number, filters: DeanFilters) {
-    const clauses: string[] = [
+    // ── mv_student_summary: structural + profile columns ──────────────────────
+    const studentClauses: string[] = [
         `university_id = ${universityId}`,
         `faculty_id = ${facultyId}`,
     ];
-    if (filters.departmentIds?.length) {
-        clauses.push(`department_id IN (${filters.departmentIds.join(",")})`);
-    }
-    if (filters.advisorId?.length) {
-        clauses.push(`advisor_id IN (${filters.advisorId.join(",")})`);
-    }
-    if (filters.gender?.length) {
-        clauses.push(`gender_code IN (${filters.gender.map(g => `'${g}'`).join(",")})`);
-    }
-    if (filters.familyIncomeBracket?.length) {
-        clauses.push(`income_bracket_code IN (${filters.familyIncomeBracket.map(v => `'${v}'`).join(",")})`);
-    }
-    if (filters.bloodGroup?.length) {
-        clauses.push(`blood_group_code IN (${filters.bloodGroup.map(v => `'${v}'`).join(",")})`);
-    }
-    if (filters.parentalStatus?.length) {
-        clauses.push(`parental_status_code IN (${filters.parentalStatus.map(v => `'${v}'`).join(",")})`);
-    }
-    if (filters.chronicConditionIds?.length) {
-        // Correct PostgreSQL syntax for array intersection
-        clauses.push(`chronic_condition_ids && ARRAY[${filters.chronicConditionIds.join(",")}]::int[]`);
-    }
+    if (filters.departmentIds?.length) studentClauses.push(`department_id IN (${filters.departmentIds.join(",")})`);
+    if (filters.advisorId?.length)     studentClauses.push(`advisor_id IN (${filters.advisorId.join(",")})`);
+    if (filters.gender?.length)        studentClauses.push(`gender_code IN (${filters.gender.map(g => `'${g}'`).join(",")})`);
+    if (filters.familyIncomeBracket?.length) studentClauses.push(`income_bracket_code IN (${filters.familyIncomeBracket.map(v => `'${v}'`).join(",")})`);
+    if (filters.bloodGroup?.length)    studentClauses.push(`blood_group_code IN (${filters.bloodGroup.map(v => `'${v}'`).join(",")})`);
+    if (filters.parentalStatus?.length) studentClauses.push(`parental_status_code IN (${filters.parentalStatus.map(v => `'${v}'`).join(",")})`);
+    const w = `WHERE ${studentClauses.join(" AND ")}`;
 
-    const w = `WHERE ${clauses.join(" AND ")}`;
-
-    // Booking clauses (can follow common filters)
-    const bookClauses: string[] = [...clauses];
-    if (filters.serviceMode?.length) {
-        bookClauses.push(`service_mode_code IN (${filters.serviceMode.map(v => `'${v}'`).join(",")})`);
+    // ── mv_booking_summary: structural + month + problem_category_id + booking_status + service_mode_code ─
+    const bookClauses: string[] = [
+        `university_id = ${universityId}`,
+        `faculty_id = ${facultyId}`,
+    ];
+    if (filters.departmentIds?.length)    bookClauses.push(`department_id IN (${filters.departmentIds.join(",")})`);
+    if (filters.advisorId?.length)        bookClauses.push(`advisor_id IN (${filters.advisorId.join(",")})`);
+    if (filters.problemCategoryIds?.length) bookClauses.push(`problem_category_id IN (${filters.problemCategoryIds.join(",")})`);
+    if (filters.bookingStatus?.length)    bookClauses.push(`booking_status IN (${filters.bookingStatus.map(v => `'${v}'`).join(",")})`);
+    if (filters.serviceMode?.length)      bookClauses.push(`service_mode_code IN (${filters.serviceMode.map(v => `'${v}'`).join(",")})`);
+    if (!filters.allTime) {
+        if (filters.dateStart) bookClauses.push(`month >= '${toYYYYMM(filters.dateStart)}'`);
+        if (filters.dateEnd)   bookClauses.push(`month <= '${toYYYYMM(filters.dateEnd)}'`);
     }
-    if (filters.bookingStatus?.length) {
-        bookClauses.push(`booking_status IN (${filters.bookingStatus.map(v => `'${v}'`).join(",")})`);
-    }
-    if (filters.attendanceStatus?.length) {
-        bookClauses.push(`booking_attendance_status IN (${filters.attendanceStatus.map(v => `'${v}'`).join(",")})`);
-    }
-    if (filters.problemCategoryIds?.length) {
-        bookClauses.push(`problem_category_id IN (${filters.problemCategoryIds.join(",")})`);
-    }
-
     const bw = `WHERE ${bookClauses.join(" AND ")}`;
 
-    // Risk clauses (scoped to COMPLETED bookings usually, but scope filters apply)
-    const riskClauses: string[] = [...clauses];
-    if (filters.problemCategoryIds?.length) {
-        riskClauses.push(`problem_category_id IN (${filters.problemCategoryIds.join(",")})`);
+    // ── mv_student_risk_score: structural + latest_recorded_at ONLY ───────────
+    const riskClauses: string[] = [
+        `university_id = ${universityId}`,
+        `faculty_id = ${facultyId}`,
+    ];
+    if (filters.departmentIds?.length) riskClauses.push(`department_id IN (${filters.departmentIds.join(",")})`);
+    if (filters.advisorId?.length)     riskClauses.push(`advisor_id IN (${filters.advisorId.join(",")})`);
+    if (!filters.allTime) {
+        if (filters.dateStart) riskClauses.push(`latest_recorded_at >= '${toDateStr(filters.dateStart)}'`);
+        if (filters.dateEnd)   riskClauses.push(`latest_recorded_at <= '${toDateStr(filters.dateEnd)} 23:59:59'`);
     }
     const rw = `WHERE ${riskClauses.join(" AND ")}`;
 
@@ -117,8 +113,7 @@ export const DeanStoryService = {
                 { department_id: number; count: number }[]
             >(`
                 SELECT department_id, SUM(total_bookings)::int AS count
-                FROM mv_booking_summary
-                WHERE university_id = ${universityId} AND faculty_id = ${facultyId}
+                FROM mv_booking_summary ${scope.bookingWhere}
                 GROUP BY department_id
                 ORDER BY count DESC
             `);

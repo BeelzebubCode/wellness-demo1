@@ -48,6 +48,13 @@ const RectorProblemSection = dynamic(
         ssr: false,
     }
 );
+const GenericIncomeChart = dynamic(
+    () => import("../../shared/GenericIncomeChart"),
+    {
+        loading: () => <div className="h-80 bg-slate-50 animate-pulse rounded-2xl" />,
+        ssr: false,
+    }
+);
 
 const API = "/api/v2/dashboards/rector/story";
 
@@ -150,6 +157,9 @@ export function RectorDashboard() {
                     <PolicySummaryCard />
                 </div>
             </DataStoryGrid>
+
+            {/* ── Section 4: Income Distribution ────────────────────── */}
+            <GenericIncomeChart apiPath={API} title="โครงสร้างรายได้ครอบครัวนิสิตทั้งมหาวิทยาลัย" delay={5} />
 
             {/* ── Footer ────────────────────────────────────────────── */}
             <div className="pt-8 border-t border-slate-100 flex justify-between items-center text-xs text-slate-300">

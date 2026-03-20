@@ -13,6 +13,7 @@ import BookingStory from "./BookingStory";
 import ProblemStory from "./ProblemStory";
 import RiskStory from "./RiskStory";
 import RecommendationCard from "./RecommendationCard";
+import GenericIncomeChart from "../../shared/GenericIncomeChart";
 
 export default function HeadDepartmentDashboard() {
     const [dept, setDept] = useState<{ nameTh: string; facultyNameTh: string; universityNameTh: string } | null>(null);
@@ -67,8 +68,11 @@ export default function HeadDepartmentDashboard() {
                 {/* Row 3: Risk (full width) */}
                 <RiskStory delay={3} />
 
-                {/* Row 4: Recommendations */}
-                <RecommendationCard delay={4} />
+                {/* Row 4: Income Distribution */}
+                <GenericIncomeChart apiPath="/api/v2/dashboards/head-department" title="รายได้ครอบครัวนิสิตในภาควิชา" delay={4} />
+
+                {/* Row 5: Recommendations */}
+                <RecommendationCard delay={5} />
 
                 {/* Footer */}
                 <div className="text-center text-xs text-slate-300 py-3 animate-[fadeUp_0.5s_ease-out_both]" style={{ animationDelay: "400ms" }}>

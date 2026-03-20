@@ -40,12 +40,19 @@ export const MONTH_LABEL: Record<string, string> = {
 };
 
 export const RISK_META: Record<string, { label: string; color: string; bg: string }> = {
+    // Numeric keys (legacy / other uses)
     "1": { label: "ปกติ", color: "#10b981", bg: "bg-emerald-50" },
     "2": { label: "ต่ำ", color: "#06b6d4", bg: "bg-cyan-50" },
     "3": { label: "ปานกลาง", color: "#f59e0b", bg: "bg-amber-50" },
     "4": { label: "สูง", color: "#f43f5e", bg: "bg-rose-50" },
     "5": { label: "วิกฤต", color: "#7c3aed", bg: "bg-purple-50" },
-    UNKNOWN: { label: "ไม่ระบุ", color: "#94a3b8", bg: "bg-slate-50" },
+    // MV risk_band string keys (mv_student_risk_score.risk_band)
+    NORMAL:   { label: "ปกติ",    color: "#10b981", bg: "bg-emerald-50" },
+    LOW:      { label: "ต่ำ",     color: "#06b6d4", bg: "bg-cyan-50" },
+    MEDIUM:   { label: "ปานกลาง", color: "#f59e0b", bg: "bg-amber-50" },
+    HIGH:     { label: "สูง",     color: "#f43f5e", bg: "bg-rose-50" },
+    CRITICAL: { label: "วิกฤต",   color: "#7c3aed", bg: "bg-purple-50" },
+    UNKNOWN:  { label: "ไม่ระบุ",  color: "#94a3b8", bg: "bg-slate-50" },
 };
 
 export const SERVICE_MODE_OPTIONS = [

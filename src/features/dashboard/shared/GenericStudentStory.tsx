@@ -16,9 +16,10 @@ interface Props {
     apiPath: string;
     title: string;
     delay?: number;
+    description?: string;
 }
 
-export default function GenericStudentStory({ apiPath, title, delay = 0 }: Props) {
+export default function GenericStudentStory({ apiPath, title, delay = 0, description }: Props) {
     const [date, setDate] = useState<DatePreset>("all");
     const [customRange, setCustomRange] = useState<DateRange | undefined>();
     const [unit, setUnit] = useState<UnitMode>("count");
@@ -41,6 +42,7 @@ export default function GenericStudentStory({ apiPath, title, delay = 0 }: Props
             icon={<Users className="w-5 h-5" />}
             iconGradient="bg-gradient-to-br from-indigo-500 to-blue-600"
             title={title}
+            description={description}
             narration={
                 data ? `นิสิตทั้งหมด ${total} คน — เคยมาปรึกษา ${consulted} คน (${pctConsulted}%) / ไม่เคย ${never} คน (${pctNever}%)`
                     : "กำลังโหลด..."

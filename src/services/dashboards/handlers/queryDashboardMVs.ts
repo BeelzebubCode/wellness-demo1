@@ -16,8 +16,8 @@ export interface MVScope {
     riskWhere: string;
 }
 
-// ─── In-memory TTL cache (60s) ──────────────────────────────────────────────
-const CACHE_TTL_MS = 60_000;
+// ─── In-memory TTL cache (10s) — short TTL keeps filters responsive ─────────
+const CACHE_TTL_MS = 10_000;
 const cache = new Map<string, { data: any; ts: number }>();
 
 function getCached<T>(key: string): T | null {
@@ -76,7 +76,6 @@ export async function queryBookingStory(scope: MVScope) {
     if (cached) return cached;
 
     const w = scope.bookingWhere;
-    const andOrWhere = w ? "AND" : "WHERE";
 
     const [stats, trend] = await Promise.all([
         prisma.$queryRawUnsafe<{
@@ -159,11 +158,6 @@ export async function queryRiskStory(scope: MVScope) {
     const cacheKey = `risk_ewma:${scope.riskWhere}`;
     const cached = getCached<any>(cacheKey);
     if (cached) return cached;
-
-    // Build WHERE using the same scope columns but against the new MV
-    // scope.riskWhere uses university_id, faculty_id, department_id, advisor_id
-    const riskWhere = scope.riskWhere
-        .replace(/mv_risk_summary/g, "mv_student_risk_score");
 
     const [bandDist, summary] = await Promise.all([
         // Distribution by risk band (CRITICAL, HIGH, MEDIUM, NORMAL)

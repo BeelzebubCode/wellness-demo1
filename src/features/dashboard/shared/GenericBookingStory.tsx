@@ -9,9 +9,9 @@ import { StoryChipGroup, StoryFilterStack } from "../widgets/story/StoryFilterCh
 import { DatePresetBar, UnitToggle } from "./StoryUI";
 import { useStoryData, Tip, MONTH_LABEL, type DatePreset, type DateRange, type UnitMode } from "./story-utils";
 
-interface Props { apiPath: string; title: string; delay?: number; }
+interface Props { apiPath: string; title: string; delay?: number; description?: string; }
 
-export default function GenericBookingStory({ apiPath, title, delay = 0 }: Props) {
+export default function GenericBookingStory({ apiPath, title, delay = 0, description }: Props) {
     const [date, setDate] = useState<DatePreset>("all");
     const [customRange, setCustomRange] = useState<DateRange | undefined>();
     const [unit, setUnit] = useState<UnitMode>("count");
@@ -43,6 +43,7 @@ export default function GenericBookingStory({ apiPath, title, delay = 0 }: Props
             icon={<Calendar className="w-5 h-5" />}
             iconGradient="bg-gradient-to-br from-emerald-500 to-teal-600"
             title={title}
+            description={description}
             narration={
                 data ? `การนัดหมายทั้งหมด ${total} ครั้ง — มาตามนัด ${checkedIn} ครั้ง / ไม่มา ${noShow} ครั้ง / สำเร็จ ${completed} ครั้ง`
                     : "กำลังโหลด..."

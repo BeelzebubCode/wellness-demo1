@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-    ResponsiveContainer, Cell, LabelList,
+    ResponsiveContainer, Cell,
 } from "recharts";
 import { useRouter } from "next/navigation";
 import { Building2, Loader2 } from "lucide-react";
@@ -79,7 +79,7 @@ export default function DepartmentConsultationChart() {
                     <BarChart
                         data={sorted}
                         layout="vertical"
-                        margin={{ top: 0, right: 40, left: 0, bottom: 0 }}
+                        margin={{ top: 0, right: 16, left: 0, bottom: 0 }}
                     >
                         <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#f1f5f9" />
                         <XAxis
@@ -121,11 +121,6 @@ export default function DepartmentConsultationChart() {
                                     className="transition-opacity hover:opacity-80"
                                 />
                             ))}
-                            <LabelList
-                                dataKey="count"
-                                position="right"
-                                style={{ fontSize: 11, fill: "#64748b", fontWeight: 600 }}
-                            />
                         </Bar>
                     </BarChart>
                 </ResponsiveContainer>

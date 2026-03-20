@@ -9,9 +9,9 @@ import { StoryChipGroup, StoryFilterStack } from "../widgets/story/StoryFilterCh
 import { DatePresetBar } from "./StoryUI";
 import { useStoryData, Tip, RISK_META, type DatePreset, type DateRange } from "./story-utils";
 
-interface Props { apiPath: string; title: string; delay?: number; }
+interface Props { apiPath: string; title: string; delay?: number; description?: string; }
 
-export default function GenericRiskStory({ apiPath, title, delay = 0 }: Props) {
+export default function GenericRiskStory({ apiPath, title, delay = 0, description }: Props) {
     const [date, setDate] = useState<DatePreset>("all");
     const [customRange, setCustomRange] = useState<DateRange | undefined>();
     const [gender, setGender] = useState<string[]>([]);
@@ -47,6 +47,7 @@ export default function GenericRiskStory({ apiPath, title, delay = 0 }: Props) {
             icon={<ShieldAlert className="w-5 h-5" />}
             iconGradient="bg-gradient-to-br from-rose-500 to-pink-600"
             title={title}
+            description={description}
             narration={
                 data
                     ? `ประเมินความเสี่ยงทั้งหมด ${total} ครั้ง — ระดับสูง/วิกฤต ${highRisk} ครั้ง (${highPct}%)`

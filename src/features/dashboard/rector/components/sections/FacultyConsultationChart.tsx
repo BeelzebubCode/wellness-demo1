@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-    Cell, LabelList, ResponsiveContainer,
+    Cell, ResponsiveContainer,
 } from "recharts";
 import { useRouter } from "next/navigation";
 import { GraduationCap, Loader2, Download, Filter, ChevronDown, TrendingUp, AlertTriangle, CheckCircle2 } from "lucide-react";
@@ -240,7 +240,7 @@ export default function FacultyConsultationChart() {
 
                 <div className="h-[400px] w-full mt-2">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={sorted} layout="vertical" margin={{ top: 5, right: 70, left: 20, bottom: 5 }}>
+                        <BarChart data={sorted} layout="vertical" margin={{ top: 5, right: 16, left: 20, bottom: 5 }}>
                             <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#f1f5f9" />
                             <XAxis type="number" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false}
                                 domain={[0, Math.ceil(maxCount * 1.2)]} />
@@ -285,13 +285,6 @@ export default function FacultyConsultationChart() {
                                 {sorted.map((_, idx) => (
                                     <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
                                 ))}
-                                <LabelList
-                                    dataKey="count"
-                                    position="right"
-                                    formatter={(v: unknown) => Number(v).toLocaleString()}
-                                    style={{ fontSize: 12, fill: "#64748b", fontWeight: 800 }}
-                                    offset={12}
-                                />
                             </Bar>
                         </BarChart>
                     </ResponsiveContainer>

@@ -13,7 +13,7 @@ import { DepartmentStat } from "./DepartmentListing";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
   XAxis, YAxis, CartesianGrid, AreaChart, Area,
-  BarChart, Bar, LabelList,
+  BarChart, Bar,
 } from "recharts";
 
 interface Props {

@@ -13,7 +13,7 @@ import {
 import {
     Users, TrendingUp, CreditCard, ShieldAlert, PieChart as PieIcon,
     GitCompareArrows, Droplets, Heart, GraduationCap, AlertTriangle,
-    Calendar, StickyNote, CheckCircle, ClipboardList, X, Phone, RotateCcw,
+    Calendar, StickyNote, CheckCircle, ClipboardList, X, Phone, RotateCcw, Wallet,
 } from "lucide-react";
 import { DataStoryCard } from "../../widgets/story/DataStoryCard";
 import { StoryFilterStack, StoryChipGroup } from "../../widgets/story/StoryFilterChips";
@@ -296,6 +296,7 @@ function ConsultationCard({ delay, onClickStudent, opts }: { delay: number; onCl
             icon={<Users className="w-5 h-5" />}
             iconGradient="bg-gradient-to-br from-teal-500 to-emerald-600"
             title="จำนวนครั้งที่นิสิตปรึกษา"
+            description="รายชื่อนิสิตในที่ปรึกษาและจำนวนครั้งที่เข้าปรึกษา สีแสดงระดับความเสี่ยงล่าสุด — กดที่แท่งเพื่อดูข้อมูลรายบุคคล"
             narration={data ? `นิสิต ${list.length} คน ปรึกษารวม ${total} ครั้ง — กดที่แท่งเพื่อดูรายละเอียด` : "กำลังโหลด..."}
             kpis={data ? [
                 { label: "นิสิตรวม", value: list.length, color: "#14b8a6" },
@@ -357,6 +358,7 @@ function TrendCard({ delay, opts }: { delay: number; opts: FilterOpts }) {
             icon={<TrendingUp className="w-5 h-5" />}
             iconGradient="bg-gradient-to-br from-blue-500 to-indigo-600"
             title="แนวโน้มการรับคำปรึกษา"
+            description="กราฟเส้นแสดงจำนวนการปรึกษารายเดือน — ช่วยระบุช่วงเวลาที่นิสิตเครียดสูงสุด เช่น ก่อนสอบ หรือหลังผลออก"
             narration={data ? "ดูช่วงเวลาที่นิสิตเข้ารับคำปรึกษา — ก่อนสอบ / หลังสอบ / ปิดเทอม" : "กำลังโหลด..."}
             kpis={data ? [
                 { label: "เดือนทั้งหมด", value: trend.length, color: "#4f46e5" },
@@ -543,6 +545,7 @@ function ProblemDonutCard({ delay, opts }: { delay: number; opts: FilterOpts }) 
             icon={<PieIcon className="w-5 h-5" />}
             iconGradient="bg-gradient-to-br from-violet-500 to-purple-600"
             title="ประเภทปัญหาที่ปรึกษา"
+            description="สัดส่วนประเภทปัญหาที่นิสิตในที่ปรึกษานำมาขอรับคำปรึกษา — ใช้เตรียมความพร้อมและเลือกวิธีรับมือที่เหมาะสม"
             narration={data ? `${donut.length} ประเภทปัญหา — สูงสุด: ${donut[0]?.category ?? "-"}` : "กำลังโหลด..."}
             kpis={data ? [
                 { label: "ประเภทรวม", value: donut.length, color: "#7c3aed" },
@@ -593,7 +596,8 @@ function ComparisonCard({ delay, opts }: { delay: number; opts: FilterOpts }) {
         <DataStoryCard
             icon={<GitCompareArrows className="w-5 h-5" />}
             iconGradient="bg-gradient-to-br from-amber-500 to-orange-600"
-            title="เปรียบเทียบสถานะกับการปรึกษา"
+            title="รายได้ & สถานะครอบครัว vs การปรึกษา"
+            description="ความสัมพันธ์ระหว่างระดับรายได้ครอบครัว / สถานะครอบครัว กับจำนวนนิสิตที่เข้าปรึกษา — ช่วยระบุกลุ่มเปราะบางที่ต้องการการดูแลพิเศษ"
             narration={data ? "ความสัมพันธ์ระหว่างรายได้ / ครอบครัว กับจำนวนนิสิตที่มาปรึกษา" : "กำลังโหลด..."}
             filters={
                 <StoryFilterStack>
@@ -669,6 +673,7 @@ function HighRiskCard({ delay, onClickStudent, opts }: { delay: number; onClickS
             icon={<ShieldAlert className="w-5 h-5" />}
             iconGradient="bg-gradient-to-br from-rose-500 to-pink-600"
             title="นิสิตเฝ้าระวังพิเศษ"
+            description="รายชื่อนิสิตที่ได้รับการประเมินความเสี่ยงระดับสูงหรือวิกฤต — กดที่แท่งเพื่อดูข้อมูลรายบุคคลและประสานการดูแลเชิงรุก"
             narration={data ? `นิสิตที่ได้ความเสี่ยงระดับ สูง/วิกฤต — ${highRisk.length} คน — กดที่แท่งเพื่อดูรายละเอียด` : "กำลังโหลด..."}
             kpis={data ? [{ label: "เฝ้าระวัง", value: highRisk.length, color: "#f43f5e" }] : undefined}
             filters={
@@ -722,6 +727,185 @@ function HighRiskCard({ delay, onClickStudent, opts }: { delay: number; onClickS
                     <CheckCircle className="w-4 h-4 mr-1.5" />ไม่พบนิสิตที่มีระดับความเสี่ยงสูง
                 </div>
             )}
+        </DataStoryCard>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION 7: Income Distribution (uses comparison → incomeVsCount)
+// ═══════════════════════════════════════════════════════════════════════════
+const INCOME_LABEL_ADV: Record<string, string> = {
+    "UNDER_100K": "< 100K", "BETWEEN_100K_200K": "100-200K",
+    "BETWEEN_200K_300K": "200-300K", "BETWEEN_300K_500K": "300-500K",
+    "BETWEEN_500K_800K": "500-800K", "BETWEEN_800K_1M": "800K-1M",
+    "OVER_1M": "> 1M", "UNKNOWN": "ไม่ทราบ",
+};
+const INCOME_COLORS_ADV = ["#10b981","#06b6d4","#3b82f6","#8b5cf6","#f59e0b","#f97316","#ef4444","#94a3b8"];
+const INCOME_ORDER_ADV = ["UNDER_100K","BETWEEN_100K_200K","BETWEEN_200K_300K","BETWEEN_300K_500K","BETWEEN_500K_800K","BETWEEN_800K_1M","OVER_1M","UNKNOWN"];
+
+// Parental status colors keyed by Thai label (API returns Thai names for advisor)
+const PARENTAL_COLORS_ADV: Record<string, string> = {
+    "อยู่ด้วยกัน":    "#10b981",
+    "หย่าร้าง":       "#f59e0b",
+    "เลี้ยงเดี่ยว":   "#3b82f6",
+    "บิดาเสียชีวิต":  "#f97316",
+    "มารดาเสียชีวิต": "#8b5cf6",
+    "เสียชีวิตทั้งคู่": "#ef4444",
+    "ไม่ระบุ":        "#94a3b8",
+};
+
+function AdvisorIncomeCard({ delay, opts }: { delay: number; opts: FilterOpts }) {
+    const [filters, setFilters] = useState<CardFilters>({ ...DEFAULT_FILTERS });
+    const { data, loading } = useCardData("comparison", filters);
+    const rawIncome: { incomeRange: string; code?: string; studentCount: number }[] = data?.comparison?.incomeVsCount ?? [];
+    const total = rawIncome.reduce((s, d) => s + d.studentCount, 0);
+
+    // Sort by income order low→high — match on code field (API returns both incomeRange label + code)
+    const sorted = INCOME_ORDER_ADV
+        .map(key => rawIncome.find(d => d.code === key || d.incomeRange === key))
+        .filter(Boolean)
+        .map(d => ({
+            key: d!.code ?? d!.incomeRange,
+            name: INCOME_LABEL_ADV[d!.code ?? ""] ?? INCOME_LABEL_ADV[d!.incomeRange] ?? d!.incomeRange,
+            count: d!.studentCount,
+            pct: total > 0 ? parseFloat((d!.studentCount / total * 100).toFixed(1)) : 0,
+        }))
+        .filter(d => d.count > 0);
+
+    // Parental status — familyVsCount has Thai labels already
+    const rawParental: { familyStatus: string; studentCount: number }[] = data?.comparison?.familyVsCount ?? [];
+    const parentalTotal = rawParental.reduce((s, d) => s + d.studentCount, 0);
+    const sortedParental = [...rawParental]
+        .sort((a, b) => b.studentCount - a.studentCount)
+        .map(d => ({
+            name: d.familyStatus,
+            count: d.studentCount,
+            color: PARENTAL_COLORS_ADV[d.familyStatus] ?? PIE_COLORS[0],
+            pct: parentalTotal > 0 ? parseFloat((d.studentCount / parentalTotal * 100).toFixed(1)) : 0,
+        }))
+        .filter(d => d.count > 0);
+
+    const topGroup = [...sorted].sort((a, b) => b.count - a.count)[0];
+    const lowPct = sorted.filter(d => ["UNDER_100K","BETWEEN_100K_200K","BETWEEN_200K_300K"].includes(d.key))
+        .reduce((s, d) => s + d.pct, 0);
+    const narration = topGroup
+        ? `กลุ่มรายได้ที่พบมากที่สุดคือ "${topGroup.name}" (${topGroup.pct}%) — นิสิตรายได้ต่ำ <300K/ปี รวม ${lowPct.toFixed(1)}%`
+        : "กำลังโหลด...";
+
+    return (
+        <DataStoryCard
+            icon={<Wallet className="w-5 h-5" />}
+            iconGradient="bg-gradient-to-br from-emerald-500 to-teal-600"
+            title="รายได้ครอบครัวนิสิตในที่ปรึกษา"
+            description="การกระจายระดับรายได้ครอบครัวต่อปีของนิสิตในที่ปรึกษา — ใช้วางแผนการดูแลและสนับสนุนนิสิตกลุ่มเปราะบางทางการเงิน"
+            narration={loading ? "กำลังโหลด..." : narration}
+            kpis={data && total > 0 ? [
+                { label: "นิสิตในฐานข้อมูล", value: total, color: "#10b981" },
+                { label: "กลุ่มรายได้", value: sorted.length, color: "#6366f1" },
+            ] : undefined}
+            filters={
+                <StoryFilterStack>
+                    <StoryChipGroup label="เพศ" options={GENDER_OPTS} selected={filters.gender} onChange={v => setFilters(p => ({ ...p, gender: v }))} />
+                    <StoryChipGroup label="ชั้นปี" options={YEAR_OPTS} selected={filters.academicYear} onChange={v => setFilters(p => ({ ...p, academicYear: v }))} />
+                    {opts.seasons.length > 0 && <StoryChipGroup label="ฤดูกาล" options={opts.seasons} selected={filters.seasonIds} onChange={v => setFilters(p => ({ ...p, seasonIds: v }))} />}
+                    <TimePeriodChips value={filters.timePeriod} onChange={v => setFilters(p => ({ ...p, timePeriod: v }))}
+                        customStart={filters.customStart} customEnd={filters.customEnd}
+                        onCustomChange={(s, e) => setFilters(p => ({ ...p, customStart: s, customEnd: e }))} />
+                    {isFiltersDirty(filters) && <ResetFilterButton onClick={() => setFilters({ ...DEFAULT_FILTERS })} />}
+                </StoryFilterStack>
+            }
+            headerBadge={<DateRangeBadge period={filters.timePeriod} customStart={filters.customStart} customEnd={filters.customEnd} />}
+            delay={delay} loading={loading}
+        >
+            <div className="space-y-5">
+                {sorted.length > 0 ? (
+                    <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">รายได้ครอบครัวต่อปี (บาท)</p>
+                        <ResponsiveContainer width="100%" height={Math.max(200, sorted.length * 36 + 40)}>
+                            <BarChart data={sorted} layout="vertical" margin={{ left: 10, right: 16, top: 4, bottom: 4 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                                <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                                <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11, fill: "#475569", fontWeight: 600 }} axisLine={false} tickLine={false} />
+                                <Tooltip content={({ active, payload }: any) => {
+                                    if (!active || !payload?.[0]) return null;
+                                    const d = payload[0].payload;
+                                    return (
+                                        <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-2xl text-xs min-w-[160px]">
+                                            <p className="font-bold text-slate-800 mb-2">{d.name}</p>
+                                            <div className="flex justify-between gap-4"><span className="text-slate-400">จำนวน:</span><span className="font-bold text-slate-700">{d.count} ราย</span></div>
+                                            <div className="flex justify-between gap-4"><span className="text-slate-400">สัดส่วน:</span><span className="font-bold text-emerald-600">{d.pct}%</span></div>
+                                        </div>
+                                    );
+                                }} />
+                                <Bar dataKey="count" radius={[0, 8, 8, 0]} barSize={22}>
+                                    {sorted.map((d, idx) => (
+                                        <Cell key={idx} fill={INCOME_COLORS_ADV[INCOME_ORDER_ADV.indexOf(d.key)] ?? PIE_COLORS[idx % PIE_COLORS.length]} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5">
+                            {sorted.map((d, i) => {
+                                const colorIdx = INCOME_ORDER_ADV.indexOf(d.key);
+                                const color = INCOME_COLORS_ADV[colorIdx] ?? PIE_COLORS[i % PIE_COLORS.length];
+                                return (
+                                    <div key={i} className="flex items-center gap-2">
+                                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                                        <span className="text-[11px] text-slate-600 flex-1 truncate">{d.name}</span>
+                                        <span className="text-[11px] font-bold text-slate-500 tabular-nums">{d.pct}%</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex flex-col items-center justify-center py-12 text-slate-300">
+                        <Wallet className="w-10 h-10 mb-2 opacity-20" />
+                        <p className="text-sm font-medium">ยังไม่มีข้อมูลในช่วงเวลาที่เลือก</p>
+                    </div>
+                )}
+
+                {/* ── Parental Status Section ── */}
+                {sortedParental.length > 0 && (
+                    <div className="pt-5 border-t border-slate-100">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Users className="w-4 h-4 text-slate-400" />
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">สถานะบิดามารดา</p>
+                            <span className="text-[10px] text-slate-300">({parentalTotal.toLocaleString()} ราย)</span>
+                        </div>
+                        <ResponsiveContainer width="100%" height={Math.max(150, sortedParental.length * 32 + 20)}>
+                            <BarChart data={sortedParental} layout="vertical" margin={{ left: 10, right: 16, top: 2, bottom: 2 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                                <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                                <YAxis type="category" dataKey="name" width={105} tick={{ fontSize: 11, fill: "#475569", fontWeight: 600 }} axisLine={false} tickLine={false} />
+                                <Tooltip content={({ active, payload }: any) => {
+                                    if (!active || !payload?.[0]) return null;
+                                    const d = payload[0].payload;
+                                    return (
+                                        <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-2xl text-xs min-w-[160px]">
+                                            <p className="font-bold text-slate-800 mb-2">{d.name}</p>
+                                            <div className="flex justify-between gap-4"><span className="text-slate-400">จำนวน:</span><span className="font-bold text-slate-700">{d.count} ราย</span></div>
+                                            <div className="flex justify-between gap-4"><span className="text-slate-400">สัดส่วน:</span><span className="font-bold text-indigo-600">{d.pct}%</span></div>
+                                        </div>
+                                    );
+                                }} />
+                                <Bar dataKey="count" radius={[0, 8, 8, 0]} barSize={18}>
+                                    {sortedParental.map((d, idx) => <Cell key={idx} fill={d.color} />)}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5">
+                            {sortedParental.map((d, i) => (
+                                <div key={i} className="flex items-center gap-2">
+                                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                                    <span className="text-[11px] text-slate-600 flex-1 truncate">{d.name}</span>
+                                    <span className="text-[11px] font-bold text-slate-500 tabular-nums">{d.pct}%</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
         </DataStoryCard>
     );
 }
@@ -784,7 +968,9 @@ export function AdvisorDashboard() {
                     <ComparisonCard delay={3} opts={opts} />
                 </DataStoryGrid>
 
-                <HighRiskCard delay={4} onClickStudent={setSelectedStudentId} opts={opts} />
+                <AdvisorIncomeCard delay={4} opts={opts} />
+
+                <HighRiskCard delay={5} onClickStudent={setSelectedStudentId} opts={opts} />
 
                 <div className="text-center text-xs text-slate-300 py-3 animate-[fadeUp_0.5s_ease-out_both]" style={{ animationDelay: "500ms" }}>
                     อัปเดตล่าสุด: {new Date().toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })}
