@@ -17,19 +17,19 @@ import { universityStudentCounts, DEFAULT_STUDENT_COUNT } from "@/lib/constants/
  */
 export async function GET(req: NextRequest) {
   const startTime = Date.now();
-  
+
   try {
     const { searchParams } = new URL(req.url);
-    
+
     // 🔥 Pagination support (optional for map, useful for API clients)
     const page = Math.max(0, parseInt(searchParams.get("page") || "0"));
     const pageSizeRaw = parseInt(searchParams.get("pageSize") || "100");
     const pageSize = Math.min(500, Math.max(1, pageSizeRaw)); // cap at 500 for map view
-    
+
     // 🎯 Filtering & sorting constants
-    const problemCategory = searchParams.get("problemCategory") || ""; 
-    const sortBy = searchParams.get("sortBy") || ""; 
-    
+    const problemCategory = searchParams.get("problemCategory") || "";
+    const sortBy = searchParams.get("sortBy") || "";
+
     // 🚀 CACHE STRATEGY: Check Redis first
     const cacheKey = `${CacheKeys.universities()}:v2:p${page}:s${pageSize}`;
     const cachedData = await getCached<any>(cacheKey);
@@ -67,6 +67,7 @@ export async function GET(req: NextRequest) {
             select: {
               province_name_th: true,
               province_name_en: true,
+              is_special_zone: true,
               region: {
                 select: {
                   region_name_th: true,
@@ -114,8 +115,8 @@ export async function GET(req: NextRequest) {
     });
 
     const granularStatsByUni = new Map<number, any>(); // uniId -> { STATUS: { CAT_CODE: count } }
-    const statusBreakdownByUni = new Map<number, Record<string, number>>(); 
-    const problemBreakdownByUni = new Map<number, Record<string, number>>(); 
+    const statusBreakdownByUni = new Map<number, Record<string, number>>();
+    const problemBreakdownByUni = new Map<number, Record<string, number>>();
     const topCategoryByUni = new Map<number, any>();
     const statsAccumulator: Record<number, Record<number, number>> = {}; // uniId -> { catId: totalCount }
 
@@ -148,7 +149,7 @@ export async function GET(req: NextRequest) {
       problemBreakdownByUni.set(stat.university_id, pbBreakdown);
 
       // Accumulate for top category
-      statsAccumulator[stat.university_id][stat.problem_category_id] = 
+      statsAccumulator[stat.university_id][stat.problem_category_id] =
         (statsAccumulator[stat.university_id][stat.problem_category_id] || 0) + count;
     }
 
@@ -178,7 +179,7 @@ export async function GET(req: NextRequest) {
     }
 
     const elapsed = Date.now() - startTime;
-    
+
     // 🔍 Log slow queries (>100ms) without PII
     if (elapsed > 100) {
       console.warn(`[SLOW QUERY] GET /api/v2/ministry/universities took ${elapsed}ms (page=${page}, pageSize=${pageSize}, results=${universities.length})`);
@@ -190,7 +191,7 @@ export async function GET(req: NextRequest) {
       const problemBreakdown = problemBreakdownByUni.get(uni.university_id) || {};
       const statusBreakdown = statusBreakdownByUni.get(uni.university_id) || {};
       const granularStats = granularStatsByUni.get(uni.university_id) || {};
-      
+
       return {
         id: uni.university_code,
         code: uni.university_code,
@@ -201,6 +202,7 @@ export async function GET(req: NextRequest) {
         region: uni.province.region.region_name_en || "Central",
         regionCode: uni.province.region.region_code || "UPPER_CENTRAL",
         province: uni.province.province_name_th || "",
+        isSpecialZone: uni.province.is_special_zone || false,
         // priority: hardcoded CSV data > DB count
         students: universityStudentCounts[uni.university_code] ?? uni._count.students,
         type: uni.universityType?.code || "PUBLIC",
@@ -218,7 +220,7 @@ export async function GET(req: NextRequest) {
 
     // 🎯 Apply problem category filter
     if (problemCategory) {
-      mapData = mapData.filter(uni => 
+      mapData = mapData.filter(uni =>
         uni.problemBreakdown[problemCategory] && uni.problemBreakdown[problemCategory] > 0
       );
     }
@@ -237,12 +239,12 @@ export async function GET(req: NextRequest) {
       // 🔥 Backward compatible: only add pagination if requested
       ...(searchParams.get("page") || searchParams.get("pageSize")
         ? {
-            pagination: {
-              page,
-              pageSize,
-              hasMore: mapData.length === pageSize,
-            },
-          }
+          pagination: {
+            page,
+            pageSize,
+            hasMore: mapData.length === pageSize,
+          },
+        }
         : {}),
       // Cache metadata
       generatedAt: new Date().toISOString(),
@@ -250,7 +252,7 @@ export async function GET(req: NextRequest) {
 
     // 💾 CACHE SET: Save to Redis background
     // Don't await to avoid blocking response
-    setCache(cacheKey, response, CacheTTL.UNIVERSITIES).catch(err => 
+    setCache(cacheKey, response, CacheTTL.UNIVERSITIES).catch(err =>
       console.error("[CACHE ERROR] Failed to set cache:", err)
     );
 

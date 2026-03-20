@@ -34,8 +34,13 @@ export default function GenericBookingStory({ apiPath, title, delay = 0, descrip
 
     const calc = (val: number) => unit === "percent" && total > 0 ? ((val / total) * 100).toFixed(1) + "%" : val;
 
+    // Determine if trend is yearly or monthly
+    const isYearly = data?.trendMode === "year";
+
     const trendData = (data?.monthlyTrend ?? []).map((m: any) => ({
-        month: MONTH_LABEL[m.month?.split("-")[1]] || m.month,
+        label: isYearly
+            ? `พ.ศ. ${m.month}` // Already BE year from backend
+            : (MONTH_LABEL[m.month?.split("-")[1]] || m.month),
         จอง: m.bookings,
         มาจริง: unit === "percent" && m.bookings > 0 ? Number(((m.checkedIn / m.bookings) * 100).toFixed(1)) : m.checkedIn,
     }));
@@ -47,7 +52,7 @@ export default function GenericBookingStory({ apiPath, title, delay = 0, descrip
             title={title}
             description={description}
             narration={
-                data ? `การนัดหมายทั้งหมด ${total} ครั้ง — มาตามนัด ${checkedIn} ครั้ง / ไม่มา ${noShow} ครั้ง / สำเร็จ ${completed} ครั้ง`
+                data ? `การนัดหมายทั้งหมด ${total.toLocaleString()} ครั้ง — มาตามนัด ${checkedIn.toLocaleString()} ครั้ง / ไม่มา ${noShow.toLocaleString()} ครั้ง / สำเร็จ ${completed.toLocaleString()} ครั้ง`
                     : "กำลังโหลด..."
             }
             kpis={data ? [
@@ -96,18 +101,23 @@ export default function GenericBookingStory({ apiPath, title, delay = 0, descrip
         >
             {data && trendData.length > 0 && (
                 <div className="mt-1">
-                    <p className="text-[10px] text-slate-400 font-bold mb-2 uppercase tracking-wider">แนวโน้มรายเดือน</p>
-                    <ResponsiveContainer width="100%" height={180}>
-                        <LineChart data={trendData}>
+                    <p className="text-[10px] text-slate-400 font-bold mb-2 uppercase tracking-wider">
+                        {isYearly ? "แนวโน้มรายปี" : "แนวโน้มรายเดือน"}
+                    </p>
+                    <ResponsiveContainer width="100%" height={isYearly ? 220 : 180}>
+                        <BarChart data={trendData} barGap={4}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                            <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#94a3b8" }} />
-                            <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} width={35} />
+                            <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }}
+                                angle={isYearly ? 0 : -45} textAnchor={isYearly ? "middle" : "end"}
+                                height={isYearly ? 30 : 50} />
+                            <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} width={50}
+                                tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}K` : String(v)} />
                             <Tooltip content={<Tip />} />
                             <Legend verticalAlign="bottom" iconType="circle"
                                 formatter={(v: string) => <span className="text-[10px] text-slate-500 font-medium">{v}</span>} />
-                            <Line type="monotone" dataKey="จอง" stroke="#4f46e5" strokeWidth={2} dot={{ r: 3 }} />
-                            <Line type="monotone" dataKey="มาจริง" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
-                        </LineChart>
+                            <Bar dataKey="จอง" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="มาจริง" fill="#10b981" radius={[4, 4, 0, 0]} />
+                        </BarChart>
                     </ResponsiveContainer>
                 </div>
             )}
@@ -119,3 +129,4 @@ export default function GenericBookingStory({ apiPath, title, delay = 0, descrip
         </DataStoryCard>
     );
 }
+

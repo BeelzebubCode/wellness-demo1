@@ -70,9 +70,9 @@ function UniversityPin({ data, opacity = 1 }: { data: UniversityMapData; opacity
             }
           }}
         />
-        
+
         {data.dominantProblemCount > 0 && data.dominantProblemCount >= 50 && (
-         <div style={{
+          <div style={{
             position: "absolute",
             top: -2,
             right: -2,
@@ -92,7 +92,7 @@ function UniversityPin({ data, opacity = 1 }: { data: UniversityMapData; opacity
           }}>
             !
           </div>
-       )}
+        )}
       </div>
     ),
     iconSize: [48, 48],
@@ -121,16 +121,16 @@ function UniversityPin({ data, opacity = 1 }: { data: UniversityMapData; opacity
             <div>
               <div style={{ fontSize: "10px", color: "#9ca3af", textTransform: "uppercase" }}>ปัญหาหลัก</div>
               <div style={{ fontWeight: 600, fontSize: "12px", color: problemColor }}>
-                 {data.dominantProblemTH || "N/A"}
+                {data.dominantProblemTH || "N/A"}
               </div>
             </div>
           </div>
-            <a
-              href={`/ministry/universities/${data.code}`}
-              className="block text-center py-2 px-3 bg-primary text-white rounded-lg text-[13px] font-semibold no-underline"
-            >
-              ดูแดชบอร์ด →
-            </a>
+          <a
+            href={`/ministry/universities/${data.code}`}
+            className="block text-center py-2 px-3 bg-primary text-white rounded-lg text-[13px] font-semibold no-underline"
+          >
+            ดูแดชบอร์ด →
+          </a>
         </div>
       </Popup>
     </Marker>
@@ -194,10 +194,11 @@ export function ThailandMap() {
   const [filter, setFilter] = useState<MapFilterState>({
     search: "",
     region: "",
+    provinceNames: [],
     type: "",
     stress: "",
-    status: "", // 🔥 Added initial status
-    problemCategories: [], // 🔥 Ensure initialized
+    status: "",
+    problemCategories: [],
   });
   const [mapStyle, setMapStyle] = useState<"street" | "satellite" | "terrain">("street");
 
@@ -220,13 +221,13 @@ export function ThailandMap() {
 
       // 3 & 5. Combined Problem Category and Status filter
       if (filter.status && filter.problemCategories && filter.problemCategories.length > 0) {
-        const hasCombinedMatch = filter.problemCategories.some(cat => 
+        const hasCombinedMatch = filter.problemCategories.some(cat =>
           uni.granularStats?.[filter.status]?.[cat] && uni.granularStats[filter.status][cat] > 0
         );
         if (!hasCombinedMatch) return false;
       } else if (filter.problemCategories && filter.problemCategories.length > 0) {
         // Individual problem filter
-        const hasMatch = filter.problemCategories.some(cat => 
+        const hasMatch = filter.problemCategories.some(cat =>
           uni.problemBreakdown && uni.problemBreakdown[cat] && uni.problemBreakdown[cat] > 0
         );
         if (!hasMatch) return false;
@@ -250,19 +251,51 @@ export function ThailandMap() {
     });
   }, [universities, filter.search, filter.type, filter.stress, filter.status, filter.problemCategories]);
 
+  // Compute available provinces (scoped to selected region)
+  const availableProvinces = useMemo(() => {
+    let source = allData;
+    if (filter.region === "SPECIAL_ADMIN") {
+      source = allData.filter(u => u.isSpecialZone);
+    } else if (filter.region) {
+      source = allData.filter(u => u.regionCode === filter.region);
+    }
+    const map = new Map<string, number>();
+    for (const u of source) {
+      if (u.province) map.set(u.province, (map.get(u.province) ?? 0) + 1);
+    }
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b, 'th'))
+      .map(([name, count]) => ({ name, count }));
+  }, [allData, filter.region]);
+
+  // Derive special zone label for the button (from DB data)
+  const specialZoneNames = useMemo(() => {
+    const names = new Set<string>();
+    for (const u of allData) {
+      if (u.isSpecialZone && u.province) names.add(u.province);
+    }
+    return Array.from(names).sort((a, b) => a.localeCompare(b, 'th'));
+  }, [allData]);
+
   // Selected region universities (fully visible)
   const selectedRegionData = useMemo(() => {
-    if (!filter.region) return allData; // No region filter
-    return allData.filter((uni) => uni.regionCode === filter.region); // 🔥 Fixed: use regionCode
-  }, [allData, filter.region]);
+    let data = allData;
+    if (filter.region === "SPECIAL_ADMIN") {
+      data = data.filter((uni) => uni.isSpecialZone);
+    } else if (filter.region) {
+      data = data.filter((uni) => uni.regionCode === filter.region);
+    }
+    if (filter.provinceNames.length > 0) data = data.filter((uni) => filter.provinceNames.includes(uni.province));
+    return data;
+  }, [allData, filter.region, filter.provinceNames]);
 
   // Other region universities (dimmed)
   const otherRegionData = useMemo(() => {
-    if (!filter.region) return []; // No dimming if no region selected
-    return allData.filter((uni) => uni.regionCode !== filter.region); // 🔥 Fixed: use regionCode
-  }, [allData, filter.region]);
+    if (!filter.region && filter.provinceNames.length === 0) return []; // No dimming
+    return allData.filter((uni) => !selectedRegionData.includes(uni));
+  }, [allData, selectedRegionData, filter.region, filter.provinceNames]);
 
-  // For sidebar display (only selected region)
+  // For sidebar display (only selected region + province)
   const filteredData = selectedRegionData;
 
   if (isLoading) {
@@ -298,15 +331,16 @@ export function ThailandMap() {
       </button>
 
       {/* Left Sidebar - Filters */}
-      <div 
-        className={`h-full flex-shrink-0 border-r border-gray-200 bg-white z-20 relative shadow-sm transition-all duration-300 ease-in-out ${
-          isSidebarExpanded ? "w-[320px] translate-x-0" : "w-0 -translate-x-full opacity-0"
-        }`}
+      <div
+        className={`h-full flex-shrink-0 border-r border-gray-200 bg-white z-20 relative shadow-sm transition-all duration-300 ease-in-out ${isSidebarExpanded ? "w-[320px] translate-x-0" : "w-0 -translate-x-full opacity-0"
+          }`}
       >
         <div className="w-[320px] h-full overflow-y-auto">
-          <MapLeftSidebar 
-            filter={filter} 
-            onChange={setFilter} 
+          <MapLeftSidebar
+            filter={filter}
+            onChange={setFilter}
+            availableProvinces={availableProvinces}
+            specialZoneNames={specialZoneNames}
           />
         </div>
       </div>
@@ -321,7 +355,7 @@ export function ThailandMap() {
           scrollWheelZoom={true}
         >
           <MapStyleController mapStyle={mapStyle} />
-          <MapBoundsController data={filteredData} resetZoom={!filter.region} />
+          <MapBoundsController data={filteredData} resetZoom={!filter.region && filter.provinceNames.length === 0} />
 
           {/* Selected region universities (fully visible) */}
           {selectedRegionData.map((uni) => (
@@ -338,38 +372,35 @@ export function ThailandMap() {
         <div className="absolute bottom-6 right-6 z-[1000] flex gap-2 bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-gray-200 p-2 animate-in fade-in slide-in-from-right-4 pointer-events-auto">
           <button
             onClick={() => setMapStyle("street")}
-            className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all shadow-sm ${
-              mapStyle === "street"
-                ? "bg-primary text-white"
-                : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-100"
-            }`}
+            className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all shadow-sm ${mapStyle === "street"
+              ? "bg-primary text-white"
+              : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-100"
+              }`}
           >
             🗺️
           </button>
           <button
             onClick={() => setMapStyle("satellite")}
-            className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all shadow-sm ${
-              mapStyle === "satellite"
-                ? "bg-primary text-white"
-                : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-100"
-            }`}
+            className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all shadow-sm ${mapStyle === "satellite"
+              ? "bg-primary text-white"
+              : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-100"
+              }`}
           >
             🛰️
           </button>
           <button
             onClick={() => setMapStyle("terrain")}
-            className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all shadow-sm ${
-              mapStyle === "terrain"
-                ? "bg-primary text-white"
-                : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-100"
-            }`}
+            className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all shadow-sm ${mapStyle === "terrain"
+              ? "bg-primary text-white"
+              : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-100"
+              }`}
           >
             🏔️
           </button>
         </div>
 
-      {/* CSS 3D Effect */}
-      <style jsx global>{`
+        {/* CSS 3D Effect */}
+        <style jsx global>{`
         .university-pin:hover {
           transform: scale(1.2) translateY(-5px);
           box-shadow: 0 8px 24px rgba(99, 102, 241, 0.7) !important;
@@ -387,13 +418,12 @@ export function ThailandMap() {
       </div>
 
       {/* Right Sidebar - University Rankings */}
-      <div 
-        className={`h-full flex-shrink-0 border-l border-gray-200 bg-white z-20 relative transition-all duration-300 ease-in-out ${
-          isSidebarExpanded ? "w-[380px] translate-x-0" : "w-0 translate-x-full opacity-0"
-        }`}
+      <div
+        className={`h-full flex-shrink-0 border-l border-gray-200 bg-white z-20 relative transition-all duration-300 ease-in-out ${isSidebarExpanded ? "w-[380px] translate-x-0" : "w-0 translate-x-full opacity-0"
+          }`}
       >
         <div className="w-[380px] h-full">
-          <UniversityRankings 
+          <UniversityRankings
             universities={filteredData}
             problemCategories={filter.problemCategories}
             status={filter.status}

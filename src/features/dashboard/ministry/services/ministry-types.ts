@@ -81,6 +81,7 @@ export interface UniversityMapData {
   region: string;
   regionCode: string;
   province: string;
+  isSpecialZone: boolean;
   students: number;
   type: string;
   logo: string;

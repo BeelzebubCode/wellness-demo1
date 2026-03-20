@@ -77,14 +77,15 @@ export async function queryBookingStory(scope: MVScope) {
 
     const w = scope.bookingWhere;
 
-    const [stats, trend] = await Promise.all([
+    // First get monthly trend to decide aggregation level
+    const [stats, monthlyTrend] = await Promise.all([
         prisma.$queryRawUnsafe<{
             total_bookings: number; checked_in: number;
             no_show: number; completed: number;
         }[]>(`
             SELECT
                 SUM(total_bookings)::int AS total_bookings,
-                SUM(CASE WHEN attendance_status = 'CHECKED_IN' THEN total_bookings ELSE 0 END)::int AS checked_in,
+                SUM(CASE WHEN attendance_status IN ('CHECKED_IN','LATE') THEN total_bookings ELSE 0 END)::int AS checked_in,
                 SUM(CASE WHEN attendance_status = 'NO_SHOW' THEN total_bookings ELSE 0 END)::int AS no_show,
                 SUM(CASE WHEN booking_status = 'COMPLETED' THEN total_bookings ELSE 0 END)::int AS completed
             FROM mv_booking_summary ${w}
@@ -93,7 +94,7 @@ export async function queryBookingStory(scope: MVScope) {
             month: string; bookings: number; checked_in: number;
         }[]>(`
             SELECT month, SUM(total_bookings)::int AS bookings,
-                   SUM(CASE WHEN attendance_status = 'CHECKED_IN' THEN total_bookings ELSE 0 END)::int AS checked_in
+                   SUM(CASE WHEN attendance_status IN ('CHECKED_IN','LATE') THEN total_bookings ELSE 0 END)::int AS checked_in
             FROM mv_booking_summary ${w}
             GROUP BY month ORDER BY month
         `),
@@ -101,13 +102,42 @@ export async function queryBookingStory(scope: MVScope) {
 
     const bs = stats[0] ?? { total_bookings: 0, checked_in: 0, no_show: 0, completed: 0 };
 
+    // If more than 18 months, aggregate by year for readable chart
+    const useYearly = monthlyTrend.length > 18;
+    let trend: { period: string; bookings: number; checkedIn: number }[];
+
+    if (useYearly) {
+        const yearMap = new Map<string, { bookings: number; checkedIn: number }>();
+        for (const r of monthlyTrend) {
+            const year = r.month.split("-")[0]; // "2019"
+            const existing = yearMap.get(year) ?? { bookings: 0, checkedIn: 0 };
+            existing.bookings += r.bookings;
+            existing.checkedIn += r.checked_in;
+            yearMap.set(year, existing);
+        }
+        trend = Array.from(yearMap.entries())
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([year, d]) => ({
+                period: String(Number(year) + 543), // Convert CE to BE (พ.ศ.)
+                bookings: d.bookings,
+                checkedIn: d.checkedIn,
+            }));
+    } else {
+        trend = monthlyTrend.map(r => ({
+            period: r.month,
+            bookings: r.bookings,
+            checkedIn: r.checked_in,
+        }));
+    }
+
     const result = {
         totalBookings: bs.total_bookings,
         checkedInCount: bs.checked_in,
         noShowCount: bs.no_show,
         completedCount: bs.completed,
+        trendMode: useYearly ? "year" as const : "month" as const,
         monthlyTrend: trend.map(r => ({
-            month: r.month, bookings: r.bookings, checkedIn: r.checked_in,
+            month: r.period, bookings: r.bookings, checkedIn: r.checkedIn,
         })),
     };
     setCache(cacheKey, result);
