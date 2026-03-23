@@ -92,4 +92,5 @@ export interface UniversityMapData {
   problemBreakdown: Record<string, number>;
   statusBreakdown: Record<string, number>;
   granularStats: Record<string, Record<string, number>>;
+  serviceModeBreakdown: Record<string, number>;
 }

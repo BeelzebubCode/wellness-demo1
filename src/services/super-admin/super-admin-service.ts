@@ -226,56 +226,43 @@ export const SuperAdminService = {
    * How fast do high-risk students get attended to?
    */
   async getHighRiskResponseTime() {
-    // Find bookings with high risk outcomes (risk_level_id >= 4)
-    const highRiskBookings = await prisma.bookingOutcome.findMany({
-      where: { risk_level_id: { gte: 4 } },
-      select: {
-        university_id: true,
-        booking: {
-          select: {
-            booking_created_at: true,
-            attendance: {
-              select: { booking_attendance_checked_in_at: true }
-            }
-          }
-        }
-      }
-    });
+    // Use raw query to avoid bind variable overflow with large datasets
+    const results = await prisma.$queryRaw<Array<{
+      university_id: number;
+      avg_wait_hours: number;
+      case_count: bigint;
+    }>>`
+      SELECT
+        bo.university_id,
+        AVG(EXTRACT(EPOCH FROM (ba.booking_attendance_checked_in_at - b.booking_created_at)) / 3600) as avg_wait_hours,
+        COUNT(*) as case_count
+      FROM booking_outcome bo
+      JOIN booking b ON b.booking_id = bo.booking_id AND b.university_id = bo.university_id
+      LEFT JOIN booking_attendance ba ON ba.booking_id = bo.booking_id
+      WHERE bo.risk_level_id >= 4
+        AND ba.booking_attendance_checked_in_at IS NOT NULL
+        AND ba.booking_attendance_checked_in_at > b.booking_created_at
+        AND b.booking_created_at >= NOW() - INTERVAL '90 days'
+      GROUP BY bo.university_id
+      ORDER BY avg_wait_hours DESC
+      LIMIT 15
+    `;
 
-    // Group by university and compute avg wait hours
-    const uniStats: Record<number, { totalHours: number; count: number }> = {};
-
-    highRiskBookings.forEach(outcome => {
-      const createdAt = outcome.booking.booking_created_at;
-      const checkedInAt = outcome.booking.attendance?.booking_attendance_checked_in_at;
-      if (!checkedInAt) return;
-
-      const waitHours = (checkedInAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-      if (waitHours < 0) return;
-
-      if (!uniStats[outcome.university_id]) {
-        uniStats[outcome.university_id] = { totalHours: 0, count: 0 };
-      }
-      uniStats[outcome.university_id].totalHours += waitHours;
-      uniStats[outcome.university_id].count++;
-    });
+    if (results.length === 0) return [];
 
     // Fetch university names
-    const uniIds = Object.keys(uniStats).map(Number);
+    const uniIds = results.map(r => r.university_id);
     const unis = await prisma.university.findMany({
       where: { university_id: { in: uniIds } },
       select: { university_id: true, university_name_th: true, university_code: true }
     });
     const uniMap = new Map(unis.map(u => [u.university_id, u.university_name_th || u.university_code]));
 
-    return Object.entries(uniStats)
-      .map(([id, stats]) => ({
-        universityName: uniMap.get(Number(id)) || `Uni ${id}`,
-        avgWaitHours: Math.round((stats.totalHours / stats.count) * 10) / 10,
-        caseCount: stats.count
-      }))
-      .sort((a, b) => b.avgWaitHours - a.avgWaitHours)
-      .slice(0, 15);
+    return results.map(r => ({
+      universityName: uniMap.get(r.university_id) || `Uni ${r.university_id}`,
+      avgWaitHours: Math.round(Number(r.avg_wait_hours) * 10) / 10,
+      caseCount: Number(r.case_count)
+    }));
   },
 
   /**

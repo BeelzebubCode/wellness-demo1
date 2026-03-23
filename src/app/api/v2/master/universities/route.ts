@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
     const skip = page * pageSize;
 
     // 1. Parallel Fetch: Universities + Categories
-    const [universities, categories] = await Promise.all([
+    const [universities, categories, serviceModes] = await Promise.all([
       prisma.university.findMany({
         where: {
           university_is_active: true,
@@ -96,27 +96,47 @@ export async function GET(req: NextRequest) {
           problem_category_name_en: true,
           problem_category_name_th: true,
         }
-      })
+      }),
+      prisma.serviceModeCategory.findMany({
+        select: {
+          service_mode_id: true,
+          code: true,
+        },
+      }),
     ]);
 
     const universityIds = universities.map(u => u.university_id);
     const categoryMap = new Map(categories.map(c => [c.problem_category_id, c]));
+    const serviceModeMap = new Map(serviceModes.map(s => [s.service_mode_id, s.code]));
 
     // 2. Optimized: Single GroupBy for ALL stats (status + category)
     // This replaces two separate heavy queries with one.
-    const granularStats = await prisma.booking.groupBy({
-      by: ["university_id", "booking_status", "problem_category_id"],
-      where: {
-        university_id: { in: universityIds },
-      },
-      _count: {
-        _all: true,
-      },
-    });
+    const [granularStats, serviceModeStats] = await Promise.all([
+      prisma.booking.groupBy({
+        by: ["university_id", "booking_status", "problem_category_id"],
+        where: {
+          university_id: { in: universityIds },
+        },
+        _count: {
+          _all: true,
+        },
+      }),
+      prisma.booking.groupBy({
+        by: ["university_id", "service_mode_id"],
+        where: {
+          university_id: { in: universityIds },
+          service_mode_id: { not: undefined },
+        },
+        _count: {
+          _all: true,
+        },
+      }),
+    ]);
 
     const granularStatsByUni = new Map<number, any>(); // uniId -> { STATUS: { CAT_CODE: count } }
     const statusBreakdownByUni = new Map<number, Record<string, number>>();
     const problemBreakdownByUni = new Map<number, Record<string, number>>();
+    const serviceModeBreakdownByUni = new Map<number, Record<string, number>>();
     const topCategoryByUni = new Map<number, any>();
     const statsAccumulator: Record<number, Record<number, number>> = {}; // uniId -> { catId: totalCount }
 
@@ -178,6 +198,16 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Build service mode breakdown per university
+    for (const stat of serviceModeStats) {
+      if (stat.service_mode_id == null) continue;
+      const modeCode = serviceModeMap.get(stat.service_mode_id);
+      if (!modeCode) continue;
+      const breakdown = serviceModeBreakdownByUni.get(stat.university_id) || {};
+      breakdown[modeCode] = (breakdown[modeCode] || 0) + (typeof stat._count === 'object' ? (stat._count as any)._all : 0);
+      serviceModeBreakdownByUni.set(stat.university_id, breakdown);
+    }
+
     const elapsed = Date.now() - startTime;
 
     // 🔍 Log slow queries (>100ms) without PII
@@ -215,6 +245,7 @@ export async function GET(req: NextRequest) {
         problemBreakdown, // Full breakdown: { STRESS: 10, DEPRESSION: 5, ... }
         statusBreakdown,  // Status breakdown: { COMPLETED: 10, CANCELLED: 2, ... }
         granularStats,    // 🔥 2D Statistics: { COMPLETED: { STRESS: 5 }, CANCELLED: { STRESS: 1 } }
+        serviceModeBreakdown: serviceModeBreakdownByUni.get(uni.university_id) || {}, // { ONLINE: 50, ONSITE: 20 }
       };
     });
 

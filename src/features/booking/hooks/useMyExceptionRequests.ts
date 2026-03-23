@@ -47,7 +47,7 @@ export interface PenaltyBooking {
     deadlineAt: string;
     isExpired: boolean;
     canSubmit: boolean;
-    penaltyType: "LATE_CANCEL" | "VERY_LATE_CANCEL" | "NORMAL";
+    penaltyType: "LATE_CANCEL" | "VERY_LATE_CANCEL";
 }
 
 export interface TrustStatusInfo {

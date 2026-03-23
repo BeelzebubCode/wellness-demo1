@@ -334,6 +334,7 @@ export function ThailandMap() {
     stress: "",
     status: "",
     problemCategories: [],
+    serviceModes: [],
   });
   const [mapStyle, setMapStyle] = useState<"street" | "satellite" | "terrain">("street");
   const [showIntelOverlay, setShowIntelOverlay] = useState(true);
@@ -409,9 +410,17 @@ export function ThailandMap() {
         if (filter.stress === "LOW" && count >= 20) return false;
       }
 
+      // 5. Service Mode filter
+      if (filter.serviceModes && filter.serviceModes.length > 0) {
+        const hasMode = filter.serviceModes.some(code =>
+          uni.serviceModeBreakdown && uni.serviceModeBreakdown[code] && uni.serviceModeBreakdown[code] > 0
+        );
+        if (!hasMode) return false;
+      }
+
       return true;
     });
-  }, [universities, filter.search, filter.type, filter.stress, filter.status, filter.problemCategories]);
+  }, [universities, filter.search, filter.type, filter.stress, filter.status, filter.problemCategories, filter.serviceModes]);
 
   // Compute available provinces (scoped to selected region)
   const availableProvinces = useMemo(() => {

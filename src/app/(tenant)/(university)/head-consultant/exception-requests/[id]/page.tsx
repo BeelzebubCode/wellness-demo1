@@ -1,7 +1,7 @@
 // src/app/(tenant)/(university)/head-consultant/exception-requests/[id]/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -75,10 +75,41 @@ export default function ExceptionRequestDetailPage() {
 
     const { data: request, isLoading, error, refresh } = useExceptionRequestDetail(requestId);
     const [decisionNote, setDecisionNote] = useState("");
-    const [confirmAction, setConfirmAction] = useState<"APPROVE" | "REJECT" | null>(null);
+    const [countdownModal, setCountdownModal] = useState<{ action: "APPROVE" | "REJECT"; seconds: number } | null>(null);
+    const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const { doReview, isSubmitting } = useExceptionReview(() => refresh());
     const { warning: toastWarning } = useToast();
 
+    // ── All hooks MUST be above early returns ──
+    const cancelCountdown = useCallback(() => {
+        if (countdownRef.current) clearInterval(countdownRef.current);
+        countdownRef.current = null;
+        setCountdownModal(null);
+    }, []);
+
+    const startCountdown = useCallback((action: "APPROVE" | "REJECT") => {
+        setCountdownModal({ action, seconds: 3 });
+        if (countdownRef.current) clearInterval(countdownRef.current);
+        let sec = 3;
+        countdownRef.current = setInterval(() => {
+            sec -= 1;
+            if (sec <= 0) {
+                if (countdownRef.current) clearInterval(countdownRef.current);
+                countdownRef.current = null;
+                setCountdownModal(null);
+                doReview(requestId, action, decisionNote);
+            } else {
+                setCountdownModal({ action, seconds: sec });
+            }
+        }, 1000);
+    }, [doReview, requestId, decisionNote]);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
+    }, []);
+
+    // ── Early returns ──
     if (isLoading) {
         return (
             <div className="flex justify-center items-center py-32">
@@ -119,17 +150,13 @@ export default function ExceptionRequestDetailPage() {
     const isLocked = student.behaviorStatus?.student_trust_locked_until
         && new Date(student.behaviorStatus.student_trust_locked_until) > new Date();
 
-    const handleApprove = async () => {
-        if (confirmAction !== "APPROVE") { setConfirmAction("APPROVE"); return; }
-        setConfirmAction(null);
-        await doReview(requestId, "APPROVE", decisionNote);
+    const handleApprove = () => {
+        startCountdown("APPROVE");
     };
 
-    const handleReject = async () => {
+    const handleReject = () => {
         if (!decisionNote.trim()) { toastWarning("กรุณาระบุเหตุผลในการปฏิเสธ"); return; }
-        if (confirmAction !== "REJECT") { setConfirmAction("REJECT"); return; }
-        setConfirmAction(null);
-        await doReview(requestId, "REJECT", decisionNote);
+        startCountdown("REJECT");
     };
 
     return (
@@ -245,35 +272,78 @@ export default function ExceptionRequestDetailPage() {
                                 disabled={isSubmitting}
                             />
 
-                            {/* Inline confirmation bar */}
-                            {confirmAction && (
-                                <div className={`flex items-center gap-3 p-3 rounded-xl border mt-4 ${confirmAction === "APPROVE"
-                                    ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-                                    : "bg-red-50 border-red-200 text-red-800"
-                                    }`}>
-                                    <AlertTriangle className="w-4 h-4 shrink-0" />
-                                    <span className="flex-1 text-sm font-medium">
-                                        {confirmAction === "APPROVE"
-                                            ? "ยืนยันอนุมัติ? ระบบจะคืนแต้มและปลดล็อกนิสิตโดยอัตโนมัติ"
-                                            : "ยืนยันปฏิเสธคำขอนี้?"
-                                        }
-                                    </span>
-                                    <button
-                                        onClick={() => setConfirmAction(null)}
-                                        className="px-3 py-1 text-xs font-semibold rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-                                    >
-                                        ยกเลิก
-                                    </button>
-                                    <button
-                                        onClick={confirmAction === "APPROVE" ? handleApprove : handleReject}
-                                        disabled={isSubmitting}
-                                        className={`px-3 py-1 text-xs font-bold rounded-lg text-white disabled:opacity-50 ${confirmAction === "APPROVE"
-                                            ? "bg-emerald-600 hover:bg-emerald-700"
-                                            : "bg-red-600 hover:bg-red-700"
-                                            }`}
-                                    >
-                                        {isSubmitting ? "กำลังดำเนินการ..." : "ยืนยัน"}
-                                    </button>
+                            {/* Countdown confirmation modal */}
+                            {countdownModal && (
+                                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                                    <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-md mx-4 overflow-hidden animate-in zoom-in-95 duration-200">
+                                        {/* Header */}
+                                        <div className={`px-6 py-5 ${countdownModal.action === "APPROVE"
+                                            ? "bg-gradient-to-r from-emerald-50 to-green-50"
+                                            : "bg-gradient-to-r from-red-50 to-rose-50"
+                                            }`}>
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${countdownModal.action === "APPROVE"
+                                                    ? "bg-emerald-100"
+                                                    : "bg-red-100"
+                                                    }`}>
+                                                    {countdownModal.action === "APPROVE"
+                                                        ? <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                                                        : <XCircle className="w-6 h-6 text-red-600" />
+                                                    }
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-lg font-bold text-slate-800">
+                                                        {countdownModal.action === "APPROVE" ? "อนุมัติคำขอ" : "ปฏิเสธคำขอ"}
+                                                    </h3>
+                                                    <p className="text-xs text-gray-500 mt-0.5">
+                                                        {countdownModal.action === "APPROVE"
+                                                            ? "ระบบจะคืนแต้มและปลดล็อกนิสิตโดยอัตโนมัติ"
+                                                            : "คำขอจะถูกปฏิเสธ"
+                                                        }
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Countdown */}
+                                        <div className="px-6 py-8 flex flex-col items-center">
+                                            <div className="relative w-24 h-24 mb-4">
+                                                {/* Circular progress */}
+                                                <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
+                                                    <circle cx="48" cy="48" r="42" fill="none" stroke="#e5e7eb" strokeWidth="6" />
+                                                    <circle
+                                                        cx="48" cy="48" r="42" fill="none"
+                                                        stroke={countdownModal.action === "APPROVE" ? "#10b981" : "#ef4444"}
+                                                        strokeWidth="6"
+                                                        strokeLinecap="round"
+                                                        strokeDasharray={`${2 * Math.PI * 42}`}
+                                                        strokeDashoffset={`${2 * Math.PI * 42 * (1 - countdownModal.seconds / 3)}`}
+                                                        className="transition-all duration-1000 ease-linear"
+                                                    />
+                                                </svg>
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <span className={`text-3xl font-black tabular-nums ${countdownModal.action === "APPROVE" ? "text-emerald-600" : "text-red-600"}`}>
+                                                        {countdownModal.seconds}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <p className="text-sm text-gray-500 text-center">
+                                                ดำเนินการอัตโนมัติใน <b>{countdownModal.seconds} วินาที</b>
+                                            </p>
+                                            <p className="text-xs text-gray-400 mt-1">กดยกเลิกเพื่อหยุดการดำเนินการ</p>
+                                        </div>
+
+                                        {/* Cancel button */}
+                                        <div className="px-6 pb-6">
+                                            <button
+                                                onClick={cancelCountdown}
+                                                className="w-full py-3 rounded-xl text-sm font-bold border-2 border-gray-200 text-gray-700 bg-white
+                                                           hover:bg-gray-50 hover:border-gray-300 transition-all duration-150 active:scale-[0.98]"
+                                            >
+                                                <XCircle className="w-4 h-4" /> ยกเลิก
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
 

@@ -48,7 +48,7 @@ export function TimeSlotCard({
       return {
         variant: "available" as BadgeVariant,
         icon: <CheckCircle className="w-3.5 h-3.5" />,
-        text: `ว่าง ${queueText}`,
+        text: "ว่าง",
       };
     }
 
@@ -63,7 +63,7 @@ export function TimeSlotCard({
         return {
           variant: "full" as BadgeVariant,
           icon: <XCircle className="w-3.5 h-3.5" />,
-          text: `เต็ม ${queueText}`,
+          text: "เต็ม",
         };
       case "CLOSED":
       case "CANCELLED":

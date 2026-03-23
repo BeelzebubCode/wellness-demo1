@@ -85,53 +85,88 @@ export async function GET(req: NextRequest) {
             },
         });
 
-        // ── 3. ALL cancelled bookings that triggered penalty (not just within deadline) ──
-        // These are bookings with late cancel or no-show that contribute to the student's penalty count
-        const penaltyBookings = await prisma.booking.findMany({
+        // ── 3. Find bookings that ACTUALLY triggered penalties via discipline_log ──
+        // Use discipline_log as source of truth instead of re-computing from time-diff
+        const penaltyLogs = await prisma.disciplineLog.findMany({
             where: {
                 university_id: activeUniversityId,
-                student: { account_id: account.accountId },
-                booking_status: "CANCELLED",
+                student_id: student.student_id,
+                action_type_code: { in: ["NO_SHOW", "LATE_CANCEL"] },
+                booking_id: { not: null },
             },
             select: {
                 booking_id: true,
-                booking_created_at: true,
-                problemCategory: {
-                    select: { problem_category_name_th: true },
+                action_type_code: true,
+                created_at: true,
+            },
+            orderBy: { created_at: "desc" },
+        });
+
+        // Get unique booking IDs that were penalized
+        const penaltyBookingIds = [...new Set(penaltyLogs.map(l => l.booking_id!))];
+
+        // Build a map: bookingId → penaltyType from the discipline log
+        const penaltyTypeMap = new Map<number, "LATE_CANCEL" | "VERY_LATE_CANCEL">();
+        for (const log of penaltyLogs) {
+            if (!log.booking_id) continue;
+            if (!penaltyTypeMap.has(log.booking_id)) {
+                penaltyTypeMap.set(
+                    log.booking_id,
+                    log.action_type_code === "NO_SHOW" ? "VERY_LATE_CANCEL" : "LATE_CANCEL"
+                );
+            }
+        }
+
+        // Fetch full booking data for penalized bookings
+        const penaltyBookings = penaltyBookingIds.length > 0
+            ? await prisma.booking.findMany({
+                where: {
+                    university_id: activeUniversityId,
+                    booking_id: { in: penaltyBookingIds },
                 },
-                cancellation: {
-                    select: {
-                        booking_cancellation_cancelled_at: true,
-                        cancellationReason: {
-                            select: {
-                                cancellation_reason_name_en: true,
-                                cancellation_reason_name_th: true,
+                select: {
+                    booking_id: true,
+                    booking_created_at: true,
+                    problemCategory: {
+                        select: { problem_category_name_th: true },
+                    },
+                    cancellation: {
+                        select: {
+                            booking_cancellation_cancelled_at: true,
+                            cancellationReason: {
+                                select: {
+                                    cancellation_reason_name_en: true,
+                                    cancellation_reason_name_th: true,
+                                },
                             },
                         },
                     },
-                },
-                timeSlot: {
-                    select: {
-                        time_slot_start_datetime: true,
-                        time_slot_end_datetime: true,
+                    timeSlot: {
+                        select: {
+                            time_slot_start_datetime: true,
+                            time_slot_end_datetime: true,
+                        },
+                    },
+                    attendance: {
+                        select: { booking_attendance_status: true },
+                    },
+                    exceptionRequest: {
+                        select: {
+                            booking_exception_request_id: true,
+                            booking_exception_status: true,
+                        },
                     },
                 },
-                attendance: {
-                    select: { booking_attendance_status: true },
-                },
-                exceptionRequest: {
-                    select: {
-                        booking_exception_request_id: true,
-                        booking_exception_status: true,
-                    },
-                },
-            },
-            orderBy: { booking_created_at: "desc" },
-            take: 100,
-        });
+                orderBy: { booking_created_at: "desc" },
+            })
+            : [];
 
         // Compute deadline + eligibility per booking
         const now = new Date();
+        const isCurrentlyLocked = trustStatus?.student_trust_locked_until
+            ? new Date(trustStatus.student_trust_locked_until) > now
+            : false;
+
         const penaltyBookingsWithDeadline = penaltyBookings.map((b) => {
             const cancelledAt = b.cancellation?.booking_cancellation_cancelled_at ?? b.booking_created_at;
             const deadlineAt = new Date(cancelledAt);
@@ -141,37 +176,29 @@ export async function GET(req: NextRequest) {
             const hasRequest = !!b.exceptionRequest;
             const requestStatus = b.exceptionRequest?.booking_exception_status ?? null;
 
-            // Determine penalty type from time slot
-            const slotStart = b.timeSlot?.time_slot_start_datetime;
-            let penaltyType: "LATE_CANCEL" | "VERY_LATE_CANCEL" | "NORMAL" = "NORMAL";
-            if (slotStart && cancelledAt) {
-                const timeDiffHours = (new Date(slotStart).getTime() - new Date(cancelledAt).getTime()) / (1000 * 60 * 60);
-                if (timeDiffHours < 6) {
-                    penaltyType = "VERY_LATE_CANCEL"; // NO_SHOW equivalent
-                } else if (timeDiffHours < 24) {
-                    penaltyType = "LATE_CANCEL";
-                }
-            }
+            // Use discipline_log as source of truth for penalty type
+            const penaltyType = penaltyTypeMap.get(b.booking_id) ?? "VERY_LATE_CANCEL";
 
-            // Can submit if: not expired, no existing request (or rejected), and is penalty booking
-            const canSubmit = !isExpired && penaltyType !== "NORMAL" && (!hasRequest || requestStatus === "REJECTED");
+            // Can submit if:
+            //   - No existing active request (or was rejected)
+            //   - Either: deadline hasn't passed OR student is currently locked/banned
+            //     (Locked students should always be able to appeal)
+            const noBlockingRequest = !hasRequest || requestStatus === "REJECTED";
+            const canSubmit = noBlockingRequest && (!isExpired || isCurrentlyLocked);
 
             return {
                 ...b,
                 deadlineAt: deadlineAt.toISOString(),
-                isExpired,
+                isExpired: isExpired && !isCurrentlyLocked,
                 canSubmit,
                 penaltyType,
             };
         });
 
-        // Filter to only penalty bookings (LATE_CANCEL or VERY_LATE_CANCEL)
-        const penaltyOnly = penaltyBookingsWithDeadline.filter((b) => b.penaltyType !== "NORMAL");
-
         return NextResponse.json({
             success: true,
             data: items,
-            penaltyBookings: penaltyOnly,
+            penaltyBookings: penaltyBookingsWithDeadline,
             trustStatus: trustStatus
                 ? {
                     lateCancelCount: trustStatus.student_trust_late_cancel_count,

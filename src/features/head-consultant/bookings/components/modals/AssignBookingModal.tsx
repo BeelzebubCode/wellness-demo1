@@ -1,11 +1,11 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { Modal, ModalFooter } from "@/components/ui/Modal";
 import { useToast } from "@/contexts/ToastContext";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { cn } from "@/lib/cn";
-import { Star, Briefcase, User2, CheckCircle2, Search, AlertCircle, Sparkles } from "lucide-react";
+import { Star, Briefcase, User2, CheckCircle2, Search, AlertCircle, Sparkles, ArrowLeftRight, UserCheck, XCircle } from "lucide-react";
 import type { AdminBookingRow, AssigneeOption } from "../../types";
 
 /* ─── Utils ─────────────────────────────────── */
@@ -275,7 +275,22 @@ export function AssignBookingModal({
 }) {
   const [consultantId, setConsultantId] = useState<number | "">("");
   const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<"inhouse" | "borrowed">("inhouse");
   const { warning } = useToast();
+  const [countdownModal, setCountdownModal] = useState<{ seconds: number } | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pendingAssignRef = useRef<{ bookingId: number; cid: number; borrowAssignmentId?: number } | null>(null);
+
+  const cancelCountdown = useCallback(() => {
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    countdownRef.current = null;
+    setCountdownModal(null);
+    pendingAssignRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
+  }, []);
 
   // ✅ Advanced Ranking Logic
   const sortedAssignees = useMemo(() => {
@@ -370,38 +385,91 @@ export function AssignBookingModal({
 
           {/* Consultant list */}
           <div className="space-y-1">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-gray-600">
-                รายชื่อที่แนะนำ
-              </span>
-              <span className="text-[11px] text-gray-400">
-                {sortedAssignees.length} คน • เรียงตามความเหมาะสม
-              </span>
-            </div>
+            {/* Category Tabs */}
+            {(() => {
+              const inHouse = sortedAssignees.filter(a => !a.borrowAssignmentId);
+              const borrowed = sortedAssignees.filter(a => !!a.borrowAssignmentId);
+              const hasBorrowed = borrowed.length > 0;
 
-            {isLoadingAssignees ? (
-              <div className="flex items-center gap-2 py-8 justify-center text-sm text-gray-500">
-                <Spinner /> กำลังโหลดรายชื่อ...
-              </div>
-            ) : sortedAssignees.length === 0 ? (
-              <div className="py-8 text-center text-sm text-gray-400">
-                ไม่พบที่ปรึกษา
-              </div>
-            ) : (
-              <div className="max-h-[320px] overflow-y-auto space-y-2 pr-2 hide-scrollbar">
-                {sortedAssignees.map((a) => (
-                  <ConsultantCard
-                    key={a.id}
-                    a={a}
-                    selected={consultantId === a.id}
-                    onClick={() => setConsultantId(a.id)}
-                    isClash={hasClash(booking, a)}
-                    isSpecMatch={getSpecMatchScore(booking, a) > 0}
-                    isOutsideBorrow={isOutsideBorrowWindow(booking, a)}
-                  />
-                ))}
-              </div>
-            )}
+              return (
+                <>
+                  {hasBorrowed && (
+                    <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5 mb-3">
+                      <button
+                        type="button"
+                        onClick={() => setTab("inhouse")}
+                        className={cn(
+                          "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-bold transition-all",
+                          tab === "inhouse"
+                            ? "bg-white text-primary-700 shadow-sm"
+                            : "text-gray-400 hover:text-gray-600"
+                        )}
+                      >
+                        <User2 className="h-3.5 w-3.5" />
+                        คนของเรา
+                        <span className={cn(
+                          "px-1.5 py-0.5 rounded-full text-[10px] font-black",
+                          tab === "inhouse" ? "bg-primary-100 text-primary-700" : "bg-gray-200 text-gray-500"
+                        )}>
+                          {inHouse.length}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTab("borrowed")}
+                        className={cn(
+                          "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-bold transition-all",
+                          tab === "borrowed"
+                            ? "bg-white text-indigo-700 shadow-sm"
+                            : "text-gray-400 hover:text-gray-600"
+                        )}
+                      >
+                        <ArrowLeftRight className="h-3.5 w-3.5" /> คนที่ยืมมา
+                        <span className={cn(
+                          "px-1.5 py-0.5 rounded-full text-[10px] font-black",
+                          tab === "borrowed" ? "bg-indigo-100 text-indigo-700" : "bg-gray-200 text-gray-500"
+                        )}>
+                          {borrowed.length}
+                        </span>
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-gray-600">
+                      {tab === "inhouse" ? "รายชื่อที่แนะนำ" : "ที่ปรึกษาจากมหาวิทยาลัยอื่น"}
+                    </span>
+                    <span className="text-[11px] text-gray-400">
+                      {(tab === "inhouse" ? inHouse : borrowed).length} คน • เรียงตามความเหมาะสม
+                    </span>
+                  </div>
+
+                  {isLoadingAssignees ? (
+                    <div className="flex items-center gap-2 py-8 justify-center text-sm text-gray-500">
+                      <Spinner /> กำลังโหลดรายชื่อ...
+                    </div>
+                  ) : (tab === "inhouse" ? inHouse : borrowed).length === 0 ? (
+                    <div className="py-8 text-center text-sm text-gray-400">
+                      {tab === "inhouse" ? "ไม่พบที่ปรึกษา" : "ไม่มีที่ปรึกษาที่ยืมมา"}
+                    </div>
+                  ) : (
+                    <div className="max-h-[320px] overflow-y-auto space-y-2 pr-2 hide-scrollbar">
+                      {(tab === "inhouse" ? inHouse : borrowed).map((a) => (
+                        <ConsultantCard
+                          key={a.id}
+                          a={a}
+                          selected={consultantId === a.id}
+                          onClick={() => setConsultantId(a.id)}
+                          isClash={hasClash(booking, a)}
+                          isSpecMatch={getSpecMatchScore(booking, a) > 0}
+                          isOutsideBorrow={isOutsideBorrowWindow(booking, a)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           <ModalFooter>
@@ -416,25 +484,94 @@ export function AssignBookingModal({
             <Button
               disabled={!canSubmit}
               leftIcon={isSaving ? <Spinner /> : undefined}
-              onClick={async () => {
+              onClick={() => {
                 if (!booking) return;
                 const cid = Number(consultantId);
                 if (!Number.isFinite(cid) || cid <= 0) return;
 
-                // Validate if assigning to the exact same consultant
                 if (booking.consultant?.id === cid || booking.consultantId === cid) {
                   warning("ที่ปรึกษาท่านนี้ดูแลเคสนี้อยู่แล้ว กรุณาเลือกท่านอื่น");
                   return;
                 }
 
                 const selected = assignees.find((a) => a.id === cid);
-                await onConfirmAssign(booking.id, cid, selected?.borrowAssignmentId);
-                onOpenChange(false);
+                pendingAssignRef.current = { bookingId: booking.id, cid, borrowAssignmentId: selected?.borrowAssignmentId };
+                setCountdownModal({ seconds: 3 });
+                if (countdownRef.current) clearInterval(countdownRef.current);
+                let sec = 3;
+                countdownRef.current = setInterval(() => {
+                  sec -= 1;
+                  if (sec <= 0) {
+                    if (countdownRef.current) clearInterval(countdownRef.current);
+                    countdownRef.current = null;
+                    setCountdownModal(null);
+                    const p = pendingAssignRef.current;
+                    pendingAssignRef.current = null;
+                    if (p) {
+                      Promise.resolve(onConfirmAssign(p.bookingId, p.cid, p.borrowAssignmentId)).then(() => onOpenChange(false));
+                    }
+                  } else {
+                    setCountdownModal({ seconds: sec });
+                  }
+                }, 1000);
               }}
             >
               มอบหมาย
             </Button>
           </ModalFooter>
+
+          {/* Countdown confirmation modal */}
+          {countdownModal && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+              <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-md mx-4 overflow-hidden">
+                <div className="px-6 py-5 bg-gradient-to-r from-primary-50 to-blue-50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center">
+                      <UserCheck className="w-6 h-6 text-primary-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-800">มอบหมายที่ปรึกษา</h3>
+                      <p className="text-xs text-gray-500 mt-0.5">ระบบจะมอบหมายเคสให้ที่ปรึกษาโดยอัตโนมัติ</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="px-6 py-8 flex flex-col items-center">
+                  <div className="relative w-24 h-24 mb-4">
+                    <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
+                      <circle cx="48" cy="48" r="42" fill="none" stroke="#e5e7eb" strokeWidth="6" />
+                      <circle
+                        cx="48" cy="48" r="42" fill="none"
+                        stroke="#6366f1"
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                        strokeDasharray={`${2 * Math.PI * 42}`}
+                        strokeDashoffset={`${2 * Math.PI * 42 * (1 - countdownModal.seconds / 3)}`}
+                        className="transition-all duration-1000 ease-linear"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-3xl font-black tabular-nums text-indigo-600">
+                        {countdownModal.seconds}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-500 text-center">
+                    ดำเนินการอัตโนมัติใน <b>{countdownModal.seconds} วินาที</b>
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">กดยกเลิกเพื่อหยุดการดำเนินการ</p>
+                </div>
+                <div className="px-6 pb-6">
+                  <button
+                    onClick={cancelCountdown}
+                    className="w-full py-3 rounded-xl text-sm font-bold border-2 border-gray-200 text-gray-700 bg-white
+                               hover:bg-gray-50 hover:border-gray-300 transition-all duration-150 active:scale-[0.98]"
+                  >
+                    <XCircle className="w-4 h-4" /> ยกเลิก
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </Modal>

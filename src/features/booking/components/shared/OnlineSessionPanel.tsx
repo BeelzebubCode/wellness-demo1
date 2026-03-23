@@ -1,12 +1,14 @@
 // src/features/booking/components/my-appointments/OnlineSessionPanel.tsx
 "use client";
 
+import { useState } from "react";
 import { cn } from "@/lib/cn";
-import { Link2, Info, Phone } from "lucide-react";
+import { Link2, Info, Phone, Copy, Check } from "lucide-react";
 import type { MyBookingDto } from "@/features/booking/types";
 import { ONLINE_CHANNEL_META } from "@/lib/constants/booking-service";
 
 export function OnlineSessionPanel({ booking }: { booking: MyBookingDto }) {
+  const [copied, setCopied] = useState(false);
   // ✅ อ่านข้อมูลจาก booking.session ตาม type definition
   const session = booking.session;
   const channel = booking.onlineChannel ?? session?.onlineChannel ?? null;
@@ -68,16 +70,49 @@ export function OnlineSessionPanel({ booking }: { booking: MyBookingDto }) {
             )}
 
             {phoneNumber && (
-              <a
-                href={`tel:${phoneNumber}`}
-                className={cn(
-                  "inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50/50 px-4 py-2 text-sm text-indigo-700 font-bold shadow-sm",
-                  "hover:bg-indigo-100 transition active:scale-95"
-                )}
-              >
-                <Phone className="w-4 h-4" />
-                โทรหาผู้ให้คำปรึกษา ({phoneNumber})
-              </a>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(phoneNumber);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    } catch {
+                      // Fallback for older browsers
+                      const ta = document.createElement("textarea");
+                      ta.value = phoneNumber;
+                      ta.style.position = "fixed";
+                      ta.style.opacity = "0";
+                      document.body.appendChild(ta);
+                      ta.select();
+                      document.execCommand("copy");
+                      document.body.removeChild(ta);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }
+                  }}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold shadow-sm transition active:scale-95",
+                    copied
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : "border-indigo-200 bg-indigo-50/50 text-indigo-700 hover:bg-indigo-100"
+                  )}
+                >
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  {copied ? "คัดลอกแล้ว!" : `${phoneNumber}`}
+                </button>
+                <a
+                  href={`tel:${phoneNumber}`}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50/50 px-3 py-2 text-sm text-indigo-700 font-bold shadow-sm",
+                    "hover:bg-indigo-100 transition active:scale-95"
+                  )}
+                  title="โทรออก"
+                >
+                  <Phone className="w-4 h-4" />
+                </a>
+              </div>
             )}
           </div>
 

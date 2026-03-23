@@ -1,7 +1,7 @@
 "use client";
 
-import { Search, MapPin, Filter, ChevronDown, Building, Brain, X, RotateCcw, Zap, Layers, Clock, Sun, CloudRain, Snowflake, BookOpen, Calendar } from "lucide-react";
-import { useState, useMemo, useCallback } from "react";
+import { Search, MapPin, Filter, ChevronDown, Building, Brain, X, RotateCcw, Zap, Layers, Clock, Sun, CloudRain, Snowflake, BookOpen, Calendar, Monitor } from "lucide-react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { ProblemCategoryFilter } from "./ProblemCategoryFilter";
 import type { BorrowAnalytics } from "./BorrowingOverlay";
 
@@ -13,6 +13,7 @@ export type MapFilterState = {
   stress: string;
   status: string;
   problemCategories: string[];
+  serviceModes: string[];
 };
 
 interface ProvinceOption {
@@ -20,19 +21,19 @@ interface ProvinceOption {
   count: number;
 }
 
-// ─── Region Data ────────────────────────────────────────────────────────────
-const REGIONS = [
-  { value: "", label: "ทั้งหมด", emoji: "🇹🇭" },
-  { value: "UPPER_NORTH", label: "เหนือตอนบน", emoji: "🏔️" },
-  { value: "LOWER_NORTH", label: "เหนือตอนล่าง", emoji: "⛰️" },
-  { value: "UPPER_NORTHEAST", label: "อีสานตอนบน", emoji: "🌾" },
-  { value: "LOWER_NORTHEAST", label: "อีสานตอนล่าง", emoji: "🌿" },
-  { value: "UPPER_CENTRAL", label: "กลางตอนบน", emoji: "🏙️" },
-  { value: "LOWER_CENTRAL", label: "กลางตอนล่าง", emoji: "🏛️" },
-  { value: "EAST", label: "ตะวันออก", emoji: "🌊" },
-  { value: "UPPER_SOUTH", label: "ใต้ตอนบน", emoji: "🌴" },
-  { value: "LOWER_SOUTH", label: "ใต้ตอนล่าง", emoji: "🏝️" },
-];
+// ─── Region Data (loaded dynamically from DB) ───────────────────────────────
+type RegionOption = {
+  region_id: number;
+  region_code: string;
+  region_name_th: string;
+  region_name_en: string | null;
+};
+type SpecialZoneProvince = {
+  province_id: number;
+  province_name_th: string;
+  province_name_en: string | null;
+  province_code: string;
+};
 
 // ─── Accordion Section ──────────────────────────────────────────────────────
 function FilterSection({
@@ -329,6 +330,146 @@ function TimeFilterSection({
   );
 }
 
+// ─── Service Mode Filter (dynamic from DB) ──────────────────────────────────
+type ServiceModeOption = {
+  service_mode_id: number;
+  code: string;
+  name_th: string;
+  name_en: string;
+  sort_order: number;
+};
+
+function ServiceModeFilter({ selected, onChange }: { selected: string[]; onChange: (codes: string[]) => void }) {
+  const [modes, setModes] = useState<ServiceModeOption[]>([]);
+
+  useEffect(() => {
+    fetch("/api/v2/master/service-modes", { cache: "no-store" })
+      .then(r => r.json())
+      .then(j => { if (j.success) setModes(j.data ?? []); })
+      .catch(() => { });
+  }, []);
+
+  if (modes.length === 0) return null;
+
+  const toggle = (code: string) => {
+    onChange(
+      selected.includes(code)
+        ? selected.filter(c => c !== code)
+        : [...selected, code]
+    );
+  };
+
+  return (
+    <FilterSection
+      icon={Monitor}
+      title="ประเภทการเข้ารับ"
+      badge={
+        selected.length > 0 ? (
+          <span className="ml-1 px-1.5 py-0.5 rounded-full bg-teal-500 text-white text-[9px] font-bold leading-none">
+            {selected.length}
+          </span>
+        ) : undefined
+      }
+    >
+      <div className="grid grid-cols-2 gap-1">
+        {modes.map(m => {
+          const active = selected.includes(m.code);
+          return (
+            <button
+              key={m.code}
+              type="button"
+              onClick={() => toggle(m.code)}
+              className={`px-2 py-2.5 rounded-xl text-[11px] font-semibold transition-all border ${active
+                ? "bg-teal-50 text-teal-700 border-teal-300 shadow-sm"
+                : "bg-white text-gray-600 border-gray-100 hover:border-teal-200 hover:bg-teal-50/50"
+                }`}
+            >
+              {m.name_th}
+            </button>
+          );
+        })}
+      </div>
+    </FilterSection>
+  );
+}
+
+// ─── Dynamic Region Filter ──────────────────────────────────────────────────
+function RegionFilter({
+  selectedRegion,
+  onSelectRegion,
+  specialZoneNames,
+}: {
+  selectedRegion: string;
+  onSelectRegion: (regionCode: string) => void;
+  specialZoneNames: string[];
+}) {
+  const [regions, setRegions] = useState<RegionOption[]>([]);
+  const [dbSpecialZones, setDbSpecialZones] = useState<SpecialZoneProvince[]>([]);
+
+  useEffect(() => {
+    fetch("/api/v2/master/regions", { cache: "no-store" })
+      .then(r => r.json())
+      .then(j => {
+        if (j.success) {
+          setRegions(j.data?.regions ?? []);
+          setDbSpecialZones(j.data?.specialZoneProvinces ?? []);
+        }
+      })
+      .catch(() => { });
+  }, []);
+
+  const szCount = dbSpecialZones.length || specialZoneNames.length;
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-1">
+        {/* "ทั้งหมด" button */}
+        <button
+          type="button"
+          onClick={() => onSelectRegion("")}
+          className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-[11px] font-semibold transition-all border col-span-2 justify-center ${selectedRegion === ""
+            ? "bg-primary text-white border-primary shadow-sm shadow-primary/25 scale-[0.98]"
+            : "bg-white text-gray-600 border-gray-100 hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
+            }`}
+        >
+          ทั้งหมด
+        </button>
+
+        {regions.map((r) => (
+          <button
+            key={r.region_code}
+            type="button"
+            onClick={() => onSelectRegion(r.region_code)}
+            className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-[11px] font-semibold transition-all border ${selectedRegion === r.region_code
+              ? "bg-primary text-white border-primary shadow-sm shadow-primary/25 scale-[0.98]"
+              : "bg-white text-gray-600 border-gray-100 hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
+              }`}
+          >
+            <span className="truncate">{r.region_name_th}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Special Zones */}
+      <button
+        type="button"
+        onClick={() => onSelectRegion("SPECIAL_ADMIN")}
+        className={`mt-2 w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-bold transition-all border-2 ${selectedRegion === "SPECIAL_ADMIN"
+          ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-500 shadow-lg shadow-amber-500/25"
+          : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 hover:border-amber-300 hover:shadow-md"
+          }`}
+      >
+        เขตปกครองพิเศษ
+        {szCount > 0 && (
+          <span className={`text-[9px] ${selectedRegion === "SPECIAL_ADMIN" ? "text-white/70" : "text-amber-500"}`}>
+            ({szCount})
+          </span>
+        )}
+      </button>
+    </>
+  );
+}
+
 // ─── Main Component ─────────────────────────────────────────────────────────
 export function MapLeftSidebar({
   filter,
@@ -361,10 +502,11 @@ export function MapLeftSidebar({
     filter.stress,
     filter.status,
     (filter.problemCategories || []).length > 0,
+    (filter.serviceModes || []).length > 0,
   ].filter(Boolean).length;
 
   const resetAll = () =>
-    onChange({ search: "", region: "", provinceNames: [], type: "", stress: "", status: "", problemCategories: [] });
+    onChange({ search: "", region: "", provinceNames: [], type: "", stress: "", status: "", problemCategories: [], serviceModes: [] });
 
   const filteredProvinces = useMemo(() => {
     if (!provinceSearch) return availableProvinces;
@@ -372,7 +514,17 @@ export function MapLeftSidebar({
     return availableProvinces.filter((p) => p.name.toLowerCase().includes(q));
   }, [availableProvinces, provinceSearch]);
 
-  const selectedRegionLabel = REGIONS.find((r) => r.value === filter.region)?.label ?? "ทั้งหมด";
+  // Dynamic region label lookup
+  const [allRegions, setAllRegions] = useState<RegionOption[]>([]);
+  useEffect(() => {
+    fetch("/api/v2/master/regions", { cache: "no-store" })
+      .then(r => r.json())
+      .then(j => { if (j.success) setAllRegions(j.data?.regions ?? []); })
+      .catch(() => { });
+  }, []);
+  const selectedRegionLabel = filter.region === "SPECIAL_ADMIN"
+    ? "เขตปกครองพิเศษ"
+    : allRegions.find((r) => r.region_code === filter.region)?.region_name_th ?? "ทั้งหมด";
 
   return (
     <div className="h-full flex flex-col bg-white/95 backdrop-blur-sm">
@@ -472,105 +624,78 @@ export function MapLeftSidebar({
             ) : undefined
           }
         >
-          <div className="grid grid-cols-2 gap-1">
-            {REGIONS.map((r) => (
-              <button
-                key={r.value}
-                type="button"
-                onClick={() => onChange({ ...filter, region: r.value, provinceNames: [] })}
-                className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-[11px] font-semibold transition-all border ${filter.region === r.value
-                  ? "bg-primary text-white border-primary shadow-sm shadow-primary/25 scale-[0.98]"
-                  : "bg-white text-gray-600 border-gray-100 hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
-                  }`}
-              >
-                <span className="text-sm leading-none">{r.emoji}</span>
-                <span className="truncate">{r.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Special Zones */}
-          <button
-            type="button"
-            onClick={() => onChange({ ...filter, region: "SPECIAL_ADMIN", provinceNames: [] })}
-            className={`mt-2 w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-bold transition-all border-2 ${filter.region === "SPECIAL_ADMIN"
-              ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-500 shadow-lg shadow-amber-500/25"
-              : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 hover:border-amber-300 hover:shadow-md"
-              }`}
-          >
-            <span className="text-base">🏛️</span>
-            เขตปกครองพิเศษ
-            {specialZoneNames.length > 0 && (
-              <span className={`text-[9px] ${filter.region === "SPECIAL_ADMIN" ? "text-white/70" : "text-amber-500"}`}>
-                ({specialZoneNames.length})
-              </span>
-            )}
-          </button>
+          <RegionFilter
+            selectedRegion={filter.region}
+            onSelectRegion={(code: string) => onChange({ ...filter, region: code, provinceNames: [] })}
+            specialZoneNames={specialZoneNames}
+          />
         </FilterSection>
 
         {/* ── Province ───────────────────────────────────────── */}
-        {availableProvinces.length > 0 && (
-          <FilterSection
-            icon={Building}
-            title="จังหวัด"
-            badge={
-              filter.provinceNames.length > 0 ? (
-                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-blue-500 text-white text-[9px] font-bold leading-none">
-                  {filter.provinceNames.length}
-                </span>
-              ) : undefined
-            }
-            defaultOpen={!!filter.region}
-          >
-            {/* Search */}
-            <div className="relative mb-2">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
-              <input
-                type="text"
-                className="w-full pl-7 pr-3 py-1.5 bg-gray-50 border border-gray-100 rounded-lg text-[11px] focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all placeholder:text-gray-400"
-                placeholder="ค้นหาจังหวัด..."
-                value={provinceSearch}
-                onChange={(e) => setProvinceSearch(e.target.value)}
-              />
-            </div>
+        {
+          availableProvinces.length > 0 && (
+            <FilterSection
+              icon={Building}
+              title="จังหวัด"
+              badge={
+                filter.provinceNames.length > 0 ? (
+                  <span className="ml-1 px-1.5 py-0.5 rounded-full bg-blue-500 text-white text-[9px] font-bold leading-none">
+                    {filter.provinceNames.length}
+                  </span>
+                ) : undefined
+              }
+              defaultOpen={!!filter.region}
+            >
+              {/* Search */}
+              <div className="relative mb-2">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+                <input
+                  type="text"
+                  className="w-full pl-7 pr-3 py-1.5 bg-gray-50 border border-gray-100 rounded-lg text-[11px] focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all placeholder:text-gray-400"
+                  placeholder="ค้นหาจังหวัด..."
+                  value={provinceSearch}
+                  onChange={(e) => setProvinceSearch(e.target.value)}
+                />
+              </div>
 
-            {/* Province List */}
-            <div className="max-h-[160px] overflow-y-auto custom-scrollbar rounded-xl bg-gray-50/50 border border-gray-100 p-1 space-y-0.5">
-              {/* All button */}
-              <button
-                type="button"
-                onClick={() => onChange({ ...filter, provinceNames: [] })}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-[11px] font-semibold transition-all ${filter.provinceNames.length === 0
-                  ? "bg-white text-primary shadow-sm border border-primary/20"
-                  : "text-gray-500 hover:bg-white"
-                  }`}
-              >
-                <span>🇹🇭 ทั้งหมด</span>
-                <span className="text-[9px] text-gray-400 tabular-nums">{availableProvinces.reduce((s, p) => s + p.count, 0)}</span>
-              </button>
+              {/* Province List */}
+              <div className="max-h-[160px] overflow-y-auto custom-scrollbar rounded-xl bg-gray-50/50 border border-gray-100 p-1 space-y-0.5">
+                {/* All button */}
+                <button
+                  type="button"
+                  onClick={() => onChange({ ...filter, provinceNames: [] })}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-[11px] font-semibold transition-all ${filter.provinceNames.length === 0
+                    ? "bg-white text-primary shadow-sm border border-primary/20"
+                    : "text-gray-500 hover:bg-white"
+                    }`}
+                >
+                  <span>🇹🇭 ทั้งหมด</span>
+                  <span className="text-[9px] text-gray-400 tabular-nums">{availableProvinces.reduce((s, p) => s + p.count, 0)}</span>
+                </button>
 
-              {filteredProvinces.map((p) => {
-                const isSelected = filter.provinceNames.includes(p.name);
-                return (
-                  <button
-                    key={p.name}
-                    type="button"
-                    onClick={() => {
-                      const next = isSelected ? filter.provinceNames.filter((n) => n !== p.name) : [...filter.provinceNames, p.name];
-                      onChange({ ...filter, provinceNames: next });
-                    }}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-[11px] font-medium transition-all ${isSelected ? "bg-primary text-white shadow-sm" : "text-gray-600 hover:bg-white hover:shadow-sm"
-                      }`}
-                  >
-                    <span className="truncate">{p.name}</span>
-                    <span className={`text-[9px] tabular-nums ${isSelected ? "text-white/70" : "text-gray-400"}`}>{p.count}</span>
-                  </button>
-                );
-              })}
-              {filteredProvinces.length === 0 && <p className="text-[10px] text-gray-400 text-center py-3">ไม่พบจังหวัด</p>}
-            </div>
-          </FilterSection>
-        )}
+                {filteredProvinces.map((p) => {
+                  const isSelected = filter.provinceNames.includes(p.name);
+                  return (
+                    <button
+                      key={p.name}
+                      type="button"
+                      onClick={() => {
+                        const next = isSelected ? filter.provinceNames.filter((n) => n !== p.name) : [...filter.provinceNames, p.name];
+                        onChange({ ...filter, provinceNames: next });
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-[11px] font-medium transition-all ${isSelected ? "bg-primary text-white shadow-sm" : "text-gray-600 hover:bg-white hover:shadow-sm"
+                        }`}
+                    >
+                      <span className="truncate">{p.name}</span>
+                      <span className={`text-[9px] tabular-nums ${isSelected ? "text-white/70" : "text-gray-400"}`}>{p.count}</span>
+                    </button>
+                  );
+                })}
+                {filteredProvinces.length === 0 && <p className="text-[10px] text-gray-400 text-center py-3">ไม่พบจังหวัด</p>}
+              </div>
+            </FilterSection>
+          )
+        }
 
         {/* ── Booking Status ─────────────────────────────────── */}
         <FilterSection icon={Zap} title="สถานะการจอง">
@@ -611,14 +736,22 @@ export function MapLeftSidebar({
         </FilterSection>
 
         {/* ── Time Filter (always visible — default filter) ────── */}
-        {onBorrowDateChange && (
-          <TimeFilterSection
-            dateFrom={borrowDateFrom}
-            dateTo={borrowDateTo}
-            onDateChange={onBorrowDateChange}
-            filters={borrowFilters}
-          />
-        )}
+        {
+          onBorrowDateChange && (
+            <TimeFilterSection
+              dateFrom={borrowDateFrom}
+              dateTo={borrowDateTo}
+              onDateChange={onBorrowDateChange}
+              filters={borrowFilters}
+            />
+          )
+        }
+
+        {/* ── Service Mode Filter (dynamic from DB) ────────────── */}
+        <ServiceModeFilter
+          selected={filter.serviceModes}
+          onChange={(codes: string[]) => onChange({ ...filter, serviceModes: codes })}
+        />
 
         {/* ── Advanced Filters (bottom) ────────────────────────── */}
         <FilterSection icon={Layers} title="ตัวกรองเพิ่มเติม" defaultOpen={false}>
@@ -649,14 +782,14 @@ export function MapLeftSidebar({
 
 
         </FilterSection>
-      </div>
+      </div >
 
       {/* ── Footer ───────────────────────────────────────────── */}
-      <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50">
+      < div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50" >
         <p className="text-[10px] text-gray-400 text-center font-medium">
           NU Wellness • National Command Center
         </p>
-      </div>
+      </div >
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
@@ -664,6 +797,6 @@ export function MapLeftSidebar({
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
       `}</style>
-    </div>
+    </div >
   );
 }

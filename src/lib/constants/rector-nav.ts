@@ -14,9 +14,9 @@ export const RECTOR_NAV: NavItem[] = [
     label: "ข้อมูลคณะ",
     icon: School,
   },
-  {
-    href: "/rector/reports",
-    label: "รายงานสรุป",
-    icon: FileText,
-  },
+  // {
+  //   href: "/rector/reports",
+  //   label: "รายงานสรุป",
+  //   icon: FileText,
+  // },
 ];
