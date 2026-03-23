@@ -36,6 +36,16 @@ function dedupe<T>(key: string, fn: () => Promise<T>): Promise<T> {
 }
 
 // =======================
+// ✅ Me() cache (30s TTL)
+// =======================
+const ME_CACHE_TTL = 30_000; // 30 seconds
+let meCache: { data: MeResponse; ts: number } | null = null;
+
+export function invalidateMeCache() {
+  meCache = null;
+}
+
+// =======================
 // Base methods
 // =======================
 async function get<T>(url: string): Promise<T> {
@@ -103,10 +113,19 @@ export const authApi = {
   },
 
   async me(): Promise<MeResponse> {
-    return get<MeResponse>(`${API_BASE}/me`);
+    // ✅ Return cached result if still fresh
+    if (meCache && Date.now() - meCache.ts < ME_CACHE_TTL) {
+      return meCache.data;
+    }
+    const data = await get<MeResponse>(`${API_BASE}/me`);
+    if (data?.valid) {
+      meCache = { data, ts: Date.now() };
+    }
+    return data;
   },
 
   async logout(): Promise<void> {
+    invalidateMeCache(); // ✅ Clear cache on logout
     const res = await fetch(`${API_BASE}/logout`, {
       method: "POST",
       credentials: "include",
@@ -125,6 +144,7 @@ export const authApi = {
     activeUniversityId?: number;
     error?: string;
   }> {
+    invalidateMeCache(); // ✅ Clear cache on tenant switch
     return post(`${API_BASE}/switch-tenant`, { universityId });
   },
 };

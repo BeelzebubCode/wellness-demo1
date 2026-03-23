@@ -11,8 +11,9 @@ import ReactDOMServer from "react-dom/server";
 import { MapLeftSidebar, MapFilterState } from "./MapLeftSidebar";
 import { useUniversitiesMap } from "../../hooks/useUniversitiesMap";
 import type { UniversityMapData } from "../../hooks/useUniversitiesMap";
-import { Layers, Map as MapIcon, PanelLeft, ChevronRight, ChevronLeft, Shield, AlertTriangle, Eye, EyeOff } from "lucide-react";
+import { Layers, Map as MapIcon, PanelLeft, ChevronRight, ChevronLeft, Shield, AlertTriangle, Eye, EyeOff, ArrowRightLeft } from "lucide-react";
 import { UniversityRankings } from "./UniversityRankings";
+import { BorrowPolylines, BorrowLegend, BorrowRankings, useBorrowAnalytics } from "./BorrowingOverlay";
 
 // ─── Risk Tier Classification (matches booking_outcome.risk_level_id 1–5) ──
 type RiskTier = "VERY_HIGH" | "HIGH" | "MEDIUM" | "LOW" | "VERY_LOW";
@@ -337,6 +338,18 @@ export function ThailandMap() {
   const [mapStyle, setMapStyle] = useState<"street" | "satellite" | "terrain">("street");
   const [showIntelOverlay, setShowIntelOverlay] = useState(true);
   const [activeRiskTiers, setActiveRiskTiers] = useState<Set<RiskTier>>(new Set(RISK_TIERS));
+  const [mapMode, setMapMode] = useState<"risk" | "borrow">("risk");
+  const [selectedBorrower, setSelectedBorrower] = useState<number | null>(null);
+  const [borrowTopN, setBorrowTopN] = useState(10);
+  const [borrowDateFrom, setBorrowDateFrom] = useState<string | undefined>();
+  const [borrowDateTo, setBorrowDateTo] = useState<string | undefined>();
+
+  const { data: borrowData, loading: borrowLoading } = useBorrowAnalytics(borrowDateFrom, borrowDateTo);
+
+  const handleBorrowDateChange = useCallback((from?: string, to?: string) => {
+    setBorrowDateFrom(from);
+    setBorrowDateTo(to);
+  }, []);
 
   const handleTierToggle = useCallback((tier: RiskTier) => {
     setActiveRiskTiers(prev => {
@@ -468,6 +481,13 @@ export function ThailandMap() {
     });
   }, [selectedRegionData]);
 
+  // ── Filter universities for right-side rankings by active risk tiers ──
+  const riskFilteredData = useMemo(() => {
+    // Don't filter if: overlay hidden, all selected, or none selected
+    if (!showIntelOverlay || activeRiskTiers.size === RISK_TIERS.length || activeRiskTiers.size === 0) return filteredData;
+    return filteredData.filter((uni) => activeRiskTiers.has(classifyRisk(uni)));
+  }, [filteredData, activeRiskTiers, showIntelOverlay]);
+
   if (isLoading) {
     return (
       <div className="w-full h-full bg-slate-100 flex items-center justify-center">
@@ -511,6 +531,11 @@ export function ThailandMap() {
             onChange={setFilter}
             availableProvinces={availableProvinces}
             specialZoneNames={specialZoneNames}
+            mapMode={mapMode}
+            borrowDateFrom={borrowDateFrom}
+            borrowDateTo={borrowDateTo}
+            onBorrowDateChange={handleBorrowDateChange}
+            borrowFilters={borrowData?.filters}
           />
         </div>
       </div>
@@ -528,7 +553,7 @@ export function ThailandMap() {
           <MapBoundsController data={filteredData} resetZoom={!filter.region && filter.provinceNames.length === 0} />
 
           {/* ── Intel Overlay: Risk Zone Circles (filtered by active tiers) ── */}
-          {showIntelOverlay && intelOverlayData
+          {mapMode === "risk" && showIntelOverlay && intelOverlayData
             .filter((d) => activeRiskTiers.has(d.tier))
             .map((d) => (
               <Circle
@@ -540,11 +565,16 @@ export function ThailandMap() {
             ))}
 
           {/* ── Intel Overlay: Pulsing Alert for VERY_HIGH ─────────── */}
-          {showIntelOverlay && activeRiskTiers.has("VERY_HIGH") && intelOverlayData
+          {mapMode === "risk" && showIntelOverlay && activeRiskTiers.has("VERY_HIGH") && intelOverlayData
             .filter((d) => d.tier === "VERY_HIGH")
             .map((d) => (
               <PulsingAlertMarker key={`alert-${d.uni.id}`} lat={d.uni.lat} lng={d.uni.lng} label={d.uni.name} />
             ))}
+
+          {/* ── Borrowing Overlay: Polyline Connections ─────────── */}
+          {mapMode === "borrow" && borrowData && (
+            <BorrowPolylines pairs={borrowData.universityPairs} selectedBorrower={selectedBorrower} topN={borrowTopN} />
+          )}
 
           {/* Selected region universities (fully visible) */}
           {selectedRegionData.map((uni) => (
@@ -588,8 +618,37 @@ export function ThailandMap() {
           </button>
         </div>
 
-        {/* Intel Legend */}
-        <IntelLegend data={filteredData} visible={showIntelOverlay} onToggle={() => setShowIntelOverlay(!showIntelOverlay)} activeTiers={activeRiskTiers} onTierToggle={handleTierToggle} />
+        {/* Mode Toggle Tab */}
+        <div className="absolute top-4 right-4 z-[1000] pointer-events-auto">
+          <div className="bg-white/95 backdrop-blur-lg rounded-xl shadow-xl border border-gray-200 p-1 flex gap-1">
+            <button
+              onClick={() => { setMapMode("risk"); setSelectedBorrower(null); }}
+              className={`px-3 py-2 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 ${mapMode === "risk" ? "bg-slate-800 text-white shadow-md" : "text-gray-500 hover:bg-gray-50"
+                }`}
+            >
+              <Shield className="w-3.5 h-3.5" /> ภาพรวมความเสี่ยง
+            </button>
+            <button
+              onClick={() => setMapMode("borrow")}
+              className={`px-3 py-2 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 ${mapMode === "borrow" ? "bg-indigo-700 text-white shadow-md" : "text-gray-500 hover:bg-gray-50"
+                }`}
+            >
+              <ArrowRightLeft className="w-3.5 h-3.5" /> เครือข่ายยืมตัว
+            </button>
+          </div>
+        </div>
+
+        {/* Intel Legend (risk mode) */}
+        {mapMode === "risk" && (
+          <IntelLegend data={filteredData} visible={showIntelOverlay} onToggle={() => setShowIntelOverlay(!showIntelOverlay)} activeTiers={activeRiskTiers} onTierToggle={handleTierToggle} />
+        )}
+
+        {/* Borrow Legend (borrow mode) */}
+        {mapMode === "borrow" && borrowData && (
+          <BorrowLegend data={borrowData} selectedBorrower={selectedBorrower} onSelectBorrower={setSelectedBorrower} />
+        )}
+
+
 
         {/* CSS 3D Effect + Intel Animations */}
         <style jsx global>{`
@@ -653,20 +712,34 @@ export function ThailandMap() {
       `}</style>
       </div>
 
-      {/* Right Sidebar - University Rankings */}
+      {/* Right Sidebar — conditioned by mode */}
       <div
         className={`h-full flex-shrink-0 border-l border-gray-200 bg-white z-20 relative transition-all duration-300 ease-in-out ${isSidebarExpanded ? "w-[380px] translate-x-0" : "w-0 translate-x-full opacity-0"
           }`}
       >
         <div className="w-[380px] h-full">
-          <UniversityRankings
-            universities={filteredData}
-            problemCategories={filter.problemCategories}
-            status={filter.status}
-            onSelect={(code) => {
-              window.location.href = `/ministry/universities/${code}`;
-            }}
-          />
+          {mapMode === "risk" ? (
+            <UniversityRankings
+              universities={riskFilteredData}
+              problemCategories={filter.problemCategories}
+              status={filter.status}
+              onSelect={(code) => {
+                window.location.href = `/ministry/universities/${code}`;
+              }}
+            />
+          ) : borrowData ? (
+            <BorrowRankings
+              data={borrowData}
+              selectedBorrower={selectedBorrower}
+              onSelectBorrower={setSelectedBorrower}
+              topN={borrowTopN}
+              onTopNChange={setBorrowTopN}
+            />
+          ) : (
+            <div className="h-full flex items-center justify-center">
+              <div className="text-gray-400 text-sm">กำลังโหลด...</div>
+            </div>
+          )}
         </div>
       </div>
     </div>

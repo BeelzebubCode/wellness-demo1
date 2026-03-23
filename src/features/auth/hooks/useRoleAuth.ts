@@ -47,6 +47,12 @@ export function useRoleAuth<TUser extends AuthUser = AuthUser>({
     pushRef.current = push;
   }, [push]);
 
+  // ✅ Use ref for pathname to avoid recreating callbacks on every navigation
+  const pathnameRef = useRef(pathname);
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
+
   const mountedRef = useRef(true);
   useEffect(() => {
     mountedRef.current = true;
@@ -85,7 +91,7 @@ export function useRoleAuth<TUser extends AuthUser = AuthUser>({
       const now = Date.now();
       if (now - last < COOLDOWN_MS) return;
       sessionStorage.setItem(loginToastKey, String(now));
-    } catch {}
+    } catch { }
 
     pushRef.current({
       type: "warning",
@@ -98,14 +104,14 @@ export function useRoleAuth<TUser extends AuthUser = AuthUser>({
   const clearLoginToastFlag = useCallback(() => {
     try {
       sessionStorage.removeItem(loginToastKey);
-    } catch {}
+    } catch { }
   }, [loginToastKey]);
 
   const redirectingRef = useRef(false);
 
   const redirectLogin = useCallback(() => {
     if (!guard) return;
-    if (pathname === "/login") return;
+    if (pathnameRef.current === "/login") return;
 
     // ✅ กัน redirect ซ้อน
     if (redirectingRef.current) return;
@@ -118,7 +124,7 @@ export function useRoleAuth<TUser extends AuthUser = AuthUser>({
     const next =
       typeof window !== "undefined"
         ? `${window.location.pathname}${window.location.search || ""}`
-        : pathname;
+        : pathnameRef.current;
 
     router.replace(`${to}?next=${encodeURIComponent(next || "/")}`);
 
@@ -126,7 +132,7 @@ export function useRoleAuth<TUser extends AuthUser = AuthUser>({
     setTimeout(() => {
       redirectingRef.current = false;
     }, 800);
-  }, [guard, pathname, redirectTo, router, toastLoginOnce]);
+  }, [guard, redirectTo, router, toastLoginOnce]);
 
   const redirectHomeDenied = useCallback(() => {
     if (!guard) return;
@@ -181,8 +187,8 @@ export function useRoleAuth<TUser extends AuthUser = AuthUser>({
         allowedUnis.some((u) => allowedUniSet.has(u));
 
       if (!ok) {
-         console.log("[useRoleAuth] Guard UNI_NOT_ALLOWED:", { activeUni, allowedUnis, allowedSet: Array.from(allowedUniSet) });
-         return { ok: false, reason: "UNI_NOT_ALLOWED" };
+        console.log("[useRoleAuth] Guard UNI_NOT_ALLOWED:", { activeUni, allowedUnis, allowedSet: Array.from(allowedUniSet) });
+        return { ok: false, reason: "UNI_NOT_ALLOWED" };
       }
     }
 
@@ -255,7 +261,9 @@ export function useRoleAuth<TUser extends AuthUser = AuthUser>({
     return () => {
       window.removeEventListener("auth-changed", onAuthChanged);
     };
-  }, [pathname, verify]);
+    // ✅ Only run on mount — verify is stable now (no pathname dep)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return {
     user,

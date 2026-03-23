@@ -1,37 +1,10 @@
-"use client";
-
-import { usePathname } from "next/navigation";
-import { LoadingSpinner } from "@/components/ui";
-import { useRoleAuth } from "@/features/auth/hooks/useRoleAuth";
+// ✅ ลบ useRoleAuth ออก — role-specific child layouts จัดการ auth guard เองแล้ว
+// เหลือแค่ pass-through layout เพื่อลดการเรียก API ซ้ำ
 
 export default function UniversityLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const isLoginPage = pathname === "/login";
-
-  // ✅ เช็ค "ล็อกอิน" อย่างเดียว ไม่สน role (role ไปเช็คใน layout ของแต่ละฝ่าย)
-  const { isLoading, isAuthenticated } = useRoleAuth({
-    redirectTo: "/login",
-    allowedRoles: ["STUDENT", "CONSULTANT", "HEAD_CONSULTANT", "RECTOR", "SUPER_ADMIN", "ADVISOR", "DEAN", "HEAD_DEPARTMENT"] as const,
-    loginToastKey: "toast_login_required_university",
-    guard: false, // ✅ Allow public access
-  });
-
-  // ✅ หน้า login ก็ปล่อยผ่าน (กัน loop)
-  if (isLoginPage) return <>{children}</>;
-
-  // ✅ Loading เท่านั้นที่บล็อก
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <LoadingSpinner size="xl" label="กำลังตรวจสอบสิทธิ์..." />
-      </div>
-    );
-  }
-
-  // ✅ ผ่านแล้วก็ render ลูกอย่างเดียว (ไม่ใส่ header/sidebar)
   return <>{children}</>;
 }

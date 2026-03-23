@@ -1,8 +1,9 @@
 "use client";
 
-import { Search, MapPin, Filter, ChevronDown, Building, Brain, X, RotateCcw, Zap, Layers } from "lucide-react";
-import { useState, useMemo } from "react";
+import { Search, MapPin, Filter, ChevronDown, Building, Brain, X, RotateCcw, Zap, Layers, Clock, Sun, CloudRain, Snowflake, BookOpen, Calendar } from "lucide-react";
+import { useState, useMemo, useCallback } from "react";
 import { ProblemCategoryFilter } from "./ProblemCategoryFilter";
+import type { BorrowAnalytics } from "./BorrowingOverlay";
 
 export type MapFilterState = {
   search: string;
@@ -77,17 +78,278 @@ const STATUS_OPTIONS = [
   { value: "CANCELLED", label: "ยกเลิก", color: "bg-rose-50 text-rose-700 border-rose-200", dot: "bg-rose-500" },
 ];
 
+// ─── Thai Month Names ───────────────────────────────────────────────────────
+const THAI_MONTHS: Record<number, string> = {
+  1: "ม.ค.", 2: "ก.พ.", 3: "มี.ค.", 4: "เม.ย.", 5: "พ.ค.", 6: "มิ.ย.",
+  7: "ก.ค.", 8: "ส.ค.", 9: "ก.ย.", 10: "ต.ค.", 11: "พ.ย.", 12: "ธ.ค.",
+};
+
+// ─── Season/Term date calculation ────────────────────────────────────────────
+function seasonToDateRange(mStart: number, mEnd: number, year: number) {
+  const ce = year - 543;
+  if (mEnd >= mStart) {
+    return { from: new Date(ce, mStart - 1, 1).toISOString(), to: new Date(ce, mEnd, 0, 23, 59, 59).toISOString() };
+  }
+  return { from: new Date(ce, mStart - 1, 1).toISOString(), to: new Date(ce + 1, mEnd, 0, 23, 59, 59).toISOString() };
+}
+function termToDateRange(code: string, year: number) {
+  const ce = year - 543;
+  switch (code) {
+    case "SEMESTER_1": return { from: new Date(ce, 5, 1).toISOString(), to: new Date(ce, 9, 31, 23, 59, 59).toISOString() };
+    case "SEMESTER_2": return { from: new Date(ce, 10, 1).toISOString(), to: new Date(ce + 1, 2, 31, 23, 59, 59).toISOString() };
+    case "SUMMER": return { from: new Date(ce + 1, 3, 1).toISOString(), to: new Date(ce + 1, 5, 30, 23, 59, 59).toISOString() };
+    default: return { from: new Date(ce, 0, 1).toISOString(), to: new Date(ce + 1, 0, 0, 23, 59, 59).toISOString() };
+  }
+}
+
+// ─── Time Filter Section ─────────────────────────────────────────────────────
+type TimeMode = "all" | "season" | "term" | "custom";
+const SEASON_VISUAL: Record<string, { icon: React.ReactNode; gradient: string; emoji: string }> = {
+  HOT: { icon: <Sun className="w-3.5 h-3.5" />, gradient: "from-orange-500 to-amber-400", emoji: "☀️" },
+  RAIN: { icon: <CloudRain className="w-3.5 h-3.5" />, gradient: "from-blue-500 to-sky-400", emoji: "🌧️" },
+  COOL: { icon: <Snowflake className="w-3.5 h-3.5" />, gradient: "from-cyan-500 to-teal-400", emoji: "❄️" },
+};
+
+function TimeFilterSection({
+  dateFrom, dateTo, onDateChange, filters,
+}: {
+  dateFrom?: string; dateTo?: string;
+  onDateChange: (from?: string, to?: string) => void;
+  filters?: BorrowAnalytics["filters"];
+}) {
+  const [open, setOpen] = useState(true);
+  const [mode, setMode] = useState<TimeMode>("all");
+  const [selectedSeason, setSelectedSeason] = useState("");
+  const [selectedTerm, setSelectedTerm] = useState("");
+  const [selectedYear, setSelectedYear] = useState(2568);
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+
+  const years = filters?.academicYears || [];
+  const seasons = filters?.seasons || [];
+  const termTypes = filters?.termTypes || [];
+
+  const isActive = mode !== "all";
+
+  const handleMode = useCallback((m: TimeMode) => {
+    setMode(m);
+    if (m === "all") { onDateChange(undefined, undefined); setSelectedSeason(""); setSelectedTerm(""); }
+  }, [onDateChange]);
+
+  const handleSeason = useCallback((code: string) => {
+    setSelectedSeason(code);
+    const s = seasons.find((x) => x.season_code === code);
+    if (s) { const r = seasonToDateRange(s.month_start, s.month_end, selectedYear); onDateChange(r.from, r.to); }
+  }, [seasons, selectedYear, onDateChange]);
+
+  const handleTerm = useCallback((code: string) => {
+    setSelectedTerm(code);
+    const r = termToDateRange(code, selectedYear);
+    onDateChange(r.from, r.to);
+  }, [selectedYear, onDateChange]);
+
+  const handleYear = useCallback((y: number) => {
+    setSelectedYear(y);
+    if (mode === "season" && selectedSeason) {
+      const s = seasons.find((x) => x.season_code === selectedSeason);
+      if (s) { const r = seasonToDateRange(s.month_start, s.month_end, y); onDateChange(r.from, r.to); }
+    } else if (mode === "term" && selectedTerm) {
+      const r = termToDateRange(selectedTerm, y);
+      onDateChange(r.from, r.to);
+    }
+  }, [mode, selectedSeason, selectedTerm, seasons, onDateChange]);
+
+  return (
+    <div className="border-b border-gray-100/80">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-5 py-3 hover:bg-gray-50/50 transition-colors group"
+      >
+        <div className="flex items-center gap-2">
+          <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${isActive ? "bg-gradient-to-br from-indigo-500 to-purple-500" : "bg-gradient-to-br from-primary/10 to-primary/5"}`}>
+            <Clock className={`w-3 h-3 ${isActive ? "text-white" : "text-primary"}`} />
+          </div>
+          <span className="text-xs font-bold text-gray-700 tracking-wide">ช่วงเวลา</span>
+          {isActive && (
+            <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 text-[9px] font-black rounded-full">กรองอยู่</span>
+          )}
+        </div>
+        <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      <div className={`overflow-hidden transition-all duration-200 ease-in-out ${open ? "max-h-[600px] opacity-100 pb-3" : "max-h-0 opacity-0"}`}>
+        <div className="px-4">
+          {/* Mode tabs */}
+          <div className="grid grid-cols-4 gap-0.5 bg-gray-100/80 rounded-lg p-0.5 mb-3">
+            {([
+              { key: "all" as const, label: "ทั้งหมด", icon: "📊" },
+              { key: "season" as const, label: "ฤดูกาล", icon: "🌦️" },
+              { key: "term" as const, label: "เทอม", icon: "📅" },
+              { key: "custom" as const, label: "กำหนด", icon: "📆" },
+            ]).map((t) => (
+              <button
+                key={t.key}
+                onClick={() => handleMode(t.key)}
+                className={`px-1 py-1.5 rounded-md text-[10px] font-bold transition-all text-center ${mode === t.key
+                  ? "bg-white text-indigo-700 shadow-sm"
+                  : "text-gray-400 hover:text-gray-600"
+                  }`}
+              >
+                <span className="block text-xs mb-0.5">{t.icon}</span>
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Year selector */}
+          {(mode === "season" || mode === "term") && (
+            <div className="mb-3">
+              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">ปีการศึกษา</p>
+              <div className="flex gap-1 flex-wrap">
+                {years.slice(0, 8).map((y) => (
+                  <button
+                    key={y}
+                    onClick={() => handleYear(y)}
+                    className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all ${selectedYear === y
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : "bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-100"
+                      }`}
+                  >
+                    {y}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Season cards */}
+          {mode === "season" && (
+            <div className="space-y-1.5">
+              {seasons.map((s) => {
+                const vis = SEASON_VISUAL[s.season_code] || SEASON_VISUAL.HOT;
+                const isActive = selectedSeason === s.season_code;
+                return (
+                  <button
+                    key={s.season_code}
+                    onClick={() => handleSeason(s.season_code)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${isActive
+                      ? `bg-gradient-to-r ${vis.gradient} text-white shadow-lg shadow-${s.season_code === "HOT" ? "orange" : s.season_code === "RAIN" ? "blue" : "cyan"}-200/50`
+                      : "bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-100"
+                      }`}
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isActive ? "bg-white/20" : "bg-white"}`}>
+                      <span className="text-sm">{vis.emoji}</span>
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-[11px] font-bold">{s.season_name_th}</div>
+                      <div className={`text-[9px] ${isActive ? "text-white/70" : "text-gray-400"}`}>
+                        {THAI_MONTHS[s.month_start]} – {THAI_MONTHS[s.month_end]}
+                      </div>
+                    </div>
+                    {isActive && <div className="w-2 h-2 rounded-full bg-white" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Term buttons */}
+          {mode === "term" && (
+            <div className="space-y-1.5">
+              {termTypes.map((t) => (
+                <button
+                  key={t.code}
+                  onClick={() => handleTerm(t.code)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${selectedTerm === t.code
+                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200/50"
+                    : "bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-100"
+                    }`}
+                >
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${selectedTerm === t.code ? "bg-white/20" : "bg-white"}`}>
+                    <BookOpen className={`w-4 h-4 ${selectedTerm === t.code ? "text-white" : "text-indigo-500"}`} />
+                  </div>
+                  <span className="text-[11px] font-bold">{t.name_th}</span>
+                  {selectedTerm === t.code && <div className="w-2 h-2 rounded-full bg-white ml-auto" />}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Custom date picker */}
+          {mode === "custom" && (
+            <div className="space-y-2">
+              <div>
+                <label className="text-[9px] font-bold text-gray-400 block mb-1">ตั้งแต่วันที่</label>
+                <input
+                  type="date"
+                  value={customFrom}
+                  onChange={(e) => setCustomFrom(e.target.value)}
+                  className="w-full px-3 py-2 text-[11px] border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 outline-none bg-white"
+                />
+              </div>
+              <div>
+                <label className="text-[9px] font-bold text-gray-400 block mb-1">ถึงวันที่</label>
+                <input
+                  type="date"
+                  value={customTo}
+                  onChange={(e) => setCustomTo(e.target.value)}
+                  className="w-full px-3 py-2 text-[11px] border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 outline-none bg-white"
+                />
+              </div>
+              <button
+                onClick={() => {
+                  if (customFrom && customTo) {
+                    onDateChange(new Date(customFrom).toISOString(), new Date(customTo + "T23:59:59").toISOString());
+                  }
+                }}
+                disabled={!customFrom || !customTo}
+                className="w-full py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-[11px] font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+              >
+                🔍 ค้นหา
+              </button>
+            </div>
+          )}
+
+          {/* Active filter indicator */}
+          {mode !== "all" && dateFrom && (
+            <div className="mt-3 flex items-center justify-between bg-indigo-50 rounded-lg px-3 py-2">
+              <span className="text-[9px] text-indigo-600 font-medium">
+                📅 {new Date(dateFrom).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" })}
+                {" → "}
+                {dateTo ? new Date(dateTo).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" }) : "ปัจจุบัน"}
+              </span>
+              <button onClick={() => handleMode("all")} className="text-[9px] text-indigo-600 font-bold hover:text-indigo-800">
+                ✕ ล้าง
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ─────────────────────────────────────────────────────────
 export function MapLeftSidebar({
   filter,
   onChange,
   availableProvinces = [],
   specialZoneNames = [],
+  mapMode = "risk",
+  borrowDateFrom,
+  borrowDateTo,
+  onBorrowDateChange,
+  borrowFilters,
 }: {
   filter: MapFilterState;
   onChange: (v: MapFilterState) => void;
   availableProvinces?: ProvinceOption[];
   specialZoneNames?: string[];
+  mapMode?: "risk" | "borrow";
+  borrowDateFrom?: string;
+  borrowDateTo?: string;
+  onBorrowDateChange?: (from?: string, to?: string) => void;
+  borrowFilters?: BorrowAnalytics["filters"];
 }) {
   const [provinceSearch, setProvinceSearch] = useState("");
 
@@ -348,7 +610,17 @@ export function MapLeftSidebar({
           />
         </FilterSection>
 
-        {/* ── Advanced Filters ────────────────────────────────── */}
+        {/* ── Time Filter (always visible — default filter) ────── */}
+        {onBorrowDateChange && (
+          <TimeFilterSection
+            dateFrom={borrowDateFrom}
+            dateTo={borrowDateTo}
+            onDateChange={onBorrowDateChange}
+            filters={borrowFilters}
+          />
+        )}
+
+        {/* ── Advanced Filters (bottom) ────────────────────────── */}
         <FilterSection icon={Layers} title="ตัวกรองเพิ่มเติม" defaultOpen={false}>
           {/* Institution Type */}
           <div className="mb-3">

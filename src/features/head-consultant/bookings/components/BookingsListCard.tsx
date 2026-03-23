@@ -134,13 +134,19 @@ function getAssignState(b: AdminBookingRow) {
   if (b.status === "CANCELLED") return { can: false, isAutoAssigned: false, reason: "รายการนี้ถูกยกเลิกแล้ว" };
   if (b.status === "COMPLETED") return { can: false, isAutoAssigned: false, reason: "รายการนี้เสร็จสิ้นแล้ว" };
 
-  // Check if auto-assigned → block re-assign from this page
+  // Check if auto-assigned
   const latestAssignment = b.assignments?.[0];
   const isAuto = latestAssignment?.isAutoAssigned === true;
 
   if (b.status === "ASSIGNED" || b.status === "IN_PROGRESS") {
     if (isAuto) {
-      return { can: false, isAutoAssigned: true, isEdit: true, reason: "แจกงานอัตโนมัติแล้ว แก้ไขได้ที่หน้าประวัติการแจก" };
+      // ✅ Allow editing auto-assigned bookings if the time slot hasn't started yet
+      const slotStarted = isSlotStarted(b.date, b.startTime);
+      if (slotStarted) {
+        return { can: false, isAutoAssigned: true, isEdit: true, reason: "เลยเวลานัดหมายแล้ว ไม่สามารถแก้ไขได้" };
+      }
+      // Slot hasn't started → allow edit
+      return { can: true, isAutoAssigned: true, isEdit: true, reason: null as string | null };
     }
     return { can: true, isAutoAssigned: false, isEdit: true, reason: null as string | null };
   }
@@ -151,8 +157,20 @@ function getAssignState(b: AdminBookingRow) {
   return { can: false, isAutoAssigned: false, reason: "สถานะไม่อนุญาตให้แจกงาน" };
 }
 
+/** Check if the booking's time slot has already started */
+function isSlotStarted(date: string | null, startTime: string | null): boolean {
+  if (!date || !startTime) return false;
+  try {
+    // date = "YYYY-MM-DD", startTime = "HH:mm"
+    const slotStart = new Date(`${date}T${startTime}:00`);
+    return Date.now() >= slotStart.getTime();
+  } catch {
+    return false;
+  }
+}
+
 function assignLabel(assign: { can: boolean; isEdit?: boolean; isAutoAssigned?: boolean }, status?: string) {
-  if (assign.isAutoAssigned) return "🤖 แจกงานอัตโนมัติแล้ว";
+  if (assign.isAutoAssigned && !assign.can) return "🤖 แจกงานอัตโนมัติแล้ว";
   if (assign.can) return assign.isEdit ? "แก้ไขผู้ดูแล" : "แจกงาน";
 
   switch (status) {
