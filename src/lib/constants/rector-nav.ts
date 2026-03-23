@@ -1,5 +1,5 @@
 // lib/constants/rector-nav.ts
-import { LayoutDashboard, FileText, School, UserCheck, Bot } from "lucide-react";
+import { LayoutDashboard, FileText, School } from "lucide-react";
 import type { NavItem } from "@/components/layout/sidebar/types";
 
 export const RECTOR_NAV: NavItem[] = [
@@ -18,10 +18,5 @@ export const RECTOR_NAV: NavItem[] = [
     href: "/rector/reports",
     label: "รายงานสรุป",
     icon: FileText,
-  },
-  {
-    href: "/rector/ai-insight",
-    label: "AI สรุปผล",
-    icon: Bot,
   },
 ];

@@ -1,7 +1,7 @@
 // src/features/dashboard/shared/GenericProblemStory.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { AlertTriangle } from "lucide-react";
 import { DataStoryCard } from "../widgets/story/DataStoryCard";
@@ -44,22 +44,24 @@ export default function GenericProblemStory({ apiPath, title, delay = 0, descrip
             .catch(() => { });
     }, []);
 
-    const { data, loading, meta } = useStoryData<any>(apiPath, "problems", {
+    interface ProblemCategory { label: string; count: number }
+    interface ProblemData { categories: ProblemCategory[] }
+
+    const { data, loading, meta } = useStoryData<ProblemData>(apiPath, "problems", {
         department_ids: deptIds,
     }, date, customRange);
 
     const categories = data?.categories ?? [];
-    const totalProblems = categories.reduce((s: number, c: any) => s + c.count, 0);
+    const totalProblems = categories.reduce((s, c) => s + c.count, 0);
 
-    // ✅ Show ALL categories (no slice), sorted by count desc
-    const barData = [...categories]
-        .sort((a: any, b: any) => b.count - a.count)
-        .map((c: any) => ({
+    const barData = useMemo(() => [...categories]
+        .sort((a, b) => b.count - a.count)
+        .map((c) => ({
             name: c.label,
             fullName: c.label,
             count: c.count,
             pct: totalProblems > 0 ? parseFloat((c.count / totalProblems * 100).toFixed(1)) : 0,
-        }));
+        })), [categories, totalProblems]);
 
     // Dynamic height: 36px per bar, min 200px
     const chartHeight = Math.max(200, barData.length * 36 + 40);
@@ -116,7 +118,7 @@ export default function GenericProblemStory({ apiPath, title, delay = 0, descrip
                                         tick={{ fontSize: 11, fill: "#334155", fontWeight: 500 }} />
                                     <Tooltip content={<ProblemTip unit={unit} />} />
                                     <Bar dataKey={unit === "percent" ? "pct" : "count"} name="จำนวน" radius={[0, 6, 6, 0]} barSize={20}>
-                                        {barData.map((_: any, idx: number) => (
+                                        {barData.map((_, idx) => (
                                             <Cell key={idx} fill={BAR_COLORS[idx % BAR_COLORS.length]} />
                                         ))}
                                     </Bar>
@@ -132,7 +134,8 @@ export default function GenericProblemStory({ apiPath, title, delay = 0, descrip
 }
 
 // ─── Enhanced Tooltip for problem bars ────────────────────────────────────────
-function ProblemTip({ active, payload, label, unit }: any) {
+interface ProblemTipProps { active?: boolean; payload?: Array<{ payload?: { fullName?: string; count?: number; pct?: number }; color?: string }>; label?: string; unit: UnitMode }
+function ProblemTip({ active, payload, label, unit }: ProblemTipProps) {
     if (!active || !payload?.length) return null;
     const d = payload[0]?.payload;
     return (

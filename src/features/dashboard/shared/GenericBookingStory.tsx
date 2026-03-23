@@ -1,7 +1,7 @@
 // src/features/dashboard/shared/GenericBookingStory.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from "recharts";
 import { Calendar } from "lucide-react";
 import { DataStoryCard } from "../widgets/story/DataStoryCard";
@@ -20,7 +20,17 @@ export default function GenericBookingStory({ apiPath, title, delay = 0, descrip
     const [service, setService] = useState<string[]>([]);
     const [deptIds, setDeptIds] = useState<string[]>([]);
 
-    const { data, loading, meta } = useStoryData<any>(apiPath, "bookings", {
+    interface BookingTrendItem { month: string; bookings: number; checkedIn: number }
+    interface BookingData {
+        totalBookings: number;
+        checkedInCount: number;
+        noShowCount: number;
+        completedCount: number;
+        trendMode?: "year" | "month";
+        monthlyTrend?: BookingTrendItem[];
+    }
+
+    const { data, loading, meta } = useStoryData<BookingData>(apiPath, "bookings", {
         booking_status: status,
         attendance_status: attendance,
         service_mode: service,
@@ -34,16 +44,15 @@ export default function GenericBookingStory({ apiPath, title, delay = 0, descrip
 
     const calc = (val: number) => unit === "percent" && total > 0 ? ((val / total) * 100).toFixed(1) + "%" : val;
 
-    // Determine if trend is yearly or monthly
     const isYearly = data?.trendMode === "year";
 
-    const trendData = (data?.monthlyTrend ?? []).map((m: any) => ({
+    const trendData = useMemo(() => (data?.monthlyTrend ?? []).map((m) => ({
         label: isYearly
-            ? `พ.ศ. ${m.month}` // Already BE year from backend
+            ? `พ.ศ. ${m.month}`
             : (MONTH_LABEL[m.month?.split("-")[1]] || m.month),
         จอง: m.bookings,
         มาจริง: unit === "percent" && m.bookings > 0 ? Number(((m.checkedIn / m.bookings) * 100).toFixed(1)) : m.checkedIn,
-    }));
+    })), [data?.monthlyTrend, isYearly, unit]);
 
     return (
         <DataStoryCard

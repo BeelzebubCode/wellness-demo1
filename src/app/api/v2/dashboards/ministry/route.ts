@@ -141,105 +141,81 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(emptyResponse);
     }
 
-    // Calculate metrics for each university
-    const universityMetrics: UniversityRiskMetrics[] = await Promise.all(
-      universities.map(async (uni) => {
-        try {
-          // 1. Queue Size (pending bookings - PENDING_ASSIGNMENT or ASSIGNED)
-          const queueSize = await prisma.booking.count({
-            where: {
-              university_id: uni.university_id,
-              booking_status: { in: ["PENDING_ASSIGNMENT", "ASSIGNED"] },
-            },
-          });
+    // ── Batch queries: 3 SQL statements instead of N×3 ──────────────────────
+    const uniIds = universities.map(u => u.university_id);
 
-          //2. Average Wait Time (from booking creation to time slot start)
-          const completedBookings = await prisma.booking.findMany({
-            where: {
-              university_id: uni.university_id,
-              booking_status: { in: ["IN_PROGRESS", "COMPLETED"] },
-              booking_created_at: { gte: startDate },
-            },
-            select: {
-              booking_created_at: true,
-              timeSlot: {
-                select: {
-                  time_slot_start_datetime: true,
-                },
-              },
-            },
-          });
+    interface QueueRow { university_id: number; queue_size: number }
+    interface WaitRow { university_id: number; avg_wait_days: number }
+    interface RiskRow { university_id: number; total: number; high: number }
 
-          const avgWaitTime =
-            completedBookings.length > 0
-              ? completedBookings.reduce((sum, b) => {
-                const waitDays = Math.floor(
-                  (new Date(b.timeSlot.time_slot_start_datetime).getTime() -
-                    new Date(b.booking_created_at).getTime()) /
-                  (1000 * 60 * 60 * 24)
-                );
-                return sum + Math.max(waitDays, 0); // Ensure non-negative
-              }, 0) / completedBookings.length
-              : 0;
+    const [queueRows, waitRows, riskRows] = await Promise.all([
+      // 1. Queue size per university (1 query)
+      prisma.$queryRawUnsafe<QueueRow[]>(`
+        SELECT university_id, COUNT(*)::int AS queue_size
+        FROM booking
+        WHERE university_id = ANY($1::int[])
+          AND booking_status IN ('PENDING_ASSIGNMENT','ASSIGNED')
+        GROUP BY university_id
+      `, uniIds),
 
-          // 3. High Risk Percentage (EWMA MV-based)
-          const riskMV = await prisma.$queryRawUnsafe<{ total: number; high: number }[]>(`
-            SELECT COUNT(*)::int AS total,
-                   COUNT(CASE WHEN risk_band IN ('VERY_HIGH','HIGH') THEN 1 END)::int AS high
-            FROM mv_student_risk_score WHERE university_id = ${uni.university_id}
-          `);
-          const totalOutcomes = riskMV[0]?.total ?? 0;
-          const highRiskOutcomes = riskMV[0]?.high ?? 0;
+      // 2. Avg wait time per university (1 query)
+      prisma.$queryRawUnsafe<WaitRow[]>(`
+        SELECT b.university_id,
+               COALESCE(AVG(GREATEST(EXTRACT(EPOCH FROM (ts.time_slot_start_datetime - b.booking_created_at)) / 86400, 0)), 0)::float AS avg_wait_days
+        FROM booking b
+        JOIN time_slot ts ON ts.university_id = b.university_id AND ts.time_slot_id = b.time_slot_id
+        WHERE b.university_id = ANY($1::int[])
+          AND b.booking_status IN ('IN_PROGRESS','COMPLETED')
+          AND b.booking_created_at >= $2
+        GROUP BY b.university_id
+      `, uniIds, startDate),
 
-          const highRiskPercentage =
-            totalOutcomes > 0 ? (highRiskOutcomes / totalOutcomes) * 100 : 0;
+      // 3. Risk band per university (1 query)
+      prisma.$queryRawUnsafe<RiskRow[]>(`
+        SELECT university_id, COUNT(*)::int AS total,
+               COUNT(CASE WHEN risk_band IN ('VERY_HIGH','HIGH') THEN 1 END)::int AS high
+        FROM mv_student_risk_score
+        WHERE university_id = ANY($1::int[])
+        GROUP BY university_id
+      `, uniIds),
+    ]);
 
-          // 4. Therapist Utilization (stub - TODO: calculate from actual slots)
-          const totalConsultants = uni._count.consultants;
-          const therapistUtilization = totalConsultants > 0 ? (queueSize / (totalConsultants * 20)) * 100 : 0; // Assume 20 slots per consultant
+    // Build lookup maps
+    const queueMap = new Map(queueRows.map(r => [r.university_id, r.queue_size]));
+    const waitMap = new Map(waitRows.map(r => [r.university_id, r.avg_wait_days]));
+    const riskMap = new Map(riskRows.map(r => [r.university_id, { total: r.total, high: r.high }]));
 
-          // Calculate Risk Score
-          const riskScore = calculateRiskScore({
-            queueSize,
-            avgWaitTime,
-            highRiskPercentage,
-            therapistUtilization: Math.min(therapistUtilization, 100),
-          });
+    // Assemble metrics (no more N+1)
+    const universityMetrics: UniversityRiskMetrics[] = universities.map(uni => {
+      const queueSize = queueMap.get(uni.university_id) ?? 0;
+      const avgWaitTime = waitMap.get(uni.university_id) ?? 0;
+      const risk = riskMap.get(uni.university_id) ?? { total: 0, high: 0 };
+      const highRiskPercentage = risk.total > 0 ? (risk.high / risk.total) * 100 : 0;
+      const totalConsultants = uni._count.consultants;
+      const therapistUtilization = totalConsultants > 0 ? (queueSize / (totalConsultants * 20)) * 100 : 0;
 
-          return {
-            universityId: uni.university_id,
-            universityCode: uni.university_code,
-            universityName: uni.university_name_th,
-            universityType: (uni as any).university_type || "PUBLIC",
-            province: uni.province.province_name_th,
-            regionCode: uni.province.region.region_code,
-            regionName: uni.province.region.region_name_th,
-            queueSize,
-            avgWaitTime: Math.round(avgWaitTime * 10) / 10,
-            highRiskPercentage: Math.round(highRiskPercentage * 10) / 10,
-            therapistUtilization: Math.round(Math.min(therapistUtilization, 100) * 10) / 10,
-            riskScore,
-          };
-        } catch (err) {
-          console.error(`[RISK_METRICS] Error calculating metrics for university ${uni.university_code}:`, err);
-          // Return default metrics on error
-          return {
-            universityId: uni.university_id,
-            universityCode: uni.university_code,
-            universityName: uni.university_name_th,
-            universityType: (uni as any).university_type || "PUBLIC",
-            province: uni.province.province_name_th,
-            regionCode: uni.province.region.region_code,
-            regionName: uni.province.region.region_name_th,
-            queueSize: 0,
-            avgWaitTime: 0,
-            highRiskPercentage: 0,
-            therapistUtilization: 0,
-            riskScore: 0,
-          };
-        }
-      })
-    );
+      const riskScore = calculateRiskScore({
+        queueSize,
+        avgWaitTime,
+        highRiskPercentage,
+        therapistUtilization: Math.min(therapistUtilization, 100),
+      });
+
+      return {
+        universityId: uni.university_id,
+        universityCode: uni.university_code,
+        universityName: uni.university_name_th,
+        universityType: "PUBLIC",
+        province: uni.province.province_name_th,
+        regionCode: uni.province.region.region_code,
+        regionName: uni.province.region.region_name_th,
+        queueSize,
+        avgWaitTime: Math.round(avgWaitTime * 10) / 10,
+        highRiskPercentage: Math.round(highRiskPercentage * 10) / 10,
+        therapistUtilization: Math.round(Math.min(therapistUtilization, 100) * 10) / 10,
+        riskScore,
+      };
+    });
 
     console.log(`[RISK_METRICS] Calculated metrics for ${universityMetrics.length} universities`);
 

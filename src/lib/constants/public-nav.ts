@@ -1,5 +1,5 @@
 // src/lib/constants/public-nav.ts
-import { Home, Info, Newspaper, Bot, CalendarPlus, BookOpen } from "lucide-react";
+import { Home, Info, Bot, CalendarPlus, BookOpen } from "lucide-react";
 import type { NavItem } from "@/components/layout/sidebar/types";
 
 export const PUBLIC_NAV: NavItem[] = [
@@ -25,11 +25,6 @@ export const PUBLIC_NAV: NavItem[] = [
     label: "เกี่ยวกับ",
     icon: Info,
   },
-  // {
-  //   href: "/pr",
-  //   label: "ประชาสัมพันธ์",
-  //   icon: Newspaper,
-  // },
   {
     href: "/help/ai",
     label: "AI ผู้ช่วย",

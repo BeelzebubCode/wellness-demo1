@@ -68,8 +68,13 @@ export default function AiChatInput({
   const didForceHelpRef = useRef(false);
 
   const availableModes = MODES.filter((m) => {
-    if (m.id === "booking_agent") return isAuthenticated && user?.role === "STUDENT";
-    if (m.id === "analyst") return isAuthenticated && user?.role && !["STUDENT", "CONSULTANT", "HEAD_CONSULTANT"].includes(user.role);
+    const role = user?.role;
+    // booking_agent: only for authenticated students
+    if (m.id === "booking_agent") return isAuthenticated && role === "STUDENT";
+    // analyst (AI สรุปผล): only for ministry
+    if (m.id === "analyst") return isAuthenticated && role === "MINISTRY";
+    // help: hide for ministry (they only use analyst)
+    if (m.id === "help") return role !== "MINISTRY";
     return true;
   });
 
@@ -503,114 +508,114 @@ export default function AiChatInput({
           (chat.agent?.intent === "CANCEL" && (chat.agent?.cancelReasons?.length ?? 0) > 0) ||
           (chat.agent?.intent !== "CANCEL" && (chat.agent?.questions?.length ?? 0) > 0)
         )) && (
-        <div className="flex flex-col gap-3">
-          {/* Input Box */}
-          <div className="relative flex items-end gap-2 rounded-2xl bg-transparent border-2 border-slate-200 px-3 py-2 shadow-sm focus-within:border-indigo-400 focus-within:shadow-md transition-all">
-            <div className="flex-1 min-w-0">
-              <textarea
-                ref={textareaRef}
-                value={input}
-                placeholder={
-                  mode === "booking_agent"
-                    ? 'พิมพ์คำขอจอง/ยกเลิก "พรุ่งนี้ 14:00"'
-                    : mode === "analyst"
-                      ? "ถามสถิติ 7 วันล่าสุด, ดูเทรนด์..."
-                      : "ถามอะไรก็ได้..."
-                }
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    send();
-                  }
-                }}
-                rows={1}
-                disabled={isLoading}
-                className={cn(
-                  styles.inputText,
-                  "max-h-[150px] w-full resize-none bg-transparent outline-none border-0 px-1 py-0.5",
-                  "placeholder:text-slate-400 text-slate-900 text-[13px] md:text-[14px]",
-                  "scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent leading-[1.5]"
-                )}
-                style={{ minHeight: "32px" }}
-              />
-            </div>
-            <div className="pb-0.5">
-              <button
-                type="button"
-                onClick={send}
-                disabled={!canSend}
-                className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full transition-all duration-300",
-                  canSend
-                    ? "bg-gradient-to-br from-indigo-500 to-primary-600 text-white shadow-[0_4px_12px_rgba(79,70,229,0.3)] hover:shadow-[0_6px_16px_rgba(79,70,229,0.4)] hover:-translate-y-0.5"
-                    : "bg-slate-200 text-slate-400 cursor-not-allowed"
-                )}
-                aria-label="ส่งข้อความ"
-              >
-                <ArrowUp className={cn("h-4 w-4 transition-transform", canSend && "group-hover:translate-y-[-1px]")} strokeWidth={3} />
-              </button>
-            </div>
-          </div>
-
-          {/* Controls Row */}
-          <div className="flex items-center gap-3 px-2">
-            <button
-              type="button"
-              onClick={reset}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-slate-500 hover:bg-slate-100 hover:text-red-500 transition-colors text-[12px]"
-              title="เริ่มใหม่"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              <span>รีเซ็ต</span>
-            </button>
-
-            <div className="relative mode-selector">
-              <button
-                onClick={() => setIsModeOpen(!isModeOpen)}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-[12px] font-medium text-slate-700 hover:bg-slate-200 transition-colors"
-              >
-                <span className="text-indigo-600">{selectedMode.icon}</span>
-                {selectedMode.name}
-                <ChevronDown className={cn("h-3 w-3 text-slate-400 transition-transform", isModeOpen && "rotate-180")} />
-              </button>
-
-              {isModeOpen && (
-                <div className="absolute bottom-full left-0 mb-2 z-50 min-w-[180px] overflow-hidden rounded-xl border border-slate-100 bg-white p-1 shadow-xl animate-in fade-in zoom-in-95 slide-in-from-bottom-2">
-                  {availableModes.map((m) => (
-                    <button
-                      key={m.id}
-                      onClick={() => {
-                        if (m.id === "booking_agent" && !isAuthenticated) {
-                          push({
-                            type: "warning",
-                            title: "กรุณาเข้าสู่ระบบ",
-                            message: "ฟีเจอร์จองคิวเปิดให้ใช้งานเฉพาะผู้ที่เข้าสู่ระบบแล้วเท่านั้น",
-                          });
-                          setIsModeOpen(false);
-                          return;
-                        }
-                        onModeChange?.(m.id as AiChatMode);
-                        setIsModeOpen(false);
-                      }}
-                      className={cn(
-                        "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] text-slate-700 hover:bg-slate-50 transition-colors",
-                        mode === m.id && "bg-indigo-50 font-medium text-indigo-700"
-                      )}
-                    >
-                      <span className={mode === m.id ? "text-indigo-600" : "text-slate-400"}>
-                        {m.icon}
-                      </span>
-                      {m.name}
-                      {mode === m.id && <CheckCircle2 className="ml-auto h-3.5 w-3.5 text-indigo-600" />}
-                    </button>
-                  ))}
+            <div className="flex flex-col gap-3">
+              {/* Input Box */}
+              <div className="relative flex items-end gap-2 rounded-2xl bg-transparent border-2 border-slate-200 px-3 py-2 shadow-sm focus-within:border-indigo-400 focus-within:shadow-md transition-all">
+                <div className="flex-1 min-w-0">
+                  <textarea
+                    ref={textareaRef}
+                    value={input}
+                    placeholder={
+                      mode === "booking_agent"
+                        ? 'พิมพ์คำขอจอง/ยกเลิก "พรุ่งนี้ 14:00"'
+                        : mode === "analyst"
+                          ? "ถามสถิติ 7 วันล่าสุด, ดูเทรนด์..."
+                          : "ถามอะไรก็ได้..."
+                    }
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        send();
+                      }
+                    }}
+                    rows={1}
+                    disabled={isLoading}
+                    className={cn(
+                      styles.inputText,
+                      "max-h-[150px] w-full resize-none bg-transparent outline-none border-0 px-1 py-0.5",
+                      "placeholder:text-slate-400 text-slate-900 text-[13px] md:text-[14px]",
+                      "scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent leading-[1.5]"
+                    )}
+                    style={{ minHeight: "32px" }}
+                  />
                 </div>
-              )}
+                <div className="pb-0.5">
+                  <button
+                    type="button"
+                    onClick={send}
+                    disabled={!canSend}
+                    className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-full transition-all duration-300",
+                      canSend
+                        ? "bg-gradient-to-br from-indigo-500 to-primary-600 text-white shadow-[0_4px_12px_rgba(79,70,229,0.3)] hover:shadow-[0_6px_16px_rgba(79,70,229,0.4)] hover:-translate-y-0.5"
+                        : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                    )}
+                    aria-label="ส่งข้อความ"
+                  >
+                    <ArrowUp className={cn("h-4 w-4 transition-transform", canSend && "group-hover:translate-y-[-1px]")} strokeWidth={3} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Controls Row */}
+              <div className="flex items-center gap-3 px-2">
+                <button
+                  type="button"
+                  onClick={reset}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-slate-500 hover:bg-slate-100 hover:text-red-500 transition-colors text-[12px]"
+                  title="เริ่มใหม่"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  <span>รีเซ็ต</span>
+                </button>
+
+                <div className="relative mode-selector">
+                  <button
+                    onClick={() => setIsModeOpen(!isModeOpen)}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-[12px] font-medium text-slate-700 hover:bg-slate-200 transition-colors"
+                  >
+                    <span className="text-indigo-600">{selectedMode.icon}</span>
+                    {selectedMode.name}
+                    <ChevronDown className={cn("h-3 w-3 text-slate-400 transition-transform", isModeOpen && "rotate-180")} />
+                  </button>
+
+                  {isModeOpen && (
+                    <div className="absolute bottom-full left-0 mb-2 z-50 min-w-[180px] overflow-hidden rounded-xl border border-slate-100 bg-white p-1 shadow-xl animate-in fade-in zoom-in-95 slide-in-from-bottom-2">
+                      {availableModes.map((m) => (
+                        <button
+                          key={m.id}
+                          onClick={() => {
+                            if (m.id === "booking_agent" && !isAuthenticated) {
+                              push({
+                                type: "warning",
+                                title: "กรุณาเข้าสู่ระบบ",
+                                message: "ฟีเจอร์จองคิวเปิดให้ใช้งานเฉพาะผู้ที่เข้าสู่ระบบแล้วเท่านั้น",
+                              });
+                              setIsModeOpen(false);
+                              return;
+                            }
+                            onModeChange?.(m.id as AiChatMode);
+                            setIsModeOpen(false);
+                          }}
+                          className={cn(
+                            "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] text-slate-700 hover:bg-slate-50 transition-colors",
+                            mode === m.id && "bg-indigo-50 font-medium text-indigo-700"
+                          )}
+                        >
+                          <span className={mode === m.id ? "text-indigo-600" : "text-slate-400"}>
+                            {m.icon}
+                          </span>
+                          {m.name}
+                          {mode === m.id && <CheckCircle2 className="ml-auto h-3.5 w-3.5 text-indigo-600" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        )}
+          )}
 
       </div>
     </div>

@@ -87,10 +87,10 @@ ${h3(icon.calendar, 'การจองคิวปรึกษา')}
 ${h3(icon.clip, 'การดูนัดหมายของฉัน')}
 <p>ที่เมนู <strong>"นัดหมายของฉัน"</strong> จะเห็นรายการนัดหมายทั้งหมด:</p>
 <table><thead><tr><th>สี</th><th>สถานะ</th><th>ความหมาย</th></tr></thead><tbody>
-<tr><td><span class="badge badge-yellow">เหลือง</span></td><td>PENDING_ASSIGNMENT</td><td>รอมอบหมาย</td></tr>
-<tr><td><span class="badge badge-blue">ฟ้า</span></td><td>ASSIGNED</td><td>ได้รับมอบหมายแล้ว</td></tr>
-<tr><td><span class="badge badge-green">เขียว</span></td><td>COMPLETED</td><td>เสร็จสิ้น</td></tr>
-<tr><td><span class="badge badge-red">แดง</span></td><td>CANCELLED</td><td>ถูกยกเลิก</td></tr>
+<tr><td><span class="badge badge-yellow">เหลือง</span></td><td>รอมอบหมาย</td><td>ระบบกำลังจัดสรรผู้ให้คำปรึกษาให้คุณ</td></tr>
+<tr><td><span class="badge badge-blue">ฟ้า</span></td><td>ได้รับมอบหมายแล้ว</td><td>มีผู้ให้คำปรึกษารอพบคุณตามเวลานัด</td></tr>
+<tr><td><span class="badge badge-green">เขียว</span></td><td>เสร็จสิ้น</td><td>การปรึกษาเสร็จเรียบร้อย</td></tr>
+<tr><td><span class="badge badge-red">แดง</span></td><td>ถูกยกเลิก</td><td>นัดหมายถูกยกเลิกแล้ว</td></tr>
 </tbody></table>
 ${h3(icon.x, 'การยกเลิกนัดหมาย')}
 ${warn('หากยกเลิกน้อยกว่า 24 ชั่วโมงก่อนเวลานัด จะถือว่า <strong>"ยกเลิกกะทันหัน" (Late Cancel)</strong> ซึ่งจะมีผลต่อคะแนนความไว้วางใจ')}
@@ -117,7 +117,7 @@ ${h3(icon.shield, 'การยื่นคำร้องยกเว้นโ�
 ${success('หากอนุมัติ → แต้มที่ถูกหักจะถูกคืน และล็อกจะถูกปลดทันที')}`
   },
   {
-    document_slug: 'consultant-guide', document_title: 'คู่มือสำหรับผู้ให้คำปรึกษา', document_order: 3, document_is_active: true,
+    document_slug: 'consultant-guide', document_title: 'คู่มือสำหรับผู้ให้คำปรึกษา', document_order: 3, document_is_active: false,
     document_content: `
 <h2>คู่มือสำหรับผู้ให้คำปรึกษา (Consultant)</h2>
 <p>คู่มือนี้อธิบายวิธีรับเคส บันทึกผล และจัดตารางเวร</p>
@@ -155,7 +155,7 @@ ${h3(icon.calendar, 'ตารางเวรและประวัติ')}
 </ul>`
   },
   {
-    document_slug: 'head-consultant-guide', document_title: 'คู่มือสำหรับหัวหน้าผู้ให้คำปรึกษา', document_order: 4, document_is_active: true,
+    document_slug: 'head-consultant-guide', document_title: 'คู่มือสำหรับหัวหน้าผู้ให้คำปรึกษา', document_order: 4, document_is_active: false,
     document_content: `
 <h2>คู่มือสำหรับหัวหน้าผู้ให้คำปรึกษา</h2>
 <p>Head Consultant เป็นผู้จัดการระบบระดับมหาวิทยาลัย</p>
@@ -190,7 +190,7 @@ ${h3(icon.users, 'ระบบยืมตัว Consultant')}
 </ol>`
   },
   {
-    document_slug: 'management-guide', document_title: 'คู่มือสำหรับผู้บริหาร', document_order: 5, document_is_active: true,
+    document_slug: 'management-guide', document_title: 'คู่มือสำหรับผู้บริหาร', document_order: 5, document_is_active: false,
     document_content: `
 <h2>คู่มือสำหรับผู้บริหาร</h2>
 <p>ผู้บริหารแต่ละระดับมีเมนูและข้อมูลที่แตกต่างกันตามขอบเขตความรับผิดชอบ</p>
@@ -225,35 +225,36 @@ ${h3(icon.building, 'กระทรวง (Ministry)')}
     document_slug: 'cancellation-policy', document_title: 'นโยบายยกเลิกนัดหมายและบทลงโทษ', document_order: 6, document_is_active: true,
     document_content: `
 <h2>นโยบายการยกเลิกนัดหมายและบทลงโทษ</h2>
-<p>เพื่อรักษาคุณภาพบริการและความเป็นธรรมต่อทุกฝ่าย ระบบมีนโยบายดังนี้</p>
-${h3(icon.clip, 'ประเภทการดำเนินการทางวินัย')}
-<table><thead><tr><th>รหัส</th><th>ชื่อ</th><th>ทิศทาง</th><th>ผลกระทบ</th></tr></thead><tbody>
-<tr><td><code>LATE_CANCEL</code></td><td>ยกเลิกนัดสาย</td><td><span class="badge badge-red">ลงโทษ</span></td><td>หักแต้ม + ล็อก (ทุก 3 ครั้ง)</td></tr>
-<tr><td><code>NO_SHOW</code></td><td>ไม่มาตามนัด</td><td><span class="badge badge-red">ลงโทษ</span></td><td>หักแต้ม + ล็อกทันที</td></tr>
-<tr><td><code>EXCEPTION_APPROVED</code></td><td>อนุมัติข้อยกเว้น</td><td><span class="badge badge-green">ปลดโทษ</span></td><td>คืนแต้ม + ปลดล็อก</td></tr>
-<tr><td><code>MANUAL_UNLOCK</code></td><td>ปลดล็อกด้วยตนเอง</td><td><span class="badge badge-green">ปลดโทษ</span></td><td>ปลดล็อก (ไม่คืนแต้ม)</td></tr>
+<p>ระบบ Wellness Booking ให้ความสำคัญกับการเข้ารับคำปรึกษาตามนัดหมาย เพื่อให้เวลาและทรัพยากรถูกจัดสรรอย่างเป็นธรรมแก่นิสิตทุกคน นโยบายนี้มีขึ้นเพื่อ<strong>ลดปัญหาการยกเลิกกะทันหัน</strong>และ<strong>การไม่มาตามนัด</strong> โดยกำหนดผลกระทบที่ชัดเจนสำหรับทุกกรณี</p>
+
+${h3(icon.shield, 'มาตรการเกี่ยวกับการนัดหมาย')}
+<table><thead><tr><th>กรณีที่เกิดขึ้น</th><th>ผลกระทบต่อบัญชีผู้ใช้</th></tr></thead><tbody>
+<tr><td>${icon.x} <strong>ยกเลิกนัดกะทันหัน</strong><br/><span style="color:#94a3b8;font-size:0.85em">ยกเลิกน้อยกว่า 24 ชม. ก่อนเวลานัด</span></td><td>ระบบบันทึกจำนวนครั้ง — หากสะสมครบ <strong>3 ครั้ง</strong> จะถูก<strong>ล็อกการจอง 7 วัน</strong> และ<strong>หักแต้ม 20 คะแนน</strong></td></tr>
+<tr><td>${icon.x} <strong>ไม่มาตามนัด</strong><br/><span style="color:#94a3b8;font-size:0.85em">ไม่มาเข้ารับคำปรึกษาโดยไม่แจ้งล่วงหน้า</span></td><td><strong>ล็อกการจอง 7 วัน</strong> และ<strong>หักแต้ม 30 คะแนนทันที</strong><br/><span style="color:#94a3b8;font-size:0.85em">ครั้งที่ 2 เป็นต้นไป: ล็อก 14 วัน + หัก 30 คะแนน</span></td></tr>
+<tr><td>${icon.check} <strong>ยื่นคำร้องยกเว้นโทษ (ได้รับอนุมัติ)</strong><br/><span style="color:#94a3b8;font-size:0.85em">เจ้าหน้าที่พิจารณาแล้วว่าเป็นเหตุสุดวิสัย</span></td><td>ได้รับ<strong>คืนแต้ม</strong>ที่ถูกหัก + <strong>ปลดล็อก</strong>การจองทันที</td></tr>
+<tr><td>${icon.check} <strong>ปลดล็อกด้วยตนเอง</strong><br/><span style="color:#94a3b8;font-size:0.85em">รอจนครบระยะเวลาล็อก</span></td><td><strong>ปลดล็อก</strong>ให้กลับมาจองได้ตามปกติ<br/><span style="color:#94a3b8;font-size:0.85em">* แต้มที่ถูกหักจะไม่ถูกคืน</span></td></tr>
 </tbody></table>
-${h3(icon.x, 'ยกเลิกกะทันหัน (Late Cancel)')}
-<ul>
-<li><strong>เงื่อนไข:</strong> ยกเลิกน้อยกว่า 24 ชั่วโมงก่อนเวลานัด</li>
-<li><strong>สะสม 3 ครั้ง:</strong> ล็อกการจอง 7 วัน + หักแต้ม 20 คะแนน</li>
-<li><strong>ทุก 3 ครั้งถัดไป:</strong> ล็อกเพิ่มอีก 7 วัน + หักแต้มอีก 20 คะแนน</li>
-</ul>
-${h3(icon.x, 'ไม่มาตามนัด (No Show)')}
-<ul>
-<li><strong>ครั้งที่ 1:</strong> ล็อกการจอง <strong>7 วัน</strong> + หักแต้ม <strong>30 คะแนน</strong></li>
-<li><strong>ครั้งที่ 2+:</strong> ล็อกการจอง <strong>14 วัน</strong> + หักแต้ม <strong>30 คะแนน</strong></li>
-</ul>
-${h3(icon.shield, 'การปลดล็อก')}
-<p>มี 2 วิธี:</p>
-<ul>
-<li><strong>ยื่นคำร้องยกเว้นโทษ</strong> — ระบุเหตุจำเป็นพร้อมหลักฐาน → หากอนุมัติ คืนแต้ม + ปลดล็อกทันที</li>
-<li><strong>รอล็อกหมดอายุ</strong> — หลังครบ 7 หรือ 14 วัน ระบบปลดล็อกอัตโนมัติ</li>
-</ul>
-${success('เข้าปรึกษาตามนัดทุกครั้ง + ทำ Feedback = ได้แต้มสะสม ไม่ถูกลงโทษ ได้ประโยชน์ทั้งแต้มและสุขภาพจิต')}`
+
+${h3(icon.alert, 'รายละเอียด: การยกเลิกกะทันหัน')}
+${warn('การ <strong>"ยกเลิกกะทันหัน"</strong> หมายถึง การยกเลิกนัดหมายภายใน <strong>24 ชั่วโมง</strong> ก่อนเวลานัด เช่น นัดหมายเวลา 14:00 น. วันจันทร์ แต่ยกเลิกในวันจันทร์เวลา 10:00 น.')}
+<p>ระบบจะ<strong>นับสะสมจำนวนครั้ง</strong>ที่ยกเลิกกะทันหัน โดยมีผลกระทบดังนี้:</p>
+<table><thead><tr><th>จำนวนครั้งสะสม</th><th>ผลกระทบ</th></tr></thead><tbody>
+<tr><td>ครั้งที่ 1–2</td><td>ยังไม่มีบทลงโทษ แต่ระบบจะ<strong>แจ้งเตือน</strong>ให้ระวัง</td></tr>
+<tr><td><strong>ครบ 3 ครั้ง</strong></td><td>🔒 ล็อกการจอง <strong>7 วัน</strong> + หักแต้ม <strong>20 คะแนน</strong></td></tr>
+<tr><td><strong>ครบ 6 ครั้ง</strong> (ทุก 3 ครั้งถัดไป)</td><td>🔒 ล็อกเพิ่มอีก <strong>7 วัน</strong> + หักแต้มอีก <strong>20 คะแนน</strong></td></tr>
+</tbody></table>
+
+${h3(icon.lock, 'การปลดล็อกและการคืนสิทธิ์')}
+<p>หากบัญชีถูกล็อก คุณสามารถปลดล็อกได้ <strong>2 วิธี:</strong></p>
+<table><thead><tr><th>วิธี</th><th>เงื่อนไข</th><th>ผลลัพธ์</th></tr></thead><tbody>
+<tr><td>📝 <strong>ยื่นคำร้องยกเว้นโทษ</strong></td><td>ระบุเหตุผลความจำเป็น (เช่น เจ็บป่วย อุบัติเหตุ เหตุฉุกเฉิน) พร้อม<strong>แนบหลักฐาน</strong></td><td>หากเจ้าหน้าที่<strong>อนุมัติ</strong> → คืนแต้มที่ถูกหัก + ปลดล็อกทันที</td></tr>
+<tr><td>⏳ <strong>รอล็อกหมดอายุ</strong></td><td>รอจนครบ <strong>7 วัน</strong> (หรือ 14 วัน กรณีไม่มาตามนัดซ้ำ)</td><td>ปลดล็อกอัตโนมัติ แต่<strong>แต้มที่ถูกหักจะไม่ถูกคืน</strong></td></tr>
+</tbody></table>
+${tip('เข้าปรึกษาตรงเวลาทุกครั้ง + ทำ Feedback หลังปรึกษา = ได้ <strong>+10 แต้มสะสม</strong> ไม่ถูกลงโทษ ได้ประโยชน์ทั้งแต้มและสุขภาพจิต 💚')}
+${success('หากมีเหตุจำเป็นที่ไม่สามารถมาตามนัดได้ กรุณา<strong>ยกเลิกล่วงหน้ามากกว่า 24 ชั่วโมง</strong> เพื่อหลีกเลี่ยงบทลงโทษ และเปิดโอกาสให้นิสิตคนอื่นได้ใช้บริการแทน')}`
   },
   {
-    document_slug: 'super-admin-guide', document_title: 'คู่มือสำหรับ Super Admin', document_order: 7, document_is_active: true,
+    document_slug: 'super-admin-guide', document_title: 'คู่มือสำหรับ Super Admin', document_order: 7, document_is_active: false,
     document_content: `
 <h2>คู่มือสำหรับ Super Admin</h2>
 <p>Super Admin คือผู้ดูแลระบบระดับแพลตฟอร์ม สามารถจัดการทุกอย่างในระบบ</p>

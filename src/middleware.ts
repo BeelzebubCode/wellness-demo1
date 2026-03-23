@@ -11,6 +11,7 @@ const PUBLIC_PATHS = new Set([
   "/help/ai",
   "/login",
   "/booking",
+  "/docs",
 ]);
 
 // ✅ Helper to check if path starts with public prefix
@@ -20,6 +21,7 @@ function isPublicPath(pathname: string) {
   if (pathname.startsWith("/pr")) return true;
   if (pathname.startsWith("/liff")) return true;
   if (pathname.startsWith("/api")) return true;
+  if (pathname.startsWith("/docs")) return true;
   return false;
 }
 
