@@ -1,6 +1,6 @@
 // features/dashboard/ministry/components/RiskyUniversityTable.tsx
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui";
-import { UniversityRiskData } from "../hooks/useMinistryStats";
+import type { UniversityRiskData } from "../services/ministry-types";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -30,8 +30,8 @@ export function RiskyUniversityTable({ universities }: Props) {
                 <tr key={uni.id} className="bg-white hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium text-gray-900">
                     <div className="flex flex-col">
-                        <span>{uni.name}</span>
-                        <span className="text-xs text-gray-500">{uni.code}</span>
+                      <span>{uni.name}</span>
+                      <span className="text-xs text-gray-500">{uni.code}</span>
                     </div>
                   </td>
                   {/* Note: Student count for university needs to be fetched or added to result if needed. Using placeholder or if provided. 
@@ -47,11 +47,11 @@ export function RiskyUniversityTable({ universities }: Props) {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                     <span className={cn("px-2 py-1 rounded-full text-xs font-semibold", 
-                        uni.highRiskCount > 50 ? "bg-red-100 text-red-700" :
+                    <span className={cn("px-2 py-1 rounded-full text-xs font-semibold",
+                      uni.highRiskCount > 50 ? "bg-red-100 text-red-700" :
                         uni.highRiskCount > 10 ? "bg-yellow-100 text-yellow-700" :
-                        "bg-green-100 text-green-700"
-                     )}>
+                          "bg-green-100 text-green-700"
+                    )}>
                       {uni.highRiskCount > 50 ? "Critical" : uni.highRiskCount > 10 ? "Warning" : "Normal"}
                     </span>
                   </td>

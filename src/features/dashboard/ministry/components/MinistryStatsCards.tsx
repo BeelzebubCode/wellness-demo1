@@ -1,7 +1,7 @@
 // features/dashboard/ministry/components/MinistryStatsCards.tsx
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
 import { Building2, Users, Activity, AlertTriangle } from "lucide-react";
-import { MinistryStats } from "../hooks/useMinistryStats";
+import type { MinistryStats } from "../services/ministry-types";
 
 interface Props {
   stats: MinistryStats;
