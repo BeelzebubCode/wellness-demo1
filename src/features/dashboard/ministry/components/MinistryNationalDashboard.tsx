@@ -6,7 +6,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Shield, RefreshCw, Clock } from "lucide-react";
+import { Shield, RefreshCw, Clock, Building2, Users, Calendar, CheckCircle2 } from "lucide-react";
 import { ExecutiveKPIStrip } from "./executive/ExecutiveKPIStrip";
 import { InsightPanel } from "./executive/InsightPanel";
 import { AlertPanel } from "./executive/AlertPanel";
@@ -63,25 +63,29 @@ function LoadingSkeleton() {
 
 function SummaryBar({ summary }: { summary: ExecData["summary"] }) {
     const items = [
-        { label: "มหาวิทยาลัย", value: summary.totalUniversities, suffix: "แห่ง" },
-        { label: "นิสิตทั้งหมด", value: summary.totalStudents, suffix: "คน" },
-        { label: "การนัดหมาย", value: summary.totalBookings, suffix: "ครั้ง" },
-        { label: "สำเร็จ", value: summary.completedBookings, suffix: "ครั้ง" },
+        { label: "มหาวิทยาลัย", value: summary.totalUniversities, suffix: "แห่ง", icon: <Building2 className="w-6 h-6" />, color: "text-blue-600 bg-blue-50 border-blue-100" },
+        { label: "นิสิตทั้งหมด", value: summary.totalStudents, suffix: "คน", icon: <Users className="w-6 h-6" />, color: "text-indigo-600 bg-indigo-50 border-indigo-100" },
+        { label: "การนัดหมาย", value: summary.totalBookings, suffix: "ครั้ง", icon: <Calendar className="w-6 h-6" />, color: "text-emerald-600 bg-emerald-50 border-emerald-100" },
+        { label: "สำเร็จ", value: summary.completedBookings, suffix: "ครั้ง", icon: <CheckCircle2 className="w-6 h-6" />, color: "text-teal-600 bg-teal-50 border-teal-100" },
     ];
 
     return (
-        <div className="flex flex-wrap items-center gap-4 px-5 py-3 rounded-xl bg-gradient-to-r from-slate-50 to-slate-100/50 border border-slate-100">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {items.map((item, i) => (
-                <React.Fragment key={i}>
-                    {i > 0 && <div className="w-[1px] h-6 bg-slate-200" />}
-                    <div className="flex items-baseline gap-1.5">
-                        <span className="text-[11px] text-slate-400 font-medium">{item.label}</span>
-                        <span className="text-sm font-black text-slate-700 tabular-nums">
-                            {item.value.toLocaleString()}
-                        </span>
-                        <span className="text-[10px] text-slate-400">{item.suffix}</span>
+                <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border ${item.color}`}>
+                        {item.icon}
                     </div>
-                </React.Fragment>
+                    <div>
+                        <p className="text-xs font-medium text-slate-500 mb-0.5">{item.label}</p>
+                        <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0 mt-0.5">
+                            <span className="text-lg lg:text-xl font-black text-slate-800 tracking-tight break-all">
+                                {item.value.toLocaleString()}
+                            </span>
+                            <span className="text-xs font-medium text-slate-400 shrink-0">{item.suffix}</span>
+                        </div>
+                    </div>
+                </div>
             ))}
         </div>
     );

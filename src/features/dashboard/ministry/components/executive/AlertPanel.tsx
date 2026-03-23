@@ -20,22 +20,25 @@ interface Alert {
 
 const SEVERITY_CONFIG = {
     critical: {
-        bg: "bg-rose-50 border-rose-200",
-        icon: <ShieldAlert className="w-5 h-5 text-rose-600" />,
+        bg: "bg-rose-50/50 border-rose-200 hover:bg-rose-50/80 shadow-sm shadow-rose-100/30",
+        iconBase: "bg-rose-100 text-rose-600",
+        icon: <ShieldAlert className="w-5 h-5" />,
         badge: "bg-rose-600 text-white",
         label: "วิกฤต",
         pulse: "animate-pulse",
     },
     warning: {
-        bg: "bg-amber-50 border-amber-200",
-        icon: <AlertTriangle className="w-5 h-5 text-amber-600" />,
+        bg: "bg-amber-50/50 border-amber-200 hover:bg-amber-50/80 shadow-sm shadow-amber-100/30",
+        iconBase: "bg-amber-100 text-amber-600",
+        icon: <AlertTriangle className="w-5 h-5" />,
         badge: "bg-amber-500 text-white",
         label: "เตือน",
         pulse: "",
     },
     info: {
-        bg: "bg-blue-50 border-blue-200",
-        icon: <Info className="w-5 h-5 text-blue-600" />,
+        bg: "bg-blue-50/50 border-blue-200 hover:bg-blue-50/80 shadow-sm shadow-blue-100/30",
+        iconBase: "bg-blue-100 text-blue-600",
+        icon: <Info className="w-5 h-5" />,
         badge: "bg-blue-500 text-white",
         label: "ข้อมูล",
         pulse: "",
@@ -46,17 +49,19 @@ function AlertItem({ alert }: { alert: Alert }) {
     const config = SEVERITY_CONFIG[alert.severity];
 
     return (
-        <div className={`rounded-xl border p-4 ${config.bg} transition-all hover:shadow-md`}>
-            <div className="flex items-start gap-3">
-                <div className={`mt-0.5 shrink-0 ${config.pulse}`}>{config.icon}</div>
+        <div className={`rounded-xl border p-4 ${config.bg} transition-all`}>
+            <div className="flex items-start gap-4">
+                <div className={`p-2.5 rounded-xl shrink-0 mt-0.5 ${config.iconBase} ${config.pulse}`}>
+                    {config.icon}
+                </div>
                 <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1.5">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${config.badge}`}>
                             {config.label}
                         </span>
                         <h4 className="text-sm font-bold text-slate-800">{alert.title}</h4>
                     </div>
-                    <p className="text-xs text-slate-600 leading-relaxed mb-2">{alert.description}</p>
+                    <p className="text-sm text-slate-600 leading-relaxed mb-3">{alert.description}</p>
 
                     {alert.metric && (
                         <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/80 border border-slate-200 mb-2">
@@ -94,16 +99,16 @@ export function AlertPanel({ alerts }: { alerts: Alert[] }) {
     const visibleAlerts = expanded ? alerts : alerts.slice(0, 3);
 
     return (
-        <div className="rounded-2xl bg-white border border-slate-100 shadow-sm overflow-hidden">
+        <div className="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden h-full">
             {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-xl bg-gradient-to-br from-rose-500 to-red-600 text-white shadow-lg shadow-rose-100 ${criticalCount > 0 ? "animate-pulse" : ""}`}>
+                    <div className={`p-2.5 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 shadow-sm ${criticalCount > 0 ? "animate-pulse" : ""}`}>
                         <ShieldAlert className="w-5 h-5" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-bold text-slate-900">แจ้งเตือน</h3>
-                        <p className="text-xs text-slate-400">
+                        <h3 className="text-lg font-bold text-slate-900 tracking-tight">แจ้งเตือน</h3>
+                        <p className="text-sm text-slate-500 font-medium mt-0.5">
                             {alerts.length === 0
                                 ? "ไม่มีการแจ้งเตือน"
                                 : `${criticalCount > 0 ? `${criticalCount} วิกฤต` : ""}${criticalCount > 0 && warningCount > 0 ? " · " : ""}${warningCount > 0 ? `${warningCount} เตือน` : ""}`

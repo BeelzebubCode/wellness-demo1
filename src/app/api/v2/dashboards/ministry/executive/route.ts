@@ -279,7 +279,7 @@ export async function GET(req: NextRequest) {
                 icon: "check-circle",
             },
             {
-                label: "อัตรา No-Show",
+                label: "อัตราไม่มาตามนัด",
                 value: noShowRate,
                 suffix: "%",
                 trend: noShowTrend.trend,
@@ -468,7 +468,7 @@ export async function GET(req: NextRequest) {
                 title: `แก้ปัญหา No-Show ${noShowRate}%`,
                 description: noShowRate > 15
                     ? `ไม่มาตามนัด ${noShowTotal.toLocaleString()} จาก ${totalBookings.toLocaleString()} ครั้ง — ต้องเพิ่มระบบแจ้งเตือนก่อนนัด`
-                    : `อัตรา No-Show ${noShowRate}% — ติดตามมหาวิทยาลัยที่สูงผิดปกติ`,
+                    : `อัตราไม่มาตามนัด ${noShowRate}% — ติดตามมหาวิทยาลัยที่สูงผิดปกติ`,
                 icon: "smartphone",
                 data: top3NoShow.map(u => ({
                     label: u.university_name_th,

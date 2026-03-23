@@ -55,16 +55,16 @@ export function TrendForecastChart({ trend }: { trend: TrendPoint[] }) {
     }));
 
     return (
-        <div className="rounded-2xl bg-white border border-slate-100 shadow-sm overflow-hidden">
+        <div className="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden h-full">
             {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-100">
+                    <div className="p-2.5 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 shadow-sm">
                         <TrendingUp className="w-5 h-5" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-bold text-slate-900">แนวโน้ม + คาดการณ์</h3>
-                        <p className="text-xs text-slate-400">ข้อมูลรายปี พร้อมเส้นคาดการณ์ปีถัดไป</p>
+                        <h3 className="text-lg font-bold text-slate-900 tracking-tight">แนวโน้ม + คาดการณ์</h3>
+                        <p className="text-sm text-slate-500 font-medium mt-0.5">ข้อมูลรายปี พร้อมเส้นคาดการณ์ปีถัดไป</p>
                     </div>
                 </div>
                 {forecastPoint && (

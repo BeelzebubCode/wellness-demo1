@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { useNotificationContext } from "@/components/notification/NotificationProvider";
 
 interface NotificationItem {
-    id: number;
+    id: number | string;
     title: string;
     body: string | null;
     icon: string;
@@ -94,17 +94,28 @@ export function NotificationBell() {
     const panelRef = useRef<HTMLDivElement>(null);
     const unreadCountRef = useRef(0);
     const hasInitializedUnreadRef = useRef(false);
-    const lastToastNotificationIdRef = useRef<number | null>(null);
+    const lastToastNotificationIdRef = useRef<number | string | null>(null);
 
     // Fetch unread count (polling + refresh on window focus)
     const fetchCount = useCallback(async () => {
         try {
+            let total = 0;
             const res = await fetch("/api/v2/notifications/count");
-            const json = await res.json();
-            if (json.success) {
-                const nextCount = Number(json.count ?? 0);
-                setUnreadCount(nextCount);
+            if (res.ok) {
+                const json = await res.json();
+                if (json.success) total += Number(json.count ?? 0);
             }
+
+            // Fetch ministry alerts if applicable
+            const minRes = await fetch("/api/v2/dashboards/ministry/executive");
+            if (minRes.ok) {
+                const minJson = await minRes.json();
+                if (minJson.success && minJson.data?.alerts?.length) {
+                    total += minJson.data.alerts.length;
+                }
+            }
+
+            setUnreadCount(total);
         } catch {
             // silent
         }
@@ -160,9 +171,40 @@ export function NotificationBell() {
     const fetchList = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fetch("/api/v2/notifications?limit=15");
-            const json = await res.json();
-            if (json.success) setItems(json.data);
+            const [res, minRes] = await Promise.all([
+                fetch("/api/v2/notifications?limit=15"),
+                fetch("/api/v2/dashboards/ministry/executive")
+            ]);
+
+            let combined: NotificationItem[] = [];
+
+            if (res.ok) {
+                const json = await res.json();
+                if (json.success) combined = json.data;
+            }
+
+            if (minRes.ok) {
+                const minJson = await minRes.json();
+                if (minJson.success && minJson.data?.alerts?.length) {
+                    const mappedAlerts: NotificationItem[] = minJson.data.alerts.map((a: any) => ({
+                        id: a.id,
+                        title: a.title,
+                        body: a.description,
+                        icon: "ALERT",
+                        category: "ALERT",
+                        templateCode: "MINISTRY_ALERT",
+                        data: {
+                            actionUrl: "/ministry"
+                        },
+                        readAt: null,
+                        createdAt: new Date().toISOString()
+                    }));
+                    combined = [...mappedAlerts, ...combined];
+                }
+            }
+
+            combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            setItems(combined);
         } catch {
             // silent
         } finally {
@@ -188,12 +230,14 @@ export function NotificationBell() {
     }, [open]);
 
     // Mark single as read
-    const markRead = async (id: number) => {
-        await fetch("/api/v2/notifications", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id }),
-        });
+    const markRead = async (id: number | string) => {
+        if (typeof id === "number") {
+            await fetch("/api/v2/notifications", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id }),
+            });
+        }
         setItems((prev) => prev.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n)));
         setUnreadCount((c) => Math.max(0, c - 1));
     };

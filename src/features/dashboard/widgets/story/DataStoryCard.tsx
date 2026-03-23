@@ -59,35 +59,34 @@ export function DataStoryCard({
             className={`
                 animate-[fadeUp_0.5s_ease-out_both] group relative
                 h-full flex flex-col
-                bg-white rounded-2xl border border-slate-100
+                bg-white rounded-2xl border border-slate-200
                 shadow-sm hover:shadow-lg transition-all duration-500
                 overflow-hidden
                 ${className ?? ""}
             `}
             style={{ animationDelay: `${delay * 100}ms` }}
         >
-            <div className="px-5 pt-5 pb-3">
+            <div className="px-6 py-5 border-b border-slate-100">
                 <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3 min-w-0">
+                    <div className="flex items-start gap-4 min-w-0">
                         <div
                             className={`
-                                shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-lg
-                                ${iconGradient ?? "bg-gradient-to-br from-indigo-500 to-violet-500"}
-                                text-white shadow-sm
+                                shrink-0 p-2.5 rounded-xl flex items-center justify-center
+                                ${iconGradient ?? "bg-indigo-50 border border-indigo-100 text-indigo-600 shadow-sm"}
                             `}
                         >
                             {icon}
                         </div>
-                        <div className="min-w-0">
-                            <h3 className="text-[15px] font-extrabold text-slate-800 leading-tight">
+                        <div className="min-w-0 pt-0.5">
+                            <h3 className="text-lg font-bold text-slate-900 tracking-tight leading-tight">
                                 {title}
                             </h3>
                             {description && (
-                                <p className="text-[12.5px] font-medium text-slate-500 mt-1 mb-0.5 leading-snug">
+                                <p className="text-sm font-medium text-slate-500 mt-0.5 leading-snug">
                                     {description}
                                 </p>
                             )}
-                            <p className="text-[12px] text-slate-400 leading-snug line-clamp-2">
+                            <p className="text-xs text-slate-400 mt-1.5 leading-snug line-clamp-2">
                                 {narration}
                             </p>
                         </div>

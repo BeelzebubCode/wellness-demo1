@@ -206,7 +206,7 @@ export default function RegionalProblemDrillDown({ delay = 0 }: { delay?: number
     return (
         <DataStoryCard
             icon={<Layers className="w-5 h-5" />}
-            iconGradient="bg-gradient-to-br from-indigo-500 to-purple-600"
+            iconGradient="bg-indigo-50 border border-indigo-100 text-indigo-600 shadow-sm"
             title="ภาพรวมปัญหาตามภูมิภาค"
             description="Drill-down ดูปัญหาจากภูมิภาค → จังหวัด → มหาวิทยาลัย — คลิกที่กราฟเพื่อดูรายละเอียดลึกขึ้น"
             narration={narration}

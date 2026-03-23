@@ -75,26 +75,46 @@ function TimeModeSlider({ onChange }: { onChange: (start: string, end: string) =
     const [mode, setMode] = useState<TimeMode>("DAYS");
     const [value, setValue] = useState(7);
 
+    const handleSelect = (v: number, currentMode: TimeMode = mode) => {
+        setValue(v);
+        const end = new Date();
+        const start = new Date();
+        if (currentMode === "DAYS") start.setDate(end.getDate() - v);
+        if (currentMode === "MONTHS") start.setMonth(end.getMonth() - v);
+        if (currentMode === "YEARS") start.setFullYear(end.getFullYear() - v);
+        
+        // Correct timezone offset hack exactly to local timezone before converting string
+        const toYMD = (d: Date) => {
+            const tz = d.getTimezoneOffset() * 60000;
+            return new Date(d.getTime() - tz).toISOString().split('T')[0];
+        };
+        onChange(toYMD(start), toYMD(end));
+    };
+
+    const handleModeSwitch = (newMode: TimeMode) => {
+        if (newMode === mode) return;
+        setMode(newMode);
+        
+        const possibleValues = 
+            newMode === "DAYS" ? [1, 3, 7, 14, 30] :
+            newMode === "MONTHS" ? [1, 3, 6, 9, 12] :
+            [1, 3, 5, 7];
+        
+        // If current value isn't applicable to new mode, pick a fallback
+        let targetValue = value;
+        if (!possibleValues.includes(targetValue)) {
+            targetValue = possibleValues[2] || possibleValues[0];
+        }
+        
+        // immediately trigger select to update API filters rather than just waiting on component render
+        handleSelect(targetValue, newMode);
+    };
+
     const values = useMemo(() => {
         if (mode === "DAYS") return [1, 3, 7, 14, 30];
         if (mode === "MONTHS") return [1, 3, 6, 9, 12];
         return [1, 3, 5, 7];
     }, [mode]);
-
-    useEffect(() => {
-        if (!values.includes(value)) setValue(values[2] || values[0]);
-    }, [mode, values, value]);
-
-    const handleSelect = (v: number) => {
-        setValue(v);
-        const end = new Date();
-        const start = new Date();
-        if (mode === "DAYS") start.setDate(end.getDate() - v);
-        if (mode === "MONTHS") start.setMonth(end.getMonth() - v);
-        if (mode === "YEARS") start.setFullYear(end.getFullYear() - v);
-        const toYMD = (d: Date) => d.toISOString().split('T')[0];
-        onChange(toYMD(start), toYMD(end));
-    };
 
     return (
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -110,7 +130,7 @@ function TimeModeSlider({ onChange }: { onChange: (start: string, end: string) =
                     <button
                         key={m.value}
                         type="button"
-                        onClick={() => setMode(m.value)}
+                        onClick={() => handleModeSwitch(m.value)}
                         className={`relative z-10 flex-1 sm:flex-none px-4 py-1.5 text-[11px] font-black uppercase tracking-wider transition-all duration-500 ${mode === m.value ? "text-primary" : "text-slate-400 hover:text-slate-600"}`}
                     >
                         {m.label}

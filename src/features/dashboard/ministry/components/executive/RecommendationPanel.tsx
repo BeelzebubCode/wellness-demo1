@@ -38,29 +38,32 @@ export function RecommendationPanel({ recommendations }: { recommendations: Reco
     if (!recommendations.length) return null;
 
     return (
-        <div className="rounded-2xl bg-white border border-slate-100 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white">
-                    <Target className="w-4 h-4" />
+        <div className="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden h-full">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-sky-50 border border-sky-100 text-sky-600 shadow-sm">
+                    <Target className="w-5 h-5" />
                 </div>
-                <h3 className="text-base font-bold text-slate-800">ข้อเสนอแนะ</h3>
+                <div>
+                    <h3 className="text-lg font-bold text-slate-900 tracking-tight">ข้อเสนอแนะ</h3>
+                    <p className="text-sm text-slate-500 font-medium mt-0.5">แนวทางดำเนินการเพื่อลดความเสี่ยงในระบบ</p>
+                </div>
             </div>
 
-            <div className="p-4 space-y-2">
+            <div className="p-5 space-y-3">
                 {recommendations.map((rec) => (
                     <div
                         key={rec.id}
-                        className="px-3 py-3 rounded-xl hover:bg-slate-50 transition-colors"
+                        className="px-4 py-3 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
                     >
                         {/* Header row */}
                         <div className="flex items-start gap-3">
-                            <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${DOT_COLOR[rec.priority]}`} />
-                            <span className="text-slate-400 shrink-0 mt-0.5">
-                                {ICON_MAP[rec.icon] ?? <Target className="w-5 h-5" />}
+                            <div className={`w-2.5 h-2.5 rounded-full mt-2 shrink-0 shadow-sm ${DOT_COLOR[rec.priority]}`} />
+                            <span className="p-2 rounded-xl bg-slate-50 border border-slate-100 text-slate-500 shrink-0">
+                                {ICON_MAP[rec.icon] ?? <Target className="w-4 h-4" />}
                             </span>
-                            <div className="min-w-0">
-                                <p className="text-sm font-semibold text-slate-700">{rec.title}</p>
-                                <p className="text-xs text-slate-400 mt-0.5">{rec.description}</p>
+                            <div className="min-w-0 pt-0.5">
+                                <p className="text-sm font-bold text-slate-800">{rec.title}</p>
+                                <p className="text-sm text-slate-500 font-medium mt-1 leading-relaxed">{rec.description}</p>
                             </div>
                         </div>
 

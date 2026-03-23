@@ -307,15 +307,19 @@ export async function platformListBorrowCandidates(input: {
     .map((g) => ({
       ...g,
       consultants: [...g.consultants].sort((a, b) => {
-        // 1️⃣ คนเข้าเวรก่อน (on duty first)
-        if (a.isOnDuty !== b.isOnDuty) {
-          return a.isOnDuty ? -1 : 1;
+        // 1️⃣ คนทียังไม่ถูกมอบหมายขึ้นก่อน
+        if (a.alreadyAssigned !== b.alreadyAssigned) {
+          return a.alreadyAssigned ? 1 : -1;
         }
-        // 2️⃣ เรียงตามจำนวน topic match (มากสุดอยู่บน)
+        // 2️⃣ เรียงตามจำนวน topic match (ความเชี่ยวชาญตรงมากสุดอยู่บน)
         if (b.topicMatchCount !== a.topicMatchCount) {
           return b.topicMatchCount - a.topicMatchCount;
         }
-        // 3️⃣ ถ้าเท่ากัน ให้เรียงตามชื่อ
+        // 3️⃣ คนเข้าเวรก่อน (on duty first)
+        if (a.isOnDuty !== b.isOnDuty) {
+          return a.isOnDuty ? -1 : 1;
+        }
+        // 4️⃣ ถ้าเท่ากัน ให้เรียงตามชื่อ
         return a.fullName.localeCompare(b.fullName, "th");
       }),
     }))
