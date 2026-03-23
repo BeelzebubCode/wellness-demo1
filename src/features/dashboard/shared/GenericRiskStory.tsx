@@ -14,17 +14,9 @@ interface Props { apiPath: string; title: string; delay?: number; description?: 
 export default function GenericRiskStory({ apiPath, title, delay = 0, description }: Props) {
     const [date, setDate] = useState<DatePreset>("all");
     const [customRange, setCustomRange] = useState<DateRange | undefined>();
-    const [gender, setGender] = useState<string[]>([]);
-    const [income, setIncome] = useState<string[]>([]);
-    const [parental, setParental] = useState<string[]>([]);
-    const [blood, setBlood] = useState<string[]>([]);
     const [deptIds, setDeptIds] = useState<string[]>([]);
 
     const { data, loading, meta } = useStoryData<any>(apiPath, "risk", {
-        gender,
-        family_income_bracket: income,
-        parental_status: parental,
-        blood_group: blood,
         department_ids: deptIds,
     }, date, customRange);
 
@@ -69,25 +61,6 @@ export default function GenericRiskStory({ apiPath, title, delay = 0, descriptio
                             onChange={setDeptIds}
                         />
                     )}
-                    <StoryChipGroup label="เพศ" options={[
-                        { value: "MALE", label: "ชาย" },
-                        { value: "FEMALE", label: "หญิง" },
-                        { value: "LGBTQ_PLUS", label: "LGBTQ+" },
-                    ]} selected={gender} onChange={setGender} />
-                    <StoryChipGroup label="รายได้" options={[
-                        { value: "UNDER_100K", label: "< 100K" }, { value: "BETWEEN_100K_200K", label: "100-200K" },
-                        { value: "BETWEEN_200K_300K", label: "200-300K" }, { value: "BETWEEN_300K_500K", label: "300-500K" },
-                        { value: "BETWEEN_500K_800K", label: "500-800K" }, { value: "OVER_1M", label: "> 1M" },
-                    ]} selected={income} onChange={setIncome} />
-                    <StoryChipGroup label="ครอบครัว" options={[
-                        { value: "TOGETHER", label: "อยู่ด้วยกัน" }, { value: "DIVORCED", label: "หย่าร้าง" },
-                        { value: "FATHER_DECEASED", label: "บิดาเสีย" }, { value: "MOTHER_DECEASED", label: "มารดาเสีย" },
-                        { value: "SINGLE_PARENT", label: "เลี้ยงเดี่ยว" },
-                    ]} selected={parental} onChange={setParental} />
-                    <StoryChipGroup label="กรุ๊ปเลือด" options={[
-                        { value: "A", label: "A" }, { value: "B", label: "B" },
-                        { value: "AB", label: "AB" }, { value: "O", label: "O" },
-                    ]} selected={blood} onChange={setBlood} />
                 </StoryFilterStack>
             }
             datePreset={date}

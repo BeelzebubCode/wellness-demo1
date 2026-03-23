@@ -57,6 +57,7 @@ function buildScopeWhere(universityId: number, facultyId: number, filters: DeanF
     if (filters.problemCategoryIds?.length) bookClauses.push(`problem_category_id IN (${filters.problemCategoryIds.join(",")})`);
     if (filters.bookingStatus?.length)    bookClauses.push(`booking_status IN (${filters.bookingStatus.map(v => `'${v}'`).join(",")})`);
     if (filters.serviceMode?.length)      bookClauses.push(`service_mode_code IN (${filters.serviceMode.map(v => `'${v}'`).join(",")})`);
+    if (filters.attendanceStatus?.length) bookClauses.push(`attendance_status IN (${filters.attendanceStatus.map(v => `'${v}'`).join(",")})`);
     if (!filters.allTime) {
         if (filters.dateStart) bookClauses.push(`month >= '${toYYYYMM(filters.dateStart)}'`);
         if (filters.dateEnd)   bookClauses.push(`month <= '${toYYYYMM(filters.dateEnd)}'`);

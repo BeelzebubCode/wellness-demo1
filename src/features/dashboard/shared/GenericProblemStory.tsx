@@ -34,10 +34,6 @@ export default function GenericProblemStory({ apiPath, title, delay = 0, descrip
     const [date, setDate] = useState<DatePreset>("all");
     const [customRange, setCustomRange] = useState<DateRange | undefined>();
     const [unit, setUnit] = useState<UnitMode>("count");
-    const [income, setIncome] = useState<string[]>([]);
-    const [blood, setBlood] = useState<string[]>([]);
-    const [parental, setParental] = useState<string[]>([]);
-    const [chronic, setChronic] = useState<string[]>([]);
     const [deptIds, setDeptIds] = useState<string[]>([]);
     const [chronicConditions, setChronicConditions] = useState<{ id: number; nameTh: string }[]>([]);
 
@@ -49,10 +45,6 @@ export default function GenericProblemStory({ apiPath, title, delay = 0, descrip
     }, []);
 
     const { data, loading, meta } = useStoryData<any>(apiPath, "problems", {
-        family_income_bracket: income,
-        blood_group: blood,
-        parental_status: parental,
-        chronic_condition_ids: chronic,
         department_ids: deptIds,
     }, date, customRange);
 
@@ -100,32 +92,6 @@ export default function GenericProblemStory({ apiPath, title, delay = 0, descrip
                             selected={deptIds}
                             onChange={setDeptIds}
                         />
-                    )}
-                    <StoryChipGroup label="รายได้" options={[
-                        { value: "UNDER_100K", label: "< 100K" },
-                        { value: "BETWEEN_100K_200K", label: "100-200K" },
-                        { value: "BETWEEN_200K_300K", label: "200-300K" },
-                        { value: "BETWEEN_300K_500K", label: "300-500K" },
-                        { value: "BETWEEN_500K_800K", label: "500-800K" },
-                        { value: "BETWEEN_800K_1M", label: "800K-1M" },
-                        { value: "OVER_1M", label: "> 1M" },
-                    ]} selected={income} onChange={setIncome} />
-                    <StoryChipGroup label="กรุ๊ปเลือด" options={[
-                        { value: "A", label: "A" }, { value: "B", label: "B" },
-                        { value: "O", label: "O" }, { value: "AB", label: "AB" },
-                    ]} selected={blood} onChange={setBlood} />
-                    <StoryChipGroup label="สถานะบิดามารดา" options={[
-                        { value: "TOGETHER", label: "อยู่ด้วยกัน" },
-                        { value: "DIVORCED", label: "หย่าร้าง" },
-                        { value: "SINGLE_PARENT", label: "เลี้ยงเดี่ยว" },
-                        { value: "FATHER_DECEASED", label: "บิดาเสียชีวิต" },
-                        { value: "MOTHER_DECEASED", label: "มารดาเสียชีวิต" },
-                        { value: "BOTH_DECEASED", label: "เสียชีวิตทั้งคู่" },
-                    ]} selected={parental} onChange={setParental} />
-                    {chronicConditions.length > 0 && (
-                        <StoryChipGroup label="โรคประจำตัว" options={chronicConditions.map(c => ({
-                            value: String(c.id), label: c.nameTh
-                        }))} selected={chronic} onChange={setChronic} />
                     )}
                 </StoryFilterStack>
             }
