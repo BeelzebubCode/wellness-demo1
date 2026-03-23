@@ -26,6 +26,7 @@ function StatusBadge({ status }: { status: string }) {
     );
 }
 import { authApi } from "@/features/auth/api";
+import { setTenantTheme } from "@/lib/tenant/client";
 
 type BorrowedAssignment = {
     assignmentId: number;
@@ -114,6 +115,10 @@ export default function ConsultantBorrowedWorkPage() {
             if (!result.success) {
                 alert(result.error || "ไม่สามารถเปลี่ยนมหาวิทยาลัยได้");
                 return;
+            }
+
+            if (result.universityCode) {
+                setTenantTheme(result.universityCode);
             }
 
             // ✅ Stay on same host — ไม่ต้อง redirect ไป subdomain

@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAccountFromRequest } from "@/lib/auth/context";
 import { generateToken } from "@/lib/auth/jwt";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   const ctx = await getAccountFromRequest(req);
@@ -16,6 +17,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Forbidden: university" }, { status: 403 });
   }
 
+  const university = await prisma.university.findUnique({
+    where: { university_id: universityId },
+    select: { university_code: true }
+  });
+
   const token = await generateToken({
     accountId: ctx.accountId,
     username: ctx.username,
@@ -27,7 +33,11 @@ export async function POST(req: NextRequest) {
     allowedUniversityIds: ctx.allowedUniversityIds,
   });
 
-  const res = NextResponse.json({ success: true, activeUniversityId: universityId });
+  const res = NextResponse.json({ 
+    success: true, 
+    activeUniversityId: universityId,
+    universityCode: university?.university_code || "DEFAULT"
+  });
 
   // ✅ host-only cookie (ไม่ต้อง domain)
   res.cookies.set({
@@ -38,6 +48,14 @@ export async function POST(req: NextRequest) {
     sameSite: "lax",
     maxAge: 60 * 60 * 24 * 7,
     path: "/",
+  });
+
+  // ✅ Update tenant_code cookie so ThemeContext hydration reads the new one
+  res.cookies.set({
+    name: "tenant_code",
+    value: university?.university_code || "DEFAULT",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7,
   });
 
   return res;

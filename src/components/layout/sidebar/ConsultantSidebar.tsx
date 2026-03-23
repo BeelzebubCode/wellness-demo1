@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { useMyProfile } from "@/features/profile/hooks/useMyProfile";
 import { authApi } from "@/features/auth/api";
 import { useConsultantAssignedCount } from "@/features/consultant/my-jobs/hooks/useConsultantAssignedCount";
+import { setTenantTheme } from "@/lib/tenant/client";
 
 import { CONSULTANT_NAV } from "@/lib/constants/consultant-nav";
 import { BaseSidebar } from "./BaseSidebar";
@@ -52,6 +53,10 @@ export function ConsultantSidebar(props: ConsultantSidebarProps) {
       if (!result.success) {
         alert(result.error || "ไม่สามารถกลับสู่มหาลัยต้นสังกัดได้");
         return;
+      }
+
+      if (result.universityCode) {
+        setTenantTheme(result.universityCode);
       }
 
       window.location.assign("/consultant/my-jobs");

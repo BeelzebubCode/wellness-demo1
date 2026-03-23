@@ -350,7 +350,7 @@ export function UniversityDetailDashboard({ universityCode }: UniversityDetailPr
     ];
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6 pb-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 space-y-6 pb-12">
             {/* ── Premium Banner ─────────────── */}
             <div className="relative overflow-hidden rounded-2xl bg-[#0f172a] p-6 text-white shadow-2xl">
                 <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />

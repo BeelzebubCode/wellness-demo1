@@ -142,6 +142,7 @@ export const authApi = {
   async switchTenant(universityId: number): Promise<{
     success: boolean;
     activeUniversityId?: number;
+    universityCode?: string;
     error?: string;
   }> {
     invalidateMeCache(); // ✅ Clear cache on tenant switch
