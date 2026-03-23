@@ -1,25 +1,83 @@
 "use client";
 
-import { Search, MapPin, Filter, ChevronDown, Building } from "lucide-react";
+import { Search, MapPin, Filter, ChevronDown, Building, Brain, X, RotateCcw, Zap, Layers } from "lucide-react";
 import { useState, useMemo } from "react";
 import { ProblemCategoryFilter } from "./ProblemCategoryFilter";
 
 export type MapFilterState = {
   search: string;
   region: string;
-  provinceNames: string[];  // Multi-select provinces by name
+  provinceNames: string[];
   type: string;
   stress: string;
   status: string;
   problemCategories: string[];
 };
 
-// Province options type  
 interface ProvinceOption {
   name: string;
-  count: number; // number of universities
+  count: number;
 }
 
+// ─── Region Data ────────────────────────────────────────────────────────────
+const REGIONS = [
+  { value: "", label: "ทั้งหมด", emoji: "🇹🇭" },
+  { value: "UPPER_NORTH", label: "เหนือตอนบน", emoji: "🏔️" },
+  { value: "LOWER_NORTH", label: "เหนือตอนล่าง", emoji: "⛰️" },
+  { value: "UPPER_NORTHEAST", label: "อีสานตอนบน", emoji: "🌾" },
+  { value: "LOWER_NORTHEAST", label: "อีสานตอนล่าง", emoji: "🌿" },
+  { value: "UPPER_CENTRAL", label: "กลางตอนบน", emoji: "🏙️" },
+  { value: "LOWER_CENTRAL", label: "กลางตอนล่าง", emoji: "🏛️" },
+  { value: "EAST", label: "ตะวันออก", emoji: "🌊" },
+  { value: "UPPER_SOUTH", label: "ใต้ตอนบน", emoji: "🌴" },
+  { value: "LOWER_SOUTH", label: "ใต้ตอนล่าง", emoji: "🏝️" },
+];
+
+// ─── Accordion Section ──────────────────────────────────────────────────────
+function FilterSection({
+  icon: Icon,
+  title,
+  badge,
+  defaultOpen = true,
+  children,
+}: {
+  icon: any;
+  title: string;
+  badge?: React.ReactNode;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="border-b border-gray-100/80 last:border-b-0">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-5 py-3 hover:bg-gray-50/50 transition-colors group"
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+            <Icon className="w-3 h-3 text-primary" />
+          </div>
+          <span className="text-xs font-bold text-gray-700 tracking-wide">{title}</span>
+          {badge}
+        </div>
+        <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+      </button>
+      <div className={`overflow-hidden transition-all duration-200 ease-in-out ${open ? "max-h-[500px] opacity-100 pb-3" : "max-h-0 opacity-0"}`}>
+        <div className="px-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Status Pill ────────────────────────────────────────────────────────────
+const STATUS_OPTIONS = [
+  { value: "", label: "ทั้งหมด", color: "bg-gray-100 text-gray-600 border-gray-200", dot: "bg-gray-400" },
+  { value: "COMPLETED", label: "สำเร็จ", color: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
+  { value: "CANCELLED", label: "ยกเลิก", color: "bg-rose-50 text-rose-700 border-rose-200", dot: "bg-rose-500" },
+];
+
+// ─── Main Component ─────────────────────────────────────────────────────────
 export function MapLeftSidebar({
   filter,
   onChange,
@@ -31,11 +89,6 @@ export function MapLeftSidebar({
   availableProvinces?: ProvinceOption[];
   specialZoneNames?: string[];
 }) {
-  const handleFilterChange = (v: MapFilterState) => {
-    onChange(v);
-  };
-
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [provinceSearch, setProvinceSearch] = useState("");
 
   const activeFilterCount = [
@@ -45,137 +98,193 @@ export function MapLeftSidebar({
     filter.type,
     filter.stress,
     filter.status,
-    (filter.problemCategories || []).length > 0
+    (filter.problemCategories || []).length > 0,
   ].filter(Boolean).length;
 
-  // Filter province options by search text
+  const resetAll = () =>
+    onChange({ search: "", region: "", provinceNames: [], type: "", stress: "", status: "", problemCategories: [] });
+
   const filteredProvinces = useMemo(() => {
     if (!provinceSearch) return availableProvinces;
     const q = provinceSearch.toLowerCase();
-    return availableProvinces.filter(p => p.name.toLowerCase().includes(q));
+    return availableProvinces.filter((p) => p.name.toLowerCase().includes(q));
   }, [availableProvinces, provinceSearch]);
 
-  return (
-    <div className="h-full flex flex-col bg-white">
-      {/* Header */}
-      <div className="px-5 py-4 border-b border-gray-100">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <h3 className="text-xs font-bold text-gray-900 tracking-tight">ตัวกรอง</h3>
-          </div>
-          {activeFilterCount > 0 && (
-            <button
-              onClick={() => handleFilterChange({ search: "", region: "", provinceNames: [], type: "", stress: "", status: "", problemCategories: [] })}
-              className="text-[10px] xl:text-xs font-semibold text-primary hover:text-primary/80 transition-colors bg-primary/5 px-2 py-1 rounded-md"
-            >
-              ล้างทั้งหมด ({activeFilterCount})
-            </button>
-          )}
-        </div>
+  const selectedRegionLabel = REGIONS.find((r) => r.value === filter.region)?.label ?? "ทั้งหมด";
 
-        {/* Search Input */}
+  return (
+    <div className="h-full flex flex-col bg-white/95 backdrop-blur-sm">
+      {/* ── Branded Header ─────────────────────────────────────── */}
+      <div className="px-5 pt-5 pb-4 bg-gradient-to-br from-slate-900 via-slate-800 to-primary/90 text-white relative overflow-hidden">
+        {/* Decorative circles */}
+        <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-white/5" />
+        <div className="absolute right-8 bottom-0 w-16 h-16 rounded-full bg-primary/20" />
+
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            className="w-full pl-9 pr-3 py-2 bg-gray-50 border-0 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary transition-all placeholder:text-gray-400"
-            placeholder="ค้นหามหาวิทยาลัย..."
-            value={filter.search}
-            onChange={(e) => onChange({ ...filter, search: e.target.value })}
-          />
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
+                <Filter className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black tracking-tight">ตัวกรองข้อมูล</h3>
+                <p className="text-[10px] text-white/60 font-medium">National Command Center</p>
+              </div>
+            </div>
+            {activeFilterCount > 0 && (
+              <button
+                onClick={resetAll}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur text-[10px] font-bold transition-all group"
+              >
+                <RotateCcw className="w-3 h-3 group-hover:rotate-[-180deg] transition-transform duration-500" />
+                ล้าง ({activeFilterCount})
+              </button>
+            )}
+          </div>
+
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+            <input
+              type="text"
+              className="w-full pl-10 pr-4 py-2.5 bg-white/10 backdrop-blur border border-white/10 rounded-xl text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/25 focus:bg-white/15 transition-all"
+              placeholder="🔍 ค้นหามหาวิทยาลัย..."
+              value={filter.search}
+              onChange={(e) => onChange({ ...filter, search: e.target.value })}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Filters Content */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
-        {/* Region Filter */}
-        <div>
-          <label className="text-xs font-bold text-gray-500 mb-2 flex items-center gap-1.5 uppercase tracking-wider">
-            <MapPin className="w-3 h-3" />
-            ภูมิภาค
-          </label>
-          <div className="grid grid-cols-2 gap-1.5">
-            {[
-              { value: "", label: "ทั้งหมด" },
-              { value: "UPPER_NORTH", label: "เหนือตอนบน" },
-              { value: "LOWER_NORTH", label: "เหนือตอนล่าง" },
-              { value: "UPPER_NORTHEAST", label: "อีสานตอนบน" },
-              { value: "LOWER_NORTHEAST", label: "อีสานตอนล่าง" },
-              { value: "UPPER_CENTRAL", label: "กลางตอนบน" },
-              { value: "LOWER_CENTRAL", label: "กลางตอนล่าง" },
-              { value: "EAST", label: "ตะวันออก" },
-              { value: "UPPER_SOUTH", label: "ใต้ตอนบน" },
-              { value: "LOWER_SOUTH", label: "ใต้ตอนล่าง" },
-            ].map((r) => (
+      {/* ── Active Filters Strip ─────────────────────────────── */}
+      {activeFilterCount > 0 && (
+        <div className="px-5 py-2 bg-primary/5 border-b border-primary/10 flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] text-primary/60 font-bold uppercase">กำลังกรอง:</span>
+          {filter.region && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">
+              {selectedRegionLabel}
+              <button onClick={() => onChange({ ...filter, region: "", provinceNames: [] })} className="hover:text-rose-500 ml-0.5">
+                <X className="w-2.5 h-2.5" />
+              </button>
+            </span>
+          )}
+          {filter.provinceNames.length > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold">
+              {filter.provinceNames.length} จังหวัด
+              <button onClick={() => onChange({ ...filter, provinceNames: [] })} className="hover:text-rose-500 ml-0.5">
+                <X className="w-2.5 h-2.5" />
+              </button>
+            </span>
+          )}
+          {filter.status && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold">
+              {STATUS_OPTIONS.find((s) => s.value === filter.status)?.label}
+              <button onClick={() => onChange({ ...filter, status: "" })} className="hover:text-rose-500 ml-0.5">
+                <X className="w-2.5 h-2.5" />
+              </button>
+            </span>
+          )}
+          {(filter.problemCategories?.length ?? 0) > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 text-[10px] font-bold">
+              {filter.problemCategories.length} ปัญหา
+              <button onClick={() => onChange({ ...filter, problemCategories: [] })} className="hover:text-rose-500 ml-0.5">
+                <X className="w-2.5 h-2.5" />
+              </button>
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* ── Filter Sections ──────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+
+        {/* ── Region ─────────────────────────────────────────── */}
+        <FilterSection
+          icon={MapPin}
+          title="ภูมิภาค"
+          badge={
+            filter.region ? (
+              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-primary text-white text-[9px] font-bold leading-none">
+                {selectedRegionLabel}
+              </span>
+            ) : undefined
+          }
+        >
+          <div className="grid grid-cols-2 gap-1">
+            {REGIONS.map((r) => (
               <button
                 key={r.value}
                 type="button"
-                onClick={() => handleFilterChange({ ...filter, region: r.value, provinceNames: [] })}
-                className={`px-2 py-2 rounded-md text-[10px] xl:text-xs font-medium transition-all border ${filter.region === r.value
-                  ? "bg-primary text-white border-primary shadow-sm"
-                  : "bg-white text-gray-600 hover:bg-gray-50 border-gray-200"
+                onClick={() => onChange({ ...filter, region: r.value, provinceNames: [] })}
+                className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-[11px] font-semibold transition-all border ${filter.region === r.value
+                  ? "bg-primary text-white border-primary shadow-sm shadow-primary/25 scale-[0.98]"
+                  : "bg-white text-gray-600 border-gray-100 hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
                   }`}
               >
-                {r.label}
+                <span className="text-sm leading-none">{r.emoji}</span>
+                <span className="truncate">{r.label}</span>
               </button>
             ))}
           </div>
-          {/* Special Administrative Zones — separated */}
+
+          {/* Special Zones */}
           <button
             type="button"
-            onClick={() => handleFilterChange({ ...filter, region: "SPECIAL_ADMIN", provinceNames: [] })}
-            className={`mt-2 w-full px-3 py-2.5 rounded-lg text-[10px] xl:text-xs font-bold transition-all border-2 flex items-center justify-center gap-1.5 ${filter.region === "SPECIAL_ADMIN"
-              ? "bg-amber-500 text-white border-amber-500 shadow-md"
-              : "bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200"
+            onClick={() => onChange({ ...filter, region: "SPECIAL_ADMIN", provinceNames: [] })}
+            className={`mt-2 w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-bold transition-all border-2 ${filter.region === "SPECIAL_ADMIN"
+              ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-500 shadow-lg shadow-amber-500/25"
+              : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 hover:border-amber-300 hover:shadow-md"
               }`}
           >
-            🏛️ เขตปกครองพิเศษ
+            <span className="text-base">🏛️</span>
+            เขตปกครองพิเศษ
             {specialZoneNames.length > 0 && (
-              <span className={`text-[9px] ${filter.region === "SPECIAL_ADMIN" ? "text-white/80" : "text-amber-500"}`}>
-                ({specialZoneNames.join(", ")})
+              <span className={`text-[9px] ${filter.region === "SPECIAL_ADMIN" ? "text-white/70" : "text-amber-500"}`}>
+                ({specialZoneNames.length})
               </span>
             )}
           </button>
-        </div>
+        </FilterSection>
 
-        {/* Province Filter */}
+        {/* ── Province ───────────────────────────────────────── */}
         {availableProvinces.length > 0 && (
-          <div>
-            <label className="text-xs font-bold text-gray-500 mb-2 flex items-center gap-1.5 uppercase tracking-wider">
-              <Building className="w-3 h-3" />
-              จังหวัด / เขตปกครองพิเศษ
-              {filter.provinceNames.length > 0 && (
-                <span className="ml-auto text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-bold">
-                  {filter.provinceNames.length} เลือก
+          <FilterSection
+            icon={Building}
+            title="จังหวัด"
+            badge={
+              filter.provinceNames.length > 0 ? (
+                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-blue-500 text-white text-[9px] font-bold leading-none">
+                  {filter.provinceNames.length}
                 </span>
-              )}
-            </label>
-
-            {/* Province search */}
+              ) : undefined
+            }
+            defaultOpen={!!filter.region}
+          >
+            {/* Search */}
             <div className="relative mb-2">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
               <input
                 type="text"
-                className="w-full pl-7 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-[11px] focus:outline-none focus:ring-1 focus:ring-primary transition-all placeholder:text-gray-400"
+                className="w-full pl-7 pr-3 py-1.5 bg-gray-50 border border-gray-100 rounded-lg text-[11px] focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all placeholder:text-gray-400"
                 placeholder="ค้นหาจังหวัด..."
                 value={provinceSearch}
                 onChange={(e) => setProvinceSearch(e.target.value)}
               />
             </div>
 
-            {/* Province chips — scrollable */}
-            <div className="max-h-[140px] overflow-y-auto rounded-lg border border-gray-100 p-1.5 space-y-0.5">
-              {/* "ทั้งหมด" option */}
+            {/* Province List */}
+            <div className="max-h-[160px] overflow-y-auto custom-scrollbar rounded-xl bg-gray-50/50 border border-gray-100 p-1 space-y-0.5">
+              {/* All button */}
               <button
                 type="button"
-                onClick={() => handleFilterChange({ ...filter, provinceNames: [] })}
-                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-[10px] xl:text-[11px] font-medium transition-all ${filter.provinceNames.length === 0
-                  ? "bg-primary/10 text-primary font-bold"
-                  : "text-gray-500 hover:bg-gray-50"
+                onClick={() => onChange({ ...filter, provinceNames: [] })}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-[11px] font-semibold transition-all ${filter.provinceNames.length === 0
+                  ? "bg-white text-primary shadow-sm border border-primary/20"
+                  : "text-gray-500 hover:bg-white"
                   }`}
               >
-                <span>ทั้งหมด</span>
-                <span className="text-[9px] text-gray-400">{availableProvinces.reduce((s, p) => s + p.count, 0)} แห่ง</span>
+                <span>🇹🇭 ทั้งหมด</span>
+                <span className="text-[9px] text-gray-400 tabular-nums">{availableProvinces.reduce((s, p) => s + p.count, 0)}</span>
               </button>
 
               {filteredProvinces.map((p) => {
@@ -185,137 +294,104 @@ export function MapLeftSidebar({
                     key={p.name}
                     type="button"
                     onClick={() => {
-                      const next = isSelected
-                        ? filter.provinceNames.filter(n => n !== p.name)
-                        : [...filter.provinceNames, p.name];
-                      handleFilterChange({ ...filter, provinceNames: next });
+                      const next = isSelected ? filter.provinceNames.filter((n) => n !== p.name) : [...filter.provinceNames, p.name];
+                      onChange({ ...filter, provinceNames: next });
                     }}
-                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-[10px] xl:text-[11px] font-medium transition-all ${isSelected
-                      ? "bg-primary text-white shadow-sm"
-                      : "text-gray-600 hover:bg-gray-50"
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-[11px] font-medium transition-all ${isSelected ? "bg-primary text-white shadow-sm" : "text-gray-600 hover:bg-white hover:shadow-sm"
                       }`}
                   >
                     <span className="truncate">{p.name}</span>
-                    <span className={`text-[9px] ${isSelected ? "text-white/80" : "text-gray-400"}`}>
-                      {p.count} แห่ง
-                    </span>
+                    <span className={`text-[9px] tabular-nums ${isSelected ? "text-white/70" : "text-gray-400"}`}>{p.count}</span>
                   </button>
                 );
               })}
-
-              {filteredProvinces.length === 0 && (
-                <p className="text-[10px] text-gray-400 text-center py-2">ไม่พบจังหวัด</p>
-              )}
+              {filteredProvinces.length === 0 && <p className="text-[10px] text-gray-400 text-center py-3">ไม่พบจังหวัด</p>}
             </div>
-          </div>
+          </FilterSection>
         )}
 
-        {/* Problem Category Filter */}
-        <div>
-          <ProblemCategoryFilter
-            selected={filter.problemCategories}
-            onChange={(codes) => handleFilterChange({ ...filter, problemCategories: codes })}
-          />
-        </div>
-
-        {/* Status Filter */}
-        <div>
-          <label className="text-xs font-bold text-gray-500 mb-2 flex items-center gap-1.5 uppercase tracking-wider">
-            <Filter className="w-3 h-3" />
-            สถานะการจอง
-          </label>
-          <div className="grid grid-cols-3 gap-1.5">
-            {[
-              { value: "", label: "ทั้งหมด" },
-              { value: "COMPLETED", label: "สำเร็จ" },
-              { value: "CANCELLED", label: "ยกเลิก" },
-            ].map((s) => (
+        {/* ── Booking Status ─────────────────────────────────── */}
+        <FilterSection icon={Zap} title="สถานะการจอง">
+          <div className="flex gap-1.5">
+            {STATUS_OPTIONS.map((s) => (
               <button
                 key={s.value}
                 type="button"
-                onClick={() => handleFilterChange({ ...filter, status: s.value })}
-                className={`px-2 py-2 rounded-md text-[10px] xl:text-xs font-medium transition-all border ${filter.status === s.value
-                  ? "bg-primary text-white border-primary shadow-sm"
-                  : "bg-white text-gray-600 hover:bg-gray-50 border-gray-200"
+                onClick={() => onChange({ ...filter, status: s.value })}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl text-[11px] font-bold transition-all border ${filter.status === s.value
+                  ? `${s.color} border-current shadow-sm scale-[0.98]`
+                  : "bg-white text-gray-500 border-gray-100 hover:border-gray-200 hover:bg-gray-50"
                   }`}
               >
+                <div className={`w-1.5 h-1.5 rounded-full ${filter.status === s.value ? s.dot : "bg-gray-300"}`} />
                 {s.label}
               </button>
             ))}
           </div>
-        </div>
+        </FilterSection>
 
-        {/* Advanced Filters Toggle */}
-        <button
-          onClick={() => setShowAdvanced(!showAdvanced)}
-          className="w-full flex items-center justify-between py-1 text-[10px] xl:text-xs font-bold text-gray-500 hover:text-gray-900 transition-colors border-t border-gray-100 pt-4 uppercase tracking-wider"
+        {/* ── Problem Category ────────────────────────────────── */}
+        <FilterSection
+          icon={Brain}
+          title="ประเภทปัญหา"
+          badge={
+            (filter.problemCategories?.length ?? 0) > 0 ? (
+              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-violet-500 text-white text-[9px] font-bold leading-none">
+                {filter.problemCategories.length}
+              </span>
+            ) : undefined
+          }
         >
-          <span className="flex items-center gap-1.5">
-            <Filter className="w-3 h-3" />
-            ตัวกรองเพิ่มเติม
-          </span>
-          <ChevronDown className={`w-3 h-3 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
-        </button>
+          <ProblemCategoryFilter
+            selected={filter.problemCategories}
+            onChange={(codes) => onChange({ ...filter, problemCategories: codes })}
+          />
+        </FilterSection>
 
-        {/* Advanced Filters */}
-        {showAdvanced && (
-          <div className="space-y-3 pt-0">
-            {/* Institution Type */}
-            <div>
-              <label className="text-xs font-bold text-gray-500 mb-2 block uppercase tracking-wider">
-                ประเภทสถาบัน
-              </label>
-              <div className="grid grid-cols-2 gap-1.5">
-                {[
-                  { value: "", label: "ทั้งหมด" },
-                  { value: "PUBLIC", label: "รัฐ" },
-                  { value: "PRIVATE", label: "เอกชน" },
-                  { value: "SUPERVISED", label: "ในกำกับ (อิสระ)" },
-                ].map((t) => (
-                  <button
-                    key={t.value}
-                    type="button"
-                    onClick={() => handleFilterChange({ ...filter, type: t.value })}
-                    className={`px-2 py-2 rounded-md text-[10px] xl:text-xs font-medium transition-all border ${filter.type === t.value
-                      ? "bg-primary text-white border-primary shadow-sm"
-                      : "bg-white text-gray-600 hover:bg-gray-50 border-gray-200"
-                      }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Priority Level */}
-            <div>
-              <label className="text-xs font-bold text-gray-500 mb-2 block uppercase tracking-wider">
-                ระดับความเร่งด่วน
-              </label>
-              <div className="grid grid-cols-2 gap-1.5">
-                {[
-                  { value: "", label: "ทั้งหมด" },
-                  { value: "HIGH", label: "สูง" },
-                  { value: "MEDIUM", label: "ปานกลาง" },
-                  { value: "LOW", label: "ต่ำ" },
-                ].map((s) => (
-                  <button
-                    key={s.value}
-                    type="button"
-                    onClick={() => handleFilterChange({ ...filter, stress: s.value })}
-                    className={`px-2 py-2 rounded-md text-[10px] xl:text-xs font-medium transition-all border ${filter.stress === s.value
-                      ? "bg-primary text-white border-primary shadow-sm"
-                      : "bg-white text-gray-600 hover:bg-gray-50 border-gray-200"
-                      }`}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
+        {/* ── Advanced Filters ────────────────────────────────── */}
+        <FilterSection icon={Layers} title="ตัวกรองเพิ่มเติม" defaultOpen={false}>
+          {/* Institution Type */}
+          <div className="mb-3">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">ประเภทสถาบัน</p>
+            <div className="grid grid-cols-2 gap-1">
+              {[
+                { value: "", label: "ทั้งหมด" },
+                { value: "PUBLIC", label: "🏫 รัฐ" },
+                { value: "PRIVATE", label: "🏢 เอกชน" },
+                { value: "SUPERVISED", label: "🎓 ในกำกับ" },
+              ].map((t) => (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => onChange({ ...filter, type: t.value })}
+                  className={`px-2 py-2 rounded-lg text-[11px] font-semibold transition-all border ${filter.type === t.value
+                    ? "bg-primary text-white border-primary shadow-sm"
+                    : "bg-white text-gray-600 border-gray-100 hover:border-primary/30 hover:bg-primary/5"
+                    }`}
+                >
+                  {t.label}
+                </button>
+              ))}
             </div>
           </div>
-        )}
+
+
+        </FilterSection>
       </div>
+
+      {/* ── Footer ───────────────────────────────────────────── */}
+      <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50">
+        <p className="text-[10px] text-gray-400 text-center font-medium">
+          NU Wellness • National Command Center
+        </p>
+      </div>
+
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+      `}</style>
     </div>
   );
 }
