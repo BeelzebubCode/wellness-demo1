@@ -78,6 +78,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
     // Transform data (stats removed — analytics API handles this)
     const result = {
+      university_id: university.university_id,
       id: university.university_code,
       code: university.university_code,
       name: university.university_name_th,

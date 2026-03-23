@@ -45,19 +45,17 @@ export const MONTH_LABEL: Record<string, string> = {
 };
 
 export const RISK_META: Record<string, { label: string; color: string; bg: string }> = {
-    // Numeric keys (legacy / other uses)
     "1": { label: "ปกติ", color: "#10b981", bg: "bg-emerald-50" },
     "2": { label: "ต่ำ", color: "#06b6d4", bg: "bg-cyan-50" },
     "3": { label: "ปานกลาง", color: "#f59e0b", bg: "bg-amber-50" },
     "4": { label: "สูง", color: "#f43f5e", bg: "bg-rose-50" },
-    "5": { label: "วิกฤต", color: "#7c3aed", bg: "bg-purple-50" },
-    // MV risk_band string keys (mv_student_risk_score.risk_band)
-    NORMAL:   { label: "ปกติ",    color: "#10b981", bg: "bg-emerald-50" },
-    LOW:      { label: "ต่ำ",     color: "#06b6d4", bg: "bg-cyan-50" },
-    MEDIUM:   { label: "ปานกลาง", color: "#f59e0b", bg: "bg-amber-50" },
-    HIGH:     { label: "สูง",     color: "#f43f5e", bg: "bg-rose-50" },
-    CRITICAL: { label: "วิกฤต",   color: "#7c3aed", bg: "bg-purple-50" },
-    UNKNOWN:  { label: "ไม่ระบุ",  color: "#94a3b8", bg: "bg-slate-50" },
+    "5": { label: "สูงมาก", color: "#7c3aed", bg: "bg-purple-50" },
+    // MV risk_band keys (ตรงกับ risk_level_category)
+    VERY_LOW: { label: "ปกติ", color: "#10b981", bg: "bg-emerald-50" },
+    LOW: { label: "ต่ำ", color: "#06b6d4", bg: "bg-cyan-50" },
+    MEDIUM: { label: "ปานกลาง", color: "#f59e0b", bg: "bg-amber-50" },
+    HIGH: { label: "สูง", color: "#f43f5e", bg: "bg-rose-50" },
+    VERY_HIGH: { label: "สูงมาก", color: "#7c3aed", bg: "bg-purple-50" },
 };
 
 export const SERVICE_MODE_OPTIONS = [
@@ -96,6 +94,66 @@ export function getDateRange(
     return { start: toLocalISODate(start), end, allTime: false };
 }
 
+// ─── Request deduplication + client-side response cache ─────────────────────
+const inflightRequests = new Map<string, Promise<any>>();
+const responseCache = new Map<string, { data: any; ts: number }>();
+const CLIENT_CACHE_TTL = 30_000; // 30s — match server-side MV cache
+
+/**
+ * When story=all returns, also cache as individual story responses
+ * so subsequent story=bookings / story=risk / etc. are instant cache-hits.
+ */
+function crossPopulateStoryCache(url: string, json: any) {
+    try {
+        const u = new URL(url);
+        if (u.searchParams.get("story") !== "all") return;
+        const stories = ["students", "bookings", "problems", "risk"];
+        for (const s of stories) {
+            if (!json.data?.[s]) continue;
+            const singleUrl = new URL(url);
+            singleUrl.searchParams.set("story", s);
+            const singleJson = {
+                success: true,
+                data: { [s]: json.data[s], dataRange: json.data.dataRange },
+            };
+            responseCache.set(singleUrl.toString(), { data: singleJson, ts: Date.now() });
+        }
+    } catch { /* non-fatal */ }
+}
+
+async function dedupFetch(url: string): Promise<any> {
+    const cached = responseCache.get(url);
+    if (cached && Date.now() - cached.ts < CLIENT_CACHE_TTL) return cached.data;
+
+    const existing = inflightRequests.get(url);
+    if (existing) return existing;
+
+    const promise = fetch(url, { credentials: "include", cache: "no-store" })
+        .then(async (res) => {
+            const json = await res.json();
+            if (!res.ok) throw new Error(json?.error);
+            responseCache.set(url, { data: json, ts: Date.now() });
+            crossPopulateStoryCache(url, json);
+            return json;
+        })
+        .finally(() => { inflightRequests.delete(url); });
+
+    inflightRequests.set(url, promise);
+    return promise;
+}
+
+/**
+ * Call story=all once to warm up cache for all story components.
+ * Import this in the page-level component and call it on mount.
+ */
+export function prefetchAllStories(apiPath: string, universityId?: number) {
+    const url = new URL(apiPath, window.location.origin);
+    url.searchParams.set("story", "all");
+    url.searchParams.set("all_time", "true");
+    if (universityId) url.searchParams.set("university_ids", String(universityId));
+    dedupFetch(url.toString()).catch(() => { /* silent */ });
+}
+
 // ─── Generic Hook: story data fetching (parameterized API path) ─────────────
 export function useStoryData<T>(
     apiPath: string,   // e.g. "/api/v2/dashboards/dean/story"
@@ -120,24 +178,19 @@ export function useStoryData<T>(
                     apiPath: string; story: string; filters: Record<string, string[]>;
                     datePreset: DatePreset; customRange?: DateRange;
                 };
-                const sp = new URLSearchParams();
-                sp.set("story", parsed.story);
+                const url = new URL(parsed.apiPath, window.location.origin);
+                url.searchParams.set("story", parsed.story);
                 const dr = getDateRange(parsed.datePreset, parsed.customRange);
-                if (dr.allTime) sp.set("all_time", "true");
+                if (dr.allTime) url.searchParams.set("all_time", "true");
                 else {
-                    if (dr.start) sp.set("date_start", dr.start);
-                    if (dr.end) sp.set("date_end", dr.end);
+                    if (dr.start) url.searchParams.set("date_start", dr.start);
+                    if (dr.end) url.searchParams.set("date_end", dr.end);
                 }
                 Object.entries(parsed.filters).forEach(([k, v]) => {
-                    if (v.length) sp.set(k, v.join(","));
+                    if (v.length) url.searchParams.set(k, v.join(","));
                 });
-                const res = await fetch(`${parsed.apiPath}?${sp}`, {
-                    credentials: "include", cache: "no-store",
-                });
+                const json = await dedupFetch(url.toString());
                 if (cancelled) return;
-                const json = await res.json();
-                if (cancelled) return;
-                if (!res.ok) throw new Error(json?.error);
                 setData(json.data?.[parsed.story] ?? null);
                 // Save meta (faculty, university, department, etc.)
                 const d = json.data || {};

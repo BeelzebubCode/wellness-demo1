@@ -57,6 +57,7 @@ interface Recommendation {
     title: string;
     description: string;
     icon: string;
+    data: { label: string; value: string }[];
 }
 
 interface TrendPoint {
@@ -453,72 +454,117 @@ export async function GET(req: NextRequest) {
         areaFocus.forEach((a, i) => { a.rank = i + 1; });
 
         // ═══════════════════════════════════════════════════════════════════
-        // 6. Recommendations
+        // 6. Recommendations (fully data-driven)
         // ═══════════════════════════════════════════════════════════════════
 
         const recommendations: Recommendation[] = [];
 
-        if (noShowRate > 15) {
+        // --- No-Show recommendation with top 3 worst universities ---
+        if (noShowRate > 5) {
+            const top3NoShow = noShowByUni.slice(0, 3).filter(u => Number(u.no_show_pct) > 5);
             recommendations.push({
                 id: "rec-noshow",
-                priority: "high",
-                title: "ลดอัตรา No-Show อย่างเร่งด่วน",
-                description: `อัตราไม่มาตามนัดอยู่ที่ ${noShowRate}% — แนะนำเพิ่มระบบแจ้งเตือน SMS/LINE ก่อนนัด 24 ชม. และ follow-up อัตโนมัติ`,
+                priority: noShowRate > 15 ? "high" : "medium",
+                title: `แก้ปัญหา No-Show ${noShowRate}%`,
+                description: noShowRate > 15
+                    ? `ไม่มาตามนัด ${noShowTotal.toLocaleString()} จาก ${totalBookings.toLocaleString()} ครั้ง — ต้องเพิ่มระบบแจ้งเตือนก่อนนัด`
+                    : `อัตรา No-Show ${noShowRate}% — ติดตามมหาวิทยาลัยที่สูงผิดปกติ`,
                 icon: "smartphone",
-            });
-        } else if (noShowRate > 5) {
-            recommendations.push({
-                id: "rec-noshow-mild",
-                priority: "medium",
-                title: "ติดตามอัตรา No-Show",
-                description: `อัตราไม่มาตามนัด ${noShowRate}% — พิจารณาเพิ่มช่องทางออนไลน์สำหรับมหาวิทยาลัยที่มี no-show สูง`,
-                icon: "clipboard-list",
+                data: top3NoShow.map(u => ({
+                    label: u.university_name_th,
+                    value: `${u.no_show_pct}% (${u.no_show}/${u.total})`,
+                })),
             });
         }
 
-        if (accessRate < 30) {
-            recommendations.push({
-                id: "rec-access",
-                priority: "high",
-                title: "เพิ่มอัตราการเข้าถึงบริการ",
-                description: `มีเพียง ${accessRate}% ของนิสิตที่เข้าถึงบริการ — แนะนำจัดแคมเปญประชาสัมพันธ์ระดับมหาวิทยาลัย`,
-                icon: "megaphone",
-            });
-        }
-
-        if (highRiskTotal > 100) {
-            const topRiskyUni = riskyUniversities[0];
+        // --- Risk recommendation with top 3 risky universities ---
+        if (highRiskTotal > 0) {
+            const top3Risk = riskyUniversities.slice(0, 3);
             recommendations.push({
                 id: "rec-risk",
-                priority: "high",
-                title: "เพิ่มบุคลากรในมหาวิทยาลัยกลุ่มเสี่ยง",
-                description: topRiskyUni
-                    ? `${topRiskyUni.university_name_th} มีนิสิตเสี่ยงสูงมากที่สุด — ส่งทีมเชี่ยวชาญลงพื้นที่`
-                    : `มีนิสิตเสี่ยงสูง ${highRiskTotal} ราย — จัดสรรงบบุคลากรเพิ่ม`,
+                priority: highRiskTotal > 100 ? "high" : "medium",
+                title: `ดูแลนิสิตเสี่ยงสูง ${highRiskTotal.toLocaleString()} ราย`,
+                description: `กระจายใน ${riskyUniversities.length} มหาวิทยาลัย — ค่าเฉลี่ยความเสี่ยงระดับชาติ ${avgRiskScore}`,
                 icon: "user-plus",
+                data: top3Risk.map(u => ({
+                    label: u.university_name_th,
+                    value: `${u.critical + u.high} ราย (${u.risk_pct}%)`,
+                })),
             });
         }
 
+        // --- Access rate recommendation with never-consulted count ---
+        if (accessRate < 50) {
+            const neverConsulted = totalStudents - consultedStudents;
+            recommendations.push({
+                id: "rec-access",
+                priority: accessRate < 20 ? "high" : "medium",
+                title: `เพิ่มการเข้าถึงบริการ (ปัจจุบัน ${accessRate}%)`,
+                description: `นิสิต ${neverConsulted.toLocaleString()} คน ยังไม่เคยเข้าใช้บริการเลย`,
+                icon: "megaphone",
+                data: [
+                    { label: "นิสิตทั้งหมด", value: `${totalStudents.toLocaleString()} คน` },
+                    { label: "เข้าถึงแล้ว", value: `${consultedStudents.toLocaleString()} คน (${accessRate}%)` },
+                    { label: "ยังไม่เข้าถึง", value: `${neverConsulted.toLocaleString()} คน` },
+                ],
+            });
+        }
+
+        // --- Region gap recommendation ---
         if (leastRegion && totalBookings > 0) {
             const lrPct = Math.round((leastRegion.total / totalBookings) * 100);
-            if (lrPct < 10) {
+            const topPct = topRegion ? Math.round((topRegion.total / totalBookings) * 100) : 0;
+            if (lrPct < 10 && topRegion) {
                 recommendations.push({
                     id: "rec-region",
                     priority: "medium",
-                    title: `เพิ่มการเข้าถึงใน${leastRegion.region_name_th}`,
-                    description: `${leastRegion.region_name_th}มีสัดส่วนการใช้บริการเพียง ${lrPct}% — พิจารณาเพิ่มบริการออนไลน์ในพื้นที่`,
+                    title: `ปิดช่องว่างระหว่างภาค`,
+                    description: `${leastRegion.region_name_th} ใช้บริการน้อยกว่า${topRegion.region_name_th} ${topPct - lrPct} เท่า`,
                     icon: "map",
+                    data: [
+                        { label: topRegion.region_name_th, value: `${topRegion.total.toLocaleString()} ครั้ง (${topPct}%)` },
+                        { label: leastRegion.region_name_th, value: `${leastRegion.total.toLocaleString()} ครั้ง (${lrPct}%)` },
+                    ],
                 });
             }
         }
 
-        recommendations.push({
-            id: "rec-data",
-            priority: "low",
-            title: "ติดตามข้อมูลรายเดือน",
-            description: `อัปเดต Dashboard ทุกเดือน เพื่อตรวจจับแนวโน้มผิดปกติแต่เนิ่น ๆ`,
-            icon: "calendar",
-        });
+        // --- Success rate recommendation ---
+        if (successRate < 80 && totalBookings > 50) {
+            const incompleteCount = totalBookings - completedTotal;
+            recommendations.push({
+                id: "rec-success",
+                priority: successRate < 50 ? "high" : "medium",
+                title: `เพิ่มอัตราสำเร็จ (ปัจจุบัน ${successRate}%)`,
+                description: `มี ${incompleteCount.toLocaleString()} ครั้งที่ไม่สำเร็จ จาก ${totalBookings.toLocaleString()} ครั้ง`,
+                icon: "clipboard-list",
+                data: [
+                    { label: "สำเร็จ", value: `${completedTotal.toLocaleString()} ครั้ง` },
+                    { label: "ไม่สำเร็จ", value: `${incompleteCount.toLocaleString()} ครั้ง` },
+                    { label: "อัตราสำเร็จ", value: `${successRate}%` },
+                ],
+            });
+        }
+
+        // --- YoY trend recommendation ---
+        if (previousYearBookings > 0) {
+            recommendations.push({
+                id: "rec-trend",
+                priority: "low",
+                title: bookingTrend.direction === "up"
+                    ? `การใช้บริการเพิ่ม ${bookingTrend.trend}% — รักษาโมเมนตัม`
+                    : `การใช้บริการลด ${bookingTrend.trend}% — ต้องกระตุ้น`,
+                description: bookingTrend.direction === "up"
+                    ? `เพิ่มจาก ${previousYearBookings.toLocaleString()} เป็น ${currentYearBookings.toLocaleString()} ครั้ง`
+                    : `ลดจาก ${previousYearBookings.toLocaleString()} เหลือ ${currentYearBookings.toLocaleString()} ครั้ง`,
+                icon: "calendar",
+                data: [
+                    { label: "ปีที่แล้ว", value: `${previousYearBookings.toLocaleString()} ครั้ง` },
+                    { label: "ปีนี้", value: `${currentYearBookings.toLocaleString()} ครั้ง` },
+                    { label: "เปลี่ยนแปลง", value: `${bookingTrend.direction === "up" ? "+" : "-"}${bookingTrend.trend}%` },
+                ],
+            });
+        }
 
         // ═══════════════════════════════════════════════════════════════════
         // 7. Trend data (yearly aggregated)

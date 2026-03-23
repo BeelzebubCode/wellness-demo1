@@ -1,6 +1,6 @@
 // src/features/dashboard/ministry/components/executive/RecommendationPanel.tsx
 // ─────────────────────────────────────────────────────────────────────────────
-// 🎯 Actionable Recommendations
+// Actionable Recommendations — data-driven with real metrics
 // ─────────────────────────────────────────────────────────────────────────────
 "use client";
 
@@ -11,12 +11,12 @@ import {
 } from "lucide-react";
 
 const ICON_MAP: Record<string, React.ReactNode> = {
-    "smartphone": <Smartphone className="w-6 h-6" />,
-    "clipboard-list": <ClipboardList className="w-6 h-6" />,
-    "megaphone": <Megaphone className="w-6 h-6" />,
-    "user-plus": <UserPlus className="w-6 h-6" />,
-    "map": <Map className="w-6 h-6" />,
-    "calendar": <Calendar className="w-6 h-6" />,
+    "smartphone": <Smartphone className="w-5 h-5" />,
+    "clipboard-list": <ClipboardList className="w-5 h-5" />,
+    "megaphone": <Megaphone className="w-5 h-5" />,
+    "user-plus": <UserPlus className="w-5 h-5" />,
+    "map": <Map className="w-5 h-5" />,
+    "calendar": <Calendar className="w-5 h-5" />,
 };
 
 interface Recommendation {
@@ -25,24 +25,13 @@ interface Recommendation {
     title: string;
     description: string;
     icon: string;
+    data?: { label: string; value: string }[];
 }
 
-const PRIORITY_STYLES = {
-    high: {
-        badge: "bg-rose-100 text-rose-700 border-rose-200",
-        label: "เร่งด่วน",
-        ring: "ring-2 ring-rose-100",
-    },
-    medium: {
-        badge: "bg-amber-100 text-amber-700 border-amber-200",
-        label: "สำคัญ",
-        ring: "ring-2 ring-amber-50",
-    },
-    low: {
-        badge: "bg-slate-100 text-slate-600 border-slate-200",
-        label: "ติดตาม",
-        ring: "",
-    },
+const DOT_COLOR = {
+    high: "bg-rose-500",
+    medium: "bg-amber-400",
+    low: "bg-slate-300",
 };
 
 export function RecommendationPanel({ recommendations }: { recommendations: Recommendation[] }) {
@@ -50,43 +39,44 @@ export function RecommendationPanel({ recommendations }: { recommendations: Reco
 
     return (
         <div className="rounded-2xl bg-white border border-slate-100 shadow-sm overflow-hidden">
-            {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-lg shadow-sky-100">
-                    <Target className="w-5 h-5" />
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white">
+                    <Target className="w-4 h-4" />
                 </div>
-                <div>
-                    <h3 className="text-lg font-bold text-slate-900">ข้อเสนอแนะเชิงปฏิบัติ</h3>
-                    <p className="text-xs text-slate-400">สิ่งที่ควรดำเนินการ — เรียงตามความเร่งด่วน</p>
-                </div>
+                <h3 className="text-base font-bold text-slate-800">ข้อเสนอแนะ</h3>
             </div>
 
-            {/* Items */}
-            <div className="p-4 space-y-3">
-                {recommendations.map((rec) => {
-                    const ps = PRIORITY_STYLES[rec.priority];
-                    return (
-                        <div
-                            key={rec.id}
-                            className={`rounded-xl border border-slate-100 p-4 hover:border-slate-200 transition-all ${ps.ring}`}
-                        >
-                            <div className="flex items-start gap-3">
-                                <span className="text-slate-400 mt-0.5 shrink-0">
-                                    {ICON_MAP[rec.icon] ?? <Target className="w-6 h-6" />}
-                                </span>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${ps.badge}`}>
-                                            {ps.label}
-                                        </span>
-                                        <h4 className="text-sm font-bold text-slate-800">{rec.title}</h4>
-                                    </div>
-                                    <p className="text-xs text-slate-500 leading-relaxed">{rec.description}</p>
-                                </div>
+            <div className="p-4 space-y-2">
+                {recommendations.map((rec) => (
+                    <div
+                        key={rec.id}
+                        className="px-3 py-3 rounded-xl hover:bg-slate-50 transition-colors"
+                    >
+                        {/* Header row */}
+                        <div className="flex items-start gap-3">
+                            <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${DOT_COLOR[rec.priority]}`} />
+                            <span className="text-slate-400 shrink-0 mt-0.5">
+                                {ICON_MAP[rec.icon] ?? <Target className="w-5 h-5" />}
+                            </span>
+                            <div className="min-w-0">
+                                <p className="text-sm font-semibold text-slate-700">{rec.title}</p>
+                                <p className="text-xs text-slate-400 mt-0.5">{rec.description}</p>
                             </div>
                         </div>
-                    );
-                })}
+
+                        {/* Data metrics */}
+                        {rec.data && rec.data.length > 0 && (
+                            <div className="ml-10 mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                                {rec.data.map((d, j) => (
+                                    <div key={j} className="flex items-baseline gap-1.5">
+                                        <span className="text-[11px] text-slate-400">{d.label}:</span>
+                                        <span className="text-[11px] font-bold text-slate-600">{d.value}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                ))}
             </div>
         </div>
     );

@@ -13,13 +13,13 @@ interface UniversityRiskMetrics {
   province: string;
   regionCode: string;
   regionName: string;
-  
+
   // Core Metrics
   queueSize: number;
   avgWaitTime: number;
   highRiskPercentage: number;
   therapistUtilization: number;
-  
+
   // Calculated Risk Score (0-100)
   riskScore: number;
 }
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
 
     // Cache key
     const cacheKey = `ministry:risk-metrics:region=${region || "all"}:type=${type || "all"}:days=${days}`;
-    
+
     // Check cache
     const cached = await getCached<{ universities: UniversityRiskMetrics[], regions: RegionalRiskMetrics[] }>(cacheKey);
     if (cached) {
@@ -173,34 +173,23 @@ export async function GET(request: NextRequest) {
           const avgWaitTime =
             completedBookings.length > 0
               ? completedBookings.reduce((sum, b) => {
-                  const waitDays = Math.floor(
-                    (new Date(b.timeSlot.time_slot_start_datetime).getTime() -
-                      new Date(b.booking_created_at).getTime()) /
-                      (1000 * 60 * 60 * 24)
-                  );
-                  return sum + Math.max(waitDays, 0); // Ensure non-negative
-                }, 0) / completedBookings.length
+                const waitDays = Math.floor(
+                  (new Date(b.timeSlot.time_slot_start_datetime).getTime() -
+                    new Date(b.booking_created_at).getTime()) /
+                  (1000 * 60 * 60 * 24)
+                );
+                return sum + Math.max(waitDays, 0); // Ensure non-negative
+              }, 0) / completedBookings.length
               : 0;
 
-          // 3. High Risk Percentage
-          const totalOutcomes = await prisma.bookingOutcome.count({
-            where: {
-              booking: {
-                university_id: uni.university_id,
-              },
-              booking_outcome_recorded_at: { gte: startDate },
-            },
-          });
-
-          const highRiskOutcomes = await prisma.bookingOutcome.count({
-            where: {
-              booking: {
-                university_id: uni.university_id,
-              },
-              risk_level_id: { gte: 7 }, // 7-10 = High Risk
-              booking_outcome_recorded_at: { gte: startDate },
-            },
-          });
+          // 3. High Risk Percentage (EWMA MV-based)
+          const riskMV = await prisma.$queryRawUnsafe<{ total: number; high: number }[]>(`
+            SELECT COUNT(*)::int AS total,
+                   COUNT(CASE WHEN risk_band IN ('VERY_HIGH','HIGH') THEN 1 END)::int AS high
+            FROM mv_student_risk_score WHERE university_id = ${uni.university_id}
+          `);
+          const totalOutcomes = riskMV[0]?.total ?? 0;
+          const highRiskOutcomes = riskMV[0]?.high ?? 0;
 
           const highRiskPercentage =
             totalOutcomes > 0 ? (highRiskOutcomes / totalOutcomes) * 100 : 0;
@@ -256,7 +245,7 @@ export async function GET(request: NextRequest) {
 
     // Aggregate by region
     const regionMap = new Map<string, RegionalRiskMetrics>();
-    
+
     universityMetrics.forEach((um) => {
       if (!regionMap.has(um.regionCode)) {
         regionMap.set(um.regionCode, {

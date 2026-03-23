@@ -16,8 +16,8 @@ export interface MVScope {
     riskWhere: string;
 }
 
-// ─── In-memory TTL cache (10s) — short TTL keeps filters responsive ─────────
-const CACHE_TTL_MS = 10_000;
+// ─── In-memory TTL cache (30s) — keeps repeated queries fast ────────────────
+const CACHE_TTL_MS = 30_000;
 const cache = new Map<string, { data: any; ts: number }>();
 
 function getCached<T>(key: string): T | null {
@@ -183,14 +183,14 @@ export async function queryProblemStory(scope: MVScope) {
     return result;
 }
 
-// ─── Risk Story (EWMA-based) ────────────────────────────────────────────────
+// ─── Risk Story (EWMA-based, 5 bands matching risk_level_category) ──────────
 export async function queryRiskStory(scope: MVScope) {
     const cacheKey = `risk_ewma:${scope.riskWhere}`;
     const cached = getCached<any>(cacheKey);
     if (cached) return cached;
 
     const [bandDist, summary] = await Promise.all([
-        // Distribution by risk band (CRITICAL, HIGH, MEDIUM, NORMAL)
+        // Distribution by risk band (VERY_HIGH, HIGH, MEDIUM, LOW, VERY_LOW)
         prisma.$queryRawUnsafe<
             { risk_band: string; count: number }[]
         >(`
@@ -200,27 +200,28 @@ export async function queryRiskStory(scope: MVScope) {
         `),
         // Summary stats
         prisma.$queryRawUnsafe<
-            { avg_score: number; total_students: number; critical_count: number; high_count: number }[]
+            { avg_score: number; total_students: number; very_high_count: number; high_count: number }[]
         >(`
             SELECT
                 ROUND(AVG(risk_score)::numeric, 2) AS avg_score,
                 COUNT(*)::int AS total_students,
-                COUNT(CASE WHEN risk_band = 'CRITICAL' THEN 1 END)::int AS critical_count,
+                COUNT(CASE WHEN risk_band = 'VERY_HIGH' THEN 1 END)::int AS very_high_count,
                 COUNT(CASE WHEN risk_band = 'HIGH' THEN 1 END)::int AS high_count
             FROM mv_student_risk_score ${scope.riskWhere}
         `),
     ]);
 
-    const s = summary[0] || { avg_score: 0, total_students: 0, critical_count: 0, high_count: 0 };
+    const s = summary[0] || { avg_score: 0, total_students: 0, very_high_count: 0, high_count: 0 };
 
     const result = {
         riskDistribution: {
-            high: Number(s.critical_count) + Number(s.high_count),
+            high: Number(s.very_high_count) + Number(s.high_count),
             medium: bandDist.find(b => b.risk_band === "MEDIUM")?.count ?? 0,
-            low: bandDist.find(b => b.risk_band === "NORMAL")?.count ?? 0,
+            low: (bandDist.find(b => b.risk_band === "LOW")?.count ?? 0) +
+                (bandDist.find(b => b.risk_band === "VERY_LOW")?.count ?? 0),
         },
         distribution: bandDist.map(r => ({ label: r.risk_band, count: r.count })),
-        highRiskCount: Number(s.critical_count) + Number(s.high_count),
+        highRiskCount: Number(s.very_high_count) + Number(s.high_count),
         avgRiskScore: Number(s.avg_score),
         totalAssessed: Number(s.total_students),
         method: "EWMA+PeakMemory",
