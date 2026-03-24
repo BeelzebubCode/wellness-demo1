@@ -12,7 +12,7 @@ const API = "/api/v2/dashboards/dean/story";
 type Preset = "7d" | "30d" | "90d" | "all" | "custom";
 
 const PRESETS: { value: Preset; label: string }[] = [
-    { value: "7d",  label: "7 วัน"  },
+    { value: "7d", label: "7 วัน" },
     { value: "30d", label: "30 วัน" },
     { value: "90d", label: "90 วัน" },
     { value: "all", label: "ทั้งหมด" },
@@ -33,12 +33,12 @@ function presetToRange(
         };
     }
     const days = preset === "7d" ? 7 : preset === "30d" ? 30 : 90;
-    const end   = new Date();
+    const end = new Date();
     const start = new Date(); start.setDate(start.getDate() - days);
     return {
         allTime: false,
         start: start.toISOString().split("T")[0],
-        end:   end.toISOString().split("T")[0],
+        end: end.toISOString().split("T")[0],
     };
 }
 
@@ -51,9 +51,9 @@ interface Stats {
 
 export default function DeanStatsCards({ theme = "light" }: { theme?: "light" | "dark" }) {
     const isDark = theme === "dark";
-    const [stats,   setStats]   = useState<Stats | null>(null);
+    const [stats, setStats] = useState<Stats | null>(null);
     const [loading, setLoading] = useState(true);
-    const [preset,  setPreset]  = useState<Preset>("30d");
+    const [preset, setPreset] = useState<Preset>("30d");
     const [customStart, setCustomStart] = useState<string | undefined>();
     const [customEnd, setCustomEnd] = useState<string | undefined>();
 
@@ -65,17 +65,17 @@ export default function DeanStatsCards({ theme = "light" }: { theme?: "light" | 
                 const { allTime, start, end } = presetToRange(preset, customStart, customEnd);
                 const params = new URLSearchParams({ story: "all" });
                 if (allTime) { params.set("all_time", "true"); }
-                else         { if (start) params.set("date_start", start); if (end) params.set("date_end", end); }
+                else { if (start) params.set("date_start", start); if (end) params.set("date_end", end); }
 
-                const res  = await fetch(`${API}?${params.toString()}`, { credentials: "include" });
+                const res = await fetch(`${API}?${params.toString()}`, { credentials: "include" });
                 const json = await res.json();
                 if (cancelled) return;
                 const d = json.data ?? {};
                 setStats({
-                    totalBookings:  d.bookings?.totalBookings  ?? 0,
+                    totalBookings: d.bookings?.totalBookings ?? 0,
                     completedCount: d.bookings?.completedCount ?? 0,
-                    highRiskCount:  d.risk?.highRiskCount      ?? 0,
-                    noShowCount:    d.bookings?.noShowCount    ?? 0,
+                    highRiskCount: d.risk?.highRiskCount ?? 0,
+                    noShowCount: d.bookings?.noShowCount ?? 0,
                 });
             } catch { /* silent */ } finally {
                 if (!cancelled) setLoading(false);
@@ -84,57 +84,57 @@ export default function DeanStatsCards({ theme = "light" }: { theme?: "light" | 
         return () => { cancelled = true; };
     }, [preset, customStart, customEnd]);
 
-    const total       = stats?.totalBookings  ?? 0;
+    const total = stats?.totalBookings ?? 0;
     const successRate = total > 0 ? Math.round(((stats?.completedCount ?? 0) / total) * 100) : 0;
-    const noShowRate  = total > 0 ? Math.round(((stats?.noShowCount    ?? 0) / total) * 100) : 0;
+    const noShowRate = total > 0 ? Math.round(((stats?.noShowCount ?? 0) / total) * 100) : 0;
 
     const cards = [
         {
             label: "การนัดหมายทั้งหมด",
             value: loading ? "—" : total.toLocaleString(),
-            unit:  loading ? ""  : "ครั้ง",
-            icon:  Calendar,
+            unit: loading ? "" : "ครั้ง",
+            icon: Calendar,
             gradient: "from-pink-400 to-rose-500",
             iconBg: "bg-pink-50",
             iconColor: "text-pink-600",
             glow: "shadow-[var(--tw-shadow-color)] shadow-pink-500/5",
-            sub:   "จำนวนการนัดหมาย",
+            sub: "จำนวนการนัดหมาย",
             trendIcon: <Clock className="w-3.5 h-3.5 text-pink-500 mr-1.5" />
         },
         {
             label: "อัตราสำเร็จ",
             value: loading ? "—" : `${successRate}%`,
-            unit:  "",
-            icon:  CheckCircle2,
+            unit: "",
+            icon: CheckCircle2,
             gradient: "from-emerald-400 to-teal-500",
             iconBg: "bg-emerald-50",
             iconColor: "text-emerald-600",
             glow: "shadow-[var(--tw-shadow-color)] shadow-emerald-500/5",
-            sub:   loading ? "" : `${(stats?.completedCount ?? 0).toLocaleString()} ครั้งสำเร็จ`,
+            sub: loading ? "" : `${(stats?.completedCount ?? 0).toLocaleString()} ครั้งสำเร็จ`,
             trendIcon: <ArrowUpRight className="w-3.5 h-3.5 text-emerald-500 mr-1.5" />
         },
         {
             label: "นิสิตกลุ่มเสี่ยงสูง",
             value: loading ? "—" : (stats?.highRiskCount ?? 0).toLocaleString(),
-            unit:  loading ? ""  : "ราย",
-            icon:  AlertCircle,
+            unit: loading ? "" : "ราย",
+            icon: AlertCircle,
             gradient: "from-rose-400 to-pink-500",
             iconBg: "bg-rose-50",
             iconColor: "text-rose-600",
             glow: "shadow-[var(--tw-shadow-color)] shadow-rose-500/5",
-            sub:   "ต้องติดตามเร่งด่วน",
+            sub: "ต้องติดตามเร่งด่วน",
             trendIcon: <AlertCircle className="w-3.5 h-3.5 text-rose-500 mr-1.5" />
         },
         {
             label: "อัตราไม่มาตามนัด",
             value: loading ? "—" : `${noShowRate}%`,
-            unit:  "",
-            icon:  TrendingDown,
+            unit: "",
+            icon: TrendingDown,
             gradient: !loading && noShowRate > 20 ? "from-red-400 to-rose-500" : "from-amber-400 to-orange-500",
             iconBg: !loading && noShowRate > 20 ? "bg-red-50" : "bg-amber-50",
             iconColor: !loading && noShowRate > 20 ? "text-red-600" : "text-amber-600",
             glow: !loading && noShowRate > 20 ? "shadow-[var(--tw-shadow-color)] shadow-red-500/5" : "shadow-[var(--tw-shadow-color)] shadow-amber-500/5",
-            sub:   loading ? "" : `${(stats?.noShowCount ?? 0).toLocaleString()} ครั้ง`,
+            sub: loading ? "" : `${(stats?.noShowCount ?? 0).toLocaleString()} ครั้ง`,
             trendIcon: <ArrowDownRight className={`w-3.5 h-3.5 ${!loading && noShowRate > 20 ? 'text-red-500' : 'text-amber-500'} mr-1.5`} />
         },
     ];
@@ -159,11 +159,10 @@ export default function DeanStatsCards({ theme = "light" }: { theme?: "light" | 
                                 <button
                                     key={p.value}
                                     onClick={() => setPreset(p.value)}
-                                    className={`relative px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 ${
-                                        isActive 
-                                            ? (isDark ? "text-white" : "text-slate-800") 
-                                            : (isDark ? "text-slate-400 hover:text-slate-200 hover:bg-slate-700/50" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50")
-                                    }`}
+                                    className={`relative px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 ${isActive
+                                        ? (isDark ? "text-white" : "text-slate-800")
+                                        : (isDark ? "text-slate-400 hover:text-slate-200 hover:bg-slate-700/50" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50")
+                                        }`}
                                 >
                                     {isActive && (
                                         <motion.div
@@ -177,7 +176,7 @@ export default function DeanStatsCards({ theme = "light" }: { theme?: "light" | 
                             );
                         })}
                     </div>
-                    
+
                     <AnimatePresence>
                         {preset === "custom" && (
                             <motion.div
@@ -190,9 +189,9 @@ export default function DeanStatsCards({ theme = "light" }: { theme?: "light" | 
                                 <div className="flex items-center gap-2">
                                     <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">ตั้งแต่:</span>
                                     <div className="w-36">
-                                        <DateCalendarPopover 
-                                            valueYMD={customStart} 
-                                            onChangeYMD={setCustomStart} 
+                                        <DateCalendarPopover
+                                            valueYMD={customStart}
+                                            onChangeYMD={setCustomStart}
                                             placeholder="วว/ดด/ปปปป"
                                             variant="compact"
                                             closeOnSelect
@@ -202,9 +201,9 @@ export default function DeanStatsCards({ theme = "light" }: { theme?: "light" | 
                                 <div className="flex items-center gap-2">
                                     <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">ถึง:</span>
                                     <div className="w-36">
-                                        <DateCalendarPopover 
-                                            valueYMD={customEnd} 
-                                            onChangeYMD={setCustomEnd} 
+                                        <DateCalendarPopover
+                                            valueYMD={customEnd}
+                                            onChangeYMD={setCustomEnd}
                                             placeholder="วว/ดด/ปปปป"
                                             variant="compact"
                                             closeOnSelect
@@ -230,7 +229,7 @@ export default function DeanStatsCards({ theme = "light" }: { theme?: "light" | 
                         >
                             {/* Decorative Background Gradient Orbs */}
                             <div className={`absolute -right-8 -top-8 w-32 h-32 rounded-full bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-10 blur-2xl group-hover:scale-150 transition-all duration-700`} />
-                            
+
                             {/* Giant Watermark Icon */}
                             <div className="absolute -right-4 -bottom-4 opacity-[0.02] group-hover:opacity-[0.04] group-hover:scale-110 group-hover:-translate-x-1 group-hover:-translate-y-1 group-hover:-rotate-12 transition-all duration-700 pointer-events-none">
                                 <card.icon strokeWidth={1} className="w-32 h-32" />
@@ -261,7 +260,7 @@ export default function DeanStatsCards({ theme = "light" }: { theme?: "light" | 
                                             <span className={`text-sm font-bold translate-y-[-4px] ${isDark ? "text-slate-400" : "text-slate-400"}`}>{card.unit}</span>
                                         )}
                                     </div>
-                                    
+
                                     {/* Footer */}
                                     <div className={`flex items-center mt-4 text-[12px] font-semibold w-fit px-3 py-1.5 rounded-lg border transition-colors duration-300 ${isDark ? "text-slate-300 bg-slate-800/80 border-slate-700/50 group-hover:bg-slate-800" : "text-slate-500 bg-slate-50/80 border-slate-100 group-hover:bg-slate-100"}`}>
                                         {card.trendIcon}
