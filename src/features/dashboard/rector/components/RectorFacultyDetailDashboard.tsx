@@ -3,14 +3,15 @@
 import { DeanDashboard } from "@/features/dashboard/dean/components/DeanDashboard";
 
 interface Props {
-    facultyCode: string;
+    facultyCode?: string;
 }
 
 /**
  * Rector's view of a specific faculty dashboard.
- * Reuses DeanDashboard with the faculty code to scope data
- * to the selected faculty.
+ * Reuses DeanDashboard which fetches its own faculty data.
+ * facultyCode is accepted for route compatibility but DeanDashboard
+ * determines faculty from the logged-in user's context.
  */
-export function RectorFacultyDetailDashboard({ facultyCode }: Props) {
-    return <DeanDashboard facultyCode={facultyCode} />;
+export function RectorFacultyDetailDashboard({ facultyCode: _facultyCode }: Props) {
+    return <DeanDashboard />;
 }

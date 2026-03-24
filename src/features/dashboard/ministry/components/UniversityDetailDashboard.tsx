@@ -17,6 +17,7 @@ import { AnimatePresence, motion } from "framer-motion";
 // Story components (self-contained, with own filters)
 import GenericBookingStory from "../../shared/GenericBookingStory";
 import GenericRiskStory from "../../shared/GenericRiskStory";
+import GenericProblemStory from "../../shared/GenericProblemStory";
 import GenericIncomeChart from "../../shared/GenericIncomeChart";
 import GenericParentalStatusChart from "../../shared/GenericParentalStatusChart";
 import { DataStoryGrid } from "../../widgets/story/DataStoryGrid";
