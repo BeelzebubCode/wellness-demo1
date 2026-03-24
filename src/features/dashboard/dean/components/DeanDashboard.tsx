@@ -52,12 +52,12 @@ export function DeanDashboard() {
     }, []);
 
     return (
-        <div className="relative min-h-screen bg-[#fff5f8] text-slate-900 overflow-hidden pb-12 transition-colors duration-1000">
+        <div className="relative min-h-screen bg-white text-slate-900 overflow-hidden pb-12 transition-colors duration-1000">
             {/* Subtle Ambient Backgrounds */}
-            <div className="absolute top-0 w-full h-[800px] bg-gradient-to-b from-pink-100/80 via-rose-50/40 to-transparent pointer-events-none" />
-            <div className="fixed -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full bg-pink-300/20 blur-[100px] pointer-events-none" />
-            <div className="fixed top-[20%] -right-[10%] w-[50vw] h-[50vw] rounded-full bg-rose-300/15 blur-[120px] pointer-events-none" />
-            <div className="fixed -bottom-[30%] left-[20%] w-[60vw] h-[60vw] rounded-full bg-pink-200/20 blur-[150px] pointer-events-none" />
+            <div className="absolute top-0 w-full h-[800px] bg-gradient-to-b from-slate-50/60 via-white to-transparent pointer-events-none" />
+            <div className="fixed -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full bg-slate-100/20 blur-[100px] pointer-events-none" />
+            <div className="fixed top-[20%] -right-[10%] w-[50vw] h-[50vw] rounded-full bg-slate-100/15 blur-[120px] pointer-events-none" />
+            <div className="fixed -bottom-[30%] left-[20%] w-[60vw] h-[60vw] rounded-full bg-slate-50/20 blur-[150px] pointer-events-none" />
 
             {/* Container */}
             <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 pt-8">

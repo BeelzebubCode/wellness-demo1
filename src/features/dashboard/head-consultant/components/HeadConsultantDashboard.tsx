@@ -15,9 +15,6 @@ import {
   Users,
   Building2,
   Filter,
-  AlertTriangle,
-  Clock,
-  ShieldAlert,
   BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -126,11 +123,7 @@ export function HeadConsultantDashboard({
 
   const selectedMember = team.find(m => m.consultantId === selectedMemberId);
 
-  // Alert counts from centralized data
-  const alertHighRisk = riskDist.highRiskCount;
-  const alertOverdue = responseTime.overdueCount;
-  const alertExceptions = attendance.pendingExceptions;
-  const hasAlerts = alertHighRisk > 0 || alertOverdue > 0 || alertExceptions > 0;
+
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
@@ -228,46 +221,6 @@ export function HeadConsultantDashboard({
         ) : activeTab === "overview" ? (
           <div className="space-y-6">
 
-            {/* ── 🔴 Alert Bar ─────────────────────────── */}
-            {hasAlerts && (
-              <div className="animate-in fade-in slide-in-from-top-2 duration-400">
-                <div className="bg-gradient-to-r from-red-50 via-amber-50 to-orange-50 border border-red-200/60 rounded-2xl px-5 py-4 shadow-sm">
-                  <div className="flex items-center gap-2 mb-3">
-                    <AlertTriangle className="w-4 h-4 text-red-500" />
-                    <span className="text-xs font-black text-red-700 uppercase tracking-wider">ต้องดำเนินการ</span>
-                  </div>
-                  <div className="flex flex-wrap gap-3">
-                    {alertHighRisk > 0 && (
-                      <div className="flex items-center gap-2 bg-white/80 backdrop-blur rounded-xl px-4 py-2.5 border border-red-200/50 shadow-sm">
-                        <ShieldAlert className="w-4 h-4 text-red-500" />
-                        <div>
-                          <span className="text-lg font-black text-red-600 tabular-nums">{alertHighRisk}</span>
-                          <span className="text-[11px] text-red-500 ml-1.5 font-bold">เคสเสี่ยงสูง/สูงมาก</span>
-                        </div>
-                      </div>
-                    )}
-                    {alertOverdue > 0 && (
-                      <div className="flex items-center gap-2 bg-white/80 backdrop-blur rounded-xl px-4 py-2.5 border border-amber-200/50 shadow-sm">
-                        <Clock className="w-4 h-4 text-amber-500" />
-                        <div>
-                          <span className="text-lg font-black text-amber-600 tabular-nums">{alertOverdue}</span>
-                          <span className="text-[11px] text-amber-500 ml-1.5 font-bold">เคสรอเกิน 48 ชม.</span>
-                        </div>
-                      </div>
-                    )}
-                    {alertExceptions > 0 && (
-                      <div className="flex items-center gap-2 bg-white/80 backdrop-blur rounded-xl px-4 py-2.5 border border-orange-200/50 shadow-sm">
-                        <AlertTriangle className="w-4 h-4 text-orange-500" />
-                        <div>
-                          <span className="text-lg font-black text-orange-600 tabular-nums">{alertExceptions}</span>
-                          <span className="text-[11px] text-orange-500 ml-1.5 font-bold">exception รอ review</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* ── Stats Cards (Original) ─────────────── */}
             <section>
