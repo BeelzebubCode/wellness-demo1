@@ -29,8 +29,13 @@ export default function BookingStory({ delay = 0 }: { delay?: number }) {
 
     const trend = useMemo(() =>
         (data?.monthlyTrend ?? []).map((d: any) => {
-            const [, mm] = d.month.split("-");
-            return { month: MONTH_LABEL[mm] ?? mm, การจอง: d.bookings, เช็คอิน: d.checkedIn };
+            const parts = (d.month || "").split("-");
+            const mm = parts.length > 1 ? parts[1] : parts[0];
+            return {
+                month: MONTH_LABEL[mm] ?? mm,
+                การจอง: Number(d.bookings || 0),
+                เช็คอิน: Number(d.checkedIn || 0)
+            };
         }), [data?.monthlyTrend]);
 
     return (
@@ -38,15 +43,16 @@ export default function BookingStory({ delay = 0 }: { delay?: number }) {
             icon={<CalendarCheck className="w-5 h-5" />}
             iconGradient="bg-gradient-to-br from-cyan-500 to-teal-600"
             title="การใช้บริการให้คำปรึกษา"
+            description="ติดตามปริมาณการจองนัดหมายปรึกษา อัตราการเข้าพบจริง (Check-in) และแนวโน้มความต้องการในแต่ละช่วงเวลา — ใช้เพื่อบริหารจัดการทรัพยากรอาจารย์ที่ปรึกษาให้เพียงพอต่อความต้องการ และระบุช่วงเวลาที่มีนิสิตขอรับบริการสูง"
             narration={
-                data ? `จองทั้งหมด ${data.totalBookings} ครั้ง — เช็คอิน ${data.checkedInCount} (${data.totalBookings > 0 ? Math.round(data.checkedInCount / data.totalBookings * 100) : 0}%)`
+                data ? `จองทั้งหมด ${data.totalBookings || 0} ครั้ง — เช็คอิน ${data.checkedInCount || 0} (${(data.totalBookings || 0) > 0 ? Math.round((data.checkedInCount || 0) / (data.totalBookings || 0) * 100) : 0}%)`
                     : "กำลังโหลด..."
             }
             kpis={data ? [
-                { label: "จอง", value: data.totalBookings, color: "#06b6d4" },
-                { label: "เช็คอิน", value: data.checkedInCount, color: "#10b981" },
-                { label: "เสร็จ", value: data.completedCount, color: "#8b5cf6" },
-                { label: "ไม่มา", value: data.noShowCount, color: "#f59e0b" },
+                { label: "จอง", value: data.totalBookings || 0, color: "#06b6d4" },
+                { label: "เช็คอิน", value: data.checkedInCount || 0, color: "#10b981" },
+                { label: "เสร็จ", value: data.completedCount || 0, color: "#8b5cf6" },
+                { label: "ไม่มา", value: data.noShowCount || 0, color: "#f59e0b" },
             ] : undefined}
             filters={
                 <StoryFilterStack>
@@ -100,7 +106,7 @@ export default function BookingStory({ delay = 0 }: { delay?: number }) {
                         <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
                         <Tooltip content={<Tip />} />
-                        <Legend iconType="circle" formatter={(v: string) => <span className="text-[10px] text-slate-500">{v}</span>} />
+                        <Legend iconType="circle" formatter={(v: string) => <span className="text-[10px] text-slate-500 font-medium">{v}</span>} />
                         <Area type="monotone" dataKey="การจอง" stroke="#4f46e5" strokeWidth={2} fill="url(#aB)" dot={{ r: 2, fill: "#4f46e5" }} />
                         <Area type="monotone" dataKey="เช็คอิน" stroke="#10b981" strokeWidth={2} fill="url(#aC)" dot={{ r: 2, fill: "#10b981" }} />
                     </AreaChart>

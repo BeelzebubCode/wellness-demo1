@@ -61,7 +61,6 @@ export default function RiskStory({ delay = 0 }: { delay?: number }) {
     const [gender, setGender] = useState<string[]>([]);
     const [income, setIncome] = useState<string[]>([]);
     const [parental, setParental] = useState<string[]>([]);
-    const [blood, setBlood] = useState<string[]>([]);
     const [advisorId, setAdvisorId] = useState<string[]>([]);
 
     // Drill-down
@@ -71,7 +70,6 @@ export default function RiskStory({ delay = 0 }: { delay?: number }) {
         gender,
         family_income_bracket: income,
         parental_status: parental,
-        blood_group: blood,
         advisorId,
     }, date, customRange);
 
@@ -121,10 +119,11 @@ export default function RiskStory({ delay = 0 }: { delay?: number }) {
                 icon={<ShieldAlert className="w-5 h-5" />}
                 iconGradient="bg-gradient-to-br from-red-500 to-rose-600"
                 title="ความเสี่ยงที่ต้องติดตาม"
+                description="สรุปการกระจายตัวของระดับความเสี่ยง (ปกติ, เสี่ยง, เสี่ยงสูง, วิกฤต) ของนิสิตโดยสรุปจากการประเมิน — เพื่อให้หัวหน้าภาควิชาให้ความสำคัญและจัดระดับความเร่งด่วนในการติดตามนิสิตกลุ่มเสี่ยงสูงหรือวิกฤตเป็นลำดับแรก เพื่อป้องกันความสูญเสียได้อย่างทันท่วงที"
                 narration={narration}
                 kpis={data ? [
-                    { label: "ทั้งหมด", value: totalAll, color: "#64748b" },
-                    { label: "สูงมาก", value: highCount, color: "#dc2626" },
+                    { label: "ทั้งหมด", value: totalAll || 0, color: "#64748b" },
+                    { label: "สูงมาก", value: highCount || 0, color: "#dc2626" },
                 ] : undefined}
                 filters={
                     <StoryFilterStack>
@@ -140,17 +139,14 @@ export default function RiskStory({ delay = 0 }: { delay?: number }) {
                         <StoryChipGroup label="รายได้" options={[
                             { value: "UNDER_100K", label: "< 100K" }, { value: "BETWEEN_100K_200K", label: "100-200K" },
                             { value: "BETWEEN_200K_300K", label: "200-300K" }, { value: "BETWEEN_300K_500K", label: "300-500K" },
-                            { value: "BETWEEN_500K_800K", label: "500-800K" }, { value: "OVER_1M", label: "> 1M" },
+                            { value: "BETWEEN_500K_800K", label: "500-800K" }, { value: "BETWEEN_800K_1M", label: "800K-1M" },
+                            { value: "OVER_1M", label: "> 1M" },
                         ]} selected={income} onChange={setIncome} />
                         <StoryChipGroup label="ครอบครัว" options={[
                             { value: "TOGETHER", label: "อยู่ด้วยกัน" }, { value: "DIVORCED", label: "หย่าร้าง" },
                             { value: "FATHER_DECEASED", label: "บิดาเสีย" }, { value: "MOTHER_DECEASED", label: "มารดาเสีย" },
                             { value: "SINGLE_PARENT", label: "เลี้ยงเดี่ยว" },
                         ]} selected={parental} onChange={setParental} />
-                        <StoryChipGroup label="กรุ๊ปเลือด" options={[
-                            { value: "A", label: "A" }, { value: "B", label: "B" },
-                            { value: "AB", label: "AB" }, { value: "O", label: "O" },
-                        ]} selected={blood} onChange={setBlood} />
                         {advisors.length > 0 && (
                             <StoryChipGroup
                                 label="อาจารย์ที่ปรึกษา"
@@ -170,7 +166,7 @@ export default function RiskStory({ delay = 0 }: { delay?: number }) {
                 <div className="space-y-4">
                     {/* Chart header with drill-down hint */}
                     <div className="flex items-center justify-between">
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">ระดับความเสี่ยง (5 ระดับ)</p>
+                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">ระดับความเสี่ยง (5 ระดับ)</p>
                         <span className="text-[9px] text-rose-500 flex items-center gap-1">
                             <MousePointerClick className="w-3 h-3" /> คลิกแท่งเพื่อดูรายชื่อนิสิต
                         </span>
@@ -264,8 +260,8 @@ export default function RiskStory({ delay = 0 }: { delay?: number }) {
                                     className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-100 hover:border-slate-300 hover:shadow-md transition-all duration-200 cursor-pointer group"
                                 >
                                     <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
-                                    <span className="text-[10px] text-slate-500 group-hover:text-slate-700">{d.name}</span>
-                                    <span className="text-[10px] font-black tabular-nums" style={{ color: d.color }}>
+                                    <span className="text-[11px] text-slate-600 font-medium group-hover:text-slate-800">{d.name}</span>
+                                    <span className="text-[12px] font-bold tabular-nums" style={{ color: d.color }}>
                                         {d.value}
                                     </span>
                                 </button>

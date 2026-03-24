@@ -105,7 +105,7 @@ export default function GenericParentalStatusChart({ apiPath, title = "สถา
             icon={<Users className="w-5 h-5" />}
             iconGradient={theme === "dark" ? undefined : "bg-gradient-to-br from-indigo-500 to-purple-600"}
             title={title}
-            description="ภาพรวมสถานะครอบครัวและบิดามารดาของนิสิต — เพื่อทำความเข้าใจสภาพแวดล้อมทางครอบครัวที่อาจส่งผลต่อความเครียด"
+            description="ภาพรวมสถานะครอบครัวและบิดามารดาของนิสิต — เพื่อทำความเข้าใจสภาพแวดล้อมทางครอบครัวและความหลากหลายของพื้นฐานนิสิต เพื่อวางแผนการดูแลและให้คำปรึกษาที่เหมาะสมสอดคล้องกับบริบทพื้นฐานของแต่ละบุคคล"
             theme={theme}
             narration={loading ? "กำลังโหลด..." : narration}
             kpis={data && parentalTotal > 0 ? [
@@ -129,7 +129,6 @@ export default function GenericParentalStatusChart({ apiPath, title = "สถา
                             onChange={setDeptIds}
                         />
                     )}
-                    <ExamPeriodFilter selected={examPeriod} onChange={setExamPeriod} />
                     {problemCategories.length > 0 && (
                         <StoryChipGroup
                             label="ประเภทปัญหา"
@@ -160,15 +159,15 @@ export default function GenericParentalStatusChart({ apiPath, title = "สถา
                                     <CartesianGrid strokeDasharray="3 3" stroke={theme === "dark" ? "#334155" : "#f1f5f9"} horizontal={false} />
                                     <XAxis
                                         type="number"
-                                        tick={{ fontSize: 10, fill: theme === "dark" ? "#64748b" : "#94a3b8" }}
+                                        tick={{ fontSize: 11, fill: theme === "dark" ? "#64748b" : "#94a3b8" }}
                                         tickFormatter={(v: number) => unit === "percent" ? `${v}%` : v.toLocaleString()}
                                         axisLine={false} tickLine={false}
                                     />
                                     <YAxis
                                         type="category"
                                         dataKey="name"
-                                        width={105}
-                                        tick={{ fontSize: 11, fill: theme === "dark" ? "#cbd5e1" : "#475569", fontWeight: 600 }}
+                                        width={120}
+                                        tick={{ fontSize: 12, fill: theme === "dark" ? "#cbd5e1" : "#475569", fontWeight: 600 }}
                                         axisLine={false} tickLine={false}
                                     />
                                     <Tooltip
@@ -176,13 +175,14 @@ export default function GenericParentalStatusChart({ apiPath, title = "สถา
                                         content={({ active, payload }) => {
                                             if (!active || !payload?.[0]) return null;
                                             const d = payload[0].payload;
+                                            const isDark = theme === "dark";
                                             return (
-                                                <div className={`border rounded-2xl p-3 shadow-2xl text-xs min-w-[160px] ${theme === "dark" ? "bg-slate-800 border-slate-700" : "bg-white border-slate-200"}`}>
-                                                    <p className={`font-bold mb-2 ${theme === "dark" ? "text-slate-200" : "text-slate-800"}`}>{d.name}</p>
+                                                <div className={`border rounded-2xl p-3 shadow-2xl text-xs min-w-[160px] ${isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-200"}`}>
+                                                    <p className={`font-bold mb-2 ${isDark ? "text-slate-200" : "text-slate-800"}`}>{d.name}</p>
                                                     <div className="space-y-1">
                                                         <div className="flex justify-between gap-4">
                                                             <span className="text-slate-400">จำนวน:</span>
-                                                            <span className={`font-bold ${theme === "dark" ? "text-slate-300" : "text-slate-700"}`}>{d.count.toLocaleString()} ราย</span>
+                                                            <span className={`font-bold ${isDark ? "text-slate-300" : "text-slate-700"}`}>{d.count.toLocaleString()} ราย</span>
                                                         </div>
                                                         <div className="flex justify-between gap-4">
                                                             <span className="text-slate-400">สัดส่วน:</span>

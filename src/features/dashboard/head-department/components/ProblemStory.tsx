@@ -8,7 +8,7 @@
 import React, { useState, useMemo } from "react";
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip,
-    ResponsiveContainer, PieChart, Pie, Cell, Legend,
+    ResponsiveContainer,
 } from "recharts";
 import { Sparkles, MousePointerClick } from "lucide-react";
 import ProblemDrillDown from "./ProblemDrillDown";
@@ -16,16 +16,9 @@ import { DataStoryCard } from "../../widgets/story/DataStoryCard";
 import { StoryChipGroup, StoryFilterStack } from "../../widgets/story/StoryFilterChips";
 import { DatePresetBar, UnitToggle } from "./StoryUI";
 import {
-    useStoryData, Tip, PIE_COLORS, INCOME_LABEL,
+    useStoryData, Tip, INCOME_LABEL,
     type DatePreset, type DateRange, type UnitMode,
 } from "./story-utils";
-
-// ─── Label maps ─────────────────────────────────────────────────────────────
-const PARENTAL_LABEL: Record<string, string> = {
-    TOGETHER: "อยู่ด้วยกัน", DIVORCED: "หย่าร้าง",
-    FATHER_DECEASED: "บิดาเสีย", MOTHER_DECEASED: "มารดาเสีย",
-    SINGLE_PARENT: "เลี้ยงเดี่ยว", UNKNOWN: "ไม่ระบุ",
-};
 
 interface NameValue { name: string; value: number }
 
@@ -64,14 +57,14 @@ function HorizontalBars({
                 <XAxis
                     type="number"
                     domain={unit === "percent" ? [0, 100] : undefined}
-                    tick={{ fontSize: 9, fill: "#94a3b8" }}
+                    tick={{ fontSize: 10, fill: "#94a3b8" }}
                     axisLine={false} tickLine={false}
                     tickFormatter={(v: number) => unit === "percent" ? `${v}%` : `${v}`}
                 />
                 <YAxis
                     type="category" dataKey="name"
-                    tick={{ fontSize: 10, fill: "#475569" }}
-                    width={80} axisLine={false} tickLine={false}
+                    tick={{ fontSize: 12, fill: "#475569" }}
+                    width={110} axisLine={false} tickLine={false}
                 />
                 <Tooltip
                     content={({ active, payload }) => {
@@ -99,7 +92,8 @@ function HorizontalBars({
                     label={({ x, y, width, height, value }: any) => (
                         <text
                             x={x + width + 4} y={y + height / 2}
-                            fill="#64748b" fontSize={9} dominantBaseline="middle"
+                            fill="#64748b" fontSize={11} dominantBaseline="middle"
+                            fontWeight={500}
                         >
                             {unit === "percent" ? `${value}%` : value}
                         </text>
@@ -120,14 +114,12 @@ export default function ProblemStory({ delay = 0 }: { delay?: number }) {
     // Cross-analysis filters
     const [income, setIncome] = useState<string[]>([]);
     const [parental, setParental] = useState<string[]>([]);
-    const [blood, setBlood] = useState<string[]>([]);
     const [chronic, setChronic] = useState<string[]>([]);
     const [advisorId, setAdvisorId] = useState<string[]>([]);
 
     const { data, loading, advisors, dataRange } = useStoryData<any>("problems", {
         family_income_bracket: income,
         parental_status: parental,
-        blood_group: blood,
         chronic_condition_ids: chronic,
         advisorId,
     }, date, customRange);
@@ -142,18 +134,11 @@ export default function ProblemStory({ delay = 0 }: { delay?: number }) {
     const incomeData: NameValue[] = useMemo(() =>
         (data?.incomeDist ?? []).filter((d: any) => d.label !== "UNKNOWN")
             .map((d: any) => ({ name: INCOME_LABEL[d.label] ?? d.label, value: d.count })), [data?.incomeDist]);
-    const incomeTotal = incomeData.reduce((a, c) => a + c.value, 0);
 
     // Chronic top 5
     const chronicRaw: { label: string; count: number }[] = data?.chronicDist?.slice(0, 5) ?? [];
     const chronicData: NameValue[] = chronicRaw.map(c => ({ name: c.label, value: c.count }));
     const chronicTotal = chronicData.reduce((a, c) => a + c.value, 0);
-
-    // Parental status
-    const parentalData: NameValue[] = useMemo(() =>
-        (data?.parentalDist ?? []).filter((d: any) => d.label !== "UNKNOWN")
-            .map((d: any) => ({ name: PARENTAL_LABEL[d.label] ?? d.label, value: d.count })), [data?.parentalDist]);
-    const parentalTotal = parentalData.reduce((a, c) => a + c.value, 0);
 
     // Smart narration
     const topProblem = cats[0];
@@ -169,11 +154,12 @@ export default function ProblemStory({ delay = 0 }: { delay?: number }) {
                 icon={<Sparkles className="w-5 h-5" />}
                 iconGradient="bg-gradient-to-br from-amber-500 to-orange-600"
                 title="ประเด็นปัญหาและโปรไฟล์นิสิตที่มาปรึกษา"
+                description="วิเคราะห์ประเภทประเด็นปัญหาที่นิสิตนำเข้ามาปรึกษา พร้อมเจาะลึกข้อมูลโรคประจำตัวของนิสิต — เพื่อความเข้าใจเชิงลึกถึงต้นเหตุของปัญหาที่เกิดขึ้นบ่อย และใช้วางแผนจัดกิจกรรมสันทนาการหรือ workshop เยียวยาสุขภาพจิตให้ตรงจุดตามสภาพปัญหาจริง"
                 narration={narration}
                 kpis={cats.length ? [
                     { label: "ประเภทปัญหา", value: cats.length, color: "#f59e0b" },
-                    { label: "รวม", value: `${totalProb} ครั้ง`, color: "#ea580c" },
-                    ...(chronicTotal > 0 ? [{ label: "มีโรคประจำตัว", value: `${chronicTotal} คน`, color: "#f43f5e" }] : []),
+                    { label: "รวม", value: `${totalProb || 0} ครั้ง`, color: "#ea580c" },
+                    ...(chronicTotal > 0 ? [{ label: "มีโรคประจำตัว", value: `${chronicTotal || 0} คน`, color: "#f43f5e" }] : []),
                 ] : undefined}
                 filters={
                     <StoryFilterStack>
@@ -184,17 +170,14 @@ export default function ProblemStory({ delay = 0 }: { delay?: number }) {
                         <StoryChipGroup label="รายได้" options={[
                             { value: "UNDER_100K", label: "< 100K" }, { value: "BETWEEN_100K_200K", label: "100-200K" },
                             { value: "BETWEEN_200K_300K", label: "200-300K" }, { value: "BETWEEN_300K_500K", label: "300-500K" },
-                            { value: "BETWEEN_500K_800K", label: "500-800K" }, { value: "OVER_1M", label: "> 1M" },
+                            { value: "BETWEEN_500K_800K", label: "500-800K" }, { value: "BETWEEN_800K_1M", label: "800K-1M" },
+                            { value: "OVER_1M", label: "> 1M" },
                         ]} selected={income} onChange={setIncome} />
                         <StoryChipGroup label="ครอบครัว" options={[
                             { value: "TOGETHER", label: "อยู่ด้วยกัน" }, { value: "DIVORCED", label: "หย่าร้าง" },
                             { value: "FATHER_DECEASED", label: "บิดาเสีย" }, { value: "MOTHER_DECEASED", label: "มารดาเสีย" },
                             { value: "SINGLE_PARENT", label: "เลี้ยงเดี่ยว" },
                         ]} selected={parental} onChange={setParental} />
-                        <StoryChipGroup label="กรุ๊ปเลือด" options={[
-                            { value: "A", label: "A" }, { value: "B", label: "B" },
-                            { value: "AB", label: "AB" }, { value: "O", label: "O" },
-                        ]} selected={blood} onChange={setBlood} />
                         {advisors.length > 0 && (
                             <StoryChipGroup
                                 label="อาจารย์ที่ปรึกษา"
@@ -216,7 +199,7 @@ export default function ProblemStory({ delay = 0 }: { delay?: number }) {
                     {problemData.length > 0 && (
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">ประเภทปัญหาที่พบ</p>
+                                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">ประเภทปัญหาที่พบ</p>
                                 <span className="text-[9px] text-amber-500 flex items-center gap-1">
                                     <MousePointerClick className="w-3 h-3" /> คลิกแท่งเพื่อดูรายชื่อนิสิต
                                 </span>
@@ -232,26 +215,12 @@ export default function ProblemStory({ delay = 0 }: { delay?: number }) {
                         </div>
                     )}
 
-                    {/* ── Profile breakdowns — 3 columns ── */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* Income */}
-                        {incomeData.length > 0 && (
-                            <div className="bg-gradient-to-br from-violet-50/80 to-purple-50/80 rounded-xl p-3 border border-violet-100/50">
-                                <p className="text-[10px] text-violet-600 font-bold mb-2 uppercase tracking-wider">💰 รายได้ครอบครัว</p>
-                                <HorizontalBars
-                                    data={incomeData}
-                                    total={incomeTotal}
-                                    unit={unit}
-                                    barColor={["#7c3aed", "#a78bfa"]}
-                                    gradientId="inc"
-                                />
-                            </div>
-                        )}
-
+                    {/* ── Profile breakdowns ── */}
+                    <div className="grid grid-cols-1 gap-4">
                         {/* Chronic conditions */}
                         {chronicData.length > 0 && (
                             <div className="bg-gradient-to-br from-rose-50/80 to-pink-50/80 rounded-xl p-3 border border-rose-100/50">
-                                <p className="text-[10px] text-rose-600 font-bold mb-2 uppercase tracking-wider">🏥 โรคประจำตัว (Top 5)</p>
+                                <p className="text-xs text-rose-600 font-bold mb-2 uppercase tracking-wider">🏥 โรคประจำตัว (Top 5)</p>
                                 <HorizontalBars
                                     data={chronicData}
                                     total={chronicTotal}
@@ -259,36 +228,6 @@ export default function ProblemStory({ delay = 0 }: { delay?: number }) {
                                     barColor={["#e11d48", "#fb7185"]}
                                     gradientId="chr"
                                 />
-                            </div>
-                        )}
-
-                        {/* Parental status */}
-                        {parentalData.length > 0 && (
-                            <div className="bg-gradient-to-br from-sky-50/80 to-cyan-50/80 rounded-xl p-3 border border-sky-100/50">
-                                <p className="text-[10px] text-sky-600 font-bold mb-2 uppercase tracking-wider">👨‍👩‍👧 สถานะครอบครัว</p>
-                                <div className="space-y-1.5 mt-1">
-                                    {parentalData.map((p, i) => {
-                                        const pct = parentalTotal > 0 ? Math.round(p.value / parentalTotal * 100) : 0;
-                                        return (
-                                            <div key={i} className="flex items-center gap-2">
-                                                <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
-                                                <span className="text-[10px] text-slate-600 flex-1 truncate">{p.name}</span>
-                                                <div className="flex-1 max-w-[80px] bg-slate-200/60 rounded-full h-2 overflow-hidden">
-                                                    <div
-                                                        className="h-full rounded-full transition-all duration-500"
-                                                        style={{
-                                                            width: `${pct}%`,
-                                                            backgroundColor: PIE_COLORS[i % PIE_COLORS.length],
-                                                        }}
-                                                    />
-                                                </div>
-                                                <span className="text-[10px] font-bold text-slate-700 tabular-nums w-12 text-right">
-                                                    {unit === "percent" ? `${pct}%` : p.value}
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
                             </div>
                         )}
                     </div>

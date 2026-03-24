@@ -160,26 +160,24 @@ export default function HeadDepartmentDashboard() {
                     <BarChart3 className="h-5 w-5 text-indigo-500" />
                     Data Stories
                 </h3>
-                <p className="text-xs text-slate-400 mb-2">
+                <p className="text-xs text-slate-400 mb-6">
                     แต่ละการ์ดกรองข้อมูลได้อิสระ — กดปุ่ม <strong className="text-slate-500">ตัวกรอง</strong> ที่มุมขวาบนของแต่ละการ์ด
                 </p>
             </div>
 
-            {/* Row 1: Overview + Bookings (2 cols) */}
+            {/* Row 1 & 2: 4 Main Stories in 2-column grid */}
             <DataStoryGrid cols={2}>
                 <StudentOverviewStory delay={0} />
                 <BookingStory delay={1} />
+                <ProblemStory delay={2} />
+                <RiskStory delay={3} />
             </DataStoryGrid>
 
-            {/* Row 2: Problems + Profile (full width — the star card) */}
-            <ProblemStory delay={2} />
-
-            {/* Row 3: Risk (full width) */}
-            <RiskStory delay={3} />
-
-            {/* Row 4: Income Distribution */}
-            <GenericIncomeChart apiPath="/api/v2/dashboards/head-department" title="รายได้ครอบครัวนิสิตในภาควิชา" delay={4} />
-            <GenericParentalStatusChart apiPath="/api/v2/dashboards/head-department" title="สถานะบิดามารดานิสิตในภาควิชา" delay={5} />
+            {/* Row 3: Generic charts also in 2-column grid */}
+            <DataStoryGrid cols={2}>
+                <GenericIncomeChart apiPath="/api/v2/dashboards/head-department" title="รายได้ครอบครัวนิสิตในภาควิชา" delay={4} />
+                <GenericParentalStatusChart apiPath="/api/v2/dashboards/head-department" title="สถานะบิดามารดานิสิตในภาควิชา" delay={5} />
+            </DataStoryGrid>
 
             {/* Row 5: Recommendations */}
             <RecommendationCard delay={6} />

@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect } from "react";
 import { AlertTriangle, Calendar, CheckCircle2, UserX } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
 
 const API = "/api/v2/dashboards/head-department";
 
@@ -157,43 +158,41 @@ export default function HeadDeptStatsCards() {
             </div>
 
             {/* ── KPI grid ── */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {cards.map((card, idx) => (
-                    <div
-                        key={idx}
-                        className={`relative overflow-hidden group rounded-[2rem] border ${card.border} ${card.bg} p-5 transition-all duration-300 hover:shadow-lg animate-[fadeUp_0.5s_ease-out_both]`}
-                        style={{ animationDelay: `${idx * 70}ms` }}
-                    >
-                        {/* Pulse ring for urgent cards */}
-                        {card.pulse && (
-                            <div className="absolute top-3 right-3 flex items-center justify-center">
-                                <span className="absolute inline-flex h-3 w-3 rounded-full bg-rose-400 opacity-75 animate-ping" />
-                                <span className="relative inline-flex h-2 w-2 rounded-full bg-rose-500" />
-                            </div>
-                        )}
-
-                        {/* bg icon watermark */}
-                        <div className="absolute -right-3 -bottom-3 opacity-10 group-hover:scale-110 transition-transform duration-500">
-                            {React.cloneElement(card.icon as React.ReactElement<{ className: string }>, { className: "w-20 h-20" })}
-                        </div>
-
-                        <div className="relative z-10">
-                            <div className="flex items-center gap-2 mb-3">
-                                <div className="p-1.5 bg-white rounded-xl shadow-sm">{card.icon}</div>
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider leading-tight">{card.label}</span>
-                            </div>
-                            <div className="flex items-baseline gap-1">
-                                <span className={`text-3xl font-black ${card.text} tracking-tight tabular-nums`}>{card.value}</span>
-                                {card.unit && <span className="text-sm font-bold text-slate-400">{card.unit}</span>}
-                            </div>
-                            {card.sub && (
-                                <p className={`text-[10px] mt-1 font-medium ${card.pulse ? "text-rose-500 font-bold" : "text-slate-400"}`}>
-                                    {card.sub}
-                                </p>
+            <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+                {cards.map((card, idx) => {
+                    const Icon = (card.icon as any).type;
+                    return (
+                        <Card key={idx} className="relative overflow-hidden group hover:shadow-md transition-shadow">
+                            <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4">
+                                <CardTitle className="text-xs font-medium text-slate-500 leading-snug">
+                                    {card.label}
+                                </CardTitle>
+                                <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${card.bg}`}>
+                                    <Icon className={`h-4 w-4 ${card.text}`} />
+                                </div>
+                            </CardHeader>
+                            <CardContent className="px-4 pb-4">
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-2xl font-bold tabular-nums text-slate-900">
+                                        {card.value}
+                                    </span>
+                                    {card.unit && <span className="text-xs font-bold text-slate-400">{card.unit}</span>}
+                                </div>
+                                {card.sub && (
+                                    <p className={`text-[11px] mt-0.5 ${card.pulse ? "text-rose-500 font-bold" : "text-slate-400"}`}>
+                                        {card.sub}
+                                    </p>
+                                )}
+                            </CardContent>
+                            {card.pulse && (
+                                <div className="absolute top-2 right-2 flex items-center justify-center">
+                                    <span className="absolute inline-flex h-2 w-2 rounded-full bg-rose-400 opacity-75 animate-ping" />
+                                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-rose-500" />
+                                </div>
                             )}
-                        </div>
-                    </div>
-                ))}
+                        </Card>
+                    );
+                })}
             </div>
         </div>
     );

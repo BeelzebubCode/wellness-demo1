@@ -36,14 +36,15 @@ export default function StudentOverviewStory({ delay = 0 }: { delay?: number }) 
             icon={<Users className="w-5 h-5" />}
             iconGradient="bg-gradient-to-br from-indigo-500 to-blue-600"
             title="ภาพรวมนิสิตในภาค"
+            description="แสดงสัดส่วนนิสิตที่เคยเข้ารับคำปรึกษาเปรียบเทียบกับนิสิตทั้งหมดในภาควิชา — ใช้เพื่อประเมินความครอบคลุมของการเข้าถึงความช่วยเหลือ และระบุนิสิตกลุ่มเป้าหมายที่ยังไม่เคยได้รับการดูแลเพื่อวางแผนจัดกิจกรรมเชิญชวนในอนาคต"
             narration={
                 data ? `นิสิตทั้งหมด ${total} คน — เคยมาปรึกษา ${consulted} คน (${pctConsulted}%) / ไม่เคย ${never} คน (${pctNever}%)`
                     : "กำลังโหลด..."
             }
             kpis={data ? [
-                { label: "นิสิตรวม", value: total, color: "#4f46e5" },
-                { label: "เคยมา", value: unit === "count" ? consulted : `${pctConsulted}%`, color: "#10b981" },
-                { label: "ไม่เคยมา", value: unit === "count" ? never : `${pctNever}%`, color: "#f43f5e" },
+                { label: "นิสิตรวม", value: total || 0, color: "#4f46e5" },
+                { label: "เคยมา", value: unit === "count" ? (consulted || 0) : `${pctConsulted}%`, color: "#10b981" },
+                { label: "ไม่เคยมา", value: unit === "count" ? (never || 0) : `${pctNever}%`, color: "#f43f5e" },
             ] : undefined}
             filters={
                 <StoryFilterStack>
@@ -74,38 +75,30 @@ export default function StudentOverviewStory({ delay = 0 }: { delay?: number }) 
         >
             {data && (
                 <div className="flex items-center gap-6">
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                         <ResponsiveContainer width="100%" height={200}>
                             <PieChart>
                                 <Pie data={pieData} dataKey="value" nameKey="name"
-                                    cx="50%" cy="50%" outerRadius={75} innerRadius={45}
+                                    cx="50%" cy="50%" outerRadius={80} innerRadius={50}
                                     paddingAngle={4} strokeWidth={0}>
                                     <Cell fill="#10b981" />
                                     <Cell fill="#f1f5f9" />
                                 </Pie>
                                 <Tooltip content={<Tip />} />
-                                <Legend verticalAlign="bottom" iconType="circle"
-                                    formatter={(v: string) => <span className="text-[10px] text-slate-500 font-medium">{v}</span>} />
                             </PieChart>
                         </ResponsiveContainer>
                     </div>
-                    {data.bloodDist?.length > 0 && (
-                        <div className="w-40 shrink-0">
-                            <p className="text-[10px] text-slate-400 font-bold mb-2 uppercase tracking-wider">กรุ๊ปเลือด</p>
-                            {data.bloodDist.map((b: any, i: number) => {
-                                const pct = total > 0 ? Math.round(b.count / total * 100) : 0;
-                                return (
-                                    <div key={i} className="flex items-center gap-2 mb-1.5">
-                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
-                                        <span className="text-[11px] text-slate-600 flex-1">{b.label}</span>
-                                        <span className="text-[11px] font-bold text-slate-700 tabular-nums">
-                                            {unit === "count" ? b.count : `${pct}%`}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
+
+                    <div className="w-48 shrink-0 space-y-1.5">
+                        {pieData.map((d, i) => (
+                            <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
+                                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: i === 0 ? "#10b981" : "#e2e8f0" }} />
+                                <span className="text-[11px] flex-1 font-medium text-slate-600 truncate">{d.name}</span>
+                                <span className="text-[12px] font-bold text-slate-700 tabular-nums">{d.value.toLocaleString()}</span>
+                                <span className="text-[10px] text-slate-400 tabular-nums">({i === 0 ? pctConsulted : pctNever}%)</span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
         </DataStoryCard>

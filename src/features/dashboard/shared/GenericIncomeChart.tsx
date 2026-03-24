@@ -185,7 +185,6 @@ export default function GenericIncomeChart({ apiPath, title = "โครงส�
                             onChange={setDeptIds}
                         />
                     )}
-                    <ExamPeriodFilter selected={examPeriod} onChange={setExamPeriod} />
                     {problemCategories.length > 0 && (
                         <StoryChipGroup
                             label="ประเภทปัญหา"
@@ -233,15 +232,15 @@ export default function GenericIncomeChart({ apiPath, title = "โครงส�
                                     <CartesianGrid strokeDasharray="3 3" stroke={theme === "dark" ? "#334155" : "#f1f5f9"} horizontal={false} />
                                     <XAxis
                                         type="number"
-                                        tick={{ fontSize: 10, fill: theme === "dark" ? "#64748b" : "#94a3b8" }}
+                                        tick={{ fontSize: 11, fill: theme === "dark" ? "#64748b" : "#94a3b8" }}
                                         tickFormatter={(v: number) => unit === "percent" ? `${v}%` : v.toLocaleString()}
                                         axisLine={false} tickLine={false}
                                     />
                                     <YAxis
                                         type="category"
                                         dataKey="name"
-                                        width={80}
-                                        tick={{ fontSize: 11, fill: theme === "dark" ? "#cbd5e1" : "#475569", fontWeight: 600 }}
+                                        width={110}
+                                        tick={{ fontSize: 12, fill: theme === "dark" ? "#cbd5e1" : "#475569", fontWeight: 600 }}
                                         axisLine={false} tickLine={false}
                                     />
                                     <Tooltip
