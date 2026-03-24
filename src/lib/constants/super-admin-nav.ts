@@ -1,14 +1,8 @@
 // src/lib/constants/super-admin-nav.ts
-import { BookOpen, Building2, Handshake, LayoutDashboard, FileText, MessageSquareWarning, Settings2, ClipboardList } from "lucide-react";
+import { BookOpen, Building2, Handshake, FileText, MessageSquareWarning, Settings2, ClipboardList } from "lucide-react";
 import type { NavItem } from "@/components/layout/sidebar/types";
 
 export const SUPER_ADMIN_NAV: NavItem[] = [
-  {
-    href: "/super-admin",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-    exact: true,
-  },
   {
     href: "/super-admin/borrow-requests",
     label: "คำขอยืมที่ปรึกษา",

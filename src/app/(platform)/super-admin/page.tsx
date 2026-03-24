@@ -1,5 +1,5 @@
-import { SuperAdminDashboard } from "@/features/dashboard/super-admin/components/SuperAdminDashboard";
+import { redirect } from "next/navigation";
 
-export default function SuperAdminDashboardPage() {
-  return <SuperAdminDashboard />;
+export default function SuperAdminPage() {
+  redirect("/super-admin/borrow-requests");
 }

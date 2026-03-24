@@ -21,7 +21,7 @@ export const CONSULTANT_NAV: NavItem[] = [
   },
   {
     href: '/consultant/shifts',
-    label: 'ตารางเวร',
+    label: 'ตารางเวรการยืมตัว',
     icon: Calendar,
   },
   {
