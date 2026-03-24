@@ -37,6 +37,7 @@ export default function GenericProblemStory({ apiPath, title, delay = 0, descrip
     const [unit, setUnit] = useState<UnitMode>("count");
     const [deptIds, setDeptIds] = useState<string[]>([]);
     const [gender, setGender] = useState<string[]>([]);
+    const [yearLevel, setYearLevel] = useState<string[]>([]);
     const [income, setIncome] = useState<string[]>([]);
     const [parentalStatus, setParentalStatus] = useState<string[]>([]);
     const [examPeriod, setExamPeriod] = useState<string[]>([]);
@@ -55,6 +56,7 @@ export default function GenericProblemStory({ apiPath, title, delay = 0, descrip
     const { data, loading, meta } = useStoryData<ProblemData>(apiPath, "problems", {
         department_ids: deptIds,
         gender: gender,
+        year_level: yearLevel,
         family_income_bracket: income,
         parental_status: parentalStatus,
         exam_period: examPeriod,
@@ -110,6 +112,12 @@ export default function GenericProblemStory({ apiPath, title, delay = 0, descrip
                         { value: "FEMALE", label: "หญิง" },
                         { value: "LGBTQ_PLUS", label: "LGBTQ+" },
                     ]} selected={gender} onChange={setGender} />
+                    <StoryChipGroup label="ชั้นปี" options={[
+                        { value: "1", label: "ปี 1" },
+                        { value: "2", label: "ปี 2" },
+                        { value: "3", label: "ปี 3" },
+                        { value: "4", label: "ปี 4" },
+                    ]} selected={yearLevel} onChange={setYearLevel} />
                     <ExamPeriodFilter selected={examPeriod} onChange={setExamPeriod} />
                     <StoryChipGroup label="รายได้ครอบครัว" options={[
                         { value: "UNDER_100K", label: "< 100K" },

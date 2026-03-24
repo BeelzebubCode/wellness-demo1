@@ -7,6 +7,8 @@ import {
 } from "recharts";
 import { useRouter } from "next/navigation";
 import { GraduationCap, Loader2, Download, Filter, ChevronDown, TrendingUp, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { StoryChipGroup } from "../../../widgets/story/StoryFilterChips";
+import { ExamPeriodFilter } from "../../../widgets/story/ExamPeriodFilter";
 
 const COLORS = [
     "#7c3aed", "#6366f1", "#3b82f6", "#06b6d4", "#14b8a6",
@@ -21,6 +23,7 @@ const PRESETS: { value: Preset; label: string }[] = [
     { value: "90d", label: "90 วัน" },
     { value: "all", label: "ทั้งหมด" },
 ];
+
 function presetToParams(preset: Preset): Record<string, string> {
     if (preset === "all") return { all_time: "true" };
     const days  = preset === "7d" ? 7 : preset === "30d" ? 30 : 90;
@@ -31,6 +34,11 @@ function presetToParams(preset: Preset): Record<string, string> {
         date_end:   end.toISOString().split("T")[0],
     };
 }
+
+const YEAR_LABELS: Record<string, string> = {
+    "1": "ปี 1", "2": "ปี 2", "3": "ปี 3", "4": "ปี 4",
+    "5": "ปี 5", "6": "ปี 6",
+};
 
 interface FacBooking { id: number; nameTh: string; code: string; count: number; }
 const API = "/api/v2/dashboards/rector/story";
@@ -44,7 +52,6 @@ function buildFacultyInsights(sorted: FacBooking[], total: number) {
     const bottom = sorted[sorted.length - 1];
     const topPct = total > 0 ? Math.round((top.count / total) * 100) : 0;
 
-    // Top faculty concentration
     if (topPct > 40) {
         insights.push({
             icon:  <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />,
@@ -59,7 +66,6 @@ function buildFacultyInsights(sorted: FacBooking[], total: number) {
         });
     }
 
-    // Top 3 coverage
     if (sorted.length >= 3) {
         const top3Total = sorted.slice(0, 3).reduce((s, d) => s + d.count, 0);
         const top3Pct   = total > 0 ? Math.round((top3Total / total) * 100) : 0;
@@ -72,7 +78,6 @@ function buildFacultyInsights(sorted: FacBooking[], total: number) {
         }
     }
 
-    // Low usage faculty
     if (sorted.length >= 4 && bottom.count < 5) {
         insights.push({
             icon:  <CheckCircle2 className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />,
@@ -84,6 +89,16 @@ function buildFacultyInsights(sorted: FacBooking[], total: number) {
     return insights;
 }
 
+// ── ChipRow helper for compact filter row ────────────────────────────────────
+function FilterSection({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+        <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-100 first:border-t-0 first:pt-0">
+            <span className="text-sm font-bold text-slate-500">{label}</span>
+            {children}
+        </div>
+    );
+}
+
 export default function FacultyConsultationChart() {
     const router = useRouter();
     const [data,       setData]       = useState<FacBooking[]>([]);
@@ -91,12 +106,27 @@ export default function FacultyConsultationChart() {
     const [showFilter, setShowFilter] = useState(false);
     const [preset,     setPreset]     = useState<Preset>("all");
 
+    // Filters
+    const [gender,        setGender]        = useState<string[]>([]);
+    const [yearLevel,     setYearLevel]     = useState<string[]>([]);
+    const [income,        setIncome]        = useState<string[]>([]);
+    const [parental,      setParental]      = useState<string[]>([]);
+    const [examPeriod,    setExamPeriod]    = useState<string[]>([]);
+
+    const activeCount = gender.length + yearLevel.length + income.length + parental.length + examPeriod.length;
+
     useEffect(() => {
         let cancelled = false;
         (async () => {
             setLoading(true);
             try {
-                const params = new URLSearchParams({ story: "departments", ...presetToParams(preset) });
+                const baseParams = presetToParams(preset);
+                const params = new URLSearchParams({ story: "departments", ...baseParams });
+                if (gender.length)     gender.forEach(v => params.append("gender", v));
+                if (yearLevel.length)  yearLevel.forEach(v => params.append("year_level", v));
+                if (income.length)     income.forEach(v => params.append("family_income_bracket", v));
+                if (parental.length)   parental.forEach(v => params.append("parental_status", v));
+                if (examPeriod.length) examPeriod.forEach(v => params.append("exam_period", v));
                 const res  = await fetch(`${API}?${params.toString()}`, { credentials: "include" });
                 const json = await res.json();
                 if (!cancelled) setData(json.data?.facultyBookings ?? []);
@@ -105,7 +135,7 @@ export default function FacultyConsultationChart() {
             }
         })();
         return () => { cancelled = true; };
-    }, [preset]);
+    }, [preset, gender, yearLevel, income, parental, examPeriod]);
 
     const sorted     = useMemo(() => [...data].sort((a, b) => b.count - a.count), [data]);
     const totalCount = sorted.reduce((s, d) => s + d.count, 0);
@@ -161,6 +191,11 @@ export default function FacultyConsultationChart() {
                     >
                         <Filter size={13} />
                         ตัวกรอง
+                        {activeCount > 0 && (
+                            <span className={`inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-black ${showFilter ? "bg-white/30 text-white" : "bg-purple-100 text-purple-700"}`}>
+                                {activeCount}
+                            </span>
+                        )}
                         <ChevronDown size={12} className={`transition-transform ${showFilter ? "rotate-180" : ""}`} />
                     </button>
 
@@ -176,23 +211,71 @@ export default function FacultyConsultationChart() {
                 </div>
             </div>
 
-            {/* Filter panel — preset buttons only, no calendar popup */}
+            {/* Filter panel */}
             {showFilter && (
-                <div className="mb-4 flex flex-wrap items-center gap-2 p-3 bg-slate-50 border border-slate-100 rounded-xl">
-                    <span className="text-xs font-bold text-slate-500 mr-1">ช่วงเวลา:</span>
-                    {PRESETS.map(p => (
-                        <button
-                            key={p.value}
-                            onClick={() => setPreset(p.value)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                                preset === p.value
-                                    ? "bg-purple-600 text-white border-purple-600 shadow-sm"
-                                    : "bg-white text-slate-500 border-slate-200 hover:border-purple-300 hover:text-purple-600"
-                            }`}
-                        >
-                            {p.label}
-                        </button>
-                    ))}
+                <div className="mb-4 p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-3">
+                    {/* Time presets */}
+                    <FilterSection label="ช่วงเวลา">
+                        <div className="flex flex-wrap gap-2">
+                            {PRESETS.map(p => (
+                                <button
+                                    key={p.value}
+                                    onClick={() => setPreset(p.value)}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                                        preset === p.value
+                                            ? "bg-purple-600 text-white border-purple-600 shadow-sm"
+                                            : "bg-white text-slate-500 border-slate-200 hover:border-purple-300 hover:text-purple-600"
+                                    }`}
+                                >
+                                    {p.label}
+                                </button>
+                            ))}
+                        </div>
+                    </FilterSection>
+
+                    {/* Exam Period */}
+                    <FilterSection label="ช่วงสอบ">
+                        <ExamPeriodFilter selected={examPeriod} onChange={setExamPeriod} />
+                    </FilterSection>
+
+                    {/* Gender */}
+                    <FilterSection label="เพศ">
+                        <StoryChipGroup label="" options={[
+                            { value: "MALE", label: "ชาย" },
+                            { value: "FEMALE", label: "หญิง" },
+                            { value: "LGBTQ_PLUS", label: "LGBTQ+" },
+                        ]} selected={gender} onChange={setGender} />
+                    </FilterSection>
+
+                    {/* Year Level */}
+                    <FilterSection label="ชั้นปี">
+                        <StoryChipGroup label="" options={
+                            ["1","2","3","4","5","6"].map(y => ({ value: y, label: YEAR_LABELS[y] ?? `ปี ${y}` }))
+                        } selected={yearLevel} onChange={setYearLevel} />
+                    </FilterSection>
+
+                    {/* Family Income */}
+                    <FilterSection label="รายได้ครอบครัว">
+                        <StoryChipGroup label="" options={[
+                            { value: "UNDER_100K", label: "< 100K" },
+                            { value: "BETWEEN_100K_200K", label: "100-200K" },
+                            { value: "BETWEEN_200K_300K", label: "200-300K" },
+                            { value: "BETWEEN_300K_500K", label: "300-500K" },
+                            { value: "BETWEEN_500K_800K", label: "500-800K" },
+                            { value: "OVER_1M", label: "> 1M" },
+                        ]} selected={income} onChange={setIncome} />
+                    </FilterSection>
+
+                    {/* Parental Status */}
+                    <FilterSection label="สถานะครอบครัว">
+                        <StoryChipGroup label="" options={[
+                            { value: "TOGETHER", label: "พ่อแม่อยู่ด้วยกัน" },
+                            { value: "DIVORCED", label: "หย่าร้าง" },
+                            { value: "FATHER_DECEASED", label: "บิดาเสีย" },
+                            { value: "MOTHER_DECEASED", label: "มารดาเสีย" },
+                            { value: "SINGLE_PARENT", label: "เลี้ยงเดี่ยว" },
+                        ]} selected={parental} onChange={setParental} />
+                    </FilterSection>
                 </div>
             )}
 

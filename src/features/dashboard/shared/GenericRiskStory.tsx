@@ -16,6 +16,10 @@ export default function GenericRiskStory({ apiPath, title, delay = 0, descriptio
     const [date, setDate] = useState<DatePreset>("all");
     const [customRange, setCustomRange] = useState<DateRange | undefined>();
     const [deptIds, setDeptIds] = useState<string[]>([]);
+    const [gender, setGender] = useState<string[]>([]);
+    const [yearLevel, setYearLevel] = useState<string[]>([]);
+    const [income, setIncome] = useState<string[]>([]);
+    const [parental, setParental] = useState<string[]>([]);
     const [examPeriod, setExamPeriod] = useState<string[]>([]);
 
     interface RiskDistItem { label: string; count: number }
@@ -26,6 +30,10 @@ export default function GenericRiskStory({ apiPath, title, delay = 0, descriptio
         highRiskCount: number;
     }>(apiPath, "risk", {
         department_ids: deptIds,
+        gender,
+        year_level: yearLevel,
+        family_income_bracket: income,
+        parental_status: parental,
         exam_period: examPeriod,
     }, date, customRange);
 
@@ -68,6 +76,32 @@ export default function GenericRiskStory({ apiPath, title, delay = 0, descriptio
                         />
                     )}
                     <ExamPeriodFilter selected={examPeriod} onChange={setExamPeriod} />
+                    <StoryChipGroup label="เพศ" options={[
+                        { value: "MALE", label: "ชาย" },
+                        { value: "FEMALE", label: "หญิง" },
+                        { value: "LGBTQ_PLUS", label: "LGBTQ+" },
+                    ]} selected={gender} onChange={setGender} />
+                    <StoryChipGroup label="ชั้นปี" options={[
+                        { value: "1", label: "ปี 1" },
+                        { value: "2", label: "ปี 2" },
+                        { value: "3", label: "ปี 3" },
+                        { value: "4", label: "ปี 4" },
+                    ]} selected={yearLevel} onChange={setYearLevel} />
+                    <StoryChipGroup label="รายได้ครอบครัว" options={[
+                        { value: "UNDER_100K", label: "< 100K" },
+                        { value: "BETWEEN_100K_200K", label: "100-200K" },
+                        { value: "BETWEEN_200K_300K", label: "200-300K" },
+                        { value: "BETWEEN_300K_500K", label: "300-500K" },
+                        { value: "BETWEEN_500K_800K", label: "500-800K" },
+                        { value: "OVER_1M", label: "> 1M" },
+                    ]} selected={income} onChange={setIncome} />
+                    <StoryChipGroup label="สถานะครอบครัว" options={[
+                        { value: "TOGETHER", label: "พ่อแม่อยู่ด้วยกัน" },
+                        { value: "DIVORCED", label: "หย่าร้าง" },
+                        { value: "FATHER_DECEASED", label: "บิดาเสีย" },
+                        { value: "MOTHER_DECEASED", label: "มารดาเสีย" },
+                        { value: "SINGLE_PARENT", label: "เลี้ยงเดี่ยว" },
+                    ]} selected={parental} onChange={setParental} />
                 </StoryFilterStack>
             }
             datePreset={date}

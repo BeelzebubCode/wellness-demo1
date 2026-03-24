@@ -24,6 +24,7 @@ export interface RectorFilters {
     birthOrder?: string[];
     chronicConditionIds?: number[];
     parentalStatus?: string[];
+    examPeriod?: string[];
 }
 
 /** Convert a Date to YYYY-MM string for MV month column comparisons */
@@ -56,6 +57,22 @@ function buildScopeWhere(universityId: number, filters: RectorFilters) {
         if (filters.dateStart) bookClauses.push(`month >= '${toYYYYMM(filters.dateStart)}'`);
         if (filters.dateEnd)   bookClauses.push(`month <= '${toYYYYMM(filters.dateEnd)}'`);
     }
+
+    if (filters.examPeriod?.length) {
+        const targetMonths = new Set<string>();
+        if (filters.examPeriod.includes("MIDTERM_1")) targetMonths.add("09");
+        if (filters.examPeriod.includes("FINAL_1")) { targetMonths.add("11"); targetMonths.add("12"); }
+        if (filters.examPeriod.includes("MIDTERM_2")) targetMonths.add("02");
+        if (filters.examPeriod.includes("FINAL_2")) { targetMonths.add("04"); targetMonths.add("05"); }
+        if (filters.examPeriod.includes("FINAL_SUMMER")) targetMonths.add("07");
+
+        if (targetMonths.size > 0) {
+            const mArr = Array.from(targetMonths);
+            const bookLikes = mArr.map(m => `month LIKE '%-${m}'`);
+            bookClauses.push(`(${bookLikes.join(" OR ")})`);
+        }
+    }
+
     const bw = `WHERE ${bookClauses.join(" AND ")}`;
 
     // ── mv_student_risk_score: structural + latest_recorded_at ONLY ───────────
@@ -66,6 +83,22 @@ function buildScopeWhere(universityId: number, filters: RectorFilters) {
         if (filters.dateStart) riskClauses.push(`latest_recorded_at >= '${toDateStr(filters.dateStart)}'`);
         if (filters.dateEnd)   riskClauses.push(`latest_recorded_at <= '${toDateStr(filters.dateEnd)} 23:59:59'`);
     }
+
+    if (filters.examPeriod?.length) {
+        const targetMonths = new Set<string>();
+        if (filters.examPeriod.includes("MIDTERM_1")) targetMonths.add("09");
+        if (filters.examPeriod.includes("FINAL_1")) { targetMonths.add("11"); targetMonths.add("12"); }
+        if (filters.examPeriod.includes("MIDTERM_2")) targetMonths.add("02");
+        if (filters.examPeriod.includes("FINAL_2")) { targetMonths.add("04"); targetMonths.add("05"); }
+        if (filters.examPeriod.includes("FINAL_SUMMER")) targetMonths.add("07");
+
+        if (targetMonths.size > 0) {
+            const mArr = Array.from(targetMonths);
+            const riskExt = mArr.map(m => `EXTRACT(MONTH FROM latest_recorded_at) = ${Number(m)}`);
+            riskClauses.push(`(${riskExt.join(" OR ")})`);
+        }
+    }
+
     const rw = `WHERE ${riskClauses.join(" AND ")}`;
 
     return { studentWhere: w, bookingWhere: bw, riskWhere: rw };

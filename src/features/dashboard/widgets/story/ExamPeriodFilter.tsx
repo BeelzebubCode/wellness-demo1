@@ -12,11 +12,11 @@ export interface ExamPeriodOption {
 }
 
 const EXAM_PERIODS: ExamPeriodOption[] = [
-    { value: "MIDTERM_1", label: "สอบกลางภาค เทอม 1", date: "(22 ก.ย.-26 ก.ย.)", type: "midterm" },
-    { value: "FINAL_1", label: "สอบปลายภาค เทอม 1", date: "(24 พ.ย.-8 ธ.ค.)", type: "final" },
-    { value: "MIDTERM_2", label: "สอบกลางภาค เทอม 2", date: "(23 ก.พ.-27 ก.พ.)", type: "midterm" },
-    { value: "FINAL_2", label: "สอบปลายภาค เทอม 2", date: "(27 เม.ย.-12 พ.ค.)", type: "final" },
-    { value: "FINAL_SUMMER", label: "สอบปลายภาค ภาคฤดูร้อน", date: "(13 ก.ค.-17 ก.ค.)", type: "final" },
+    { value: "MIDTERM_1", label: "กลางภาค 1", date: "22-26 ก.ย.", type: "midterm" },
+    { value: "FINAL_1", label: "ปลายภาค 1", date: "24 พ.ย.-8 ธ.ค.", type: "final" },
+    { value: "MIDTERM_2", label: "กลางภาค 2", date: "23-27 ก.พ.", type: "midterm" },
+    { value: "FINAL_2", label: "ปลายภาค 2", date: "27 เม.ย.-12 พ.ค.", type: "final" },
+    { value: "FINAL_SUMMER", label: "ปลายภาค ฤดูร้อน", date: "13-17 ก.ค.", type: "final" },
 ];
 
 interface ExamPeriodFilterProps {
@@ -38,7 +38,7 @@ export function ExamPeriodFilter({ selected, onChange, onCompareClick }: ExamPer
         <div className="flex flex-col gap-3 mt-2 mb-2 w-full min-w-0">
             <div className="flex items-center gap-2">
                 <Target className="w-4 h-4 text-rose-400" />
-                <span className="text-xs font-bold text-slate-500">ช่วงสอบ</span>
+                <span className="text-sm font-bold text-slate-500">ช่วงสอบ</span>
             </div>
 
             {/* Container for the horizontal chips with wrapping */}
@@ -59,15 +59,15 @@ export function ExamPeriodFilter({ selected, onChange, onCompareClick }: ExamPer
                     return (
                         <button
                             key={opt.value}
+                            title={opt.date}
                             onClick={() => toggle(opt.value)}
                             className={`
-                                flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold
+                                flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold
                                 border transition-all duration-200 whitespace-nowrap shrink-0
                                 ${active ? activeStyle : baseStyle + " opacity-80"}
                             `}
                         >
                             <span>{opt.label}</span>
-                            <span className="text-[10px] opacity-70 font-medium">{opt.date}</span>
                         </button>
                     );
                 })}

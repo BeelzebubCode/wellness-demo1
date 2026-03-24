@@ -52,6 +52,7 @@ export async function GET(req: NextRequest) {
             birthOrder: parseCSV("birth_order"),
             chronicConditionIds: parseCSVNumbers("chronic_condition_ids"),
             parentalStatus: parseCSV("parental_status"),
+            examPeriod: parseCSV("exam_period"),
         };
 
         const data = await RectorStoryService.getUniversityStoryStats(

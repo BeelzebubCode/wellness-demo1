@@ -30,9 +30,11 @@ export function StoryChipGroup({ label, options, selected, onChange }: ChipGroup
 
     return (
         <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 min-w-[50px]">
-                {label}
-            </span>
+            {label && (
+                <span className="text-sm font-bold text-slate-500 shrink-0 min-w-[50px]">
+                    {label}
+                </span>
+            )}
             <div className="flex flex-wrap gap-1.5">
                 {options.map(opt => {
                     const active = selected.includes(opt.value);
