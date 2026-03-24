@@ -80,6 +80,7 @@ export async function GET(req: NextRequest) {
             chronicConditionIds: parseCSVNumbers("chronic_condition_ids"),
             parentalStatus: parseCSV("parental_status"),
             advisorId: parseCSVNumbers("advisorId"),
+            examPeriod: parseCSV("exam_period"),
         };
 
         const data = await DeanStoryService.getFacultyStoryStats(

@@ -55,6 +55,13 @@ const GenericIncomeChart = dynamic(
         ssr: false,
     }
 );
+const GenericParentalStatusChart = dynamic(
+    () => import("../../shared/GenericParentalStatusChart"),
+    {
+        loading: () => <div className="h-64 bg-slate-50 animate-pulse rounded-2xl" />,
+        ssr: false,
+    }
+);
 
 const API = "/api/v2/dashboards/rector/story";
 
@@ -167,6 +174,7 @@ export function RectorDashboard() {
 
             {/* ── Section 4: Income Distribution ────────────────────── */}
             <GenericIncomeChart apiPath={API} title="โครงสร้างรายได้ครอบครัวนิสิตทั้งมหาวิทยาลัย" delay={5} />
+            <GenericParentalStatusChart apiPath={API} title="สถานะบิดามารดานิสิตทั้งมหาวิทยาลัย" delay={6} />
 
             {/* ── Footer ────────────────────────────────────────────── */}
             <div className="pt-12 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-400">

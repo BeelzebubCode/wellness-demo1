@@ -16,9 +16,9 @@ import { AnimatePresence, motion } from "framer-motion";
 
 // Story components (self-contained, with own filters)
 import GenericBookingStory from "../../shared/GenericBookingStory";
-import GenericProblemStory from "../../shared/GenericProblemStory";
 import GenericRiskStory from "../../shared/GenericRiskStory";
 import GenericIncomeChart from "../../shared/GenericIncomeChart";
+import GenericParentalStatusChart from "../../shared/GenericParentalStatusChart";
 import { DataStoryGrid } from "../../widgets/story/DataStoryGrid";
 import { ChartCard } from "../../widgets/cards/ChartCard";
 import { prefetchAllStories } from "../../shared/story-utils";
@@ -464,6 +464,7 @@ export function UniversityDetailDashboard({ universityCode }: UniversityDetailPr
 
                         {/* Section 7: Income Chart (full width) */}
                         <GenericIncomeChart apiPath={storyApiPath} title="รายได้ครอบครัวนิสิต" delay={5} />
+                        <GenericParentalStatusChart apiPath={storyApiPath} title="สถานะบิดามารดานิสิต" delay={6} />
                     </div>
                 )}
 

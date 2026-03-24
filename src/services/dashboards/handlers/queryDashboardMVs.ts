@@ -162,14 +162,14 @@ export async function queryProblemStory(scope: MVScope) {
             GROUP BY problem_category_name_th ORDER BY cnt DESC
         `),
         prisma.$queryRawUnsafe<{ code: string; cnt: number }[]>(`
-            SELECT income_bracket_code AS code, SUM(profile_count)::int AS cnt
-            FROM mv_student_summary ${sw}
+            SELECT income_bracket_code AS code, SUM(total_bookings)::int AS cnt
+            FROM mv_booking_summary ${bw}
             GROUP BY income_bracket_code ORDER BY cnt DESC
         `),
         prisma.$queryRawUnsafe<{ code: string; cnt: number }[]>(`
-            SELECT parental_status_code AS code, SUM(profile_count)::int AS cnt
-            FROM mv_student_summary ${sw}
-            ${sw ? 'AND' : 'WHERE'} parental_status_code != 'UNKNOWN'
+            SELECT parental_status_code AS code, SUM(total_bookings)::int AS cnt
+            FROM mv_booking_summary ${bw}
+            ${bAndOrWhere} parental_status_code != 'UNKNOWN'
             GROUP BY parental_status_code ORDER BY cnt DESC
         `),
     ]);

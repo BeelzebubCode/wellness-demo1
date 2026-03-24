@@ -6,15 +6,17 @@ import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recha
 import { ShieldAlert } from "lucide-react";
 import { DataStoryCard } from "../widgets/story/DataStoryCard";
 import { StoryChipGroup, StoryFilterStack } from "../widgets/story/StoryFilterChips";
+import { ExamPeriodFilter } from "../widgets/story/ExamPeriodFilter";
 import { DatePresetBar } from "./StoryUI";
 import { useStoryData, Tip, RISK_META, type DatePreset, type DateRange } from "./story-utils";
 
-interface Props { apiPath: string; title: string; delay?: number; description?: string; }
+interface Props { apiPath: string; title: string; delay?: number; description?: string; theme?: "light" | "dark" }
 
-export default function GenericRiskStory({ apiPath, title, delay = 0, description }: Props) {
+export default function GenericRiskStory({ apiPath, title, delay = 0, description, theme = "light" }: Props) {
     const [date, setDate] = useState<DatePreset>("all");
     const [customRange, setCustomRange] = useState<DateRange | undefined>();
     const [deptIds, setDeptIds] = useState<string[]>([]);
+    const [examPeriod, setExamPeriod] = useState<string[]>([]);
 
     interface RiskDistItem { label: string; count: number }
     const DEFAULT_META = { label: "ไม่ระบุ", color: "#94a3b8", bg: "bg-slate-50" };
@@ -24,6 +26,7 @@ export default function GenericRiskStory({ apiPath, title, delay = 0, descriptio
         highRiskCount: number;
     }>(apiPath, "risk", {
         department_ids: deptIds,
+        exam_period: examPeriod,
     }, date, customRange);
 
     const distribution = data?.distribution ?? [];
@@ -39,9 +42,10 @@ export default function GenericRiskStory({ apiPath, title, delay = 0, descriptio
     return (
         <DataStoryCard
             icon={<ShieldAlert className="w-5 h-5" />}
-            iconGradient="bg-gradient-to-br from-rose-500 to-pink-600"
+            iconGradient={theme === "dark" ? undefined : "bg-gradient-to-br from-rose-500 to-pink-600"}
             title={title}
             description={description}
+            theme={theme}
             narration={
                 data
                     ? `ประเมินความเสี่ยงทั้งหมด ${total} ครั้ง — ระดับสูง/วิกฤต ${highRisk} ครั้ง (${highPct}%)`
@@ -63,6 +67,7 @@ export default function GenericRiskStory({ apiPath, title, delay = 0, descriptio
                             onChange={setDeptIds}
                         />
                     )}
+                    <ExamPeriodFilter selected={examPeriod} onChange={setExamPeriod} />
                 </StoryFilterStack>
             }
             datePreset={date}
@@ -85,7 +90,7 @@ export default function GenericRiskStory({ apiPath, title, delay = 0, descriptio
                                 </Pie>
                                 <Tooltip content={<Tip />} />
                                 <Legend verticalAlign="bottom" iconType="circle"
-                                    formatter={(v: string) => <span className="text-[10px] text-slate-500 font-medium">{v}</span>} />
+                                    formatter={(v: string) => <span className="text-xs text-slate-500 font-medium">{v}</span>} />
                             </PieChart>
                         </ResponsiveContainer>
                     </div>
@@ -94,15 +99,16 @@ export default function GenericRiskStory({ apiPath, title, delay = 0, descriptio
                             const rm = RISK_META[d.label] ?? DEFAULT_META;
                             const pct = total > 0 ? Math.round(d.count / total * 100) : 0;
                             return (
-                                <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg ${rm.bg}`}>
-                                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: rm.color }} />
-                                    <span className="text-[11px] text-slate-600 flex-1">{rm.label}</span>
-                                    <span className="text-[12px] font-bold text-slate-700 tabular-nums">
+                                <div key={i} className={`flex items-center gap-2 px-3 py-2.5 rounded-lg ${theme === "dark" ? "bg-slate-800/80" : rm.bg}`}>
+                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: rm.color }} />
+                                    <span className={`text-sm flex-1 font-medium ${theme === "dark" ? "text-slate-300" : "text-slate-600"}`}>{rm.label}</span>
+                                    <span className={`text-sm font-bold tabular-nums ${theme === "dark" ? "text-white" : "text-slate-700"}`}>
                                         {d.count}
                                     </span>
-                                    <span className="text-[10px] text-slate-400 tabular-nums">({pct}%)</span>
+                                    <span className="text-xs text-slate-400 tabular-nums">({pct}%)</span>
                                 </div>
                             );
+
                         })}
                     </div>
                 </div>

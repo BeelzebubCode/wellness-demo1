@@ -61,7 +61,7 @@ export function StoryChipGroup({ label, options, selected, onChange }: ChipGroup
 /** Multiple chip groups stacked vertically */
 export function StoryFilterStack({ children }: { children: React.ReactNode }) {
     return (
-        <div className="space-y-2">
+        <div className="space-y-2 w-full min-w-0">
             {children}
         </div>
     );

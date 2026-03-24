@@ -26,6 +26,12 @@ const GenericIncomeChart = dynamic(() => import("../../shared/GenericIncomeChart
     ssr: false,
 });
 
+const GenericParentalStatusChart = dynamic(() => import("../../shared/GenericParentalStatusChart"), {
+    loading: () => <div className="h-64 bg-slate-50 animate-pulse rounded-2xl" />,
+    ssr: false,
+});
+
+
 interface DeptMeta {
     nameTh: string;
     facultyNameTh: string;
@@ -173,9 +179,10 @@ export default function HeadDepartmentDashboard() {
 
             {/* Row 4: Income Distribution */}
             <GenericIncomeChart apiPath="/api/v2/dashboards/head-department" title="รายได้ครอบครัวนิสิตในภาควิชา" delay={4} />
+            <GenericParentalStatusChart apiPath="/api/v2/dashboards/head-department" title="สถานะบิดามารดานิสิตในภาควิชา" delay={5} />
 
             {/* Row 5: Recommendations */}
-            <RecommendationCard delay={5} />
+            <RecommendationCard delay={6} />
 
             {/* ── Footer ────────────────────────────────────────────── */}
             <div className="pt-12 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-400">

@@ -24,6 +24,7 @@ export interface DeanFilters {
     chronicConditionIds?: number[];
     parentalStatus?: string[];
     advisorId?: number[];
+    examPeriod?: string[];
 }
 
 function toYYYYMM(d: Date): string {
@@ -58,10 +59,31 @@ function buildScopeWhere(universityId: number, facultyId: number, filters: DeanF
     if (filters.bookingStatus?.length)    bookClauses.push(`booking_status IN (${filters.bookingStatus.map(v => `'${v}'`).join(",")})`);
     if (filters.serviceMode?.length)      bookClauses.push(`service_mode_code IN (${filters.serviceMode.map(v => `'${v}'`).join(",")})`);
     if (filters.attendanceStatus?.length) bookClauses.push(`attendance_status IN (${filters.attendanceStatus.map(v => `'${v}'`).join(",")})`);
+    if (filters.gender?.length)           bookClauses.push(`gender_code IN (${filters.gender.map(v => `'${v}'`).join(",")})`);
+    if (filters.familyIncomeBracket?.length) bookClauses.push(`income_bracket_code IN (${filters.familyIncomeBracket.map(v => `'${v}'`).join(",")})`);
+    if (filters.parentalStatus?.length)   bookClauses.push(`parental_status_code IN (${filters.parentalStatus.map(v => `'${v}'`).join(",")})`);
+    if (filters.bloodGroup?.length)       bookClauses.push(`blood_group_code IN (${filters.bloodGroup.map(v => `'${v}'`).join(",")})`);
+
     if (!filters.allTime) {
         if (filters.dateStart) bookClauses.push(`month >= '${toYYYYMM(filters.dateStart)}'`);
         if (filters.dateEnd)   bookClauses.push(`month <= '${toYYYYMM(filters.dateEnd)}'`);
     }
+
+    if (filters.examPeriod?.length) {
+        const targetMonths = new Set<string>();
+        if (filters.examPeriod.includes("MIDTERM_1")) targetMonths.add("09");
+        if (filters.examPeriod.includes("FINAL_1")) { targetMonths.add("11"); targetMonths.add("12"); }
+        if (filters.examPeriod.includes("MIDTERM_2")) targetMonths.add("02");
+        if (filters.examPeriod.includes("FINAL_2")) { targetMonths.add("04"); targetMonths.add("05"); }
+        if (filters.examPeriod.includes("FINAL_SUMMER")) targetMonths.add("07");
+
+        if (targetMonths.size > 0) {
+            const mArr = Array.from(targetMonths);
+            const bookLikes = mArr.map(m => `month LIKE '%-${m}'`);
+            bookClauses.push(`(${bookLikes.join(" OR ")})`);
+        }
+    }
+
     const bw = `WHERE ${bookClauses.join(" AND ")}`;
 
     // ── mv_student_risk_score: structural + latest_recorded_at ONLY ───────────
@@ -71,10 +93,31 @@ function buildScopeWhere(universityId: number, facultyId: number, filters: DeanF
     ];
     if (filters.departmentIds?.length) riskClauses.push(`department_id IN (${filters.departmentIds.join(",")})`);
     if (filters.advisorId?.length)     riskClauses.push(`advisor_id IN (${filters.advisorId.join(",")})`);
+    if (filters.gender?.length)        riskClauses.push(`gender_code IN (${filters.gender.map(v => `'${v}'`).join(",")})`);
+    if (filters.familyIncomeBracket?.length) riskClauses.push(`income_bracket_code IN (${filters.familyIncomeBracket.map(v => `'${v}'`).join(",")})`);
+    if (filters.parentalStatus?.length) riskClauses.push(`parental_status_code IN (${filters.parentalStatus.map(v => `'${v}'`).join(",")})`);
+    if (filters.bloodGroup?.length)    riskClauses.push(`blood_group_code IN (${filters.bloodGroup.map(v => `'${v}'`).join(",")})`);
+
     if (!filters.allTime) {
         if (filters.dateStart) riskClauses.push(`latest_recorded_at >= '${toDateStr(filters.dateStart)}'`);
         if (filters.dateEnd)   riskClauses.push(`latest_recorded_at <= '${toDateStr(filters.dateEnd)} 23:59:59'`);
     }
+
+    if (filters.examPeriod?.length) {
+        const targetMonths = new Set<string>();
+        if (filters.examPeriod.includes("MIDTERM_1")) targetMonths.add("09");
+        if (filters.examPeriod.includes("FINAL_1")) { targetMonths.add("11"); targetMonths.add("12"); }
+        if (filters.examPeriod.includes("MIDTERM_2")) targetMonths.add("02");
+        if (filters.examPeriod.includes("FINAL_2")) { targetMonths.add("04"); targetMonths.add("05"); }
+        if (filters.examPeriod.includes("FINAL_SUMMER")) targetMonths.add("07");
+
+        if (targetMonths.size > 0) {
+            const mArr = Array.from(targetMonths);
+            const riskExt = mArr.map(m => `EXTRACT(MONTH FROM latest_recorded_at) = ${Number(m)}`);
+            riskClauses.push(`(${riskExt.join(" OR ")})`);
+        }
+    }
+
     const rw = `WHERE ${riskClauses.join(" AND ")}`;
 
     return { studentWhere: w, bookingWhere: bw, riskWhere: rw };

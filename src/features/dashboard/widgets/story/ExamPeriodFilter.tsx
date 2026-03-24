@@ -1,0 +1,88 @@
+// src/features/dashboard/widgets/story/ExamPeriodFilter.tsx
+"use client";
+
+import React from "react";
+import { Target, BarChart2 } from "lucide-react";
+
+export interface ExamPeriodOption {
+    value: string;
+    label: string;
+    date: string;
+    type: "midterm" | "final";
+}
+
+const EXAM_PERIODS: ExamPeriodOption[] = [
+    { value: "MIDTERM_1", label: "สอบกลางภาค เทอม 1", date: "(22 ก.ย.-26 ก.ย.)", type: "midterm" },
+    { value: "FINAL_1", label: "สอบปลายภาค เทอม 1", date: "(24 พ.ย.-8 ธ.ค.)", type: "final" },
+    { value: "MIDTERM_2", label: "สอบกลางภาค เทอม 2", date: "(23 ก.พ.-27 ก.พ.)", type: "midterm" },
+    { value: "FINAL_2", label: "สอบปลายภาค เทอม 2", date: "(27 เม.ย.-12 พ.ค.)", type: "final" },
+    { value: "FINAL_SUMMER", label: "สอบปลายภาค ภาคฤดูร้อน", date: "(13 ก.ค.-17 ก.ค.)", type: "final" },
+];
+
+interface ExamPeriodFilterProps {
+    selected: string[];
+    onChange: (selected: string[]) => void;
+    onCompareClick?: () => void;
+}
+
+export function ExamPeriodFilter({ selected, onChange, onCompareClick }: ExamPeriodFilterProps) {
+    const toggle = (val: string) => {
+        onChange(
+            selected.includes(val)
+                ? selected.filter((v) => v !== val)
+                : [...selected, val]
+        );
+    };
+
+    return (
+        <div className="flex flex-col gap-3 mt-2 mb-2 w-full min-w-0">
+            <div className="flex items-center gap-2">
+                <Target className="w-4 h-4 text-rose-400" />
+                <span className="text-xs font-bold text-slate-500">ช่วงสอบ</span>
+            </div>
+
+            {/* Container for the horizontal chips with wrapping */}
+            <div className="flex items-center gap-2 flex-wrap pb-1 w-full">
+                {EXAM_PERIODS.map((opt) => {
+                    const active = selected.includes(opt.value);
+                    const isMidterm = opt.type === "midterm";
+
+                    // Base styles depending on type
+                    const baseStyle = isMidterm
+                        ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                        : "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100";
+                    
+                    const activeStyle = isMidterm
+                        ? "ring-2 ring-amber-500 ring-offset-1 border-amber-400 bg-amber-100"
+                        : "ring-2 ring-rose-500 ring-offset-1 border-rose-400 bg-rose-100";
+
+                    return (
+                        <button
+                            key={opt.value}
+                            onClick={() => toggle(opt.value)}
+                            className={`
+                                flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold
+                                border transition-all duration-200 whitespace-nowrap shrink-0
+                                ${active ? activeStyle : baseStyle + " opacity-80"}
+                            `}
+                        >
+                            <span>{opt.label}</span>
+                            <span className="text-[10px] opacity-70 font-medium">{opt.date}</span>
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* Compare Button */}
+            <div className="flex">
+                <button 
+                    onClick={onCompareClick}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-md hover:bg-indigo-100 transition-colors text-xs font-bold shadow-sm"
+                >
+                    <BarChart2 className="w-3.5 h-3.5" />
+                    <span>เปรียบเทียบช่วงสอบ</span>
+                </button>
+            </div>
+        </div>
+    );
+}

@@ -6,6 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { AlertTriangle } from "lucide-react";
 import { DataStoryCard } from "../widgets/story/DataStoryCard";
 import { StoryChipGroup, StoryFilterStack } from "../widgets/story/StoryFilterChips";
+import { ExamPeriodFilter } from "../widgets/story/ExamPeriodFilter";
 import { DatePresetBar, UnitToggle } from "./StoryUI";
 import { useStoryData, type DatePreset, type DateRange, type UnitMode } from "./story-utils";
 
@@ -28,13 +29,17 @@ const BAR_COLORS = [
 ];
 
 
-interface Props { apiPath: string; title: string; delay?: number; description?: string; }
+interface Props { apiPath: string; title: string; delay?: number; description?: string; theme?: "light" | "dark" }
 
-export default function GenericProblemStory({ apiPath, title, delay = 0, description }: Props) {
+export default function GenericProblemStory({ apiPath, title, delay = 0, description, theme = "light" }: Props) {
     const [date, setDate] = useState<DatePreset>("all");
     const [customRange, setCustomRange] = useState<DateRange | undefined>();
     const [unit, setUnit] = useState<UnitMode>("count");
     const [deptIds, setDeptIds] = useState<string[]>([]);
+    const [gender, setGender] = useState<string[]>([]);
+    const [income, setIncome] = useState<string[]>([]);
+    const [parentalStatus, setParentalStatus] = useState<string[]>([]);
+    const [examPeriod, setExamPeriod] = useState<string[]>([]);
     const [chronicConditions, setChronicConditions] = useState<{ id: number; nameTh: string }[]>([]);
 
     useEffect(() => {
@@ -49,6 +54,10 @@ export default function GenericProblemStory({ apiPath, title, delay = 0, descrip
 
     const { data, loading, meta } = useStoryData<ProblemData>(apiPath, "problems", {
         department_ids: deptIds,
+        gender: gender,
+        family_income_bracket: income,
+        parental_status: parentalStatus,
+        exam_period: examPeriod,
     }, date, customRange);
 
     const categories = data?.categories ?? [];
@@ -69,9 +78,10 @@ export default function GenericProblemStory({ apiPath, title, delay = 0, descrip
     return (
         <DataStoryCard
             icon={<AlertTriangle className="w-5 h-5" />}
-            iconGradient="bg-gradient-to-br from-amber-500 to-orange-600"
+            iconGradient={theme === "dark" ? undefined : "bg-gradient-to-br from-amber-500 to-orange-600"}
             title={title}
             description={description}
+            theme={theme}
             narration={
                 data
                     ? `พบปัญหา ${totalProblems.toLocaleString()} กรณี จาก ${categories.length} ประเภท — ปัญหาอันดับ 1: ${categories[0]?.label ?? "ไม่มีข้อมูล"}`
@@ -95,6 +105,29 @@ export default function GenericProblemStory({ apiPath, title, delay = 0, descrip
                             onChange={setDeptIds}
                         />
                     )}
+                    <StoryChipGroup label="เพศ" options={[
+                        { value: "MALE", label: "ชาย" },
+                        { value: "FEMALE", label: "หญิง" },
+                        { value: "LGBTQ_PLUS", label: "LGBTQ+" },
+                    ]} selected={gender} onChange={setGender} />
+                    <ExamPeriodFilter selected={examPeriod} onChange={setExamPeriod} />
+                    <StoryChipGroup label="รายได้ครอบครัว" options={[
+                        { value: "UNDER_100K", label: "< 100K" },
+                        { value: "BETWEEN_100K_200K", label: "100-200K" },
+                        { value: "BETWEEN_200K_300K", label: "200-300K" },
+                        { value: "BETWEEN_300K_500K", label: "300-500K" },
+                        { value: "BETWEEN_500K_800K", label: "500-800K" },
+                        { value: "BETWEEN_800K_1M", label: "800K-1M" },
+                        { value: "OVER_1M", label: "> 1M" },
+                    ]} selected={income} onChange={setIncome} />
+                    <StoryChipGroup label="สถานะครอบครัว" options={[
+                        { value: "TOGETHER", label: "พ่อแม่อยู่ด้วยกัน" },
+                        { value: "DIVORCED", label: "หย่าร้าง" },
+                        { value: "FATHER_DECEASED", label: "บิดาเสียชีวิต" },
+                        { value: "MOTHER_DECEASED", label: "มารดาเสียชีวิต" },
+                        { value: "BOTH_DECEASED", label: "เสียชีวิตทั้งคู่" },
+                        { value: "SINGLE_PARENT", label: "เลี้ยงเดี่ยว" },
+                    ]} selected={parentalStatus} onChange={setParentalStatus} />
                 </StoryFilterStack>
             }
             datePreset={date}
@@ -108,15 +141,15 @@ export default function GenericProblemStory({ apiPath, title, delay = 0, descrip
                     {/* Problem categories bar chart */}
                     {barData.length > 0 && (
                         <div>
-                            <p className="text-[10px] text-slate-400 font-bold mb-2 uppercase tracking-wider">ประเภทปัญหา</p>
+                            <p className="text-xs text-slate-400 font-bold mb-3 uppercase tracking-wider">ประเภทปัญหา</p>
                             <ResponsiveContainer width="100%" height={chartHeight}>
                                 <BarChart data={barData} layout="vertical" margin={{ left: 10, right: 30 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                                    <XAxis type="number" tick={{ fontSize: 10, fill: "#94a3b8" }}
-                                        tickFormatter={(v: number) => unit === "percent" ? `${v}%` : v.toLocaleString()} />
-                                    <YAxis type="category" dataKey="name" width={140}
-                                        tick={{ fontSize: 11, fill: "#334155", fontWeight: 500 }} />
-                                    <Tooltip content={<ProblemTip unit={unit} />} />
+                                    <CartesianGrid strokeDasharray="3 3" stroke={theme === "dark" ? "#334155" : "#f1f5f9"} horizontal={false} />
+                                    <XAxis type="number" tick={{ fontSize: 12, fill: theme === "dark" ? "#64748b" : "#94a3b8" }}
+                                        tickFormatter={(v: number) => unit === "percent" ? `${v}%` : v.toLocaleString()} axisLine={false} tickLine={false} />
+                                    <YAxis type="category" dataKey="name" width={155}
+                                        tick={{ fontSize: 12, fill: theme === "dark" ? "#cbd5e1" : "#334155", fontWeight: 500 }} axisLine={false} tickLine={false} />
+                                    <Tooltip content={<ProblemTip unit={unit} />} cursor={{ fill: theme === "dark" ? "#1e293b" : "#f8fafc" }} />
                                     <Bar dataKey={unit === "percent" ? "pct" : "count"} name="จำนวน" radius={[0, 6, 6, 0]} barSize={20}>
                                         {barData.map((_, idx) => (
                                             <Cell key={idx} fill={BAR_COLORS[idx % BAR_COLORS.length]} />

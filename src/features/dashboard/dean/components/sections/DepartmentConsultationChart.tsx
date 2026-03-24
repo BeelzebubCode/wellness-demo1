@@ -12,6 +12,7 @@ import { DataStoryCard } from "../../../widgets/story/DataStoryCard";
 import { StoryFilterStack } from "../../../widgets/story/StoryFilterChips";
 import { DatePresetBar } from "../../../shared/StoryUI";
 import { getDateRange, type DatePreset, type DateRange } from "../../../shared/story-utils";
+import { Select } from "@/components/ui/Select";
 
 // ── Colors ──────────────────────────────────────────────────────────────
 const DEPT_COLORS = [
@@ -72,7 +73,8 @@ function periodSubLabel(p: AcademicPeriod): string {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-export default function DepartmentConsultationChart() {
+export default function DepartmentConsultationChart({ theme = "light" }: { theme?: "light" | "dark" }) {
+    const isDark = theme === "dark";
     const router = useRouter();
 
     // ── filter state ────────────────────────────────────────────────────
@@ -83,6 +85,15 @@ export default function DepartmentConsultationChart() {
     // ── data state ──────────────────────────────────────────────────────
     const [deptData, setDeptData] = useState<DeptBooking[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // ── problem categories ──────────────────────────────────────────────
+    const [problemCategories, setProblemCategories] = useState<{ id: number; name: string }[]>([]);
+    const [selectedProblemCatIds, setSelectedProblemCatIds] = useState<number[]>([]);
+
+    // ── demographic filters ─────────────────────────────────────────────
+    const [selectedGenders, setSelectedGenders] = useState<string[]>([]);
+    const [selectedIncomes, setSelectedIncomes] = useState<string[]>([]);
+    const [selectedParentalStatuses, setSelectedParentalStatuses] = useState<string[]>([]);
 
     // ── academic periods ────────────────────────────────────────────────
     const [periods, setPeriods] = useState<AcademicPeriod[]>([]);
@@ -97,15 +108,27 @@ export default function DepartmentConsultationChart() {
     // guards
     const fetchGuardRef = useRef(0);
 
-    // ── Load academic periods ───────────────────────────────────────────
+    // ── Load academic periods & problem categories ──────────────────────
     useEffect(() => {
         let cancelled = false;
         (async () => {
             try {
-                const res = await fetch(PERIODS_API, { credentials: "include", cache: "no-store" });
-                const json = await res.json();
+                const [perRes, optRes] = await Promise.all([
+                    fetch(PERIODS_API, { credentials: "include", cache: "no-store" }),
+                    fetch("/api/v2/master/filter-options", { credentials: "include", cache: "no-store" })
+                ]);
+                const perJson = await perRes.json();
+                const optJson = await optRes.json();
+                
                 if (cancelled) return;
-                setPeriods(json.data?.periods ?? []);
+                setPeriods(perJson.data?.periods ?? []);
+                
+                if (optJson.success && optJson.data?.problemCategories) {
+                    setProblemCategories(optJson.data.problemCategories.map((c: any) => ({
+                        id: c.problem_category_id,
+                        name: c.problem_category_name_th
+                    })));
+                }
             } catch { /* silent */ } finally {
                 if (!cancelled) setPeriodsLoading(false);
             }
@@ -118,11 +141,21 @@ export default function DepartmentConsultationChart() {
         datePreset: DatePreset,
         cRange: DateRange | undefined,
         periodOverride?: { start: string; end: string },
+        problemCatIds?: number[],
+        genders?: string[],
+        incomes?: string[],
+        parentalStatuses?: string[],
     ) => {
         const id = ++fetchGuardRef.current;
         setLoading(true);
         try {
             const sp = new URLSearchParams({ story: "departments" });
+            if (problemCatIds && problemCatIds.length > 0) {
+                sp.set("problem_category_ids", problemCatIds.join(","));
+            }
+            if (genders && genders.length > 0) sp.set("gender", genders.join(","));
+            if (incomes && incomes.length > 0) sp.set("family_income_bracket", incomes.join(","));
+            if (parentalStatuses && parentalStatuses.length > 0) sp.set("parental_status", parentalStatuses.join(","));
             if (periodOverride) {
                 sp.set("date_start", periodOverride.start);
                 sp.set("date_end",   periodOverride.end);
@@ -144,18 +177,17 @@ export default function DepartmentConsultationChart() {
         }
     }, []);
 
-    // ── Effect: reload on filter change ─────────────────────────────────
     useEffect(() => {
         const timer = setTimeout(() => {
             if (selectedPeriodId) {
                 const p = periods.find(x => x.periodId === selectedPeriodId);
-                if (p) fetchDepts("custom", undefined, { start: p.startDate, end: p.endDate });
+                if (p) fetchDepts("custom", undefined, { start: p.startDate, end: p.endDate }, selectedProblemCatIds, selectedGenders, selectedIncomes, selectedParentalStatuses);
             } else {
-                fetchDepts(date, customRange);
+                fetchDepts(date, customRange, undefined, selectedProblemCatIds, selectedGenders, selectedIncomes, selectedParentalStatuses);
             }
         }, 150);
         return () => clearTimeout(timer);
-    }, [date, customRange, selectedPeriodId, periods, fetchDepts]);
+    }, [date, customRange, selectedPeriodId, periods, selectedProblemCatIds, selectedGenders, selectedIncomes, selectedParentalStatuses, fetchDepts]);
 
     // ── Compare mode: fetch all periods in parallel ─────────────────────
     useEffect(() => {
@@ -171,6 +203,13 @@ export default function DepartmentConsultationChart() {
                         date_start: p.startDate,
                         date_end: p.endDate,
                     });
+                    if (selectedProblemCatIds.length > 0) {
+                        sp.set("problem_category_ids", selectedProblemCatIds.join(","));
+                    }
+                    if (selectedGenders.length > 0) sp.set("gender", selectedGenders.join(","));
+                    if (selectedIncomes.length > 0) sp.set("family_income_bracket", selectedIncomes.join(","));
+                    if (selectedParentalStatuses.length > 0) sp.set("parental_status", selectedParentalStatuses.join(","));
+
                     try {
                         const res = await fetch(`${API}?${sp}`, { credentials: "include", cache: "no-store" });
                         const json = await res.json();
@@ -184,7 +223,7 @@ export default function DepartmentConsultationChart() {
             }
         })();
         return () => { cancelled = true; };
-    }, [viewMode, periods]);
+    }, [viewMode, periods, selectedProblemCatIds, selectedGenders, selectedIncomes, selectedParentalStatuses]);
 
     // ── derived ─────────────────────────────────────────────────────────
     const sorted = useMemo(
@@ -250,10 +289,11 @@ export default function DepartmentConsultationChart() {
     return (
         <DataStoryCard
             icon={<Building2 className="w-5 h-5" />}
-            iconGradient="bg-gradient-to-br from-indigo-500 to-violet-600"
+            iconGradient={isDark ? undefined : "bg-gradient-to-br from-indigo-500 to-violet-600"}
             title="จำนวนการเข้าใช้บริการ แยกตามสาขา"
             description="ดูสัดส่วนการมาใช้บริการแยกตามภาควิชา เพื่อช่วยจัดสรรทรัพยากร ประเมินความต้องการ และพิจารณาปรับรอบคิวของนักจิตวิทยาให้เหมาะสมกับความต้องการของแต่ละสาขา"
             narration={narration}
+            theme={theme}
             datePreset={selectedPeriodId ? undefined : date}
             customRange={selectedPeriod ? { start: selectedPeriod.startDate, end: selectedPeriod.endDate } : customRange}
             filters={
@@ -270,7 +310,7 @@ export default function DepartmentConsultationChart() {
                     {/* exam period chips */}
                     {periods.length > 0 && (
                         <div className="mt-2">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
                                 🎯 ช่วงสอบ
                             </p>
                             <div className="flex flex-wrap gap-1.5">
@@ -283,7 +323,7 @@ export default function DepartmentConsultationChart() {
                                             onClick={() => handlePeriodSelect(p.periodId)}
                                             title={`${p.nameTh}\n${p.startDate} – ${p.endDate}`}
                                             className={`
-                                                px-2.5 py-1 rounded-full text-[10px] font-bold border
+                                                px-3 py-1 rounded-full text-xs font-bold border
                                                 transition-all duration-200
                                                 ${isActive
                                                     ? styles.activeBg
@@ -292,7 +332,7 @@ export default function DepartmentConsultationChart() {
                                             `}
                                         >
                                             {p.periodTypeName} {p.termNameTh}
-                                            <span className="ml-1 opacity-70 text-[9px]">
+                                            <span className="ml-1 opacity-70 text-[10px]">
                                                 ({fmtDateTH(p.startDate)}–{fmtDateTH(p.endDate)})
                                             </span>
                                             {isActive && <X className="w-3 h-3 inline-block ml-1 -mt-0.5" />}
@@ -303,7 +343,7 @@ export default function DepartmentConsultationChart() {
                         </div>
                     )}
                     {periodsLoading && (
-                        <div className="flex items-center gap-1.5 mt-2 text-slate-400 text-[10px]">
+                        <div className="flex items-center gap-1.5 mt-2 text-slate-400 text-xs">
                             <Loader2 className="w-3 h-3 animate-spin" /> กำลังโหลดช่วงสอบ...
                         </div>
                     )}
@@ -318,7 +358,7 @@ export default function DepartmentConsultationChart() {
                                     transition-all duration-200 border
                                     ${viewMode === "compare"
                                         ? "bg-violet-500 text-white border-violet-500"
-                                        : "text-violet-600 border-violet-200 bg-violet-50 hover:bg-violet-100"
+                                        : (isDark ? "text-violet-300 border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20" : "text-violet-600 border-violet-200 bg-violet-50 hover:bg-violet-100")
                                     }
                                 `}
                             >
@@ -327,6 +367,143 @@ export default function DepartmentConsultationChart() {
                             </button>
                         </div>
                     )}
+
+                    {/* problem categories */}
+                    {problemCategories.length > 0 && (
+                        <div className="mt-2 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider shrink-0 sm:w-20 pt-1">
+                                ประเภทปัญหา
+                            </span>
+                            <div className="flex flex-wrap gap-2">
+                                {problemCategories.map(p => {
+                                    const isSelected = selectedProblemCatIds.includes(p.id);
+                                    return (
+                                        <button
+                                            key={p.id}
+                                            onClick={() => {
+                                                setSelectedProblemCatIds(prev =>
+                                                    prev.includes(p.id) ? prev.filter(x => x !== p.id) : [...prev, p.id]
+                                                );
+                                            }}
+                                            className={`px-3 py-1 rounded-3xl text-xs font-bold transition-all duration-200 border ${
+                                                isSelected
+                                                    ? "bg-indigo-500 text-white border-indigo-500 shadow-sm shadow-indigo-500/20"
+                                                    : (isDark ? "bg-slate-800/60 text-slate-300 border-slate-700 hover:bg-slate-700" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:border-slate-300")
+                                            }`}
+                                        >
+                                            {p.name}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Gender options */}
+                    <div className="mt-2 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider shrink-0 sm:w-20 pt-1">
+                            เพศ
+                        </span>
+                        <div className="flex flex-wrap gap-2">
+                            {[
+                                { id: "MALE", label: "ชาย" },
+                                { id: "FEMALE", label: "หญิง" },
+                                { id: "LGBTQ_PLUS", label: "LGBTQ+" },
+                            ].map(g => {
+                                const isSelected = selectedGenders.includes(g.id);
+                                return (
+                                    <button
+                                        key={g.id}
+                                        onClick={() => {
+                                            setSelectedGenders(prev =>
+                                                prev.includes(g.id) ? prev.filter(x => x !== g.id) : [...prev, g.id]
+                                            );
+                                        }}
+                                        className={`px-3 py-1 rounded-3xl text-[10px] font-bold transition-all duration-200 border ${
+                                            isSelected
+                                                ? "bg-indigo-500 text-white border-indigo-500 shadow-sm shadow-indigo-500/20"
+                                                : (isDark ? "bg-slate-800/60 text-slate-300 border-slate-700 hover:bg-slate-700" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:border-slate-300")
+                                        }`}
+                                    >
+                                        {g.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Family Income options */}
+                    <div className="mt-2 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0 sm:w-20 pt-1">
+                            รายได้ครอบครัว
+                        </span>
+                        <div className="flex flex-wrap gap-2">
+                            {[
+                                { id: "UNDER_100K", label: "< 100K" },
+                                { id: "BETWEEN_100K_200K", label: "100-200K" },
+                                { id: "BETWEEN_200K_300K", label: "200-300K" },
+                                { id: "BETWEEN_300K_500K", label: "300-500K" },
+                                { id: "BETWEEN_500K_800K", label: "500-800K" },
+                                { id: "BETWEEN_800K_1M", label: "800K-1M" },
+                                { id: "OVER_1M", label: "> 1M" },
+                            ].map(inc => {
+                                const isSelected = selectedIncomes.includes(inc.id);
+                                return (
+                                    <button
+                                        key={inc.id}
+                                        onClick={() => {
+                                            setSelectedIncomes(prev =>
+                                                prev.includes(inc.id) ? prev.filter(x => x !== inc.id) : [...prev, inc.id]
+                                            );
+                                        }}
+                                        className={`px-3 py-1 rounded-3xl text-[10px] font-bold transition-all duration-200 border ${
+                                            isSelected
+                                                ? "bg-indigo-500 text-white border-indigo-500 shadow-sm shadow-indigo-500/20"
+                                                : (isDark ? "bg-slate-800/60 text-slate-300 border-slate-700 hover:bg-slate-700" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:border-slate-300")
+                                        }`}
+                                    >
+                                        {inc.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Parental Status options */}
+                    <div className="mt-2 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0 sm:w-20 pt-1">
+                            สถานะบิดามารดา
+                        </span>
+                        <div className="flex flex-wrap gap-2">
+                            {[
+                                { id: "TOGETHER", label: "พ่อแม่อยู่ด้วยกัน" },
+                                { id: "DIVORCED", label: "หย่าร้าง" },
+                                { id: "FATHER_DECEASED", label: "บิดาเสียชีวิต" },
+                                { id: "MOTHER_DECEASED", label: "มารดาเสียชีวิต" },
+                                { id: "BOTH_DECEASED", label: "เสียชีวิตทั้งคู่" },
+                                { id: "SINGLE_PARENT", label: "เลี้ยงเดี่ยว" },
+                            ].map(ps => {
+                                const isSelected = selectedParentalStatuses.includes(ps.id);
+                                return (
+                                    <button
+                                        key={ps.id}
+                                        onClick={() => {
+                                            setSelectedParentalStatuses(prev =>
+                                                prev.includes(ps.id) ? prev.filter(x => x !== ps.id) : [...prev, ps.id]
+                                            );
+                                        }}
+                                        className={`px-3 py-1 rounded-3xl text-[10px] font-bold transition-all duration-200 border ${
+                                            isSelected
+                                                ? "bg-indigo-500 text-white border-indigo-500 shadow-sm shadow-indigo-500/20"
+                                                : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                                        }`}
+                                    >
+                                        {ps.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </StoryFilterStack>
             }
             delay={0}
@@ -349,33 +526,35 @@ export default function DepartmentConsultationChart() {
                                 layout="vertical"
                                 margin={{ top: 0, right: 20, left: 0, bottom: 0 }}
                             >
-                                <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#f1f5f9" />
+                                <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke={isDark ? "#334155" : "#f1f5f9"} />
                                 <XAxis
                                     type="number"
-                                    tick={{ fontSize: 10, fill: "#94a3b8" }}
+                                    tick={{ fontSize: 10, fill: isDark ? "#64748b" : "#94a3b8" }}
                                     tickFormatter={(v) => v.toLocaleString()}
+                                    axisLine={false} tickLine={false}
                                 />
                                 <YAxis
                                     type="category"
                                     dataKey="deptName"
                                     width={160}
-                                    tick={{ fontSize: 11, fill: "#475569", fontWeight: 500 }}
+                                    tick={{ fontSize: 11, fill: isDark ? "#cbd5e1" : "#475569", fontWeight: 500 }}
+                                    axisLine={false} tickLine={false}
                                 />
                                 <Tooltip
-                                    cursor={{ fill: "#f8fafc" }}
+                                    cursor={{ fill: isDark ? "#1e293b" : "#f8fafc" }}
                                     content={({ active, payload }) => {
                                         if (!active || !payload?.length) return null;
                                         const row = payload[0]?.payload;
                                         return (
-                                            <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-xl text-xs max-w-xs">
-                                                <p className="font-bold text-slate-700 mb-1.5">{row?.deptName}</p>
+                                            <div className={`border rounded-xl px-3 py-2 shadow-xl text-xs max-w-xs ${isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-200"}`}>
+                                                <p className={`font-bold mb-1.5 ${isDark ? "text-slate-200" : "text-slate-700"}`}>{row?.deptName}</p>
                                                 {payload.map((entry: any) => {
                                                     const p = periods.find(x => `p_${x.periodId}` === entry.dataKey);
                                                     if (!p) return null;
                                                     return (
                                                         <div key={entry.dataKey} className="flex items-center gap-1.5 mb-0.5">
                                                             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.fill }} />
-                                                            <span className="text-slate-500">
+                                                            <span className={isDark ? "text-slate-400" : "text-slate-500"}>
                                                                 {p.periodTypeName} {p.termNameTh}:
                                                             </span>
                                                             <span className="font-bold" style={{ color: entry.fill }}>
@@ -384,9 +563,9 @@ export default function DepartmentConsultationChart() {
                                                         </div>
                                                     );
                                                 })}
-                                                <div className="mt-1 pt-1 border-t border-slate-100">
-                                                    <span className="text-slate-400">รวม: </span>
-                                                    <span className="font-bold text-slate-700">{row?.total?.toLocaleString()} ครั้ง</span>
+                                                <div className={`mt-1 pt-1 border-t ${isDark ? "border-slate-700" : "border-slate-100"}`}>
+                                                    <span className={isDark ? "text-slate-500" : "text-slate-400"}>รวม: </span>
+                                                    <span className={`font-bold ${isDark ? "text-slate-300" : "text-slate-700"}`}>{row?.total?.toLocaleString()} ครั้ง</span>
                                                 </div>
                                             </div>
                                         );
@@ -424,8 +603,8 @@ export default function DepartmentConsultationChart() {
                         </ResponsiveContainer>
 
                         {/* Ranking Table */}
-                        <div className="bg-slate-50 rounded-xl p-4">
-                            <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                        <div className={`rounded-xl p-4 ${isDark ? "bg-slate-800/50" : "bg-slate-50"}`}>
+                            <h4 className={`text-sm font-bold mb-3 flex items-center gap-2 ${isDark ? "text-slate-300" : "text-slate-700"}`}>
                                 🏆 อันดับสาขาที่มาปรึกษามากสุดในแต่ละช่วงสอบ
                             </h4>
                             <div className="grid gap-2">
@@ -435,20 +614,20 @@ export default function DepartmentConsultationChart() {
                                     const totalInPeriod = bookings.reduce((s, b) => s + b.count, 0);
                                     const styles = PERIOD_CHIP_STYLES[p.periodTypeCode] ?? PERIOD_CHIP_STYLES.MIDTERM_EXAM;
                                     return (
-                                        <div key={p.periodId} className="flex items-center gap-3 bg-white rounded-lg px-3 py-2 border border-slate-100">
+                                        <div key={p.periodId} className={`flex items-center gap-3 rounded-lg px-3 py-2 border ${isDark ? "bg-slate-800/80 border-slate-700/50" : "bg-white border-slate-100"}`}>
                                             <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${styles.bg} ${styles.text} shrink-0`}>
                                                 {p.periodTypeName} {p.termNameTh}
                                             </span>
-                                            <ArrowRight className="w-3 h-3 text-slate-300 shrink-0" />
+                                            <ArrowRight className={`w-3 h-3 shrink-0 ${isDark ? "text-slate-600" : "text-slate-300"}`} />
                                             {topDept ? (
-                                                <span className="text-xs text-slate-600">
-                                                    <span className="font-bold text-slate-800">{topDept.nameTh}</span>
+                                                <span className={`text-xs ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                                                    <span className={`font-bold ${isDark ? "text-white" : "text-slate-800"}`}>{topDept.nameTh}</span>
                                                     {" "}({topDept.count.toLocaleString()} ครั้ง)
                                                 </span>
                                             ) : (
-                                                <span className="text-xs text-slate-400">ไม่มีข้อมูล</span>
+                                                <span className={`text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}>ไม่มีข้อมูล</span>
                                             )}
-                                            <span className="ml-auto text-[10px] text-slate-400">
+                                            <span className={`ml-auto text-[10px] ${isDark ? "text-slate-500" : "text-slate-400"}`}>
                                                 รวม {totalInPeriod.toLocaleString()} ครั้ง
                                             </span>
                                         </div>
@@ -472,36 +651,38 @@ export default function DepartmentConsultationChart() {
                                 layout="vertical"
                                 margin={{ top: 0, right: 16, left: 0, bottom: 0 }}
                             >
-                                <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#f1f5f9" />
+                                <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke={isDark ? "#334155" : "#f1f5f9"} />
                                 <XAxis
                                     type="number"
-                                    tick={{ fontSize: 11, fill: "#94a3b8" }}
+                                    tick={{ fontSize: 11, fill: isDark ? "#64748b" : "#94a3b8" }}
                                     domain={[0, Math.ceil(maxCount * 1.15)]}
                                     tickFormatter={(v) => v.toLocaleString()}
+                                    axisLine={false} tickLine={false}
                                 />
                                 <YAxis
                                     type="category"
                                     dataKey="nameTh"
                                     width={180}
-                                    tick={{ fontSize: 12, fill: "#475569", fontWeight: 500 }}
+                                    tick={{ fontSize: 12, fill: isDark ? "#cbd5e1" : "#475569", fontWeight: 500 }}
+                                    axisLine={false} tickLine={false}
                                 />
                                 <Tooltip
-                                    cursor={{ fill: "#f8fafc" }}
+                                    cursor={{ fill: isDark ? "#1e293b" : "#f8fafc" }}
                                     content={({ active, payload }) => {
                                         if (!active || !payload?.[0]) return null;
                                         const d = payload[0].payload as DeptBooking;
                                         return (
-                                            <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-xl text-xs">
-                                                <p className="font-bold text-slate-700 mb-1">{d.nameTh}</p>
-                                                <p className="text-slate-500">
-                                                    ปรึกษา <span className="font-bold text-indigo-600">{d.count.toLocaleString()}</span> ครั้ง
+                                            <div className={`border rounded-xl px-3 py-2 shadow-xl text-xs ${isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-200"}`}>
+                                                <p className={`font-bold mb-1 ${isDark ? "text-slate-200" : "text-slate-700"}`}>{d.nameTh}</p>
+                                                <p className={isDark ? "text-slate-300" : "text-slate-500"}>
+                                                    ปรึกษา <span className={`font-bold ${isDark ? "text-indigo-400" : "text-indigo-600"}`}>{d.count.toLocaleString()}</span> ครั้ง
                                                 </p>
                                                 {selectedPeriod && (
-                                                    <p className="text-[9px] text-slate-400 mt-1">
+                                                    <p className={`text-[9px] mt-1 ${isDark ? "text-slate-400" : "text-slate-400"}`}>
                                                         ช่วง{selectedPeriod.periodTypeName} {selectedPeriod.termNameTh}
                                                     </p>
                                                 )}
-                                                <p className="text-[10px] text-slate-400 mt-1 italic">คลิกเพื่อดูรายละเอียดเชิงลึก</p>
+                                                <p className={`text-[10px] mt-1 italic ${isDark ? "text-slate-500" : "text-slate-400"}`}>คลิกเพื่อดูรายละเอียดเชิงลึก</p>
                                             </div>
                                         );
                                     }}

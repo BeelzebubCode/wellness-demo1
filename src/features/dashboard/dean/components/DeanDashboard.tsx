@@ -8,7 +8,9 @@ import GenericBookingStory from "../../shared/GenericBookingStory";
 import GenericProblemStory from "../../shared/GenericProblemStory";
 import GenericRiskStory from "../../shared/GenericRiskStory";
 import GenericIncomeChart from "../../shared/GenericIncomeChart";
+import GenericParentalStatusChart from "../../shared/GenericParentalStatusChart";
 import DepartmentConsultationChart from "./sections/DepartmentConsultationChart";
+import { DeanInsightPanel } from "./DeanInsightPanel";
 import { Building2, LayoutDashboard } from "lucide-react";
 
 const DeanStatsCards = dynamic(
@@ -50,32 +52,40 @@ export function DeanDashboard() {
     }, []);
 
     return (
-        <div className="max-w-7xl mx-auto space-y-8 pb-12">
-            {/* ── Banner ─────────────────────────── */}
-            <div className="relative overflow-hidden rounded-[2rem] bg-[#0f172a] p-8 text-white shadow-2xl mb-8">
-                <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-cyan-500/10 blur-3xl" />
-                <div className="absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-blue-600/5 blur-3xl" />
+        <div className="relative min-h-screen bg-[#fff5f8] text-slate-900 overflow-hidden pb-12 transition-colors duration-1000">
+            {/* Subtle Ambient Backgrounds */}
+            <div className="absolute top-0 w-full h-[800px] bg-gradient-to-b from-pink-100/80 via-rose-50/40 to-transparent pointer-events-none" />
+            <div className="fixed -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full bg-pink-300/20 blur-[100px] pointer-events-none" />
+            <div className="fixed top-[20%] -right-[10%] w-[50vw] h-[50vw] rounded-full bg-rose-300/15 blur-[120px] pointer-events-none" />
+            <div className="fixed -bottom-[30%] left-[20%] w-[60vw] h-[60vw] rounded-full bg-pink-200/20 blur-[150px] pointer-events-none" />
+
+            {/* Container */}
+            <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 pt-8">
+                {/* ── Banner ─────────────────────────── */}
+                <div className="relative overflow-hidden rounded-[2.5rem] bg-slate-900 p-8 text-white shadow-xl mb-8 border border-pink-900/30">
+                    <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-pink-500/20 blur-3xl pointer-events-none" />
+                    <div className="absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-rose-600/15 blur-3xl pointer-events-none" />
 
                 <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
                     <div className="flex items-center gap-6">
                         <div className="flex h-20 w-20 items-center justify-center rounded-[1.5rem] bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl ring-1 ring-white/20">
-                            <Building2 className="h-10 w-10 text-cyan-400" />
+                            <Building2 className="h-10 w-10 text-pink-400" />
                         </div>
                         <div>
                             <h1 className="text-4xl font-black tracking-tight mb-2">
-                                แผงควบคุมคณบดี
+                                ภาพรวมการเข้ารับการรักษาจิตแพทย์ของนิสิต
                             </h1>
                             <div className="flex flex-wrap items-center gap-3 text-white/60 text-sm font-bold uppercase tracking-widest">
                                 <span>{faculty?.universityNameTh || "กำลังโหลด..."}</span>
-                                <span className="h-1 w-1 rounded-full bg-cyan-500/40" />
-                                <span className="text-cyan-400">{faculty?.nameTh || "กำลังโหลด..."}</span>
+                                <span className="h-1 w-1 rounded-full bg-pink-500/50" />
+                                <span className="text-pink-300">{faculty?.nameTh || "กำลังโหลด..."}</span>
                             </div>
                         </div>
                     </div>
 
                     <div className="flex flex-col items-end gap-4 self-stretch md:self-auto">
                         <div className="text-right">
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-400 mb-1 opacity-70">สถานะปัจจุบัน</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-400 mb-1 opacity-70">สถานะปัจจุบัน</p>
                             <div className="text-sm font-bold flex items-center gap-2 justify-end">
                                 อัปเดตล่าสุด: {new Date().toLocaleDateString('th-TH', {
                                     day: 'numeric',
@@ -97,12 +107,15 @@ export function DeanDashboard() {
 
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
 
+                {/* ── AI Insight & Policy Summary ─────────────────── */}
+                <DeanInsightPanel />
+
                 {/* ── Section 0: KPI Stats ─────────────────────── */}
                 <section>
                     <div className="mb-3 flex items-center gap-2">
-                        <LayoutDashboard className="h-4 w-4 text-cyan-500" />
-                        <h3 className="text-lg font-black text-slate-800">ภาพรวมสถิติ</h3>
-                        <span className="text-xs text-slate-400 font-medium">— มีตัวกรองช่วงเวลาของตัวเอง</span>
+                        <LayoutDashboard className="h-5 w-5 text-pink-500" />
+                        <h3 className="text-xl font-black text-slate-800">ภาพรวมสถิติ</h3>
+                        <span className="text-xs text-slate-400 font-medium ml-2 bg-white px-2 py-1 rounded-md border border-slate-100 shadow-sm">— มีตัวกรองช่วงเวลาของตัวเอง</span>
                     </div>
                     <DeanStatsCards />
                 </section>
@@ -124,16 +137,18 @@ export function DeanDashboard() {
 
                 {/* ── Grid Row 3: Income Distribution (full width) ──────────── */}
                 <GenericIncomeChart apiPath={API} title="รายได้ครอบครัวนิสิตในคณะ" delay={4} />
+                <GenericParentalStatusChart apiPath={API} title="สถานะบิดามารดานิสิตในคณะ" delay={5} />
             </div>
 
             {/* ── Footer ─────────────────────────── */}
-            <div className="pt-12 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-400">
+            <div className="pt-12 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-400 pb-8">
                 <div className="flex items-center gap-3">
                     <span className="font-bold text-slate-500">รายงานสำหรับระดับผู้บริหารคณะ</span>
                     <span className="hidden md:inline w-1 h-1 bg-slate-300 rounded-full"></span>
                     <span>อ้างอิงข้อมูล ณ {new Date().toLocaleDateString('th-TH')}</span>
                 </div>
-                <span className="px-2 py-1 bg-slate-100 rounded text-slate-500 font-mono text-[10px] uppercase tracking-widest font-bold">Confidential</span>
+                <span className="px-2 py-1 bg-white rounded-md shadow-sm border border-slate-200 text-slate-500 font-mono text-[10px] uppercase tracking-widest font-bold">Confidential</span>
+            </div>
             </div>
         </div>
     );
