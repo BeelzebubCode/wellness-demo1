@@ -21,7 +21,7 @@ async function getBorrowWindowDays(): Promise<number> {
     where: { is_active: true },
     orderBy: { created_at: "desc" },
   });
-  return policy?.borrow_window_days ?? 14;
+  return policy?.borrow_policy_days ?? 14;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

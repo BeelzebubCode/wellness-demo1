@@ -10,7 +10,14 @@ import LogoutButton from "@/components/auth/LogoutButton";
 
 const ThailandMap = dynamic(
   () => import("./map/ThailandMap").then((mod) => ({ default: mod.ThailandMap })),
-  { ssr: false }
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-full bg-slate-50 flex items-center justify-center">
+        <div className="text-gray-400 text-sm font-medium">กำลังโหลดแผนที่...</div>
+      </div>
+    ),
+  }
 );
 
 export function MinistryMapDashboard() {

@@ -30,8 +30,13 @@ export async function GET(req: NextRequest) {
     const problemCategory = searchParams.get("problemCategory") || "";
     const sortBy = searchParams.get("sortBy") || "";
 
-    // 🚀 CACHE STRATEGY: Check Redis first
-    const cacheKey = `${CacheKeys.universities()}:v2:p${page}:s${pageSize}`;
+    // 🔥 Date / Service-mode filter params (from sidebar time filter + service mode buttons)
+    const dateFrom = searchParams.get("dateFrom") || "";
+    const dateTo = searchParams.get("dateTo") || "";
+    const serviceModesParam = searchParams.get("serviceModes") || ""; // comma-separated codes e.g. "ONLINE,ONSITE"
+
+    // 🚀 CACHE STRATEGY: Check Redis first (include filter params in cache key)
+    const cacheKey = `${CacheKeys.universities()}:v2:p${page}:s${pageSize}:df${dateFrom}:dt${dateTo}:sm${serviceModesParam}`;
     const cachedData = await getCached<any>(cacheKey);
 
     if (cachedData) {
@@ -108,35 +113,79 @@ export async function GET(req: NextRequest) {
     const universityIds = universities.map(u => u.university_id);
     const categoryMap = new Map(categories.map(c => [c.problem_category_id, c]));
     const serviceModeMap = new Map(serviceModes.map(s => [s.service_mode_id, s.code]));
+    const serviceModeCodeToId = new Map(serviceModes.map(s => [s.code, s.service_mode_id]));
 
-    // 2. Optimized: Single GroupBy for ALL stats (status + category)
-    // This replaces two separate heavy queries with one.
-    const [granularStats, serviceModeStats] = await Promise.all([
+    // ── Build shared booking WHERE clause (date + service mode filters) ──
+    const bookingWhere: any = { university_id: { in: universityIds } };
+
+    if (dateFrom || dateTo) {
+      bookingWhere.booking_created_at = {};
+      if (dateFrom) bookingWhere.booking_created_at.gte = new Date(dateFrom);
+      if (dateTo) bookingWhere.booking_created_at.lte = new Date(dateTo);
+    }
+
+    // Resolve service mode codes to IDs for Prisma filter
+    const serviceModeCodes = serviceModesParam ? serviceModesParam.split(",").filter(Boolean) : [];
+    if (serviceModeCodes.length > 0) {
+      const modeIds = serviceModeCodes.map(c => serviceModeCodeToId.get(c)).filter((id): id is number => id != null);
+      if (modeIds.length > 0) {
+        bookingWhere.service_mode_id = { in: modeIds };
+      }
+    }
+
+    // ── Build raw SQL date/mode clauses for the nationality query ──
+    let natExtraWhere = "";
+    const natParams: any[] = [universityIds];
+    if (dateFrom) { natExtraWhere += ` AND b.booking_created_at >= $2`; natParams.push(new Date(dateFrom)); }
+    if (dateTo) { const idx = natParams.length + 1; natExtraWhere += ` AND b.booking_created_at <= $${idx}`; natParams.push(new Date(dateTo)); }
+    if (serviceModeCodes.length > 0) {
+      const modeIds = serviceModeCodes.map(c => serviceModeCodeToId.get(c)).filter((id): id is number => id != null);
+      if (modeIds.length > 0) { const idx = natParams.length + 1; natExtraWhere += ` AND b.service_mode_id = ANY($${idx}::int[])`; natParams.push(modeIds); }
+    }
+
+    // 2. Optimized: Single GroupBy for ALL stats (status + category) + nationality booking counts
+    const [granularRaw, serviceModeRaw, nationalityStats] = await Promise.all([
       prisma.booking.groupBy({
         by: ["university_id", "booking_status", "problem_category_id"],
-        where: {
-          university_id: { in: universityIds },
-        },
-        _count: {
-          _all: true,
-        },
+        where: bookingWhere,
+        _count: { _all: true },
       }),
       prisma.booking.groupBy({
         by: ["university_id", "service_mode_id"],
-        where: {
-          university_id: { in: universityIds },
-          service_mode_id: { not: undefined },
-        },
-        _count: {
-          _all: true,
-        },
+        where: { ...bookingWhere, service_mode_id: { not: undefined } },
+        _count: { _all: true },
       }),
+      // Nationality breakdown: count BOOKINGS per nationality per university
+      prisma.$queryRawUnsafe<{ university_id: number; category: string; cnt: number }[]>(
+        `SELECT b.university_id,
+          CASE WHEN sp.student_nationality = 'ไทย' THEN 'DOMESTIC' ELSE 'INTERNATIONAL' END AS category,
+          COUNT(*)::int AS cnt
+        FROM booking b
+        JOIN student s ON b.student_id = s.student_id
+        JOIN student_profile sp ON sp.student_id = s.student_id AND sp.university_id = s.university_id
+        WHERE b.university_id = ANY($1::int[])${natExtraWhere}
+        GROUP BY b.university_id, category`,
+        ...natParams
+      ),
     ]);
+    // Normalize Prisma groupBy output
+    const granularStats = granularRaw.map(s => ({
+      university_id: s.university_id,
+      booking_status: s.booking_status,
+      problem_category_id: s.problem_category_id,
+      count: s._count._all,
+    }));
+    const serviceModeStats = serviceModeRaw.map(s => ({
+      university_id: s.university_id,
+      service_mode_id: s.service_mode_id,
+      count: typeof s._count === 'object' ? (s._count as any)._all : 0,
+    }));
 
     const granularStatsByUni = new Map<number, any>(); // uniId -> { STATUS: { CAT_CODE: count } }
     const statusBreakdownByUni = new Map<number, Record<string, number>>();
     const problemBreakdownByUni = new Map<number, Record<string, number>>();
     const serviceModeBreakdownByUni = new Map<number, Record<string, number>>();
+    const nationalityBreakdownByUni = new Map<number, Record<string, number>>();
     const topCategoryByUni = new Map<number, any>();
     const statsAccumulator: Record<number, Record<number, number>> = {}; // uniId -> { catId: totalCount }
 
@@ -149,7 +198,7 @@ export async function GET(req: NextRequest) {
       const catInfo = categoryMap.get(stat.problem_category_id);
       if (!catInfo || !catInfo.problem_category_code) continue;
       const catCode = catInfo.problem_category_code;
-      const count = stat._count._all;
+      const count = stat.count;
 
       // Update 2D breakdown
       const uniStats = granularStatsByUni.get(stat.university_id) || {};
@@ -204,8 +253,15 @@ export async function GET(req: NextRequest) {
       const modeCode = serviceModeMap.get(stat.service_mode_id);
       if (!modeCode) continue;
       const breakdown = serviceModeBreakdownByUni.get(stat.university_id) || {};
-      breakdown[modeCode] = (breakdown[modeCode] || 0) + (typeof stat._count === 'object' ? (stat._count as any)._all : 0);
+      breakdown[modeCode] = (breakdown[modeCode] || 0) + stat.count;
       serviceModeBreakdownByUni.set(stat.university_id, breakdown);
+    }
+
+    // Build nationality breakdown per university
+    for (const stat of nationalityStats) {
+      const breakdown = nationalityBreakdownByUni.get(stat.university_id) || {};
+      breakdown[stat.category] = (breakdown[stat.category] || 0) + stat.cnt;
+      nationalityBreakdownByUni.set(stat.university_id, breakdown);
     }
 
     const elapsed = Date.now() - startTime;
@@ -246,6 +302,7 @@ export async function GET(req: NextRequest) {
         statusBreakdown,  // Status breakdown: { COMPLETED: 10, CANCELLED: 2, ... }
         granularStats,    // 🔥 2D Statistics: { COMPLETED: { STRESS: 5 }, CANCELLED: { STRESS: 1 } }
         serviceModeBreakdown: serviceModeBreakdownByUni.get(uni.university_id) || {}, // { ONLINE: 50, ONSITE: 20 }
+        nationalityBreakdown: nationalityBreakdownByUni.get(uni.university_id) || {}, // { DOMESTIC: 500, INTERNATIONAL: 30 }
       };
     });
 

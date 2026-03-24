@@ -38,7 +38,7 @@ export async function createBorrowRequest(params: {
       });
     }
 
-    const minDays = policy?.borrow_window_days ?? 5; // Default to 5 if no policy exists
+    const minDays = policy?.borrow_policy_days ?? 5; // Default to 5 if no policy exists
 
     if (diffDays < minDays) {
       throw new Error(`คำขอยืมตัวต้องระบุวันล่วงหน้าอย่างน้อย ${minDays} วัน`);

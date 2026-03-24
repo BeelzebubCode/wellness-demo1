@@ -11,7 +11,7 @@ import ReactDOMServer from "react-dom/server";
 import { MapLeftSidebar, MapFilterState } from "./MapLeftSidebar";
 import { useUniversitiesMap } from "../../hooks/useUniversitiesMap";
 import type { UniversityMapData } from "../../hooks/useUniversitiesMap";
-import { Layers, Map as MapIcon, PanelLeft, ChevronRight, ChevronLeft, Shield, AlertTriangle, Eye, EyeOff, ArrowRightLeft } from "lucide-react";
+import { Layers, Map as MapIcon, PanelLeft, ChevronRight, ChevronLeft, Shield, AlertTriangle, Eye, EyeOff, ArrowRightLeft, X } from "lucide-react";
 import { UniversityRankings } from "./UniversityRankings";
 import { BorrowPolylines, BorrowLegend, BorrowRankings, useBorrowAnalytics } from "./BorrowingOverlay";
 
@@ -296,22 +296,26 @@ function MapBoundsController({ data, resetZoom = false }: { data: any[]; resetZo
   const hasInitialized = useRef(false);
 
   useEffect(() => {
+    // Guard: ensure map container is still valid (prevents _leaflet_pos crash)
+    try {
+      if (!map || !map.getContainer()) return;
+    } catch { return; }
+
     // On first load, always center on Thailand
     if (!hasInitialized.current) {
-      map.setView([13.7563, 100.5018], 6);
+      try { map.setView([13.7563, 100.5018], 6); } catch {}
       hasInitialized.current = true;
       return;
     }
 
-    // 🔥 NEW: Reset to Thailand view when "ทั้งหมด" is selected
+    // Reset to Thailand view when "ทั้งหมด" is selected
     if (resetZoom) {
-      map.setView([13.7563, 100.5018], 6);
+      try { map.setView([13.7563, 100.5018], 6); } catch {}
       return;
     }
 
     // After initial load, fit bounds only if there's filtered data
     if (data.length > 0 && data.length < 100) {
-      // Only fit bounds if it's a filtered subset (not all universities)
       try {
         const bounds = L.latLngBounds(data.map((u) => [u.lat, u.lng]));
         map.fitBounds(bounds, { padding: [50, 50], maxZoom: 10 });
@@ -335,6 +339,7 @@ export function ThailandMap() {
     status: "",
     problemCategories: [],
     serviceModes: [],
+    nationality: "",
   });
   const [mapStyle, setMapStyle] = useState<"street" | "satellite" | "terrain">("street");
   const [showIntelOverlay, setShowIntelOverlay] = useState(true);
@@ -345,7 +350,7 @@ export function ThailandMap() {
   const [borrowDateFrom, setBorrowDateFrom] = useState<string | undefined>();
   const [borrowDateTo, setBorrowDateTo] = useState<string | undefined>();
 
-  const { data: borrowData, loading: borrowLoading } = useBorrowAnalytics(borrowDateFrom, borrowDateTo);
+  const { data: borrowData, loading: borrowLoading } = useBorrowAnalytics(borrowDateFrom, borrowDateTo, mapMode === "borrow");
 
   const handleBorrowDateChange = useCallback((from?: string, to?: string) => {
     setBorrowDateFrom(from);
@@ -360,7 +365,11 @@ export function ThailandMap() {
     });
   }, []);
 
-  const { universities, isLoading, error } = useUniversitiesMap();
+  const { universities, isLoading, error } = useUniversitiesMap({
+    dateFrom: borrowDateFrom,
+    dateTo: borrowDateTo,
+    serviceModes: filter.serviceModes.length > 0 ? filter.serviceModes : undefined,
+  });
 
   // Compute risk thresholds whenever universities data changes
   useMemo(() => {
@@ -418,9 +427,51 @@ export function ThailandMap() {
         if (!hasMode) return false;
       }
 
+      // 6. Nationality filter (uses booking counts from nationalityBreakdown)
+      if (filter.nationality) {
+        const count = uni.nationalityBreakdown?.[filter.nationality] ?? 0;
+        if (count === 0) return false;
+      }
+
       return true;
+    }).map(uni => {
+      // When nationality filter is active, scale all booking stats proportionally
+      if (!filter.nationality) return uni;
+
+      const natCount = uni.nationalityBreakdown?.[filter.nationality] ?? 0;
+      const totalCount = Object.values(uni.nationalityBreakdown || {}).reduce((s, v) => s + v, 0);
+      if (totalCount === 0 || natCount === 0) return uni;
+
+      const ratio = natCount / totalCount;
+
+      // Helper: scale all values in a Record
+      const scaleRecord = (rec: Record<string, number>) => {
+        const scaled: Record<string, number> = {};
+        for (const [k, v] of Object.entries(rec)) {
+          scaled[k] = Math.round(v * ratio);
+        }
+        return scaled;
+      };
+
+      // Helper: scale nested 2D Record (granularStats)
+      const scaleGranular = (rec: Record<string, Record<string, number>>) => {
+        const scaled: Record<string, Record<string, number>> = {};
+        for (const [status, cats] of Object.entries(rec)) {
+          scaled[status] = scaleRecord(cats);
+        }
+        return scaled;
+      };
+
+      return {
+        ...uni,
+        dominantProblemCount: Math.round(uni.dominantProblemCount * ratio),
+        problemBreakdown: scaleRecord(uni.problemBreakdown || {}),
+        statusBreakdown: scaleRecord(uni.statusBreakdown || {}),
+        granularStats: scaleGranular(uni.granularStats || {}),
+        serviceModeBreakdown: scaleRecord(uni.serviceModeBreakdown || {}),
+      };
     });
-  }, [universities, filter.search, filter.type, filter.stress, filter.status, filter.problemCategories, filter.serviceModes]);
+  }, [universities, filter.search, filter.type, filter.stress, filter.status, filter.problemCategories, filter.serviceModes, filter.nationality]);
 
   // Compute available provinces (scoped to selected region)
   const availableProvinces = useMemo(() => {
@@ -492,18 +543,43 @@ export function ThailandMap() {
 
   // ── Filter universities for right-side rankings by active risk tiers ──
   const riskFilteredData = useMemo(() => {
-    // Don't filter if: overlay hidden, all selected, or none selected
-    if (!showIntelOverlay || activeRiskTiers.size === RISK_TIERS.length || activeRiskTiers.size === 0) return filteredData;
-    return filteredData.filter((uni) => activeRiskTiers.has(classifyRisk(uni)));
-  }, [filteredData, activeRiskTiers, showIntelOverlay]);
+    let data = filteredData;
 
-  if (isLoading) {
-    return (
-      <div className="w-full h-full bg-slate-100 flex items-center justify-center">
-        <div className="text-gray-600 font-medium">Loading universities...</div>
-      </div>
-    );
-  }
+    // When time filter is active: remove universities with zero bookings in that period
+    if (borrowDateFrom || borrowDateTo) {
+      data = data.filter((uni) => {
+        const total = Object.values(uni.problemBreakdown || {}).reduce((s, v) => s + v, 0);
+        return total > 0;
+      });
+    }
+
+    // Don't filter by risk tier if: overlay hidden, all selected, or none selected
+    if (!showIntelOverlay || activeRiskTiers.size === RISK_TIERS.length || activeRiskTiers.size === 0) return data;
+    return data.filter((uni) => activeRiskTiers.has(classifyRisk(uni)));
+  }, [filteredData, activeRiskTiers, showIntelOverlay, borrowDateFrom, borrowDateTo]);
+
+  // ── Label maps for the active filter strip (hooks must be before early returns) ──
+  const regionLabelMap = useMemo(() => {
+    const m: Record<string, string> = { SPECIAL_ADMIN: "เขตปกครองพิเศษ" };
+    for (const u of universities) { if (u.regionCode && u.region) m[u.regionCode] = u.region; }
+    return m;
+  }, [universities]);
+
+  const [catLabelMap, setCatLabelMap] = useState<Record<string, string>>({});
+  const [modeLabelMap, setModeLabelMap] = useState<Record<string, string>>({});
+  const [timeFilterLabel, setTimeFilterLabel] = useState("");
+  useEffect(() => {
+    fetch("/api/v2/master/problem-categories").then(r => r.json())
+      .then(j => { if (j.success && j.categories) { const m: Record<string, string> = {}; j.categories.forEach((c: any) => { m[c.code] = c.nameTh; }); setCatLabelMap(m); } })
+      .catch(() => {});
+    fetch("/api/v2/master/service-modes").then(r => r.json())
+      .then(j => { if (j.success && j.data) { const m: Record<string, string> = {}; j.data.forEach((s: any) => { m[s.code] = s.name_th; }); setModeLabelMap(m); } })
+      .catch(() => {});
+  }, []);
+
+  const TYPE_LABELS: Record<string, string> = { PUBLIC: "สถาบันของรัฐ", PRIVATE: "สถาบันเอกชน", RAJABHAT: "มหาวิทยาลัยราชภัฏ", RAJAMANGALA: "มหาวิทยาลัยราชมงคล", AUTONOMOUS: "สถาบันในกำกับ", SPECIAL: "สถาบันพิเศษ" };
+  const STATUS_LABELS: Record<string, string> = { COMPLETED: "สำเร็จ", CANCELLED: "ยกเลิก" };
+  const NAT_LABELS: Record<string, string> = { DOMESTIC: "🇹🇭 ในประเทศ", INTERNATIONAL: "🌏 ต่างประเทศ" };
 
   if (error) {
     return (
@@ -513,8 +589,75 @@ export function ThailandMap() {
     );
   }
 
+  const hasActiveFilters = !!(filter.region || filter.provinceNames.length > 0 || filter.type || filter.status ||
+    (filter.problemCategories?.length ?? 0) > 0 || (filter.serviceModes?.length ?? 0) > 0 || filter.nationality || timeFilterLabel);
+
   return (
-    <div className="flex h-[calc(100vh-4rem)] w-full overflow-hidden bg-tenant relative">
+    <div className="flex flex-col h-[calc(100vh-4rem)] w-full overflow-hidden">
+      {/* ── Active Filters Strip ── */}
+      {hasActiveFilters && (
+        <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-1.5 flex items-center gap-1.5 overflow-x-auto">
+          <span className="text-[10px] text-gray-400 font-semibold uppercase whitespace-nowrap mr-1">ตัวกรอง:</span>
+          {filter.region && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold whitespace-nowrap">
+              📍 {regionLabelMap[filter.region] || filter.region}
+              <button onClick={() => setFilter({ ...filter, region: "", provinceNames: [] })} className="hover:text-rose-500"><X className="w-2.5 h-2.5" /></button>
+            </span>
+          )}
+          {filter.provinceNames.map((prov) => (
+            <span key={prov} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold whitespace-nowrap">
+              {prov}
+              <button onClick={() => setFilter({ ...filter, provinceNames: filter.provinceNames.filter(p => p !== prov) })} className="hover:text-rose-500"><X className="w-2.5 h-2.5" /></button>
+            </span>
+          ))}
+          {filter.type && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold whitespace-nowrap">
+              🏛 {TYPE_LABELS[filter.type] || filter.type}
+              <button onClick={() => setFilter({ ...filter, type: "" })} className="hover:text-rose-500"><X className="w-2.5 h-2.5" /></button>
+            </span>
+          )}
+          {filter.status && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold whitespace-nowrap">
+              {STATUS_LABELS[filter.status] || filter.status}
+              <button onClick={() => setFilter({ ...filter, status: "" })} className="hover:text-rose-500"><X className="w-2.5 h-2.5" /></button>
+            </span>
+          )}
+          {(filter.problemCategories?.length ?? 0) > 0 && filter.problemCategories.map((cat) => (
+            <span key={cat} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 text-[10px] font-bold whitespace-nowrap">
+              {catLabelMap[cat] || cat}
+              <button onClick={() => setFilter({ ...filter, problemCategories: filter.problemCategories.filter(c => c !== cat) })} className="hover:text-rose-500"><X className="w-2.5 h-2.5" /></button>
+            </span>
+          ))}
+          {(filter.serviceModes?.length ?? 0) > 0 && filter.serviceModes.map((mode) => (
+            <span key={mode} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-700 text-[10px] font-bold whitespace-nowrap">
+              {modeLabelMap[mode] || mode}
+              <button onClick={() => setFilter({ ...filter, serviceModes: filter.serviceModes.filter(m => m !== mode) })} className="hover:text-rose-500"><X className="w-2.5 h-2.5" /></button>
+            </span>
+          ))}
+          {filter.nationality && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 text-[10px] font-bold whitespace-nowrap">
+              {NAT_LABELS[filter.nationality] || filter.nationality}
+              <button onClick={() => setFilter({ ...filter, nationality: "" })} className="hover:text-rose-500"><X className="w-2.5 h-2.5" /></button>
+            </span>
+          )}
+          {timeFilterLabel && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold whitespace-nowrap">
+              {timeFilterLabel}
+              <button onClick={() => { setTimeFilterLabel(""); handleBorrowDateChange(undefined, undefined); }} className="hover:text-rose-500"><X className="w-2.5 h-2.5" /></button>
+            </span>
+          )}
+          {/* Clear All */}
+          <button
+            onClick={() => { setFilter({ search: "", region: "", provinceNames: [], type: "", stress: "", status: "", problemCategories: [], serviceModes: [], nationality: "" }); setTimeFilterLabel(""); handleBorrowDateChange(undefined, undefined); }}
+            className="ml-auto text-[10px] text-gray-400 hover:text-rose-500 font-semibold whitespace-nowrap flex items-center gap-1"
+          >
+            ล้างทั้งหมด <X className="w-3 h-3" />
+          </button>
+        </div>
+      )}
+
+      {/* ── Map Row ── */}
+      <div className="flex flex-1 overflow-hidden bg-tenant relative">
       {/* Sidebar Toggle Handle (Always visible at the edge) */}
       <button
         onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
@@ -545,6 +688,7 @@ export function ThailandMap() {
             borrowDateTo={borrowDateTo}
             onBorrowDateChange={handleBorrowDateChange}
             borrowFilters={borrowData?.filters}
+            onTimeFilterLabel={setTimeFilterLabel}
           />
         </div>
       </div>
@@ -562,7 +706,7 @@ export function ThailandMap() {
           <MapBoundsController data={filteredData} resetZoom={!filter.region && filter.provinceNames.length === 0} />
 
           {/* ── Intel Overlay: Risk Zone Circles (filtered by active tiers) ── */}
-          {mapMode === "risk" && showIntelOverlay && intelOverlayData
+          {!isLoading && mapMode === "risk" && showIntelOverlay && intelOverlayData
             .filter((d) => activeRiskTiers.has(d.tier))
             .map((d) => (
               <Circle
@@ -574,7 +718,7 @@ export function ThailandMap() {
             ))}
 
           {/* ── Intel Overlay: Pulsing Alert for VERY_HIGH ─────────── */}
-          {mapMode === "risk" && showIntelOverlay && activeRiskTiers.has("VERY_HIGH") && intelOverlayData
+          {!isLoading && mapMode === "risk" && showIntelOverlay && activeRiskTiers.has("VERY_HIGH") && intelOverlayData
             .filter((d) => d.tier === "VERY_HIGH")
             .map((d) => (
               <PulsingAlertMarker key={`alert-${d.uni.id}`} lat={d.uni.lat} lng={d.uni.lng} label={d.uni.name} />
@@ -586,15 +730,24 @@ export function ThailandMap() {
           )}
 
           {/* Selected region universities (fully visible) */}
-          {selectedRegionData.map((uni) => (
+          {!isLoading && selectedRegionData.map((uni) => (
             <UniversityPin key={uni.id} data={uni} opacity={1} />
           ))}
 
           {/* Other region universities (dimmed) */}
-          {otherRegionData.map((uni) => (
+          {!isLoading && otherRegionData.map((uni) => (
             <UniversityPin key={`dimmed-${uni.id}`} data={uni} opacity={0.3} />
           ))}
         </MapContainer>
+
+        {/* Loading Overlay — shows while university data loads (map tiles already rendering) */}
+        {isLoading && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none">
+            <div className="bg-white/90 backdrop-blur-sm rounded-xl px-4 py-2 shadow-lg border border-gray-100">
+              <p className="text-[11px] text-gray-500 font-medium">กำลังโหลดข้อมูลมหาวิทยาลัย...</p>
+            </div>
+          </div>
+        )}
 
         {/* Map Style Controls */}
         <div className="absolute bottom-6 right-6 z-[1000] flex gap-2 bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-gray-200 p-2 animate-in fade-in slide-in-from-right-4 pointer-events-auto">
@@ -726,7 +879,15 @@ export function ThailandMap() {
         className={`h-full flex-shrink-0 border-l border-gray-200 bg-white z-20 relative transition-all duration-300 ease-in-out ${isSidebarExpanded ? "w-[380px] translate-x-0" : "w-0 translate-x-full opacity-0"
           }`}
       >
-        <div className="w-[380px] h-full">
+        <div className="w-[380px] h-full relative">
+          {/* Loading overlay while re-fetching with new filters */}
+          {isLoading && (
+            <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-[2px] flex items-center justify-center pointer-events-none">
+              <div className="text-[11px] text-gray-500 bg-white rounded-xl px-3 py-2 shadow-md border border-gray-100">
+                กำลังอัปเดตข้อมูล...
+              </div>
+            </div>
+          )}
           {mapMode === "risk" ? (
             <UniversityRankings
               universities={riskFilteredData}
@@ -750,6 +911,7 @@ export function ThailandMap() {
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

@@ -29,8 +29,18 @@ export async function fetchRiskMetrics(filters?: RiskMetricsFilters): Promise<Ri
 
 // ─── University Map Data ─────────────────────────────────────────────────────
 
-export async function fetchUniversitiesMap(pageSize = 500): Promise<UniversityMapData[]> {
-  const res = await fetch(`/api/v2/master/universities?pageSize=${pageSize}`, {
+export async function fetchUniversitiesMap(
+  pageSize = 500,
+  filters?: { dateFrom?: string; dateTo?: string; serviceModes?: string[] }
+): Promise<UniversityMapData[]> {
+  const params = new URLSearchParams({ pageSize: String(pageSize) });
+  if (filters?.dateFrom) params.set("dateFrom", filters.dateFrom);
+  if (filters?.dateTo) params.set("dateTo", filters.dateTo);
+  if (filters?.serviceModes && filters.serviceModes.length > 0) {
+    params.set("serviceModes", filters.serviceModes.join(","));
+  }
+
+  const res = await fetch(`/api/v2/master/universities?${params.toString()}`, {
     credentials: "include",
     cache: "no-store",
   });
@@ -42,3 +52,4 @@ export async function fetchUniversitiesMap(pageSize = 500): Promise<UniversityMa
 
   return result.data as UniversityMapData[];
 }
+

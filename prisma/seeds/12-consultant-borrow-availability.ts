@@ -3,50 +3,60 @@ import { PrismaClient, BorrowAvailabilityStatus } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-    console.log("Seeding Consultant Borrow Availability...");
+    console.log("Re-seeding Consultant Borrow Availability (linked to real assignments)...");
 
-    // Seed for the first 50 consultants
-    const consultants = await prisma.consultant.findMany({
-        take: 50,
+    // Clear existing data
+    const deleted = await prisma.consultantBorrowAvailability.deleteMany({});
+    console.log(`  🗑️  Deleted ${deleted.count} old records.`);
+
+    // Fetch all borrow assignments with their related data
+    const assignments = await prisma.borrowAssignment.findMany({
+        select: {
+            borrow_assignment_id: true,
+            consultant_id: true,
+            consultant_university_id: true,
+            borrow_assign_start_at: true,
+            borrow_assign_end_at: true,
+            borrowRequest: {
+                select: {
+                    from_university_id: true,
+                },
+            },
+        },
+        orderBy: { borrow_assignment_id: 'asc' },
     });
 
-    const universities = await prisma.university.findMany();
-
-    if (universities.length < 2) {
-        console.log("Not enough universities to create cross-borrowing.");
+    if (assignments.length === 0) {
+        console.log("No borrow assignments found — nothing to seed.");
         return;
     }
 
     let count = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    for (let i = 0; i < consultants.length; i++) {
-        const consultant = consultants[i];
-        // Find a target university different from home
-        const targetUni = universities.find(u => u.university_id !== consultant.university_id);
-        if (!targetUni) continue;
-
-        // Create one active borrow starting tomorrow, lasting 5 days
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() + 1);
-
-        const endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + 5);
+    for (const a of assignments) {
+        const isPast = a.borrow_assign_end_at < today;
 
         await prisma.consultantBorrowAvailability.create({
             data: {
-                consultant_id: consultant.consultant_id,
-                home_university_id: consultant.university_id,
-                target_university_id: targetUni.university_id,
-                availability_start_date: startDate,
-                availability_end_date: endDate,
-                status: BorrowAvailabilityStatus.ACTIVE,
+                consultant_id: a.consultant_id,
+                home_university_id: a.consultant_university_id,
+                target_university_id: a.borrowRequest.from_university_id,
+                borrow_assignment_id: a.borrow_assignment_id,
+                availability_start_date: a.borrow_assign_start_at,
+                availability_end_date: a.borrow_assign_end_at,
+                status: isPast
+                    ? BorrowAvailabilityStatus.COMPLETED
+                    : BorrowAvailabilityStatus.ACTIVE,
+                completed_at: isPast ? a.borrow_assign_end_at : null,
             },
         });
 
         count++;
     }
 
-    console.log(`✅ Seeded borrow availability for ${count} consultants.`);
+    console.log(`✅ Seeded ${count} borrow availability records (linked to borrow_assignment).`);
 }
 
 main()

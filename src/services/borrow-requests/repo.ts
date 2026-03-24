@@ -62,5 +62,5 @@ export async function getBorrowWindowDays(universityId?: number | null) {
       orderBy: { created_at: "desc" },
     }));
 
-  return policy?.borrow_window_days ?? 14; // default 14 วัน
+  return policy?.borrow_policy_days ?? 14; // default 14 วัน
 }

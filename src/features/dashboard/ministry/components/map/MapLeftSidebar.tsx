@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, MapPin, Filter, ChevronDown, Building, Brain, X, RotateCcw, Zap, Layers, Clock, Sun, CloudRain, Snowflake, BookOpen, Calendar, Monitor } from "lucide-react";
+import { Search, MapPin, Filter, ChevronDown, Building, Brain, X, RotateCcw, Zap, Layers, Clock, Sun, CloudRain, Snowflake, BookOpen, Calendar, Monitor, Globe } from "lucide-react";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { ProblemCategoryFilter } from "./ProblemCategoryFilter";
 import type { BorrowAnalytics } from "./BorrowingOverlay";
@@ -14,6 +14,7 @@ export type MapFilterState = {
   status: string;
   problemCategories: string[];
   serviceModes: string[];
+  nationality: string;
 };
 
 interface ProvinceOption {
@@ -112,11 +113,12 @@ const SEASON_VISUAL: Record<string, { icon: React.ReactNode; gradient: string; e
 };
 
 function TimeFilterSection({
-  dateFrom, dateTo, onDateChange, filters,
+  dateFrom, dateTo, onDateChange, filters, onTimeFilterLabel,
 }: {
   dateFrom?: string; dateTo?: string;
   onDateChange: (from?: string, to?: string) => void;
   filters?: BorrowAnalytics["filters"];
+  onTimeFilterLabel?: (label: string) => void;
 }) {
   const [open, setOpen] = useState(true);
   const [mode, setMode] = useState<TimeMode>("all");
@@ -126,28 +128,51 @@ function TimeFilterSection({
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
 
-  const years = filters?.academicYears || [];
-  const seasons = filters?.seasons || [];
-  const termTypes = filters?.termTypes || [];
+  // Fetch filter options from dedicated endpoint when not provided via props
+  const [localFilters, setLocalFilters] = useState<BorrowAnalytics["filters"]>();
+  useEffect(() => {
+    if (filters) return;
+    fetch("/api/v2/master/time-filters")
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          setLocalFilters({ seasons: d.seasons, termTypes: d.termTypes, academicYears: d.academicYears });
+          if (d.academicYears?.length > 0) setSelectedYear(d.academicYears[0]);
+        }
+      })
+      .catch(() => {});
+  }, [filters]);
+
+  const activeFilters = filters ?? localFilters;
+  const years = activeFilters?.academicYears || [];
+  const seasons = activeFilters?.seasons || [];
+  const termTypes = activeFilters?.termTypes || [];
 
   const isActive = mode !== "all";
 
   const handleMode = useCallback((m: TimeMode) => {
     setMode(m);
-    if (m === "all") { onDateChange(undefined, undefined); setSelectedSeason(""); setSelectedTerm(""); }
-  }, [onDateChange]);
+    if (m === "all") { onDateChange(undefined, undefined); setSelectedSeason(""); setSelectedTerm(""); onTimeFilterLabel?.(""); }
+  }, [onDateChange, onTimeFilterLabel]);
 
   const handleSeason = useCallback((code: string) => {
     setSelectedSeason(code);
     const s = seasons.find((x) => x.season_code === code);
-    if (s) { const r = seasonToDateRange(s.month_start, s.month_end, selectedYear); onDateChange(r.from, r.to); }
-  }, [seasons, selectedYear, onDateChange]);
+    if (s) {
+      const r = seasonToDateRange(s.month_start, s.month_end, selectedYear);
+      onDateChange(r.from, r.to);
+      const vis = SEASON_VISUAL[code];
+      onTimeFilterLabel?.(`${vis?.emoji || '🌦️'} ${s.season_name_th || code} ${selectedYear}`);
+    }
+  }, [seasons, selectedYear, onDateChange, onTimeFilterLabel]);
 
   const handleTerm = useCallback((code: string) => {
     setSelectedTerm(code);
     const r = termToDateRange(code, selectedYear);
     onDateChange(r.from, r.to);
-  }, [selectedYear, onDateChange]);
+    const t = termTypes.find((x) => x.code === code);
+    onTimeFilterLabel?.(`📅 ${t?.name_th || code} ${selectedYear}`);
+  }, [selectedYear, onDateChange, termTypes, onTimeFilterLabel]);
 
   const handleYear = useCallback((y: number) => {
     setSelectedYear(y);
@@ -207,7 +232,7 @@ function TimeFilterSection({
             <div className="mb-3">
               <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">ปีการศึกษา</p>
               <div className="flex gap-1 flex-wrap">
-                {years.slice(0, 8).map((y) => (
+                {years.slice(0, 5).map((y) => (
                   <button
                     key={y}
                     onClick={() => handleYear(y)}
@@ -481,6 +506,7 @@ export function MapLeftSidebar({
   borrowDateTo,
   onBorrowDateChange,
   borrowFilters,
+  onTimeFilterLabel,
 }: {
   filter: MapFilterState;
   onChange: (v: MapFilterState) => void;
@@ -491,6 +517,7 @@ export function MapLeftSidebar({
   borrowDateTo?: string;
   onBorrowDateChange?: (from?: string, to?: string) => void;
   borrowFilters?: BorrowAnalytics["filters"];
+  onTimeFilterLabel?: (label: string) => void;
 }) {
   const [provinceSearch, setProvinceSearch] = useState("");
 
@@ -503,10 +530,11 @@ export function MapLeftSidebar({
     filter.status,
     (filter.problemCategories || []).length > 0,
     (filter.serviceModes || []).length > 0,
+    filter.nationality,
   ].filter(Boolean).length;
 
   const resetAll = () =>
-    onChange({ search: "", region: "", provinceNames: [], type: "", stress: "", status: "", problemCategories: [], serviceModes: [] });
+    onChange({ search: "", region: "", provinceNames: [], type: "", stress: "", status: "", problemCategories: [], serviceModes: [], nationality: "" });
 
   const filteredProvinces = useMemo(() => {
     if (!provinceSearch) return availableProvinces;
@@ -602,6 +630,14 @@ export function MapLeftSidebar({
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 text-[10px] font-bold">
               {filter.problemCategories.length} ปัญหา
               <button onClick={() => onChange({ ...filter, problemCategories: [] })} className="hover:text-rose-500 ml-0.5">
+                <X className="w-2.5 h-2.5" />
+              </button>
+            </span>
+          )}
+          {filter.nationality && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 text-[10px] font-bold">
+              {filter.nationality === "DOMESTIC" ? "🇹🇭 ในประเทศ" : "🌏 ต่างประเทศ"}
+              <button onClick={() => onChange({ ...filter, nationality: "" })} className="hover:text-rose-500 ml-0.5">
                 <X className="w-2.5 h-2.5" />
               </button>
             </span>
@@ -743,6 +779,7 @@ export function MapLeftSidebar({
               dateTo={borrowDateTo}
               onDateChange={onBorrowDateChange}
               filters={borrowFilters}
+              onTimeFilterLabel={onTimeFilterLabel}
             />
           )
         }
@@ -775,6 +812,31 @@ export function MapLeftSidebar({
                     }`}
                 >
                   {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Student Nationality */}
+          <div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">สัญชาตินิสิต</p>
+            <div className="grid grid-cols-3 gap-1">
+              {[
+                { value: "", label: "ทั้งหมด", emoji: "👥" },
+                { value: "DOMESTIC", label: "ในประเทศ", emoji: "🇹🇭" },
+                { value: "INTERNATIONAL", label: "ต่างประเทศ", emoji: "🌏" },
+              ].map((o) => (
+                <button
+                  key={o.value}
+                  type="button"
+                  onClick={() => onChange({ ...filter, nationality: o.value })}
+                  className={`px-2 py-2 rounded-lg text-[10px] font-semibold transition-all border ${filter.nationality === o.value
+                    ? "bg-teal-600 text-white border-teal-600 shadow-sm"
+                    : "bg-white text-gray-600 border-gray-100 hover:border-teal-300 hover:bg-teal-50"
+                    }`}
+                >
+                  <span className="block text-xs mb-0.5">{o.emoji}</span>
+                  {o.label}
                 </button>
               ))}
             </div>

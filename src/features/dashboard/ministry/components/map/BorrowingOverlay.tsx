@@ -30,11 +30,12 @@ export interface BorrowAnalytics {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────
 
-export function useBorrowAnalytics(dateFrom?: string, dateTo?: string) {
+export function useBorrowAnalytics(dateFrom?: string, dateTo?: string, enabled = false) {
     const [data, setData] = useState<BorrowAnalytics | null>(null);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
+        if (!enabled) return;
         setLoading(true);
         const params = new URLSearchParams();
         if (dateFrom) params.set("from", dateFrom);
@@ -45,7 +46,7 @@ export function useBorrowAnalytics(dateFrom?: string, dateTo?: string) {
             .then((d) => setData(d))
             .catch(console.error)
             .finally(() => setLoading(false));
-    }, [dateFrom, dateTo]);
+    }, [dateFrom, dateTo, enabled]);
 
     return { data, loading };
 }
