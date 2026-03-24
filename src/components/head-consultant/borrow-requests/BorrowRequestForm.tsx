@@ -404,14 +404,23 @@ export function BorrowRequestForm({
             </div>
             <label className="text-sm font-semibold text-slate-700">
               จำนวนที่ปรึกษาที่ต้องการ <span className="text-red-400">*</span>
+              <span className="ml-2 text-xs font-normal text-slate-500">
+                  (สูงสุด 5 คน)
+              </span>
             </label>
           </div>
           <div className="max-w-[160px]">
             <Input
               type="number"
               min={1}
+              max={5}
               value={neededCount}
-              onChange={(e) => setNeededCount(Math.max(1, Number(e.target.value || 1)))}
+              onChange={(e) => {
+                let val = Number(e.target.value || 1);
+                if (val > 5) val = 5;
+                if (val < 1) val = 1;
+                setNeededCount(val);
+              }}
               className="rounded-lg text-center font-semibold"
             />
           </div>
