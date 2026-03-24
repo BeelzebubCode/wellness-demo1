@@ -66,89 +66,89 @@ export function DeanDashboard() {
                     <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-pink-500/20 blur-3xl pointer-events-none" />
                     <div className="absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-rose-600/15 blur-3xl pointer-events-none" />
 
-                <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
-                    <div className="flex items-center gap-6">
-                        <div className="flex h-20 w-20 items-center justify-center rounded-[1.5rem] bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl ring-1 ring-white/20">
-                            <Building2 className="h-10 w-10 text-pink-400" />
-                        </div>
-                        <div>
-                            <h1 className="text-4xl font-black tracking-tight mb-2">
-                                ภาพรวมการเข้ารับการรักษาจิตแพทย์ของนิสิต
-                            </h1>
-                            <div className="flex flex-wrap items-center gap-3 text-white/60 text-sm font-bold uppercase tracking-widest">
-                                <span>{faculty?.universityNameTh || "กำลังโหลด..."}</span>
-                                <span className="h-1 w-1 rounded-full bg-pink-500/50" />
-                                <span className="text-pink-300">{faculty?.nameTh || "กำลังโหลด..."}</span>
+                    <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+                        <div className="flex items-center gap-6">
+                            <div className="flex h-20 w-20 items-center justify-center rounded-[1.5rem] bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl ring-1 ring-white/20">
+                                <Building2 className="h-10 w-10 text-pink-400" />
                             </div>
-                        </div>
-                    </div>
-
-                    <div className="flex flex-col items-end gap-4 self-stretch md:self-auto">
-                        <div className="text-right">
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-400 mb-1 opacity-70">สถานะปัจจุบัน</p>
-                            <div className="text-sm font-bold flex items-center gap-2 justify-end">
-                                อัปเดตล่าสุด: {new Date().toLocaleDateString('th-TH', {
-                                    day: 'numeric',
-                                    month: 'long',
-                                    year: 'numeric'
-                                })} เวลา {new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                            <div>
+                                <h1 className="text-4xl font-black tracking-tight mb-2">
+                                    ภาพรวมการเข้ารับการปรึกษาจิตแพทย์ของนิสิต
+                                </h1>
+                                <div className="flex flex-wrap items-center gap-3 text-white/60 text-sm font-bold uppercase tracking-widest">
+                                    <span>{faculty?.universityNameTh || "กำลังโหลด..."}</span>
+                                    <span className="h-1 w-1 rounded-full bg-pink-500/50" />
+                                    <span className="text-pink-300">{faculty?.nameTh || "กำลังโหลด..."}</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2 bg-emerald-500/10 backdrop-blur-md rounded-full px-4 py-2 border border-emerald-500/20">
-                                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                                <span className="text-xs font-black text-emerald-400">สิทธิ์คณบดีปกติ</span>
+                        <div className="flex flex-col items-end gap-4 self-stretch md:self-auto">
+                            <div className="text-right">
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-400 mb-1 opacity-70">สถานะปัจจุบัน</p>
+                                <div className="text-sm font-bold flex items-center gap-2 justify-end">
+                                    อัปเดตล่าสุด: {new Date().toLocaleDateString('th-TH', {
+                                        day: 'numeric',
+                                        month: 'long',
+                                        year: 'numeric'
+                                    })} เวลา {new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2 bg-emerald-500/10 backdrop-blur-md rounded-full px-4 py-2 border border-emerald-500/20">
+                                    <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                                    <span className="text-xs font-black text-emerald-400">สิทธิ์คณบดีปกติ</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
 
-                {/* ── AI Insight & Policy Summary ─────────────────── */}
-                <DeanInsightPanel />
+                    {/* ── AI Insight & Policy Summary ─────────────────── */}
+                    <DeanInsightPanel />
 
-                {/* ── Section 0: KPI Stats ─────────────────────── */}
-                <section>
-                    <div className="mb-3 flex items-center gap-2">
-                        <LayoutDashboard className="h-5 w-5 text-pink-500" />
-                        <h3 className="text-xl font-black text-slate-800">ภาพรวมสถิติ</h3>
-                        <span className="text-xs text-slate-400 font-medium ml-2 bg-white px-2 py-1 rounded-md border border-slate-100 shadow-sm">— มีตัวกรองช่วงเวลาของตัวเอง</span>
-                    </div>
-                    <DeanStatsCards />
-                </section>
+                    {/* ── Section 0: KPI Stats ─────────────────────── */}
+                    <section>
+                        <div className="mb-3 flex items-center gap-2">
+                            <LayoutDashboard className="h-5 w-5 text-pink-500" />
+                            <h3 className="text-xl font-black text-slate-800">ภาพรวมสถิติ</h3>
+                            <span className="text-xs text-slate-400 font-medium ml-2 bg-white px-2 py-1 rounded-md border border-slate-100 shadow-sm">— มีตัวกรองช่วงเวลาของตัวเอง</span>
+                        </div>
+                        <DeanStatsCards />
+                    </section>
 
-                {/* ★ Hero: Department-level consultation chart — full width */}
-                <DepartmentConsultationChart />
+                    {/* ★ Hero: Department-level consultation chart — full width */}
+                    <DepartmentConsultationChart />
 
-                {/* ── Grid Row 1: Bookings + Risk ────────────────── */}
-                <DataStoryGrid cols={2}>
-                    <GenericBookingStory apiPath={API} title="ประวัติการใช้บริการในคณะ" delay={1}
-                        description="ติดตามจำนวนการนัดหมาย อัตราสำเร็จ และแนวโน้มรายปีหรือรายเดือนในคณะ — ใช้ประเมินความหนาแน่นและวางแผนจัดสรรอัตรากำลังบุคลากร" />
-                    <GenericRiskStory apiPath={API} title="ระดับความเสี่ยงในคณะ" delay={2}
-                        description="สัดส่วนนิสิตที่ประเมินแล้วตกอยู่ในเกณฑ์เสี่ยงแต่ละระดับ — เพื่อเน้นช่วยเหลือกลุ่มเปราะบาง (วิกฤต/เสี่ยงสูง) ก่อนและลดความสูญเสียในระดับคณะ" />
-                </DataStoryGrid>
+                    {/* ── Grid Row 1: Bookings + Risk ────────────────── */}
+                    <DataStoryGrid cols={2}>
+                        <GenericBookingStory apiPath={API} title="ประวัติการใช้บริการในคณะ" delay={1}
+                            description="ติดตามจำนวนการนัดหมาย อัตราสำเร็จ และแนวโน้มรายปีหรือรายเดือนในคณะ — ใช้ประเมินความหนาแน่นและวางแผนจัดสรรอัตรากำลังบุคลากร" />
+                        <GenericRiskStory apiPath={API} title="ระดับความเสี่ยงในคณะ" delay={2}
+                            description="สัดส่วนนิสิตที่ประเมินแล้วตกอยู่ในเกณฑ์เสี่ยงแต่ละระดับ — เพื่อเน้นช่วยเหลือกลุ่มเปราะบาง (วิกฤต/เสี่ยงสูง) ก่อนและลดความสูญเสียในระดับคณะ" />
+                    </DataStoryGrid>
 
-                {/* ── Grid Row 2: Problems (full width) ─────────────────── */}
-                <GenericProblemStory apiPath={API} title="ประเด็นปัญหา + โปรไฟล์นิสิตในคณะ" delay={3}
-                    description="ประเภทปัญหาที่นิสิตในคณะนำเข้ามาปรึกษากับส่วนกลาง — ใช้วางแผนจัดกิจกรรมสันทนาการ โครงการ หรือ workshop ภายในคณะได้ตรงประเด็นความเครียด" />
+                    {/* ── Grid Row 2: Problems (full width) ─────────────────── */}
+                    <GenericProblemStory apiPath={API} title="ประเด็นปัญหา + โปรไฟล์นิสิตในคณะ" delay={3}
+                        description="ประเภทปัญหาที่นิสิตในคณะนำเข้ามาปรึกษากับส่วนกลาง — ใช้วางแผนจัดกิจกรรมสันทนาการ โครงการ หรือ workshop ภายในคณะได้ตรงประเด็นความเครียด" />
 
-                {/* ── Grid Row 3: Income Distribution (full width) ──────────── */}
-                <GenericIncomeChart apiPath={API} title="รายได้ครอบครัวนิสิตในคณะ" delay={4} />
-                <GenericParentalStatusChart apiPath={API} title="สถานะบิดามารดานิสิตในคณะ" delay={5} />
-            </div>
-
-            {/* ── Footer ─────────────────────────── */}
-            <div className="pt-12 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-400 pb-8">
-                <div className="flex items-center gap-3">
-                    <span className="font-bold text-slate-500">รายงานสำหรับระดับผู้บริหารคณะ</span>
-                    <span className="hidden md:inline w-1 h-1 bg-slate-300 rounded-full"></span>
-                    <span>อ้างอิงข้อมูล ณ {new Date().toLocaleDateString('th-TH')}</span>
+                    {/* ── Grid Row 3: Income Distribution (full width) ──────────── */}
+                    <GenericIncomeChart apiPath={API} title="รายได้ครอบครัวนิสิตในคณะ" delay={4} />
+                    <GenericParentalStatusChart apiPath={API} title="สถานะบิดามารดานิสิตในคณะ" delay={5} />
                 </div>
-                <span className="px-2 py-1 bg-white rounded-md shadow-sm border border-slate-200 text-slate-500 font-mono text-[10px] uppercase tracking-widest font-bold">Confidential</span>
-            </div>
+
+                {/* ── Footer ─────────────────────────── */}
+                <div className="pt-12 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-400 pb-8">
+                    <div className="flex items-center gap-3">
+                        <span className="font-bold text-slate-500">รายงานสำหรับระดับผู้บริหารคณะ</span>
+                        <span className="hidden md:inline w-1 h-1 bg-slate-300 rounded-full"></span>
+                        <span>อ้างอิงข้อมูล ณ {new Date().toLocaleDateString('th-TH')}</span>
+                    </div>
+                    <span className="px-2 py-1 bg-white rounded-md shadow-sm border border-slate-200 text-slate-500 font-mono text-[10px] uppercase tracking-widest font-bold">Confidential</span>
+                </div>
             </div>
         </div>
     );
