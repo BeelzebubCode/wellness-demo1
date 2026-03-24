@@ -73,7 +73,7 @@ export function DeanDashboard() {
                             </div>
                             <div>
                                 <h1 className="text-4xl font-black tracking-tight mb-2">
-                                    ภาพรวมการเข้ารับการปรึกษาจิตแพทย์ของนิสิต
+                                    ภาพรวมการเข้ารับการปรึกษานักจิตบำบัดของนิสิต
                                 </h1>
                                 <div className="flex flex-wrap items-center gap-3 text-white/60 text-sm font-bold uppercase tracking-widest">
                                     <span>{faculty?.universityNameTh || "กำลังโหลด..."}</span>
