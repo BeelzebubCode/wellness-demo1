@@ -21,6 +21,7 @@ import { Card } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { addDays } from "@/lib/date";
 import { CalendarClock, Info, RotateCcw } from "lucide-react";
+import { APP_CONFIG } from "@/lib/constants/app";
 
 // helper: Date -> "YYYY-MM-DD" (ใช้ local date ไม่ใช้ UTC)
 function toISODate(d: Date) {
@@ -242,7 +243,7 @@ export function BookingPage({ universityId }: { universityId?: number }) {
           <div className="flex gap-2">
             <Info className="w-4 h-4 text-primary-700 mt-0.5 shrink-0" />
             <ul className="text-xs text-primary-800 list-disc pl-3 space-y-0.5">
-              <li>จองล่วงหน้าได้ไม่เกิน 7 วัน</li>
+              <li>จองล่วงหน้าได้ไม่เกิน {APP_CONFIG.maxAdvanceBookingDays} วัน</li>
               <li>หากมีคิวที่ยังไม่เสร็จสิ้น จะไม่สามารถจองเพิ่มได้</li>
             </ul>
           </div>
@@ -290,7 +291,7 @@ export function BookingPage({ universityId }: { universityId?: number }) {
                 onPreviousMonth={handlePreviousMonth}
                 onNextMonth={handleNextMonth}
                 minDate={startOfDay(new Date())}
-                maxDate={startOfDay(addDays(new Date(), 7))}
+                maxDate={startOfDay(addDays(new Date(), APP_CONFIG.maxAdvanceBookingDays))}
               />
             </div>
           </Card>

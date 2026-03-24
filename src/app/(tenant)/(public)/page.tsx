@@ -4,8 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Heart, CalendarDays, ClipboardList, User } from "lucide-react";
 import AuthLikeBackground from "@/components/layout/background/AuthLikeBackground";
-import { PRCard } from "@/components/public/pr/PRCard";
-import { PR_MOCK } from "@/features/pr/mock";
+
 
 export default function HomePage() {
   return (
@@ -214,65 +213,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* =========================
-            PR
-        ========================= */}
-        <section className="bg-transparent">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="flex items-start justify-between gap-4 mb-6">
-              <div className="min-w-0">
-                <div
-                  className="
-                    inline-flex items-center gap-2 px-3 py-1 rounded-full
-                    bg-white/70 backdrop-blur border
-                    text-xs font-semibold shadow-sm
-                  "
-                  style={{
-                    borderColor: "rgb(var(--border))",
-                    color: "rgb(var(--fg))",
-                  }}
-                >
-                  <span className="w-2 h-2 rounded-full" style={{ background: "rgb(var(--primary))" }} />
-                  ข่าวประชาสัมพันธ์
-                </div>
 
-                <h2 className="mt-3 text-2xl md:text-3xl font-extrabold tracking-tight" style={{ color: "rgb(var(--fg))" }}>
-                  อัปเดตล่าสุดสำหรับนิสิต
-                </h2>
-
-                <p className="mt-1 text-sm" style={{ color: "rgb(var(--muted))" }}>
-                  รวมข่าวสารและประกาศสำคัญจากมหาวิทยาลัย
-                </p>
-              </div>
-
-              <Link
-                href="/pr"
-                className="
-                  shrink-0 inline-flex items-center gap-2 rounded-full
-                  px-4 py-2 bg-white/60 backdrop-blur border
-                  text-xs font-semibold shadow-sm hover:shadow-md transition
-                "
-                style={{
-                  borderColor: "rgb(var(--border))",
-                  color: "rgb(var(--fg))",
-                }}
-              >
-                ดูทั้งหมด
-                <span className="text-base leading-none" style={{ color: "rgb(var(--primary))" }}>
-                  ›
-                </span>
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {PR_MOCK.slice(0, 3).map((it) => (
-                <PRCard key={it.id} item={it} />
-              ))}
-            </div>
-
-            <div className="h-14" />
-          </div>
-        </section>
       </main>
     </div>
   );
