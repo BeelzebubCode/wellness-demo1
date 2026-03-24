@@ -37,7 +37,6 @@ function presetToParams(preset: Preset): Record<string, string> {
 
 const YEAR_LABELS: Record<string, string> = {
     "1": "ปี 1", "2": "ปี 2", "3": "ปี 3", "4": "ปี 4",
-    "5": "ปี 5", "6": "ปี 6",
 };
 
 interface FacBooking { id: number; nameTh: string; code: string; count: number; }
@@ -250,7 +249,7 @@ export default function FacultyConsultationChart() {
                     {/* Year Level */}
                     <FilterSection label="ชั้นปี">
                         <StoryChipGroup label="" options={
-                            ["1","2","3","4","5","6"].map(y => ({ value: y, label: YEAR_LABELS[y] ?? `ปี ${y}` }))
+                            ["1","2","3","4"].map(y => ({ value: y, label: YEAR_LABELS[y] ?? `ปี ${y}` }))
                         } selected={yearLevel} onChange={setYearLevel} />
                     </FilterSection>
 
