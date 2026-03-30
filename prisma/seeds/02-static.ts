@@ -11,6 +11,54 @@ export async function seedStatic(prisma: PrismaClient) {
   const passwordHash = await bcrypt.hash(plainPassword, 10);
 
   // =========================
+  // Reference Categories
+  // =========================
+  const roles = [
+    { code: 'STUDENT', name_th: 'นิสิต/นักศึกษา', name_en: 'Student', sort_order: 1 },
+    { code: 'CONSULTANT', name_th: 'ผู้ให้คำปรึกษา', name_en: 'Consultant', sort_order: 2 },
+    { code: 'HEAD_CONSULTANT', name_th: 'หัวหน้าผู้ให้คำปรึกษา', name_en: 'Head Consultant', sort_order: 3 },
+    { code: 'ADVISOR', name_th: 'อาจารย์ที่ปรึกษา', name_en: 'Advisor', sort_order: 4 },
+    { code: 'DEAN', name_th: 'คณบดี', name_en: 'Dean', sort_order: 5 },
+    { code: 'HEAD_DEPARTMENT', name_th: 'หัวหน้าภาควิชา', name_en: 'Head of Department', sort_order: 6 },
+    { code: 'RECTOR', name_th: 'อธิการบดี', name_en: 'Rector', sort_order: 7 },
+    { code: 'SUPER_ADMIN', name_th: 'ผู้ดูแลระบบ', name_en: 'Super Admin', sort_order: 8 },
+    { code: 'MINISTRY', name_th: 'กระทรวง', name_en: 'Ministry', sort_order: 9 },
+    { code: 'ADMIN', name_th: 'แอดมิน', name_en: 'Admin', sort_order: 10 }
+  ];
+  await prisma.accountRoleCategory.createMany({ data: roles, skipDuplicates: true });
+
+  const pointTxnTypes = [
+    { code: 'EARN', name_th: 'ได้รับ', name_en: 'Earn', sort_order: 1 },
+    { code: 'REDEEM', name_th: 'แลก', name_en: 'Redeem', sort_order: 2 },
+    { code: 'ADJUST', name_th: 'ปรับแต่ง', name_en: 'Adjust', sort_order: 3 },
+    { code: 'EXPIRE', name_th: 'หมดอายุ', name_en: 'Expire', sort_order: 4 }
+  ];
+  await prisma.pointTxnTypeCategory.createMany({ data: pointTxnTypes, skipDuplicates: true });
+
+  const disciplineActionTypes = [
+    { action_code: 'LATE_CANCEL_PENALTY', name_th: 'ยกเลิกนัดสาย', name_en: 'Late Cancel Penalty', sort_order: 1 },
+    { action_code: 'NO_SHOW_PENALTY', name_th: 'ไม่มาตามนัด', name_en: 'No Show Penalty', sort_order: 2 },
+    { action_code: 'EXCEPTION_APPROVED_ROLLBACK', name_th: 'อนุมัติข้อยกเว้น (ย้อนกลับ)', name_en: 'Exception Approved Rollback', sort_order: 3 },
+    { action_code: 'MANUAL_UNLOCK', name_th: 'ปลดล็อคด้วยตนเอง', name_en: 'Manual Unlock', sort_order: 4 }
+  ];
+  await prisma.disciplineActionType.createMany({ data: disciplineActionTypes, skipDuplicates: true });
+
+  const aiFeedbackTypes = [
+    { code: 'CANT_ANSWER', name_th: 'ตอบไม่ได้', name_en: 'Cannot Answer', sort_order: 1 },
+    { code: 'LOW_CONFIDENCE', name_th: 'ไม่มั่นใจ', name_en: 'Low Confidence', sort_order: 2 },
+    { code: 'POLICY_BLOCK', name_th: 'ถูกบล็อกโดยนโยบาย', name_en: 'Policy Block', sort_order: 3 },
+    { code: 'PROVIDER_ERROR', name_th: 'ผู้ให้บริการขัดข้อง', name_en: 'Provider Error', sort_order: 4 },
+    { code: 'USER_NEGATIVE', name_th: 'ผู้ใช้ให้คะแนนติดลบ', name_en: 'User Negative', sort_order: 5 }
+  ];
+  await prisma.aiFeedbackTypeCategory.createMany({ data: aiFeedbackTypes, skipDuplicates: true });
+
+  const kbContentTypes = [
+    { code: 'MARKDOWN', name_th: 'มาร์กดาวน์', name_en: 'Markdown', sort_order: 1 },
+    { code: 'JSON', name_th: 'JSON', name_en: 'JSON', sort_order: 2 }
+  ];
+  await prisma.kbContentTypeCategory.createMany({ data: kbContentTypes, skipDuplicates: true });
+
+  // =========================
   // Student Status (rerun-safe)
   // =========================
   const statusActive = await prisma.studentStatus.upsert({
@@ -161,13 +209,11 @@ export async function seedStatic(prisma: PrismaClient) {
       notification_template_title: "สร้างการจองสำเร็จ",
       notification_template_body:
         "ระบบได้รับคำขอรับคำปรึกษาของคุณแล้ว โปรดรอการมอบหมายผู้ให้คำปรึกษา",
-      notification_template_format: "TEXT",
     },
     update: {
       notification_template_title: "สร้างการจองสำเร็จ",
       notification_template_body:
         "ระบบได้รับคำขอรับคำปรึกษาของคุณแล้ว โปรดรอการมอบหมายผู้ให้คำปรึกษา",
-      notification_template_format: "TEXT",
     },
   });
 
@@ -177,12 +223,10 @@ export async function seedStatic(prisma: PrismaClient) {
       notification_template_code: "BOOKING_ASSIGNED",
       notification_template_title: "มีการมอบหมายผู้ให้คำปรึกษา",
       notification_template_body: "ระบบได้มอบหมายผู้ให้คำปรึกษาให้กับการจองของคุณแล้ว",
-      notification_template_format: "TEXT",
     },
     update: {
       notification_template_title: "มีการมอบหมายผู้ให้คำปรึกษา",
       notification_template_body: "ระบบได้มอบหมายผู้ให้คำปรึกษาให้กับการจองของคุณแล้ว",
-      notification_template_format: "TEXT",
     },
   });
 

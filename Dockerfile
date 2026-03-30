@@ -35,9 +35,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
-# ✅ Copy entrypoint script
-COPY --from=builder --chown=nextjs:nodejs /app/docker-entrypoint.sh ./docker-entrypoint.sh
-RUN chmod +x ./docker-entrypoint.sh
+# ✅ Add AWS Lambda Web Adapter for Serverless Deployment
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4 /lambda-adapter /opt/extensions/lambda-adapter
 
 USER nextjs
 
@@ -45,5 +44,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# ✅ ใช้ entrypoint ที่ migrate + seed ก่อน start
-CMD ["./docker-entrypoint.sh"]
+# ✅ Next.js Standalone boot
+CMD ["node", "server.js"]

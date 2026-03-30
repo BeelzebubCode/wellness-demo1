@@ -46,7 +46,13 @@ export async function clearDatabase(prisma: PrismaClient) {
         problem_category,
         organization,
         student_status,
-        account
+        account,
+        
+        account_role_category,
+        point_txn_type_category,
+        discipline_action_type,
+        ai_feedback_type_category,
+        kb_content_type_category
       RESTART IDENTITY CASCADE;
     `);
 
@@ -103,6 +109,12 @@ export async function clearDatabase(prisma: PrismaClient) {
     await prisma.studentStatus.deleteMany();
 
     await prisma.account.deleteMany();
+    
+    await prisma.accountRoleCategory.deleteMany();
+    await prisma.pointTxnTypeCategory.deleteMany();
+    await prisma.disciplineActionType.deleteMany();
+    await prisma.aiFeedbackTypeCategory.deleteMany();
+    await prisma.kbContentTypeCategory.deleteMany();
 
     // Reset sequences manually
     console.log("🔄 Resetting ID sequences...");
@@ -143,6 +155,11 @@ export async function clearDatabase(prisma: PrismaClient) {
       "account_university_permission",
       "borrow_request",
       "borrow_assignment",
+      "account_role_category",
+      "point_txn_type_category",
+      "discipline_action_type",
+      "ai_feedback_type_category",
+      "kb_content_type_category"
     ];
 
     for (const table of tables) {
