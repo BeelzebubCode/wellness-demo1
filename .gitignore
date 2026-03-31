@@ -95,3 +95,27 @@ fix-line-endings.js
 host_domain.txt
 litellm-config.yaml
 build_output.log
+scripts/
+tests/
+
+# =========================================
+# 🗃️ Prisma Dev Utilities
+# =========================================
+prisma/check-*.ts
+prisma/clear-*.ts
+prisma/fix-*.ts
+prisma/generate-*.ts
+prisma/seed-2m-*.ts
+prisma/seed-bookings-only.ts
+prisma/seed-exception-reasons.ts
+prisma/seed-nu-test-student.ts
+prisma/seed-realistic.ts
+prisma/seed-resume.ts
+prisma/seed-student-demographics.ts
+prisma/verify-*.ts
+prisma/*.dbml
+
+# =========================================
+# 🐛 Debug Routes
+# =========================================
+src/app/api/debug/
