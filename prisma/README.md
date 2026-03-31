@@ -65,38 +65,38 @@ erDiagram
     University }o--o| UniversityTypeCategory : "type"
 
     Region {
-        int region_id PK
+        int region_id
         string region_name_th
         string region_name_en
-        string region_code UK
+        string region_code
     }
 
     Province {
-        int province_id PK
-        string province_code UK
+        int province_id
+        string province_code
         string province_name_th
         string province_name_en
-        int region_id FK
+        int region_id
         boolean is_special_zone
     }
 
     University {
-        int university_id PK
-        string university_code UK
+        int university_id
+        string university_code
         string university_name_th
         string university_name_en
-        int province_id FK
-        int rector_account_id FK
-        int university_type_id FK
+        int province_id
+        int rector_account_id
+        int university_type_id
         boolean university_is_active
         decimal university_latitude
         decimal university_longitude
     }
 
     UniversityConnection {
-        int connection_id PK
-        int source_university_id FK
-        int target_university_id FK
+        int connection_id
+        int source_university_id
+        int target_university_id
         decimal distance_km
         int connection_rank
     }
@@ -114,8 +114,8 @@ erDiagram
     AccountUniversityPermission }o--|| University : "access to"
 
     AccountRoleCategory {
-        int account_role_id PK
-        string code UK
+        int account_role_id
+        string code
         string name_th
         string name_en
         int sort_order
@@ -123,21 +123,21 @@ erDiagram
     }
 
     Account {
-        int account_id PK
-        string account_username UK
+        int account_id
+        string account_username
         string account_password
         datetime account_created_at
         datetime account_last_login_at
-        int account_home_university_id FK
-        int account_role_id FK
+        int account_home_university_id
+        int account_role_id
     }
 
     AccountUniversityPermission {
-        int account_university_permission_id PK
-        int account_id FK
-        int university_id FK
+        int account_university_permission_id
+        int account_id
+        int university_id
         string access_role
-        int access_granted_by_account_id FK
+        int access_granted_by_account_id
         datetime access_granted_at
         datetime access_revoked_at
     }
@@ -168,50 +168,50 @@ erDiagram
     StudentProfile }o--o| ParentalStatusCategory : "parental status"
 
     Student {
-        int student_id PK
-        int account_id FK_UK
-        int student_status_id FK
+        int student_id
+        int account_id
+        int student_status_id
         string student_code
-        int university_id FK
+        int university_id
     }
 
     StudentProfile {
-        int student_id PK
+        int student_id
         string student_prefix
         string student_first_name_th
         string student_last_name_th
         string student_first_name_en
         string student_last_name_en
         datetime student_birthday
-        int gender_category_id FK
-        int blood_group_id FK
-        int country_id FK
-        int income_bracket_id FK
-        int parental_status_id FK
+        int gender_category_id
+        int blood_group_id
+        int country_id
+        int income_bracket_id
+        int parental_status_id
     }
 
     StudentAcademic {
-        int student_id PK
-        int faculty_id FK
-        int department_id FK
-        int advisor_id FK
+        int student_id
+        int faculty_id
+        int department_id
+        int advisor_id
         string student_program
         string student_degree
         int student_admit_academic_year
-        int education_level_id FK
+        int education_level_id
     }
 
     StudentAddress {
-        int student_address_id PK
-        int student_id FK
-        int province_id FK
+        int student_address_id
+        int student_id
+        int province_id
         string student_address_postal_code
-        int address_type_id FK
+        int address_type_id
     }
 
     StudentBehaviorStatus {
-        int student_id PK
-        int university_id PK
+        int student_id
+        int university_id
         int student_trust_late_cancel_count
         int student_trust_no_show_count
         datetime student_trust_locked_until
@@ -234,15 +234,15 @@ erDiagram
     ConsultantShiftTeam }o--|| University : "at"
 
     Consultant {
-        int consultant_id PK
-        int account_id FK_UK
-        int organization_id FK
-        int university_id FK
-        int shift_team_id FK
+        int consultant_id
+        int account_id
+        int organization_id
+        int university_id
+        int shift_team_id
     }
 
     ConsultantProfile {
-        int consultant_id PK_FK
+        int consultant_id
         string consultant_prefix
         string consultant_first_name
         string consultant_last_name
@@ -252,27 +252,27 @@ erDiagram
     }
 
     ConsultantLanguage {
-        int consultant_language_id PK
-        int consultant_id FK
+        int consultant_language_id
+        int consultant_id
         string consultant_language_code
         string consultant_language_fluency_level
     }
 
     ConsultantSpecialization {
-        int consultant_specialization_id PK
-        int consultant_id FK
+        int consultant_specialization_id
+        int consultant_id
         string consultant_specialization_topic
     }
 
     Organization {
-        int organization_id PK
-        string organization_name UK
+        int organization_id
+        string organization_name
         string organization_type
     }
 
     ConsultantShiftTeam {
-        int shift_team_id PK
-        int university_id FK
+        int shift_team_id
+        int university_id
         string team_name
         int team_order
     }
@@ -298,59 +298,59 @@ erDiagram
     BookingAssignment }o--|| Consultant : "consultant"
 
     Booking {
-        int university_id PK_FK
-        int booking_id PK
-        int student_id FK
-        int consultant_id FK
-        int time_slot_id FK
-        int problem_category_id FK
-        int service_mode_id FK
+        int university_id
+        int booking_id
+        int student_id
+        int consultant_id
+        int time_slot_id
+        int problem_category_id
+        int service_mode_id
         enum booking_status
         string booking_detail_text
         datetime booking_created_at
     }
 
     TimeSlot {
-        int time_slot_id PK
+        int time_slot_id
         datetime time_slot_start_datetime
         datetime time_slot_end_datetime
         int time_slot_max_capacity
         enum time_slot_status
-        int university_id FK
-        int day_period_id FK
+        int university_id
+        int day_period_id
     }
 
     BookingAssignment {
-        int booking_assignment_id PK
-        int booking_id FK
-        int consultant_id FK
-        int university_id FK
-        int assigned_by_account_id FK
+        int booking_assignment_id
+        int booking_id
+        int consultant_id
+        int university_id
+        int assigned_by_account_id
         boolean is_auto_assigned
         boolean is_active
         datetime assigned_at
     }
 
     BookingSession {
-        int booking_session_id PK
-        int university_id FK
-        int booking_id FK
+        int booking_session_id
+        int university_id
+        int booking_id
         string booking_session_join_url
         string booking_session_phone_number
-        int service_mode_id FK
-        int online_channel_category_id FK
+        int service_mode_id
+        int online_channel_category_id
     }
 
     ProblemCategory {
-        int problem_category_id PK
-        string problem_category_code UK
+        int problem_category_id
+        string problem_category_code
         string problem_category_name_th
         string problem_category_name_en
     }
 
     DayPeriod {
-        int day_period_id PK
-        int university_id FK
+        int day_period_id
+        int university_id
         string day_period_code
         string day_period_name_th
         time start_time
@@ -375,67 +375,67 @@ erDiagram
     BookingCancellation }o--|| CancellationReason : "reason"
 
     BookingAttendance {
-        int university_id PK_FK
-        int booking_id PK_FK
+        int university_id
+        int booking_id
         enum booking_attendance_status
         datetime booking_attendance_checked_in_at
         int booking_attendance_late_minutes
-        int booking_attendance_marked_by_id FK
+        int booking_attendance_marked_by_id
     }
 
     BookingOutcome {
-        int university_id PK_FK
-        int booking_id PK_FK
+        int university_id
+        int booking_id
         string booking_outcome_consultant_note
         string booking_outcome_next_step
-        int risk_level_id FK
+        int risk_level_id
     }
 
     BookingCancellation {
-        int university_id PK_FK
-        int booking_id PK_FK
-        int booking_cancellation_cancelled_by_id FK
-        int cancellation_reason_id FK
+        int university_id
+        int booking_id
+        int booking_cancellation_cancelled_by_id
+        int cancellation_reason_id
         string booking_cancellation_note
     }
 
     BookingAgreementSignature {
-        int booking_agreement_signature_id PK
-        int university_id FK
-        int booking_id FK
-        int student_id FK
+        int booking_agreement_signature_id
+        int university_id
+        int booking_id
+        int student_id
         enum signature_method
         json signature_payload
     }
 
     BookingExceptionRequest {
-        int booking_exception_request_id PK
-        int university_id FK
-        int booking_id FK
-        int student_id FK
+        int booking_exception_request_id
+        int university_id
+        int booking_id
+        int student_id
         enum booking_exception_status
         string booking_exception_reason_detail
-        int exception_reason_id FK
+        int exception_reason_id
     }
 
     BookingExceptionEvidence {
-        int booking_exception_evidence_id PK
-        int booking_exception_request_id FK
+        int booking_exception_evidence_id
+        int booking_exception_request_id
         string booking_exception_evidence_url
         string booking_exception_evidence_type
     }
 
     RiskLevelCategory {
-        int risk_level_id PK
-        string code UK
+        int risk_level_id
+        string code
         string name_th
         string name_en
         string color
     }
 
     CancellationReason {
-        int cancellation_reason_id PK
-        string cancellation_reason_code UK
+        int cancellation_reason_id
+        string cancellation_reason_code
         string cancellation_reason_name_th
     }
 ```
@@ -454,31 +454,31 @@ erDiagram
     Feedback }o--|| Consultant : "for"
 
     Feedback {
-        int feedback_id PK
-        int booking_id FK
-        int student_id FK
-        int consultant_id FK
+        int feedback_id
+        int booking_id
+        int student_id
+        int consultant_id
         boolean feedback_is_anonymous
         datetime feedback_created_at
-        int university_id FK
+        int university_id
     }
 
     FeedbackRating {
-        int feedback_rating_id PK
-        int feedback_id FK
-        int evaluation_criterion_id FK
+        int feedback_rating_id
+        int feedback_id
+        int evaluation_criterion_id
         int feedback_rating_score
     }
 
     FeedbackComment {
-        int feedback_id PK_FK
+        int feedback_id
         string feedback_comment_text
         string feedback_comment_admin_reply
-        int feedback_comment_replied_by_id FK
+        int feedback_comment_replied_by_id
     }
 
     EvaluationCriterion {
-        int evaluation_criterion_id PK
+        int evaluation_criterion_id
         string evaluation_criterion_topic_th
         string evaluation_criterion_topic_en
         decimal evaluation_criterion_weight
@@ -500,44 +500,44 @@ erDiagram
     DisciplineLog }o--|| DisciplineActionType : "action type"
 
     StudentPointWallet {
-        int university_id PK
-        int student_id PK
+        int university_id
+        int student_id
         int student_point_balance
     }
 
     StudentPointTransaction {
-        int student_point_transaction_id PK
-        int student_id FK
-        int point_rule_id FK
-        int booking_id FK
+        int student_point_transaction_id
+        int student_id
+        int point_rule_id
+        int booking_id
         string student_point_txn_type
         int student_point_amount
         string student_point_note
     }
 
     PointRule {
-        int point_rule_id PK
-        string point_rule_code UK
+        int point_rule_id
+        string point_rule_code
         string point_rule_name_th
         int point_rule_points
         boolean point_rule_is_active
     }
 
     DisciplineLog {
-        int discipline_log_id PK
-        int university_id FK
-        int student_id FK
-        int booking_id FK
-        string action_type_code FK
+        int discipline_log_id
+        int university_id
+        int student_id
+        int booking_id
+        string action_type_code
         int delta_points
         datetime lock_until
         string note
-        int created_by_id FK
+        int created_by_id
     }
 
     DisciplineActionType {
-        int action_type_id PK
-        string action_code UK
+        int action_type_id
+        string action_code
         string name_th
         string name_en
         string direction
@@ -561,9 +561,9 @@ erDiagram
     University ||--o{ ConsultantBorrowPolicy : "policy"
 
     BorrowRequest {
-        int borrow_request_id PK
-        int from_university_id FK
-        int requested_by_account_id FK
+        int borrow_request_id
+        int from_university_id
+        int requested_by_account_id
         string borrow_request_title
         string borrow_request_reason
         int borrow_needed_count
@@ -573,30 +573,30 @@ erDiagram
     }
 
     BorrowAssignment {
-        int borrow_assignment_id PK
-        int borrow_request_id FK
-        int consultant_id FK
-        int consultant_university_id FK
+        int borrow_assignment_id
+        int borrow_request_id
+        int consultant_id
+        int consultant_university_id
         datetime borrow_assign_start_at
         datetime borrow_assign_end_at
-        int borrow_assigned_by_account_id FK
+        int borrow_assigned_by_account_id
     }
 
     ConsultantBorrowAvailability {
-        int consultant_borrow_availability_id PK
+        int consultant_borrow_availability_id
         uuid borrow_plan_id
-        int consultant_id FK
-        int home_university_id FK
-        int target_university_id FK
-        int borrow_assignment_id FK
+        int consultant_id
+        int home_university_id
+        int target_university_id
+        int borrow_assignment_id
         date availability_start_date
         date availability_end_date
         enum status
     }
 
     ConsultantBorrowPolicy {
-        int consultant_borrow_policy_id PK
-        int university_id FK
+        int consultant_borrow_policy_id
+        int university_id
         int borrow_policy_days
         boolean is_active
     }
@@ -619,18 +619,18 @@ erDiagram
     AiFeedbackEvent }o--o| AiKbDocument : "resolved doc"
 
     AiKbDocument {
-        int ai_kb_document_id PK
-        int university_id FK
+        int ai_kb_document_id
+        int university_id
         string ai_kb_document_key
         string ai_kb_document_title
         string ai_kb_document_category
         boolean ai_kb_document_is_active
-        int ai_kb_published_version_id FK
+        int ai_kb_published_version_id
     }
 
     AiKbDocumentVersion {
-        int ai_kb_document_version_id PK
-        int ai_kb_document_id FK
+        int ai_kb_document_version_id
+        int ai_kb_document_id
         int ai_kb_version_no
         string ai_kb_content_type
         enum ai_kb_version_status
@@ -640,9 +640,9 @@ erDiagram
     }
 
     AiKbChunk {
-        int ai_kb_chunk_id PK
-        int ai_kb_document_id FK
-        int ai_kb_document_version_id FK
+        int ai_kb_chunk_id
+        int ai_kb_document_id
+        int ai_kb_document_version_id
         int ai_kb_chunk_index
         string ai_kb_chunk_content_text
         json ai_kb_chunk_embedding
@@ -650,18 +650,18 @@ erDiagram
     }
 
     AiKbDocumentRole {
-        int ai_kb_document_id PK_FK
-        string ai_actor_role PK
+        int ai_kb_document_id
+        string ai_actor_role
     }
 
     AiFeedbackEvent {
-        int ai_feedback_event_id PK
-        int university_id FK
-        int account_id FK
+        int ai_feedback_event_id
+        int university_id
+        int account_id
         string ai_feedback_type
         string ai_user_question_text
         enum ai_feedback_status
-        int ai_resolved_document_id FK
+        int ai_resolved_document_id
     }
 ```
 
@@ -679,9 +679,9 @@ erDiagram
     Season ||--o{ Booking : "bookings in season"
 
     AcademicTerm {
-        int academic_term_id PK
-        int university_id FK
-        int academic_term_type_id FK
+        int academic_term_id
+        int university_id
+        int academic_term_type_id
         int academic_year
         date term_start_date
         date term_end_date
@@ -689,24 +689,24 @@ erDiagram
     }
 
     AcademicTermType {
-        int academic_term_type_id PK
-        string academic_term_type_code UK
+        int academic_term_type_id
+        string academic_term_type_code
         string academic_term_type_name_th
     }
 
     AcademicPeriod {
-        int period_id PK
-        int academic_term_id FK
-        int university_id FK
-        int academic_period_type_id FK
+        int period_id
+        int academic_term_id
+        int university_id
+        int academic_period_type_id
         string period_name_th
         date period_start_date
         date period_end_date
     }
 
     Season {
-        int season_id PK
-        string season_code UK
+        int season_id
+        string season_code
         string season_name_th
         int month_start
         int month_end
