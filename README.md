@@ -2,7 +2,7 @@
 
 # 🏥 Wellness Booking
 
-### ระบบจองคิวให้คำปรึกษาด้านสุขภาวะ 
+### Wellness Counseling Appointment System
 
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -13,8 +13,8 @@
 
 ---
 
-**NU Wellness Booking** คือระบบ Full-Stack Web Application สำหรับการจองคิวให้คำปรึกษาด้านสุขภาวะ (Wellness Counseling)
-ออกแบบมาเพื่อรองรับการจัดการแบบ Multi-tenant ระดับมหาวิทยาลัย พร้อมระบบ Dashboard วิเคราะห์ข้อมูลระดับกระทรวง
+A **Full-Stack Web Application** for wellness counseling appointment management.
+Designed with a **multi-tenant architecture** at the university level, with a centralized **ministry-level analytics dashboard**.
 
 </div>
 
@@ -22,30 +22,32 @@
 
 ## ✨ Features
 
-### 🎓 ระบบมหาวิทยาลัย (University Tenant)
-- **ระบบจองคิว** — นิสิต/นักศึกษาสามารถจองเวลาให้คำปรึกษาด้านสุขภาวะได้
-- **ระบบที่ปรึกษา (Advisor)** — อาจารย์ที่ปรึกษาดูแลนิสิตในสังกัด
-- **ระบบนักจิตวิทยาประจำศูนย์ (Consultant)** — ให้คำปรึกษาเชิงลึก
-- **หัวหน้านักจิตวิทยา (Head Consultant)** — จัดการคิวและมอบหมายงาน
-- **หัวหน้าภาควิชา (Head Department)** — ดูสรุปข้อมูลระดับภาควิชา
-- **คณบดี (Dean)** — ดูภาพรวมระดับคณะ
-- **อธิการบดี (Rector)** — ดูภาพรวมระดับมหาวิทยาลัย
+### 🎓 University Tenant System
+- **Booking System** — Students can book wellness counseling appointments
+- **Advisor Panel** — Academic advisors can monitor and support their students
+- **Consultant Panel** — Professional counselors provide in-depth consultations
+- **Head Consultant** — Manages queues, assignments, and consultant teams
+- **Head of Department** — Views department-level summaries and reports
+- **Dean** — Accesses faculty-level analytics overview
+- **Rector** — University-wide dashboard and oversight
 
-### 🏛️ ระบบกระทรวง (Ministry Platform)
-- **Dashboard** — แดชบอร์ดวิเคราะห์ข้อมูลภาพรวมทุกมหาวิทยาลัย
-- **AI Insight** — วิเคราะห์ข้อมูลด้วย AI (Ollama / LiteLLM)
-- **Heat Map** — แผนที่ความร้อนแสดงความเสี่ยงเชิงพื้นที่
-- **จัดการมหาวิทยาลัย** — ดูรายละเอียดและสถิติแต่ละมหาวิทยาลัย
+### 🏛️ Ministry Platform
+- **Dashboard** — Centralized analytics across all universities
+- **AI Insight** — AI-powered data analysis (Ollama / LiteLLM)
+- **Heat Map** — Geographic risk visualization
+- **University Management** — Detailed statistics per university
 
-### 🔧 ฟีเจอร์ทั่วไป
+### 🔧 Core Features
 - ✅ Multi-tenant Architecture
 - ✅ Role-based Access Control (RBAC)
 - ✅ JWT Authentication
 - ✅ LINE Login / LIFF Integration
-- ✅ Interactive Map (Mapbox / Leaflet)
+- ✅ Interactive Maps (Mapbox / Leaflet)
 - ✅ Real-time Charts & Analytics (Chart.js, Recharts)
 - ✅ AI-powered Analysis (Ollama)
-- ✅ Docker Compose สำหรับ Development
+- ✅ Consultant Borrowing System (cross-university)
+- ✅ Student Point & Discipline System
+- ✅ Docker Compose for Development
 - ✅ Responsive Design
 
 ---
@@ -63,7 +65,7 @@
 | **AI** | Ollama, LiteLLM Proxy |
 | **Maps** | Mapbox GL, Leaflet |
 | **Charts** | Chart.js, Recharts |
-| **Line API** | LINE Bot SDK, LIFF |
+| **LINE API** | LINE Bot SDK, LIFF |
 | **State Management** | Zustand |
 | **Validation** | Zod |
 | **Containerization** | Docker Compose |
@@ -75,8 +77,9 @@
 ```
 wellness-demo1/
 ├── prisma/                  # Database schema & migrations
-│   ├── schema.prisma        # Prisma schema
+│   ├── schema.prisma        # Prisma schema (60+ models)
 │   ├── migrations/          # Database migrations
+│   ├── README.md            # 📊 Full ERD documentation
 │   └── seed.ts              # Seed data
 ├── src/
 │   ├── app/
@@ -111,13 +114,35 @@ wellness-demo1/
 
 ---
 
+## 🗄️ Database Schema (ERD)
+
+The database consists of **60+ models** organized into the following domains:
+
+| Domain | Key Tables | Description |
+|---|---|---|
+| **Geography** | `Region`, `Province`, `Country` | Geographic reference data |
+| **University** | `University`, `Faculty`, `Department` | Organizational hierarchy |
+| **Accounts** | `Account`, `AccountRoleCategory`, `AccountUniversityPermission` | Authentication & RBAC |
+| **Students** | `Student`, `StudentProfile`, `StudentAcademic`, `StudentAddress` | Student information |
+| **Consultants** | `Consultant`, `ConsultantProfile`, `ConsultantShiftTeam` | Counselor management |
+| **Bookings** | `Booking`, `BookingAssignment`, `BookingSession`, `BookingOutcome` | Core booking workflow |
+| **Feedback** | `Feedback`, `FeedbackRating`, `FeedbackComment` | Service evaluation |
+| **Discipline** | `DisciplineLog`, `StudentBehaviorStatus`, `StudentPointWallet` | Point & behavior system |
+| **Borrowing** | `BorrowRequest`, `BorrowAssignment`, `ConsultantBorrowAvailability` | Cross-university consultant lending |
+| **AI / KB** | `AiKbDocument`, `AiKbChunk`, `AiFeedbackEvent` | AI knowledge base |
+| **Academic** | `AcademicTerm`, `AcademicPeriod`, `Season` | Academic calendar |
+
+> 📊 **[View the full ERD diagram →](./prisma/README.md)**
+
+---
+
 ## 🚀 Getting Started
 
 ### Prerequisites
 
 - **Node.js** 18+
 - **Docker** & **Docker Compose**
-- **pnpm** or **npm**
+- **npm** or **pnpm**
 
 ### 1. Clone Repository
 
@@ -132,7 +157,7 @@ cd wellness-demo1
 cp .env.example .env
 ```
 
-แก้ไขค่าใน `.env` ให้เหมาะสมกับ environment ของคุณ
+Edit the `.env` file to match your environment configuration.
 
 ### 3. Start Database Services
 
@@ -140,7 +165,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Services ที่จะ start:
+This will start:
 - **PostgreSQL 16** — Port `5434`
 - **pgAdmin 4** — Port `8080`
 
@@ -169,7 +194,7 @@ npx prisma db seed
 npm run dev
 ```
 
-เปิด [http://localhost:3000](http://localhost:3000) ในเบราว์เซอร์
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
@@ -189,7 +214,7 @@ npm run dev
 
 ---
 
-## 👥 ผู้จัดทำ (Contributors)
+## 👥 Contributors
 
 <table>
   <tr>
