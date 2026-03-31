@@ -64,7 +64,6 @@ Designed with a **multi-tenant architecture** at the university level, with a ce
 | **AI** | Ollama, LiteLLM Proxy |
 | **Maps** | Mapbox GL, Leaflet |
 | **Charts** | Chart.js, Recharts |
-| **LINE API** | LINE Bot SDK, LIFF |
 | **State Management** | Zustand |
 | **Validation** | Zod |
 | **Containerization** | Docker Compose |
