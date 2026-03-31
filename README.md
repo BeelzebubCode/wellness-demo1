@@ -41,7 +41,6 @@ Designed with a **multi-tenant architecture** at the university level, with a ce
 - ✅ Multi-tenant Architecture
 - ✅ Role-based Access Control (RBAC)
 - ✅ JWT Authentication
-- ✅ LINE Login / LIFF Integration
 - ✅ Interactive Maps (Mapbox / Leaflet)
 - ✅ Real-time Charts & Analytics (Chart.js, Recharts)
 - ✅ AI-powered Analysis (Ollama)
