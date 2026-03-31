@@ -1,8 +1,8 @@
 <div align="center">
 
-# 🏥 NU Wellness Booking
+# 🏥 Wellness Booking
 
-### ระบบจองคิวให้คำปรึกษาด้านสุขภาวะ — มหาวิทยาลัยนเรศวร
+### ระบบจองคิวให้คำปรึกษาด้านสุขภาวะ 
 
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -259,6 +259,6 @@ This project is for **educational and academic purposes only**.
 
 <div align="center">
 
-Made with ❤️ by **NU Wellness Team**
+Made with ❤️ by **Wellness Team**
 
 </div>
