@@ -245,11 +245,11 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
       <sub>Golffzza</sub>
     </td>
      <td align="center">
-      <a href="https://github.com/Golffzza">
-        <img src="https://github.com/Golffzza.png" width="100px;" alt="Golffzza"/><br />
-        <sub><b>Golffzza</b></sub>
+      <a href="https://github.com/meedet">
+        <img src="https://github.com/meedet.png" width="100px;" alt="Golffzza"/><br />
+        <sub><b>meedet</b></sub>
       </a><br />
-      <sub>Golffzza</sub>
+      <sub>meedet</sub>
     </td>
   </tr>
   <tr>
